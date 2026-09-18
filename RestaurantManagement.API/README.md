@@ -1,12 +1,24 @@
 # RestaurantManagement.API — database chung
 
+## Nhanh da up gi (doc 1 phut la hieu)
+- `Scripts/InitialSchema.sql` (script tao san 39 bang — chi can mo bang SSMS roi Execute)
+- `Migrations/` (3 file — lich su sinh script, EF dung de nang cap DB sau nay)
+- `Models/Entities.cs` (32 lop C# mo ta bang — sua day khi doi thiet ke)
+- `Data/RestaurantDbContext.cs` (dinh nghia khoa/FK/CHECK — nguon sinh migration)
+- `Data/RestaurantDbContextFactory.cs` (giup lenh EF chay duoc khi chua co SQL)
+- `Data/DbSeeder.cs` (nap data mau CRUD — chay bang `--seed`)
+- `Program.cs`, `.csproj` (dang ky DB + thu vien EF can thiet)
+
+## Cai gi truoc (moi may lam 1 lan)
+- Visual Studio 2026 Community (ban 2022 bao loi .NET 10) + workload ASP.NET
+- .NET 10 SDK (`dotnet --list-sdks` thay 10.x)
+- SQL Server Express, instance `SQLEXPRESS` (may ai ten khac thi sua chuoi ket noi)
+- SSMS 22 (xem DB + ve so do)
+- Tool EF: `dotnet tool install --global dotnet-ef`
+
 Schema SQL Server được sinh từ `Models/Entities.cs` và `Data/RestaurantDbContext.cs` bằng EF Core migration. Không sửa trực tiếp file migration hoặc `Scripts/InitialSchema.sql` để đổi thiết kế; sửa model rồi tạo migration mới.
 
-## Chuẩn bị
-
-- .NET SDK 10
-- SQL Server Express/Developer và SSMS
-- Chuỗi kết nối đặt ở biến môi trường, không commit mật khẩu:
+## Chuỗi kết nối (mỗi máy theo instance của mình)
 
 ```powershell
 $env:ConnectionStrings__RestaurantDb='Server=.\SQLEXPRESS;Database=RestaurantManagement;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
