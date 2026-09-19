@@ -12,6 +12,18 @@ Ngày 19/09/2026, nhánh `thanhvien1-3.1-database` đã cập nhật schema theo
 - Có migration mới: `20260919024114_SimplifySchema`.
 - Script dựng database mới: `RestaurantManagement.API/Scripts/RestaurantManagementSchema.sql`.
 
+## Chi tiết các bảng được gộp hoặc thay thế
+
+| Bảng cũ | Cách xử lý mới | Lý do |
+|---|---|---|
+| `DonHang`, `DonHangBan`, `ChiTietDonHang` | Dùng `HoaDon` và `ChiTietHoaDon`. Bàn của đoàn đã quản lý tại `ChiTietDatBan`. | Tránh đồng thời có đơn hàng và hóa đơn cùng lưu một nghiệp vụ bán hàng, gây trùng dữ liệu. |
+| `GiaoDichThanhToan`, `DoiTruCoc` | Cọc lưu tại `DatBan`; tổng tiền, tiền giảm, tiền cọc được trừ và phương thức thanh toán lưu tại `HoaDon`. | Đồ án không cần mô hình kế toán nhiều giao dịch/hoàn tiền riêng. |
+| `DonViTinh`, `QuyDoiNguyenLieu` | Lưu `DonViTinh` trực tiếp trong `NguyenLieu`. | Không triển khai quy đổi phức tạp giữa kg, g, thùng, chai trong phạm vi hiện tại. |
+| `SuDungVoucher`, `ApDungKhuyenMai` | `HoaDon` lưu voucher áp dụng và tổng tiền giảm; `KhuyenMaiMon` vẫn xác định khuyến mãi theo món. | Không cần nhật ký áp dụng nhiều tầng cho mỗi khuyến mãi/voucher ở giai đoạn này. |
+| `ThanhPhanSet` | Đổi tên thành `ChiTietCombo`. | Tên phản ánh đúng nghiệp vụ combo gồm món thành phần và số lượng. |
+| `ChiTietDonHang` | Thay bằng `ChiTietHoaDon`. | Đúng góp ý: Hóa đơn phải liên kết Món ăn thông qua Chi tiết hóa đơn. |
+| Không có ở schema cũ | Thêm `MonAnSize`. | Một món có thể có nhiều size và giá bán theo size; món không có size dùng size “Mặc định”. |
+
 ## Thành viên khác cần làm
 
 1. Pull nhánh `thanhvien1-3.1-database` sau khi nhóm thống nhất merge.
