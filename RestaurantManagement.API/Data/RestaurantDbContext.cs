@@ -12,12 +12,26 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
     public DbSet<KhachHang> KhachHang => Set<KhachHang>();
     public DbSet<DanhMuc> DanhMuc => Set<DanhMuc>();
     public DbSet<MonAn> MonAn => Set<MonAn>();
+    public DbSet<MonAnSize> MonAnSize => Set<MonAnSize>();
+    public DbSet<ChiTietCombo> ChiTietCombo => Set<ChiTietCombo>();
+    public DbSet<KhuVuc> KhuVuc => Set<KhuVuc>();
+    public DbSet<BanAn> BanAn => Set<BanAn>();
     public DbSet<DatBan> DatBan => Set<DatBan>();
-    public DbSet<DonHang> DonHang => Set<DonHang>();
+    public DbSet<ChiTietDatBan> ChiTietDatBan => Set<ChiTietDatBan>();
+    public DbSet<MonDatTruoc> MonDatTruoc => Set<MonDatTruoc>();
     public DbSet<HoaDon> HoaDon => Set<HoaDon>();
+    public DbSet<ChiTietHoaDon> ChiTietHoaDon => Set<ChiTietHoaDon>();
     public DbSet<NguyenLieu> NguyenLieu => Set<NguyenLieu>();
+    public DbSet<DinhMucMon> DinhMucMon => Set<DinhMucMon>();
+    public DbSet<NhaCungCap> NhaCungCap => Set<NhaCungCap>();
     public DbSet<PhieuNhap> PhieuNhap => Set<PhieuNhap>();
+    public DbSet<ChiTietPhieuNhap> ChiTietPhieuNhap => Set<ChiTietPhieuNhap>();
     public DbSet<PhieuXuat> PhieuXuat => Set<PhieuXuat>();
+    public DbSet<ChiTietPhieuXuat> ChiTietPhieuXuat => Set<ChiTietPhieuXuat>();
+    public DbSet<KhuyenMai> KhuyenMai => Set<KhuyenMai>();
+    public DbSet<KhuyenMaiMon> KhuyenMaiMon => Set<KhuyenMaiMon>();
+    public DbSet<Voucher> Voucher => Set<Voucher>();
+    public DbSet<DanhGia> DanhGia => Set<DanhGia>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -35,9 +49,11 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<KhachHang>().HasIndex(x => x.SoDienThoai).IsUnique();
         b.Entity<KhachHang>().HasOne(x => x.TaiKhoan).WithOne().HasForeignKey<KhachHang>(x => x.TaiKhoanId);
         b.Entity<DanhMuc>().HasIndex(x => x.TenDanhMuc).IsUnique();
-        b.Entity<ThanhPhanSet>().HasKey(x => new { x.SetId, x.MonAnId });
-        b.Entity<ThanhPhanSet>().HasOne(x => x.Set).WithMany(x => x.ThanhPhan).HasForeignKey(x => x.SetId);
-        b.Entity<ThanhPhanSet>().HasOne(x => x.MonAn).WithMany().HasForeignKey(x => x.MonAnId);
+        b.Entity<MonAnSize>().HasIndex(x => new { x.MonAnId, x.TenSize }).IsUnique();
+        b.Entity<MonAnSize>().HasOne(x => x.MonAn).WithMany(x => x.Sizes).HasForeignKey(x => x.MonAnId);
+        b.Entity<ChiTietCombo>().HasKey(x => new { x.ComboId, x.MonAnId });
+        b.Entity<ChiTietCombo>().HasOne(x => x.Combo).WithMany(x => x.ThanhPhanCombo).HasForeignKey(x => x.ComboId);
+        b.Entity<ChiTietCombo>().HasOne(x => x.MonAn).WithMany().HasForeignKey(x => x.MonAnId);
         b.Entity<BanAn>().HasIndex(x => x.MaBan).IsUnique();
         b.Entity<DatBan>().HasIndex(x => x.MaDatBan).IsUnique();
         b.Entity<DatBan>().HasIndex(x => new { x.TrangThai, x.GioDen, x.GioKetThucDuKien });
@@ -45,72 +61,46 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<ChiTietDatBan>().HasOne(x => x.DatBan).WithMany(x => x.Ban).HasForeignKey(x => x.DatBanId);
         b.Entity<ChiTietDatBan>().HasIndex(x => x.BanAnId);
         b.Entity<MonDatTruoc>().HasOne(x => x.DatBan).WithMany(x => x.MonDatTruoc).HasForeignKey(x => x.DatBanId);
-        b.Entity<DonHang>().HasIndex(x => x.MaDonHang).IsUnique();
-        b.Entity<DonHang>().HasOne(x => x.DatBan).WithOne().HasForeignKey<DonHang>(x => x.DatBanId);
-        b.Entity<DonHangBan>().HasIndex(x => x.BanAnId).IsUnique().HasFilter("[KetThuc] IS NULL");
-        b.Entity<DonHangBan>().HasIndex(x => new { x.DonHangId, x.BanAnId, x.BatDau }).IsUnique();
-        b.Entity<ChiTietDonHang>().HasAlternateKey(x => new { x.Id, x.DonHangId });
-        b.Entity<ChiTietDonHang>().HasOne(x => x.MonDatTruoc).WithOne().HasForeignKey<ChiTietDonHang>(x => x.MonDatTruocId);
-        b.Entity<HoaDon>().HasIndex(x => x.SoHoaDon).IsUnique();
-        b.Entity<HoaDon>().HasOne(x => x.DonHang).WithOne(x => x.HoaDon).HasForeignKey<HoaDon>(x => x.DonHangId);
-        b.Entity<HoaDon>().HasAlternateKey(x => new { x.Id, x.DonHangId });
+        b.Entity<MonDatTruoc>().HasOne(x => x.MonAnSize).WithMany().HasForeignKey(x => x.MonAnSizeId);
+        b.Entity<HoaDon>().HasIndex(x => x.MaHoaDon).IsUnique();
+        b.Entity<HoaDon>().HasOne(x => x.DatBan).WithMany(x => x.HoaDon).HasForeignKey(x => x.DatBanId);
+        b.Entity<HoaDon>().HasOne(x => x.Voucher).WithMany().HasForeignKey(x => x.VoucherId);
         b.Entity<HoaDon>().Property(x => x.TongThanhToan)
-            .HasComputedColumnSql("[TienMon]-[TienGiam]+[TienThue]+[PhiDichVu]+[PhiGiaoHang]", stored: true);
-        b.Entity<GiaoDichThanhToan>().HasIndex(x => x.KhoaChongLap).IsUnique();
-        b.Entity<DoiTruCoc>().HasKey(x => x.GiaoDichCocId);
-        b.Entity<DoiTruCoc>().HasOne(x => x.GiaoDichCoc).WithOne().HasForeignKey<DoiTruCoc>(x => x.GiaoDichCocId);
-        b.Entity<DonViTinh>().HasIndex(x => x.TenDonVi).IsUnique();
-        b.Entity<QuyDoiNguyenLieu>().HasKey(x => new { x.NguyenLieuId, x.DonViTinhId });
-        b.Entity<DinhLuongMon>().HasKey(x => new { x.MonAnId, x.NguyenLieuId });
+            .HasComputedColumnSql("[TongTienHang]-[TienGiam]-[TienCocDaTru]", stored: true);
+        b.Entity<ChiTietHoaDon>().HasOne(x => x.HoaDon).WithMany(x => x.ChiTiet).HasForeignKey(x => x.HoaDonId);
+        b.Entity<ChiTietHoaDon>().HasOne(x => x.MonAnSize).WithMany().HasForeignKey(x => x.MonAnSizeId);
+        b.Entity<ChiTietHoaDon>().HasOne(x => x.MonDatTruoc).WithOne().HasForeignKey<ChiTietHoaDon>(x => x.MonDatTruocId);
+        b.Entity<ChiTietHoaDon>().HasAlternateKey(x => new { x.Id, x.HoaDonId });
+        b.Entity<NguyenLieu>().HasIndex(x => x.TenNguyenLieu).IsUnique();
+        b.Entity<DinhMucMon>().HasKey(x => new { x.MonAnId, x.NguyenLieuId });
         b.Entity<PhieuNhap>().HasIndex(x => x.MaPhieu).IsUnique();
         b.Entity<PhieuXuat>().HasIndex(x => x.MaPhieu).IsUnique();
-        b.Entity<ChiTietPhieuNhap>().Property(x => x.SoLuongCoSo)
-            .HasComputedColumnSql("CONVERT(decimal(18,6),[SoLuong]*[HeSoQuyDoi])", stored: true);
-        b.Entity<ChiTietPhieuXuat>().Property(x => x.SoLuongCoSo)
-            .HasComputedColumnSql("CONVERT(decimal(18,6),[SoLuong]*[HeSoQuyDoi])", stored: true);
         b.Entity<ChiTietPhieuXuat>().HasOne(x => x.LoNhap).WithMany().HasForeignKey(x => x.ChiTietPhieuNhapId);
         b.Entity<KhuyenMaiMon>().HasKey(x => new { x.KhuyenMaiId, x.MonAnId });
         b.Entity<Voucher>().HasIndex(x => x.Ma).IsUnique();
-        b.Entity<SuDungVoucher>().HasIndex(x => new { x.VoucherId, x.HoaDonId }).IsUnique();
-        b.Entity<SuDungVoucher>().HasAlternateKey(x => new { x.Id, x.HoaDonId });
-        b.Entity<ApDungKhuyenMai>().HasOne(x => x.HoaDon).WithMany()
-            .HasForeignKey(x => new { x.HoaDonId, x.DonHangId }).HasPrincipalKey(x => new { x.Id, x.DonHangId });
-        b.Entity<ApDungKhuyenMai>().HasOne(x => x.ChiTietDonHang).WithMany()
-            .HasForeignKey(x => new { x.ChiTietDonHangId, x.DonHangId }).HasPrincipalKey(x => new { x.Id, x.DonHangId });
-        b.Entity<ApDungKhuyenMai>().HasOne(x => x.SuDungVoucher).WithMany()
-            .HasForeignKey(x => new { x.SuDungVoucherId, x.HoaDonId }).HasPrincipalKey(x => new { x.Id, x.HoaDonId });
-        b.Entity<ApDungKhuyenMai>().HasIndex(x => new { x.HoaDonId, x.KhuyenMaiId, x.ChiTietDonHangId })
-            .IsUnique().HasFilter(null);
-        b.Entity<DanhGia>().HasOne(x => x.ChiTietDonHang).WithMany()
-            .HasForeignKey(x => new { x.ChiTietDonHangId, x.DonHangId }).HasPrincipalKey(x => new { x.Id, x.DonHangId });
-        b.Entity<DanhGia>().HasIndex(x => new { x.DonHangId, x.ChiTietDonHangId }).IsUnique().HasFilter(null);
+        b.Entity<DanhGia>().HasOne(x => x.HoaDon).WithMany().HasForeignKey(x => x.HoaDonId);
+        b.Entity<DanhGia>().HasOne(x => x.ChiTietHoaDon).WithMany()
+            .HasForeignKey(x => new { x.ChiTietHoaDonId, x.HoaDonId }).HasPrincipalKey(x => new { x.Id, x.HoaDonId });
+        b.Entity<DanhGia>().HasIndex(x => new { x.HoaDonId, x.ChiTietHoaDonId }).IsUnique().HasFilter(null);
 
-        Check<MonAn>(b, "Gia", "[GiaBan]>=0");
-        Check<ThanhPhanSet>(b, "ThanhPhan", "[SetId]<>[MonAnId] AND [SoLuong]>0");
+        Check<MonAnSize>(b, "Gia", "[GiaBan]>=0");
+        Check<ChiTietCombo>(b, "ThanhPhan", "[ComboId]<>[MonAnId] AND [SoLuong]>0");
         Check<BanAn>(b, "SoCho", "[SoChoNgoi]>0");
         Check<DatBan>(b, "ThoiGian", "[GioKetThucDuKien]>[GioDen]");
         Check<DatBan>(b, "SoKhach", "[SoNguoiLon]>=0 AND [SoTreEm]>=0 AND [SoNguoiLon]+[SoTreEm]>0");
-        Check<DatBan>(b, "Coc", "[TienCocYeuCau]>=0");
+        Check<DatBan>(b, "Coc", "[TienCocYeuCau]>=0 AND [TienCocDaNop]>=0");
         Check<DatBan>(b, "LienHe", "[LaKhachTrucTiep]=1 OR ([SoDienThoaiLienHe] IS NOT NULL AND LEN([SoDienThoaiLienHe])>0)");
         Check<DatBan>(b, "NhanHuy", "([TrangThai]<>'DaNhanBan' OR [ThoiDiemNhanBan] IS NOT NULL) AND ([TrangThai]<>'DaHuy' OR [ThoiDiemHuy] IS NOT NULL)");
         Check<MonDatTruoc>(b, "LuongGia", "[SoLuong]>0 AND [DonGiaThoaThuan]>=0");
-        Check<DonHang>(b, "LoaiDon", "([Loai]='TaiCho' AND [DatBanId] IS NOT NULL) OR ([Loai]='GiaoHang' AND [DatBanId] IS NULL AND [TenNguoiNhan] IS NOT NULL AND [DienThoaiGiaoHang] IS NOT NULL AND [DiaChiGiaoHang] IS NOT NULL)");
-        Check<DonHangBan>(b, "ThoiGian", "[KetThuc] IS NULL OR [KetThuc]>=[BatDau]");
-        Check<ChiTietDonHang>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
-        Check<HoaDon>(b, "SoTien", "[TienMon]>=0 AND [TienGiam]>=0 AND [TienGiam]<=[TienMon] AND [TienThue]>=0 AND [PhiDichVu]>=0 AND [PhiGiaoHang]>=0");
-        Check<GiaoDichThanhToan>(b, "SoTien", "[SoTien]>0");
-        Check<GiaoDichThanhToan>(b, "Dich", "([Loai] IN ('ThuCoc','HoanCoc') AND [DatBanId] IS NOT NULL AND [HoaDonId] IS NULL) OR ([Loai] IN ('ThuHoaDon','HoanThanhToan') AND [HoaDonId] IS NOT NULL AND [DatBanId] IS NULL)");
-        Check<GiaoDichThanhToan>(b, "Hoan", "([Loai] IN ('ThuCoc','ThuHoaDon') AND [GiaoDichGocId] IS NULL) OR ([Loai] IN ('HoanCoc','HoanThanhToan') AND [GiaoDichGocId] IS NOT NULL AND [GiaoDichGocId]<>[Id])");
-        Check<DoiTruCoc>(b, "SoTien", "[SoTien]>0");
+        Check<HoaDon>(b, "SoTien", "[TongTienHang]>=0 AND [TienGiam]>=0 AND [TienGiam]<=[TongTienHang] AND [TienCocDaTru]>=0 AND [TienCocDaTru]<=[TongTienHang]-[TienGiam]");
+        Check<ChiTietHoaDon>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
         Check<NguyenLieu>(b, "Nguong", "[NguongCanhBao]>=0");
-        Check<QuyDoiNguyenLieu>(b, "HeSo", "[HeSoVeDonViCoSo]>0");
-        Check<DinhLuongMon>(b, "SoLuong", "[SoLuongCoSo]>0");
+        Check<DinhMucMon>(b, "SoLuong", "[SoLuong]>0");
         Check<PhieuNhap>(b, "NhaCungCap", "[LyDo]<>'MuaHang' OR [NhaCungCapId] IS NOT NULL");
-        Check<ChiTietPhieuNhap>(b, "LuongGia", "[SoLuong]>0 AND [HeSoQuyDoi]>0 AND [DonGia]>=0");
-        Check<ChiTietPhieuXuat>(b, "SoLuong", "[SoLuong]>0 AND [HeSoQuyDoi]>0");
+        Check<ChiTietPhieuNhap>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
+        Check<ChiTietPhieuXuat>(b, "SoLuong", "[SoLuong]>0");
         Check<KhuyenMai>(b, "DieuKien", "[KetThuc]>[BatDau] AND [GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND [ThuTuApDung]>=0");
         Check<Voucher>(b, "Luot", "[GioiHanTongLuot]>0");
-        Check<ApDungKhuyenMai>(b, "SoTien", "[SoTienGiam]>=0 AND [CoSoTinhGiam]>=[SoTienGiam] AND [GiaTriLucApDung]>0 AND [ThuTu]>=0");
         Check<DanhGia>(b, "Diem", "[Diem] BETWEEN 1 AND 5");
 
         // Common SQL representation, enum domains and optimistic concurrency.
@@ -126,7 +116,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
             {
                 if (p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?))
                 {
-                    bool quantity = p.Name is "SoLuong" or "SoLuongCoSo" or "HeSoQuyDoi" or "HeSoVeDonViCoSo" or "NguongCanhBao";
+                    bool quantity = p.Name is "SoLuong" or "NguongCanhBao";
                     b.Entity(entity.ClrType).Property(p.Name).HasPrecision(18, quantity ? 6 : 2);
                 }
                 if (p.ClrType.IsEnum)

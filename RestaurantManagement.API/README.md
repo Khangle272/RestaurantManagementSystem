@@ -1,10 +1,11 @@
 # RestaurantManagement.API — database chung
 
 ## Nhanh da up gi (doc 1 phut la hieu)
-- `Scripts/InitialSchema.sql` (script tao san 39 bang — chi can mo bang SSMS roi Execute)
-- `Migrations/` (3 file — lich su sinh script, EF dung de nang cap DB sau nay)
-- `Models/Entities.cs` (32 lop C# mo ta bang — sua day khi doi thiet ke)
-- `Data/RestaurantDbContext.cs` (dinh nghia khoa/FK/CHECK — nguon sinh migration)
+- `Scripts/RestaurantManagementSchema.sql` (script idempotent đầy đủ từ toàn bộ migration: 24 bảng nghiệp vụ + 7 bảng Identity + lịch sử migration — mở bằng SSMS rồi Execute)
+- `Scripts/InitialSchema.sql` (script cũ của schema 31 bảng, giữ để đối chiếu; không dùng để dựng DB mới)
+- `Migrations/` (InitialSchema + SimplifySchema — lịch sử sinh script, EF dùng để nâng cấp DB sau này)
+- `Models/Entities.cs` (25 lớp C# = 24 bảng nghiệp vụ + TaiKhoan — sửa đây khi đổi thiết kế)
+- `Data/RestaurantDbContext.cs` (định nghĩa khóa/FK/CHECK — nguồn sinh migration)
 - `Data/RestaurantDbContextFactory.cs` (giup lenh EF chay duoc khi chua co SQL)
 - `Data/DbSeeder.cs` (nap data mau CRUD — chay bang `--seed`)
 - `Program.cs`, `.csproj` (dang ky DB + thu vien EF can thiet)
@@ -49,14 +50,14 @@ dotnet ef migrations script --idempotent --project RestaurantManagement.API --st
 dotnet run --project RestaurantManagement.API -- --seed
 ```
 
-Seed tạo nhân viên, khu vực/bàn, danh mục/món, nguyên liệu/đơn vị/quy đổi, nhà cung cấp, định lượng và phiếu tồn đầu kỳ. Lệnh chạy lại không tạo trùng và không ghi đè dữ liệu đã có. Seed không tạo tài khoản/mật khẩu hay giao dịch khách hàng.
+Seed tạo nhân viên, khu vực/bàn, danh mục/món + size (mỗi món có dòng “Mặc định”), nguyên liệu (đơn vị lưu trực tiếp, không quy đổi), nhà cung cấp, định mức món, combo và phiếu tồn đầu kỳ. Lệnh chạy lại không tạo trùng và không ghi đè dữ liệu đã có. Seed không tạo tài khoản/mật khẩu hay giao dịch khách hàng (đặt bàn/hóa đơn/voucher/đánh giá).
 
 Các mức giá, tên người, số điện thoại và số lượng tồn chỉ là dữ liệu minh họa để kiểm thử CRUD, không phải số liệu khảo sát.
 
 ## Quy tắc dùng chung
 
-- Không dùng `EnsureCreated`; luôn dùng migration.
-- Không tự sửa `SoLuongTon`; tồn được tính từ phiếu nhập/xuất `DaGhiSo` sau quy đổi về đơn vị cơ sở.
+- Không dùng `EnsureCreated`; luôn dùng migration. Không sửa/xóa migration `InitialSchema`; schema 24 bảng nằm ở migration `SimplifySchema` (chưa áp vào DB thật khi chưa có xác nhận).
+- Tồn kho tính từ phiếu nhập/xuất `DaGhiSo` (tồn = tổng nhập − tổng xuất); không có cột tồn cho sửa tự do.
 - Không xóa cứng dữ liệu lịch sử; dùng trạng thái ngừng sử dụng khi phù hợp.
 - Trước khi lấy code mới, kiểm tra migration mới và chạy `database update` trên database local của mình.
 - Sơ đồ database chính thức được tạo từ database đã áp migration trong SSMS.

@@ -28,6 +28,7 @@ if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
     await DbSeeder.SeedAsync(db);
     Console.WriteLine($"Seed hoàn tất: NhanVien={await db.NhanVien.CountAsync()}, " +
         $"DanhMuc={await db.DanhMuc.CountAsync()}, MonAn={await db.MonAn.CountAsync()}, " +
+        $"MonAnSize={await db.Set<MonAnSize>().CountAsync()}, " +
         $"NguyenLieu={await db.NguyenLieu.CountAsync()}, BanAn={await db.Set<BanAn>().CountAsync()}, " +
         $"PhieuNhap={await db.PhieuNhap.CountAsync()}.");
     return;
