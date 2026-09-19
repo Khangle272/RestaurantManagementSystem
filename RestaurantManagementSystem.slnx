@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="DESIGN.md" />
+  </Folder>
   <Project Path="RestaurantManagement.API/RestaurantManagement.API.csproj" />
   <Project Path="RestaurantManagement.Mobile/RestaurantManagement.Mobile.csproj" />
   <Project Path="RestaurantManagement.Shared/RestaurantManagement.Shared.csproj" />

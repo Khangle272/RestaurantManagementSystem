@@ -1,5 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+using RestaurantManagement.API.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
+
+builder.Services.AddDbContext<RestaurantDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
