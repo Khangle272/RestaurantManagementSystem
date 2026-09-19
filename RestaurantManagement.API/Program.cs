@@ -6,7 +6,7 @@ using RestaurantManagement.API.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<RestaurantDbContext>(options => options.UseSqlServer(
-    builder.Configuration.GetConnectionString("RestaurantDb")
+    builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Server=localhost;Database=RestaurantManagement;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"));
 builder.Services.AddIdentityCore<TaiKhoan>()
     .AddRoles<IdentityRole<int>>()
