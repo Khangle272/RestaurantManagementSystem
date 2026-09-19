@@ -24,6 +24,21 @@ Ngày 19/09/2026, nhánh `thanhvien1-3.1-database` đã cập nhật schema theo
 | `ChiTietDonHang` | Thay bằng `ChiTietHoaDon`. | Đúng góp ý: Hóa đơn phải liên kết Món ăn thông qua Chi tiết hóa đơn. |
 | Không có ở schema cũ | Thêm `MonAnSize`. | Một món có thể có nhiều size và giá bán theo size; món không có size dùng size “Mặc định”. |
 
+## Quy ước dữ liệu đã chốt
+
+- Bỏ `MonAn.GiaBan`; giá hiện hành nằm duy nhất tại `MonAnSize.GiaBan`.
+- `DatBan` lưu tiền cọc, thời điểm cọc và trạng thái cọc.
+- `HoaDon` lưu `DatBanId` và `KhachHangId` (đều có thể rỗng), nhân viên lập hóa đơn, trạng thái, tổng tiền hàng, tiền giảm, tiền cọc đã trừ, tổng thanh toán, voucher, phương thức và thời điểm thanh toán.
+- `PhieuXuat.HoaDonId` cho phép rỗng: chỉ gắn hóa đơn khi xuất phục vụ bán hàng; xuất hủy, hao hụt hoặc điều chỉnh không gắn hóa đơn và phân biệt bằng lý do xuất.
+- `ChiTietCombo` dùng các cột `ComboId`, `MonAnId`, `SoLuong`; cả `ComboId` và `MonAnId` đều tham chiếu `MonAn`.
+- `DanhGia` dùng thang điểm từ 1 đến 5.
+
+## Trạng thái sau cập nhật
+
+- Database theo schema mới có 24 bảng nghiệp vụ, 7 bảng Identity, bảng lịch sử EF Core và bảng `sysdiagrams` của SSMS.
+- Migration `SimplifySchema` phải được chạy sau `InitialSchema`; không sửa hoặc chạy riêng `InitialSchema.sql` cũ để tạo database mới.
+- Database mới nên được dựng bằng `RestaurantManagement.API/Scripts/RestaurantManagementSchema.sql` hoặc chạy toàn bộ migration của EF Core.
+
 ## Thành viên khác cần làm
 
 1. Pull nhánh `thanhvien1-3.1-database` sau khi nhóm thống nhất merge.
