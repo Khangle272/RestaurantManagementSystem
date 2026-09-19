@@ -56,7 +56,7 @@ Các mức giá, tên người, số điện thoại và số lượng tồn ch�
 
 ## Quy tắc dùng chung
 
-- Không dùng `EnsureCreated`; luôn dùng migration. Không sửa/xóa migration `InitialSchema`; schema 24 bảng nằm ở migration `SimplifySchema` (chưa áp vào DB thật khi chưa có xác nhận).
+- Không dùng `EnsureCreated`; luôn dùng migration. Không sửa/xóa migration `InitialSchema`; schema 24 bảng nằm ở migration `SimplifySchema`. Database kiểm thử của thành viên có thể chạy `database update` để áp migration này.
 - Tồn kho tính từ phiếu nhập/xuất `DaGhiSo` (tồn = tổng nhập − tổng xuất); không có cột tồn cho sửa tự do.
 - Không xóa cứng dữ liệu lịch sử; dùng trạng thái ngừng sử dụng khi phù hợp.
 - Trước khi lấy code mới, kiểm tra migration mới và chạy `database update` trên database local của mình.
