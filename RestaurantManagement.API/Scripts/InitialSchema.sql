@@ -1394,3 +1394,897 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [ChiTietPhieuNhap] DROP CONSTRAINT [FK_ChiTietPhieuNhap_DonViTinh_DonViTinhId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [ChiTietPhieuXuat] DROP CONSTRAINT [FK_ChiTietPhieuXuat_DonViTinh_DonViTinhId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DanhGia] DROP CONSTRAINT [FK_DanhGia_ChiTietDonHang_ChiTietDonHangId_DonHangId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DanhGia] DROP CONSTRAINT [FK_DanhGia_DonHang_DonHangId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] DROP CONSTRAINT [FK_HoaDon_DonHang_DonHangId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] DROP CONSTRAINT [FK_HoaDon_NhanVien_ThuNganId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [NguyenLieu] DROP CONSTRAINT [FK_NguyenLieu_DonViTinh_DonViCoSoId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [PhieuXuat] DROP CONSTRAINT [FK_PhieuXuat_DonHang_DonHangId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [ApDungKhuyenMai];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [DinhLuongMon];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [DoiTruCoc];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [DonHangBan];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [QuyDoiNguyenLieu];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [ThanhPhanSet];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [ChiTietDonHang];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [SuDungVoucher];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [GiaoDichThanhToan];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [DonViTinh];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP TABLE [DonHang];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP INDEX [IX_NguyenLieu_DonViCoSoId] ON [NguyenLieu];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [MonAn] DROP CONSTRAINT [CK_MonAn_Gia];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] DROP CONSTRAINT [AK_HoaDon_Id_DonHangId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP INDEX [IX_HoaDon_DonHangId] ON [HoaDon];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] DROP CONSTRAINT [CK_HoaDon_SoTien];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DatBan] DROP CONSTRAINT [CK_DatBan_Coc];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP INDEX [IX_ChiTietPhieuXuat_DonViTinhId] ON [ChiTietPhieuXuat];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [ChiTietPhieuXuat] DROP CONSTRAINT [CK_ChiTietPhieuXuat_SoLuong];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DROP INDEX [IX_ChiTietPhieuNhap_DonViTinhId] ON [ChiTietPhieuNhap];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [ChiTietPhieuNhap] DROP CONSTRAINT [CK_ChiTietPhieuNhap_LuongGia];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var nvarchar(max);
+    SELECT @var = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[ChiTietPhieuXuat]') AND [c].[name] = N'SoLuongCoSo');
+    IF @var IS NOT NULL EXEC(N'ALTER TABLE [ChiTietPhieuXuat] DROP CONSTRAINT ' + @var + ';');
+    ALTER TABLE [ChiTietPhieuXuat] DROP COLUMN [SoLuongCoSo];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var1 nvarchar(max);
+    SELECT @var1 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[ChiTietPhieuNhap]') AND [c].[name] = N'SoLuongCoSo');
+    IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [ChiTietPhieuNhap] DROP CONSTRAINT ' + @var1 + ';');
+    ALTER TABLE [ChiTietPhieuNhap] DROP COLUMN [SoLuongCoSo];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var2 nvarchar(max);
+    SELECT @var2 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[NguyenLieu]') AND [c].[name] = N'DonViCoSoId');
+    IF @var2 IS NOT NULL EXEC(N'ALTER TABLE [NguyenLieu] DROP CONSTRAINT ' + @var2 + ';');
+    ALTER TABLE [NguyenLieu] DROP COLUMN [DonViCoSoId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var3 nvarchar(max);
+    SELECT @var3 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[MonAn]') AND [c].[name] = N'GiaBan');
+    IF @var3 IS NOT NULL EXEC(N'ALTER TABLE [MonAn] DROP CONSTRAINT ' + @var3 + ';');
+    ALTER TABLE [MonAn] DROP COLUMN [GiaBan];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var4 nvarchar(max);
+    SELECT @var4 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[HoaDon]') AND [c].[name] = N'TongThanhToan');
+    IF @var4 IS NOT NULL EXEC(N'ALTER TABLE [HoaDon] DROP CONSTRAINT ' + @var4 + ';');
+    ALTER TABLE [HoaDon] DROP COLUMN [TongThanhToan];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var5 nvarchar(max);
+    SELECT @var5 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[HoaDon]') AND [c].[name] = N'DonHangId');
+    IF @var5 IS NOT NULL EXEC(N'ALTER TABLE [HoaDon] DROP CONSTRAINT ' + @var5 + ';');
+    ALTER TABLE [HoaDon] DROP COLUMN [DonHangId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var6 nvarchar(max);
+    SELECT @var6 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[HoaDon]') AND [c].[name] = N'PhiDichVu');
+    IF @var6 IS NOT NULL EXEC(N'ALTER TABLE [HoaDon] DROP CONSTRAINT ' + @var6 + ';');
+    ALTER TABLE [HoaDon] DROP COLUMN [PhiDichVu];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var7 nvarchar(max);
+    SELECT @var7 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[HoaDon]') AND [c].[name] = N'PhiGiaoHang');
+    IF @var7 IS NOT NULL EXEC(N'ALTER TABLE [HoaDon] DROP CONSTRAINT ' + @var7 + ';');
+    ALTER TABLE [HoaDon] DROP COLUMN [PhiGiaoHang];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var8 nvarchar(max);
+    SELECT @var8 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[ChiTietPhieuXuat]') AND [c].[name] = N'DonViTinhId');
+    IF @var8 IS NOT NULL EXEC(N'ALTER TABLE [ChiTietPhieuXuat] DROP CONSTRAINT ' + @var8 + ';');
+    ALTER TABLE [ChiTietPhieuXuat] DROP COLUMN [DonViTinhId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var9 nvarchar(max);
+    SELECT @var9 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[ChiTietPhieuXuat]') AND [c].[name] = N'HeSoQuyDoi');
+    IF @var9 IS NOT NULL EXEC(N'ALTER TABLE [ChiTietPhieuXuat] DROP CONSTRAINT ' + @var9 + ';');
+    ALTER TABLE [ChiTietPhieuXuat] DROP COLUMN [HeSoQuyDoi];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var10 nvarchar(max);
+    SELECT @var10 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[ChiTietPhieuNhap]') AND [c].[name] = N'DonViTinhId');
+    IF @var10 IS NOT NULL EXEC(N'ALTER TABLE [ChiTietPhieuNhap] DROP CONSTRAINT ' + @var10 + ';');
+    ALTER TABLE [ChiTietPhieuNhap] DROP COLUMN [DonViTinhId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    DECLARE @var11 nvarchar(max);
+    SELECT @var11 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[ChiTietPhieuNhap]') AND [c].[name] = N'HeSoQuyDoi');
+    IF @var11 IS NOT NULL EXEC(N'ALTER TABLE [ChiTietPhieuNhap] DROP CONSTRAINT ' + @var11 + ';');
+    ALTER TABLE [ChiTietPhieuNhap] DROP COLUMN [HeSoQuyDoi];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[PhieuXuat].[DonHangId]', N'HoaDonId', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[PhieuXuat].[IX_PhieuXuat_DonHangId]', N'IX_PhieuXuat_HoaDonId', 'INDEX';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[MonDatTruoc].[ThanhPhanSetSnapshot]', N'ChiTietComboSnapshot', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[HoaDon].[TienThue]', N'TongTienHang', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[HoaDon].[TienMon]', N'TienCocDaTru', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[HoaDon].[ThuNganId]', N'NhanVienId', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[HoaDon].[SoHoaDon]', N'MaHoaDon', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[HoaDon].[IX_HoaDon_ThuNganId]', N'IX_HoaDon_NhanVienId', 'INDEX';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[HoaDon].[IX_HoaDon_SoHoaDon]', N'IX_HoaDon_MaHoaDon', 'INDEX';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[DanhGia].[DonHangId]', N'HoaDonId', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[DanhGia].[ChiTietDonHangId]', N'ChiTietHoaDonId', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[DanhGia].[IX_DanhGia_DonHangId_ChiTietDonHangId]', N'IX_DanhGia_HoaDonId_ChiTietHoaDonId', 'INDEX';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC sp_rename N'[DanhGia].[IX_DanhGia_ChiTietDonHangId_DonHangId]', N'IX_DanhGia_ChiTietHoaDonId_HoaDonId', 'INDEX';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [NguyenLieu] ADD [DonViTinh] nvarchar(30) NOT NULL DEFAULT N'';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [MonDatTruoc] ADD [MonAnSizeId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD [DatBanId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD [KhachHangId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD [PhuongThucThanhToan] nvarchar(40) NOT NULL DEFAULT N'';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD [ThoiDiemThanhToan] datetimeoffset NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD [VoucherId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DatBan] ADD [ThoiDiemCoc] datetimeoffset NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DatBan] ADD [TienCocDaNop] decimal(18,2) NOT NULL DEFAULT 0.0;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DatBan] ADD [TrangThaiCoc] nvarchar(40) NOT NULL DEFAULT N'';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [HoaDon] ADD [TongThanhToan] AS [TongTienHang]-[TienGiam]-[TienCocDaTru] PERSISTED');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE TABLE [ChiTietCombo] (
+        [ComboId] int NOT NULL,
+        [MonAnId] int NOT NULL,
+        [SoLuong] int NOT NULL,
+        [RowVersion] rowversion NULL,
+        CONSTRAINT [PK_ChiTietCombo] PRIMARY KEY ([ComboId], [MonAnId]),
+        CONSTRAINT [CK_ChiTietCombo_ThanhPhan] CHECK ([ComboId]<>[MonAnId] AND [SoLuong]>0),
+        CONSTRAINT [FK_ChiTietCombo_MonAn_ComboId] FOREIGN KEY ([ComboId]) REFERENCES [MonAn] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietCombo_MonAn_MonAnId] FOREIGN KEY ([MonAnId]) REFERENCES [MonAn] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE TABLE [DinhMucMon] (
+        [MonAnId] int NOT NULL,
+        [NguyenLieuId] int NOT NULL,
+        [SoLuong] decimal(18,6) NOT NULL,
+        [RowVersion] rowversion NULL,
+        CONSTRAINT [PK_DinhMucMon] PRIMARY KEY ([MonAnId], [NguyenLieuId]),
+        CONSTRAINT [CK_DinhMucMon_SoLuong] CHECK ([SoLuong]>0),
+        CONSTRAINT [FK_DinhMucMon_MonAn_MonAnId] FOREIGN KEY ([MonAnId]) REFERENCES [MonAn] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_DinhMucMon_NguyenLieu_NguyenLieuId] FOREIGN KEY ([NguyenLieuId]) REFERENCES [NguyenLieu] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE TABLE [MonAnSize] (
+        [Id] int NOT NULL IDENTITY,
+        [MonAnId] int NOT NULL,
+        [TenSize] nvarchar(50) NOT NULL,
+        [GiaBan] decimal(18,2) NOT NULL,
+        [DangSuDung] bit NOT NULL,
+        [RowVersion] rowversion NULL,
+        CONSTRAINT [PK_MonAnSize] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_MonAnSize_Gia] CHECK ([GiaBan]>=0),
+        CONSTRAINT [FK_MonAnSize_MonAn_MonAnId] FOREIGN KEY ([MonAnId]) REFERENCES [MonAn] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE TABLE [ChiTietHoaDon] (
+        [Id] int NOT NULL IDENTITY,
+        [HoaDonId] int NOT NULL,
+        [MonAnId] int NOT NULL,
+        [MonAnSizeId] int NULL,
+        [TenMonLucBan] nvarchar(150) NOT NULL,
+        [SoLuong] int NOT NULL,
+        [DonGia] decimal(18,2) NOT NULL,
+        [YeuCauCheBien] nvarchar(500) NULL,
+        [ChiTietComboSnapshot] nvarchar(4000) NULL,
+        [TrangThai] nvarchar(40) NOT NULL,
+        [MonDatTruocId] int NULL,
+        [RowVersion] rowversion NULL,
+        CONSTRAINT [PK_ChiTietHoaDon] PRIMARY KEY ([Id]),
+        CONSTRAINT [AK_ChiTietHoaDon_Id_HoaDonId] UNIQUE ([Id], [HoaDonId]),
+        CONSTRAINT [CK_ChiTietHoaDon_LuongGia] CHECK ([SoLuong]>0 AND [DonGia]>=0),
+        CONSTRAINT [CK_ChiTietHoaDon_TrangThai_Enum] CHECK ([TrangThai] IN ('ChoCheBien','DangCheBien','SanSang','DaPhucVu','DaHuy')),
+        CONSTRAINT [FK_ChiTietHoaDon_HoaDon_HoaDonId] FOREIGN KEY ([HoaDonId]) REFERENCES [HoaDon] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietHoaDon_MonAnSize_MonAnSizeId] FOREIGN KEY ([MonAnSizeId]) REFERENCES [MonAnSize] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietHoaDon_MonAn_MonAnId] FOREIGN KEY ([MonAnId]) REFERENCES [MonAn] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietHoaDon_MonDatTruoc_MonDatTruocId] FOREIGN KEY ([MonDatTruocId]) REFERENCES [MonDatTruoc] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_NguyenLieu_TenNguyenLieu] ON [NguyenLieu] ([TenNguyenLieu]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_MonDatTruoc_MonAnSizeId] ON [MonDatTruoc] ([MonAnSizeId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_HoaDon_DatBanId] ON [HoaDon] ([DatBanId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_HoaDon_KhachHangId] ON [HoaDon] ([KhachHangId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_HoaDon_VoucherId] ON [HoaDon] ([VoucherId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [HoaDon] ADD CONSTRAINT [CK_HoaDon_PhuongThucThanhToan_Enum] CHECK ([PhuongThucThanhToan] IN (''TienMat'',''ChuyenKhoan'',''The'',''ViDienTu''))');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [HoaDon] ADD CONSTRAINT [CK_HoaDon_SoTien] CHECK ([TongTienHang]>=0 AND [TienGiam]>=0 AND [TienGiam]<=[TongTienHang] AND [TienCocDaTru]>=0 AND [TienCocDaTru]<=[TongTienHang]-[TienGiam])');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [DatBan] ADD CONSTRAINT [CK_DatBan_Coc] CHECK ([TienCocYeuCau]>=0 AND [TienCocDaNop]>=0)');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [DatBan] ADD CONSTRAINT [CK_DatBan_TrangThaiCoc_Enum] CHECK ([TrangThaiCoc] IN (''ChuaCoc'',''DaCoc'',''DaHoan'',''DaDoiTru''))');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [ChiTietPhieuXuat] ADD CONSTRAINT [CK_ChiTietPhieuXuat_SoLuong] CHECK ([SoLuong]>0)');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'ALTER TABLE [ChiTietPhieuNhap] ADD CONSTRAINT [CK_ChiTietPhieuNhap_LuongGia] CHECK ([SoLuong]>0 AND [DonGia]>=0)');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietCombo_MonAnId] ON [ChiTietCombo] ([MonAnId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietHoaDon_HoaDonId] ON [ChiTietHoaDon] ([HoaDonId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietHoaDon_MonAnId] ON [ChiTietHoaDon] ([MonAnId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietHoaDon_MonAnSizeId] ON [ChiTietHoaDon] ([MonAnSizeId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_ChiTietHoaDon_MonDatTruocId] ON [ChiTietHoaDon] ([MonDatTruocId]) WHERE [MonDatTruocId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE INDEX [IX_DinhMucMon_NguyenLieuId] ON [DinhMucMon] ([NguyenLieuId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_MonAnSize_MonAnId_TenSize] ON [MonAnSize] ([MonAnId], [TenSize]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DanhGia] ADD CONSTRAINT [FK_DanhGia_ChiTietHoaDon_ChiTietHoaDonId_HoaDonId] FOREIGN KEY ([ChiTietHoaDonId], [HoaDonId]) REFERENCES [ChiTietHoaDon] ([Id], [HoaDonId]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [DanhGia] ADD CONSTRAINT [FK_DanhGia_HoaDon_HoaDonId] FOREIGN KEY ([HoaDonId]) REFERENCES [HoaDon] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD CONSTRAINT [FK_HoaDon_DatBan_DatBanId] FOREIGN KEY ([DatBanId]) REFERENCES [DatBan] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD CONSTRAINT [FK_HoaDon_KhachHang_KhachHangId] FOREIGN KEY ([KhachHangId]) REFERENCES [KhachHang] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD CONSTRAINT [FK_HoaDon_NhanVien_NhanVienId] FOREIGN KEY ([NhanVienId]) REFERENCES [NhanVien] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [HoaDon] ADD CONSTRAINT [FK_HoaDon_Voucher_VoucherId] FOREIGN KEY ([VoucherId]) REFERENCES [Voucher] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [MonDatTruoc] ADD CONSTRAINT [FK_MonDatTruoc_MonAnSize_MonAnSizeId] FOREIGN KEY ([MonAnSizeId]) REFERENCES [MonAnSize] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    ALTER TABLE [PhieuXuat] ADD CONSTRAINT [FK_PhieuXuat_HoaDon_HoaDonId] FOREIGN KEY ([HoaDonId]) REFERENCES [HoaDon] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919024114_SimplifySchema'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260919024114_SimplifySchema', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

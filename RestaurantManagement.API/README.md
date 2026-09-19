@@ -1,8 +1,7 @@
 # RestaurantManagement.API — database chung
 
 ## Nhanh da up gi (doc 1 phut la hieu)
-- `Scripts/RestaurantManagementSchema.sql` (script idempotent đầy đủ từ toàn bộ migration: 24 bảng nghiệp vụ + 7 bảng Identity + lịch sử migration — mở bằng SSMS rồi Execute)
-- `Scripts/InitialSchema.sql` (script cũ của schema 31 bảng, giữ để đối chiếu; không dùng để dựng DB mới)
+- `Scripts/InitialSchema.sql` (script dựng database theo schema cuối: 24 bảng nghiệp vụ + 7 bảng Identity + lịch sử migration — mở bằng SSMS rồi Execute)
 - `Migrations/` (InitialSchema + SimplifySchema — lịch sử sinh script, EF dùng để nâng cấp DB sau này)
 - `Models/Entities.cs` (25 lớp C# = 24 bảng nghiệp vụ + TaiKhoan — sửa đây khi đổi thiết kế)
 - `Data/RestaurantDbContext.cs` (định nghĩa khóa/FK/CHECK — nguồn sinh migration)

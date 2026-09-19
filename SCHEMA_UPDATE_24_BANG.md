@@ -10,7 +10,7 @@ Ngày 19/09/2026, nhánh `thanhvien1-3.1-database` đã cập nhật schema theo
 - Đổi `ThanhPhanSet` thành `ChiTietCombo` và `DinhLuongMon` thành `DinhMucMon`.
 - Gộp các bảng chi tiết thanh toán, đối trừ cọc, quy đổi đơn vị và nhật ký áp dụng khuyến mãi vào các bảng nghiệp vụ chính, phù hợp phạm vi đồ án.
 - Có migration mới: `20260919024114_SimplifySchema`.
-- Script dựng database mới: `RestaurantManagement.API/Scripts/RestaurantManagementSchema.sql`.
+- Script dựng database mới: `RestaurantManagement.API/Scripts/InitialSchema.sql`.
 
 ## Chi tiết các bảng được gộp hoặc thay thế
 
@@ -36,14 +36,14 @@ Ngày 19/09/2026, nhánh `thanhvien1-3.1-database` đã cập nhật schema theo
 ## Trạng thái sau cập nhật
 
 - Database theo schema mới có 24 bảng nghiệp vụ, 7 bảng Identity, bảng lịch sử EF Core và bảng `sysdiagrams` của SSMS.
-- Migration `SimplifySchema` phải được chạy sau `InitialSchema`; không sửa hoặc chạy riêng `InitialSchema.sql` cũ để tạo database mới.
-- Database mới nên được dựng bằng `RestaurantManagement.API/Scripts/RestaurantManagementSchema.sql` hoặc chạy toàn bộ migration của EF Core.
+- Migration `SimplifySchema` phải được chạy sau migration `InitialSchema`; không sửa trực tiếp script `InitialSchema.sql` để đổi thiết kế.
+- Database mới nên được dựng bằng `RestaurantManagement.API/Scripts/InitialSchema.sql` hoặc chạy toàn bộ migration của EF Core.
 
 ## Thành viên khác cần làm
 
 1. Pull nhánh `thanhvien1-3.1-database` sau khi nhóm thống nhất merge.
 2. Không tự tạo hoặc đổi tên bảng/cột trong database local.
-3. Cập nhật database local bằng migration hoặc chạy script `RestaurantManagementSchema.sql` khi cần tạo database mới.
+3. Cập nhật database local bằng migration hoặc chạy script `InitialSchema.sql` khi cần tạo database mới.
 4. Nếu database local đang có dữ liệu cần giữ, sao lưu trước khi chạy migration vì schema cũ có bảng đã được gộp/bỏ.
 
-Không dùng `InitialSchema.sql` cũ để tạo database mới sau cập nhật này; file đó chỉ giữ để đối chiếu lịch sử migration.
+`InitialSchema.sql` là script duy nhất để dựng database mới theo schema 24 bảng nghiệp vụ. Không dùng script cũ hoặc tự sửa trực tiếp script để thay đổi thiết kế.
