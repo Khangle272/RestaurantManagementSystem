@@ -1,0 +1,70 @@
+@using RestaurantManagement.API.Models
+@model NguyenLieu
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Cập nhật nguyên liệu";
+}
+
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <a asp-action="Index" class="text-decoration-none text-muted mb-2 d-inline-block">
+            <i class="bi bi-arrow-left"></i> Quay lại danh sách
+        </a>
+        <h2 class="h3 mb-0">@ViewData["Title"]</h2>
+    </div>
+
+    <div class="card shadow-sm border-0 max-w-3xl">
+        <div class="card-body p-4">
+            <form asp-action="Edit" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <input type="hidden" asp-for="Id" />
+
+                <div class="mb-3">
+                    <label asp-for="TenNguyenLieu" class="form-label fw-medium">Tên nguyên liệu <span class="text-danger">*</span></label>
+                    <input asp-for="TenNguyenLieu" class="form-control" placeholder="Nhập tên nguyên liệu (VD: Thịt bò, Cà chua...)" />
+                    <span asp-validation-for="TenNguyenLieu" class="text-danger small"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="DonViTinh" class="form-label fw-medium">Đơn vị tính <span class="text-danger">*</span></label>
+                        <select asp-for="DonViTinh" class="form-select">
+                            <option value="">-- Chọn đơn vị tính --</option>
+                            <option value="kg">kg</option>
+                            <option value="lốc">lốc</option>
+                            <option value="lít">lít</option>
+                            <option value="chai">chai</option>
+                            <option value="lon">lon</option>
+                            <option value="gói">gói</option>
+                            <option value="quả">quả</option>
+                        </select>
+                        <span asp-validation-for="DonViTinh" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="NguongCanhBao" class="form-label fw-medium">Ngưỡng cảnh báo (Tồn kho tối thiểu)</label>
+                        <input asp-for="NguongCanhBao" type="number" step="0.1" class="form-control" placeholder="0.0" />
+                        <div class="form-text">Hệ thống sẽ cảnh báo khi tồn kho dưới mức này</div>
+                        <span asp-validation-for="NguongCanhBao" class="text-danger small"></span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input asp-for="DangSuDung" class="form-check-input" type="checkbox" role="switch">
+                        <label asp-for="DangSuDung" class="form-check-label">Đang sử dụng</label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary btn-brand-primary px-4">Cập nhật nguyên liệu</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4">Hủy bỏ</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

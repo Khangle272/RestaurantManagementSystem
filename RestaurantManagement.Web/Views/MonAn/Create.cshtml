@@ -1,0 +1,265 @@
+@model MonAnCreateViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Thêm Món Ăn & Thiết Lập Định Mức Kho";
+}
+
+<div class="container-fluid py-4">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" id="createForm">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0 text-gray-800">Thêm Món Ăn & Thiết Lập Định Mức Kho</h1>
+            <div>
+                <a asp-action="Index" class="btn btn-secondary me-2">Quay lại danh sách</a>
+                <button type="submit" class="btn btn-primary">Lưu món & Công thức</button>
+            </div>
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-5 mb-4">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Thông tin cơ bản & Hình ảnh</h6>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="mb-3 text-center">
+                            <div class="border border-secondary rounded p-3 mb-2" id="imagePreviewContainer" style="min-height: 200px; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                                <span id="imagePreviewText" class="text-muted">Kéo thả hoặc chọn hình ảnh (Tỉ lệ 16:9)</span>
+                                <img id="imagePreview" src="#" alt="Preview" class="img-fluid d-none" style="max-height: 250px; object-fit: contain;"/>
+                            </div>
+                            <input type="file" asp-for="HinhAnhFile" class="form-control" accept="image/*" id="HinhAnhFile" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="TenMon" class="form-label">Tên món ăn <span class="text-danger">*</span></label>
+                            <input asp-for="TenMon" class="form-control" placeholder="Nhập tên món ăn..." />
+                            <span asp-validation-for="TenMon" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DanhMucId" class="form-label">Danh mục <span class="text-danger">*</span></label>
+                            <select asp-for="DanhMucId" class="form-select" asp-items="@(new SelectList(Model.DanhMucList, "Id", "TenDanhMuc"))">
+                                <option value="">-- Chọn danh mục --</option>
+                            </select>
+                            <span asp-validation-for="DanhMucId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="GiaBan" class="form-label">Giá bán (VNĐ) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input asp-for="GiaBan" type="number" step="1000" class="form-control" />
+                                <span class="input-group-text">đ</span>
+                            </div>
+                            <span asp-validation-for="GiaBan" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-block">Trạng thái</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" asp-for="TrangThai" value="DangPhucVu" id="statusActive" checked>
+                                <label class="form-check-label text-success" for="statusActive">Đang phục vụ</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" asp-for="TrangThai" value="TamHet" id="statusEmpty">
+                                <label class="form-check-label text-warning" for="statusEmpty">Tạm hết</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" asp-for="TrangThai" value="NgungKinhDoanh" id="statusStop">
+                                <label class="form-check-label text-danger" for="statusStop">Ngừng bán</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="MoTa" class="form-label">Mô tả</label>
+                            <textarea asp-for="MoTa" class="form-control" rows="3" placeholder="Nhập mô tả món ăn..."></textarea>
+                            <span asp-validation-for="MoTa" class="text-danger"></span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-7 mb-4">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Định mức nguyên vật liệu tiêu hao (BOM)</h6>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="row g-2 mb-3 align-items-end p-3 bg-light rounded">
+                            <div class="col-md-5">
+                                <label class="form-label small mb-1">Nguyên vật liệu</label>
+                                <select id="nvlSelect" class="form-select">
+                                    <option value="">-- Chọn NVL --</option>
+                                    @if (Model.NguyenLieuList != null)
+                                    {
+                                        foreach (var nvl in Model.NguyenLieuList)
+                                        {
+                                            <option value="@nvl.Id" data-name="@nvl.TenNguyenLieu" data-unit="@nvl.DonViTinh">@nvl.TenNguyenLieu</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Định mức/phần</label>
+                                <div class="input-group">
+                                    <input type="number" id="nvlQty" class="form-control" step="0.01" min="0.01">
+                                    <span class="input-group-text" id="nvlUnitDisplay">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="btnAddNvl" class="btn btn-success w-100">
+                                    <i class="bi bi-plus"></i> Thêm vào
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="bomTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nguyên liệu</th>
+                                        <th class="text-end">Định mức/phần</th>
+                                        <th>ĐVT</th>
+                                        <th class="text-center" style="width: 50px;">Xóa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Hidden inputs container -->
+                        <div id="hiddenInputsContainer"></div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            // Image Preview
+            $('#HinhAnhFile').change(function () {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        $('#imagePreview').attr('src', e.target.result).removeClass('d-none');
+                        $('#imagePreviewText').addClass('d-none');
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    $('#imagePreview').addClass('d-none');
+                    $('#imagePreviewText').removeClass('d-none');
+                }
+            });
+
+            // BOM Logic
+            let ingredients = [];
+
+            // Update unit when select changes
+            $('#nvlSelect').change(function () {
+                const selected = $(this).find('option:selected');
+                const unit = selected.data('unit');
+                if (unit) {
+                    $('#nvlUnitDisplay').text(unit);
+                } else {
+                    $('#nvlUnitDisplay').text('-');
+                }
+            });
+
+            $('#btnAddNvl').click(function () {
+                const select = $('#nvlSelect');
+                const option = select.find('option:selected');
+                const id = option.val();
+                const name = option.data('name');
+                const unit = option.data('unit');
+                const qty = parseFloat($('#nvlQty').val());
+
+                if (!id) {
+                    alert('Vui lòng chọn nguyên vật liệu.');
+                    return;
+                }
+                if (isNaN(qty) || qty <= 0) {
+                    alert('Số lượng phải lớn hơn 0.');
+                    return;
+                }
+
+                // Check duplicate
+                if (ingredients.some(i => i.id == id)) {
+                    alert('Nguyên liệu này đã có trong danh sách.');
+                    return;
+                }
+
+                ingredients.push({ id: id, name: name, unit: unit, qty: qty });
+                renderBOM();
+                
+                // Reset inputs
+                $('#nvlSelect').val('');
+                $('#nvlQty').val('');
+                $('#nvlUnitDisplay').text('-');
+            });
+
+            $(document).on('click', '.btn-delete-nvl', function () {
+                const id = $(this).data('id');
+                ingredients = ingredients.filter(i => i.id != id);
+                renderBOM();
+            });
+
+            function renderBOM() {
+                const tbody = $('#bomTable tbody');
+                const hiddenContainer = $('#hiddenInputsContainer');
+                tbody.empty();
+                hiddenContainer.empty();
+
+                if (ingredients.length === 0) {
+                    tbody.append('<tr><td colspan="4" class="text-center text-muted">Chưa có nguyên liệu nào được thêm</td></tr>');
+                    return;
+                }
+
+                ingredients.forEach((item, index) => {
+                    // Visible table row
+                    const tr = `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td class="text-end">${item.qty}</td>
+                            <td>${item.unit}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-danger btn-delete-nvl" data-id="${item.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.append(tr);
+
+                    // Hidden inputs for model binding
+                    const hiddenId = `<input type="hidden" name="DinhMucItems[${index}].NguyenLieuId" value="${item.id}" />`;
+                    // Use a culturally invariant format or let ASP.NET Core handle it. 
+                    // Replacing '.' with ',' could be needed depending on culture, but step="0.01" value is standard decimal.
+                    const hiddenQty = `<input type="hidden" name="DinhMucItems[${index}].SoLuong" value="${item.qty}" />`;
+                    hiddenContainer.append(hiddenId);
+                    hiddenContainer.append(hiddenQty);
+                });
+            }
+
+            // Initial render
+            renderBOM();
+            
+            // Prevent form submit if validation fails or other checks needed
+            $('#createForm').submit(function(e) {
+                // If needed, check if ingredients > 0 etc.
+            });
+        });
+    </script>
+}
