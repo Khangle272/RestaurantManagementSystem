@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -39,15 +39,19 @@
                 <span class="material-symbols-outlined">dashboard</span>
                 Tổng quan
             </a>
-            <a href="#" class="nav-link @(activeMenu == "Tables" ? "active" : "")">
+            <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">
                 <span class="material-symbols-outlined">table_restaurant</span>
-                Sơ đồ bàn
+                Bàn ăn
             </a>
-            <a href="~/MonAn" class="nav-link @(activeMenu == "MonAn" ? "active" : "")">
+            <a href="~/MonAn" class="nav-link @(activeMenu == "thuc-don-mon" ? "active" : "")">
                 <span class="material-symbols-outlined">restaurant</span>
                 Thực đơn món
             </a>
-            <a href="~/NguyenLieu" class="nav-link @(activeMenu == "NguyenLieu" ? "active" : "")">
+            <a asp-controller="DanhMuc" asp-action="Index" class="nav-link @(activeMenu == "DanhMuc" ? "active" : "")">
+                <span class="material-symbols-outlined">category</span>
+                Danh mục món ăn
+            </a>
+            <a href="~/NguyenLieu" class="nav-link @(activeMenu == "kho-nguyen-lieu" ? "active" : "")">
                 <span class="material-symbols-outlined">inventory_2</span>
                 Kho nguyên liệu
             </a>
@@ -59,9 +63,9 @@
                 <span class="material-symbols-outlined">receipt_long</span>
                 Thu ngân / Hóa đơn
             </a>
-            <a href="#" class="nav-link @(activeMenu == "Staff" ? "active" : "")">
+            <a asp-controller="NhanVien" asp-action="Index" class="nav-link @(activeMenu == "NhanVien" ? "active" : "")">
                 <span class="material-symbols-outlined">badge</span>
-                Nhân viên & Ca làm
+                Nhân viên
             </a>
             <a href="#" class="nav-link @(activeMenu == "Reports" ? "active" : "")">
                 <span class="material-symbols-outlined">bar_chart</span>
