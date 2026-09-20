@@ -11,6 +11,14 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+// Tự động apply migrations + seed data khi chạy Development
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<RestaurantDbContext>();
+    db.Database.Migrate();
+    await DbSeeder.SeedAsync(db);
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

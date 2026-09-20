@@ -153,7 +153,7 @@ Toàn bộ các trang quản trị Web (gồm trang Quản lý Thực đơn và 
 * Ô tìm kiếm: Tìm kiếm theo mã hoặc tên nguyên vật liệu.
 
 
-* Dropdown: Lọc theo Đơn vị tính (Tất cả, kg, gram, lít, lon, chai, gói...).
+* Dropdown: Lọc theo Đơn vị tính (Tất cả, kg, lốc, lít, lon, chai, gói...).
 
 
 * Toggle Switch: "Chỉ hiển thị nguyên liệu chạm ngưỡng tối thiểu".
