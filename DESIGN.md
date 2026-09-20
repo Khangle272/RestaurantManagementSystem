@@ -90,7 +90,7 @@ Toàn bộ các trang quản trị Web (gồm trang Quản lý Thực đơn và 
 
 ```
 
-* **Sidebar điều hướng (Cố định chiều rộng: 260px):** Sử dụng tông màu tối `#0F172A`, các icon vector tối giản; phân định rõ phân hệ "Thực đơn món ăn" và "Kho nguyên liệu".
+* **Sidebar điều hướng (Cố định chiều rộng: 260px):** Sử dụng tông màu tối `#2C7A3E`, các icon vector tối giản; phân định rõ phân hệ "Thực đơn món ăn" và "Kho nguyên liệu".
 
 
 * **Page Header:** Thể hiện tiêu đề trang, mô tả tóm tắt nhiệm vụ và cụm nút hành động chính (nút Primary `+ Thêm mới`, `Xuất báo cáo`) ở góc trên bên phải.
