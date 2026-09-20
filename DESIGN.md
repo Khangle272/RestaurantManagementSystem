@@ -21,7 +21,7 @@ Tài liệu quy chuẩn thiết kế giao diện người dùng (Design System &
 | --- | --- | --- | --- |
 | **Primary** | `brand-primary` | `#E11D48` (Rose 600) | Nút hành động chính (CTA), mục điều hướng đang kích hoạt, điểm nhấn thương hiệu |
 | **Primary Dark** | `brand-primary-dark` | `#BE123C` (Rose 700) | Trạng thái hover/active của nút bấm chính |
-| **Secondary** | `brand-secondary` | `#0F172A` (Slate 900) | Nền thanh điều hướng bên (Sidebar), tiêu đề trang chính, màu chữ đậm |
+| **Secondary** | `brand-secondary` | `#2C7A3E` (Slate 900) | Nền thanh điều hướng bên (Sidebar), tiêu đề trang chính, màu chữ đậm |
 | **Accent / Warm** | `brand-accent` | `#F59E0B` (Amber 500) | Cảnh báo tồn kho chạm định mức tối thiểu, nhãn trạng thái chờ xử lý
 
  |
