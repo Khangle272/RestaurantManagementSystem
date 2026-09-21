@@ -215,3 +215,13 @@ body {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 0.25rem rgba(225, 29, 72, 0.25);
 }
+
+@media (max-width: 767.98px) {
+  .admin-sidebar { position: static; width: 100%; height: auto; }
+  .admin-sidebar-header { padding: 1rem; }
+  .admin-sidebar-nav { display: flex; flex-wrap: wrap; padding: 0.5rem; }
+  .admin-sidebar-nav .nav-link { padding: 0.65rem 0.85rem; }
+  .admin-sidebar-footer { display: none; }
+  .admin-topbar { position: static; height: auto; padding: 1rem; }
+  .admin-main { margin: 0; padding: 0.5rem; min-height: auto; }
+}

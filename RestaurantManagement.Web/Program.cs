@@ -11,14 +11,11 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Chỉ nạp dữ liệu mẫu khi khởi tạo database, tránh tạo lại bản ghi đã sửa/xóa.
+// Chỉ cập nhật cấu trúc database. Dữ liệu được nhập qua CRUD hoặc script chủ động.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RestaurantDbContext>();
-    var isNewDatabase = !(await db.Database.GetAppliedMigrationsAsync()).Any();
     await db.Database.MigrateAsync();
-    if (isNewDatabase)
-        await DbSeeder.SeedAsync(db);
 }
 
 // Configure the HTTP request pipeline.

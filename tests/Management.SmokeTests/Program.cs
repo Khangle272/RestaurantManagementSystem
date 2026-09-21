@@ -41,7 +41,7 @@ try
 {
     await StartWeb();
 
-    foreach (var controller in new[] { "NhanVien", "BanAn", "DanhMuc" })
+    foreach (var controller in new[] { "NhanVien", "BanAn", "DanhMuc", "MonAn", "NguyenLieu" })
     {
         await Get($"/{controller}");
         await Get($"/{controller}/Create");
@@ -52,6 +52,12 @@ try
     }
 
     await using var db = new RestaurantDbContext(options);
+    Check(!await db.NhanVien.AnyAsync() && !await db.BanAn.AnyAsync()
+        && !await db.DanhMuc.AnyAsync() && !await db.KhuVuc.AnyAsync()
+        && !await db.MonAn.AnyAsync() && !await db.PhieuNhap.AnyAsync(),
+        "Web startup creates schema without inserting sample business data");
+    // Fixtures belong only to this run's isolated, disposable test database.
+    await DbSeeder.SeedAsync(db);
     var areaId = await db.KhuVuc.Where(x => x.DangSuDung).Select(x => x.Id).FirstAsync();
     var cases = new[]
     {
@@ -101,6 +107,58 @@ try
     }
 
     var categoryId = await db.MonAn.Select(x => x.DanhMucId).FirstAsync();
+    var ingredientFields = new Dictionary<string, string>
+    {
+        ["TenNguyenLieu"] = "TEST-INGREDIENT", ["DonViTinh"] = "g",
+        ["NguongCanhBao"] = "100", ["DangSuDung"] = "true"
+    };
+    await Post("/NguyenLieu/Create", await Get("/NguyenLieu/Create"), new(ingredientFields) { ["NguongCanhBao"] = "-1" }, false, "Ngưỡng cảnh báo phải không âm");
+    await Post("/NguyenLieu/Create", await Get("/NguyenLieu/Create"), ingredientFields, true);
+    await Post("/NguyenLieu/Create", await Get("/NguyenLieu/Create"), ingredientFields, false, "Tên nguyên liệu đã tồn tại");
+    var ingredientId = await db.NguyenLieu.Where(x => x.TenNguyenLieu == "TEST-INGREDIENT").Select(x => x.Id).SingleAsync();
+    var dishFields = new Dictionary<string, string>
+    {
+        ["TenMon"] = "TEST-DISH", ["DanhMucId"] = categoryId.ToString(), ["Loai"] = "MonLe", ["TrangThai"] = "DangPhucVu",
+        ["Sizes[0].Id"] = "0", ["Sizes[0].TenSize"] = "Mặc định", ["Sizes[0].GiaBan"] = "50000", ["Sizes[0].DangSuDung"] = "true",
+        ["DinhMucItems[0].NguyenLieuId"] = ingredientId.ToString(), ["DinhMucItems[0].SoLuong"] = "120"
+    };
+    await Post("/MonAn/Create", await Get("/MonAn/Create"), new(dishFields) { ["DanhMucId"] = "2147483647" }, false, "Danh mục không tồn tại");
+    await Post("/MonAn/Create", await Get("/MonAn/Create"), new(dishFields) { ["DinhMucItems[0].SoLuong"] = "0" }, false, "Định mức phải lớn hơn 0");
+    await Post("/MonAn/Create", await Get("/MonAn/Create"), new(dishFields)
+    {
+        ["DinhMucItems[1].NguyenLieuId"] = ingredientId.ToString(), ["DinhMucItems[1].SoLuong"] = "10"
+    }, false, "không được trùng");
+    await Post("/MonAn/Create", await Get("/MonAn/Create"), dishFields, true);
+    var dishId = await db.MonAn.Where(x => x.TenMon == "TEST-DISH").Select(x => x.Id).SingleAsync();
+    var sizeId = await db.MonAnSize.Where(x => x.MonAnId == dishId).Select(x => x.Id).SingleAsync();
+    Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId && x.NguyenLieuId == ingredientId && x.SoLuong == 120), "Recipe persisted with dish");
+    await BlockDelete("NguyenLieu", ingredientId);
+    var ingredientEdit = await Get($"/NguyenLieu/Edit/{ingredientId}");
+    await Post($"/NguyenLieu/Edit/{ingredientId}", ingredientEdit, new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["DonViTinh"] = "kg" }, false, "Không thể đổi đơn vị");
+    var dishEdit = await Get($"/MonAn/Edit/{dishId}");
+    var changedDish = new Dictionary<string, string>(dishFields)
+    {
+        ["Id"] = dishId.ToString(), ["Sizes[0].Id"] = sizeId.ToString(),
+        ["Sizes[0].GiaBan"] = "65000", ["DinhMucItems[0].SoLuong"] = "150"
+    };
+    await Post($"/MonAn/Edit/{dishId}", dishEdit, changedDish, true);
+    Check(await db.MonAnSize.AnyAsync(x => x.Id == sizeId && x.GiaBan == 65000), "Dish price edit persisted");
+    Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId && x.SoLuong == 150), "Recipe edit persisted");
+    await Post($"/MonAn/Edit/{dishId}", dishEdit, new(changedDish) { ["DinhMucItems[0].SoLuong"] = "160" }, false, "đã bị thay đổi");
+    Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId && x.SoLuong == 150), "Stale dish edit leaves recipe unchanged");
+    var otherSize = await db.MonAnSize.Where(x => x.MonAnId != dishId).Select(x => x.Id).FirstAsync();
+    await Post($"/MonAn/Edit/{dishId}", await Get($"/MonAn/Edit/{dishId}"), new(changedDish) { ["Sizes[0].Id"] = otherSize.ToString() }, false, "Size không thuộc");
+    var ingredientIndex = WebUtility.HtmlDecode(await Get("/NguyenLieu?donViTinh=g"));
+    Check(ingredientIndex.Contains("Tồn kho") && ingredientIndex.Contains("10000"), "Inventory reads posted receipt quantities");
+    Check(!ingredientIndex.Contains("Xuất Excel") && !ingredientIndex.Contains("Chi nhánh Quận") && !ingredientIndex.Contains("ui-avatars.com"), "Ingredient UI removes nonfunctional mock controls");
+    var dishIndex = await Get("/MonAn?search=TEST-DISH&page=2147483647");
+    Check(dishIndex.Contains($"/MonAn/Edit/{dishId}") && dishIndex.Contains($"/MonAn/Delete/{dishId}"), "Dish actions use real routes and page clamps");
+    Check(!dishIndex.Contains("No Image") && !dishIndex.Contains("disabled"), "Dish UI has no fake image/switch");
+    await Post($"/MonAn/Delete/{dishId}", await Get($"/MonAn/Delete/{dishId}"), new() { ["Id"] = dishId.ToString() }, true);
+    Check(!await db.MonAnSize.AnyAsync(x => x.MonAnId == dishId) && !await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId), "Dish deletion removes owned prices and recipe");
+    await Post($"/NguyenLieu/Edit/{ingredientId}", await Get($"/NguyenLieu/Edit/{ingredientId}"), new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["TenNguyenLieu"] = "TEST-INGREDIENT-EDIT" }, true);
+    await Post($"/NguyenLieu/Delete/{ingredientId}", await Get($"/NguyenLieu/Delete/{ingredientId}"), new() { ["Id"] = ingredientId.ToString() }, true);
+    Check(!await db.NguyenLieu.AnyAsync(x => x.Id == ingredientId), "Ingredient deletion persisted");
     var employeeId = await db.PhieuNhap.Select(x => x.NhanVienId).FirstAsync();
     await BlockDelete("DanhMuc", categoryId);
     await BlockDelete("NhanVien", employeeId);
@@ -208,7 +266,7 @@ async Task StartWeb()
         catch (HttpRequestException) { }
         await Task.Delay(500);
     }
-    Check(ready, "Application starts with migrations and seed data");
+    Check(ready, "Application starts with migrations");
 }
 
 async Task<string> Get(string path)

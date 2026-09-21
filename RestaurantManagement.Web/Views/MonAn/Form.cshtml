@@ -1,0 +1,119 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model MonAnFormViewModel
+@{
+    Layout = "_AdminLayout";
+    var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
+    ViewData["Title"] = editing ? "Cập nhật món ăn & định mức" : "Thêm món ăn & định mức";
+}
+<div class="container-fluid py-4">
+    <a asp-action="Index" class="text-muted text-decoration-none">← Quay lại thực đơn</a>
+    <h2 class="h3 my-4">@ViewData["Title"]</h2>
+    <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post" enctype="multipart/form-data" id="dish-form">
+        @if (editing) { <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /> }
+        <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+        <div class="card border-0 shadow-sm mb-4"><div class="card-body row g-3">
+            <div class="col-md-6"><label asp-for="TenMon" class="form-label">Tên món</label><input asp-for="TenMon" class="form-control" /></div>
+            <div class="col-md-6"><label asp-for="DanhMucId" class="form-label">Danh mục</label><select asp-for="DanhMucId" class="form-select" asp-items="@(new SelectList(Model.DanhMucList, "Id", "TenDanhMuc"))"><option value="">Chọn danh mục</option></select></div>
+            <div class="col-md-6"><label asp-for="Loai" class="form-label">Loại món</label><select asp-for="Loai" class="form-select"><option value="MonLe">Món lẻ</option><option value="ThucUong">Thức uống</option><option value="Set">Set / Combo</option></select></div>
+            <div class="col-md-6"><label asp-for="TrangThai" class="form-label">Trạng thái</label><select asp-for="TrangThai" class="form-select"><option value="DangPhucVu">Đang phục vụ</option><option value="TamHet">Tạm hết</option><option value="NgungKinhDoanh">Ngừng kinh doanh</option></select></div>
+            <div class="col-12"><label asp-for="MoTa" class="form-label">Mô tả</label><textarea asp-for="MoTa" class="form-control" rows="3"></textarea></div>
+            <div class="col-md-6">
+                <label asp-for="HinhAnhFile" class="form-label">Ảnh món ăn (PNG, JPEG, WebP; tối đa 5 MB)</label>
+                <input asp-for="HinhAnhFile" type="file" accept="image/png,image/jpeg,image/webp" class="form-control" />
+                @if (!string.IsNullOrEmpty(Model.HinhAnh))
+                {
+                    <img src="@Model.HinhAnh" alt="Ảnh hiện tại" class="img-thumbnail mt-2" style="max-height:160px;" />
+                    <div class="form-check mt-2"><input asp-for="XoaHinhAnh" class="form-check-input" /><label asp-for="XoaHinhAnh" class="form-check-label">Xóa ảnh hiện tại</label></div>
+                }
+            </div>
+            <div class="col-md-6">
+                <div class="form-check"><input asp-for="LaMonMoi" class="form-check-input" /><label asp-for="LaMonMoi" class="form-check-label">Món mới</label></div>
+                <div class="form-check"><input asp-for="LaMonNoiBat" class="form-check-input" /><label asp-for="LaMonNoiBat" class="form-check-label">Món nổi bật</label></div>
+            </div>
+        </div></div>
+        <section class="card border-0 shadow-sm mb-4"><div class="card-body">
+            <h3 class="h5">Giá theo size</h3><p class="text-muted small">Món một giá dùng size “Mặc định”. Size đã có trong hóa đơn có thể ngừng sử dụng.</p>
+            <div class="table-responsive"><table class="table align-middle">
+                <thead><tr><th>Tên size</th><th>Giá bán (đ)</th><th>Sử dụng</th><th></th></tr></thead>
+                <tbody id="sizes" data-prefix="Sizes">
+                @for (var i = 0; i < Model.Sizes.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Sizes[i].Id" type="hidden" data-field="Id" /><input asp-for="Sizes[i].TenSize" class="form-control" data-field="TenSize" aria-label="Tên size" /></td>
+                        <td><input asp-for="Sizes[i].GiaBan" type="number" min="0" step="0.01" class="form-control" data-field="GiaBan" aria-label="Giá bán" /></td>
+                        <td><select asp-for="Sizes[i].DangSuDung" class="form-select" data-field="DangSuDung" aria-label="Sử dụng size"><option value="true">Đang dùng</option><option value="false">Ngừng dùng</option></select></td>
+                        <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove>Xóa dòng</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add="sizes" data-template="size-template">+ Thêm size</button>
+        </div></section>
+        <section class="card border-0 shadow-sm mb-4"><div class="card-body">
+            <h3 class="h5">Định mức nguyên liệu cho một phần</h3><p class="text-muted small">Số lượng theo đơn vị của nguyên liệu. Có thể để trống nếu món không cần định mức.</p>
+            <div class="table-responsive"><table class="table align-middle">
+                <thead><tr><th>Nguyên liệu / Đơn vị</th><th>Số lượng</th><th></th></tr></thead>
+                <tbody id="recipes" data-prefix="DinhMucItems">
+                @for (var i = 0; i < Model.DinhMucItems.Count; i++)
+                {
+                    <tr>
+                        <td><select asp-for="DinhMucItems[i].NguyenLieuId" class="form-select" data-field="NguyenLieuId" aria-label="Nguyên liệu">
+                            <option value="">Chọn nguyên liệu</option>
+                            @foreach (var ingredient in Model.NguyenLieuList) { <option value="@ingredient.Id">@ingredient.TenNguyenLieu (@ingredient.DonViTinh)</option> }
+                        </select></td>
+                        <td><input asp-for="DinhMucItems[i].SoLuong" type="number" min="0.000001" step="0.000001" class="form-control" data-field="SoLuong" aria-label="Định mức" /></td>
+                        <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove>Xóa dòng</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add="recipes" data-template="recipe-template">+ Thêm nguyên liệu</button>
+        </div></section>
+        <section class="card border-0 shadow-sm mb-4"><div class="card-body">
+            <h3 class="h5">Thành phần Set / Combo</h3><p class="text-muted small">Chỉ điền phần này khi chọn loại Set / Combo.</p>
+            <div class="table-responsive"><table class="table align-middle">
+                <thead><tr><th>Món thành phần</th><th>Số lượng</th><th></th></tr></thead>
+                <tbody id="combos" data-prefix="ComboItems">
+                @for (var i = 0; i < Model.ComboItems.Count; i++)
+                {
+                    <tr>
+                        <td><select asp-for="ComboItems[i].MonAnId" class="form-select" data-field="MonAnId" aria-label="Món thành phần">
+                            <option value="">Chọn món</option>
+                            @foreach (var dish in Model.MonLeList) { <option value="@dish.Id">@dish.TenMon</option> }
+                        </select></td>
+                        <td><input asp-for="ComboItems[i].SoLuong" type="number" min="1" step="1" class="form-control" data-field="SoLuong" aria-label="Số lượng món" /></td>
+                        <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove>Xóa dòng</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add="combos" data-template="combo-template">+ Thêm món thành phần</button>
+        </div></section>
+        <button type="submit" class="btn btn-primary btn-brand-primary">Lưu món & Công thức</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Hủy bỏ</a>
+    </form>
+</div>
+<template id="size-template"><tr>
+    <td><input type="hidden" data-field="Id" value="0" /><input data-field="TenSize" class="form-control" required maxlength="50" aria-label="Tên size" /></td>
+    <td><input data-field="GiaBan" type="number" min="0" step="0.01" value="0" class="form-control" required aria-label="Giá bán" /></td>
+    <td><select data-field="DangSuDung" class="form-select" aria-label="Sử dụng size"><option value="true">Đang dùng</option><option value="false">Ngừng dùng</option></select></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove>Xóa dòng</button></td>
+</tr></template>
+<template id="recipe-template"><tr>
+    <td><select data-field="NguyenLieuId" class="form-select" required aria-label="Nguyên liệu"><option value="">Chọn nguyên liệu</option>
+    @foreach (var ingredient in Model.NguyenLieuList) { <option value="@ingredient.Id">@ingredient.TenNguyenLieu (@ingredient.DonViTinh)</option> }
+    </select></td>
+    <td><input data-field="SoLuong" type="number" min="0.000001" step="0.000001" class="form-control" required aria-label="Định mức" /></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove>Xóa dòng</button></td>
+</tr></template>
+<template id="combo-template"><tr>
+    <td><select data-field="MonAnId" class="form-select" required aria-label="Món thành phần"><option value="">Chọn món</option>
+    @foreach (var dish in Model.MonLeList) { <option value="@dish.Id">@dish.TenMon</option> }
+    </select></td>
+    <td><input data-field="SoLuong" type="number" min="1" step="1" value="1" class="form-control" required aria-label="Số lượng món" /></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove>Xóa dòng</button></td>
+</tr></template>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/dish-form.js" asp-append-version="true"></script>
+}
