@@ -1,0 +1,75 @@
+@model NhanVienFormViewModel
+@{
+    Layout = "_AdminLayout";
+    var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
+    ViewData["Title"] = editing ? "Cập nhật nhân viên" : "Thêm nhân viên";
+}
+
+<div class="container-fluid py-4">
+    <a asp-action="Index" class="text-decoration-none text-muted d-inline-block mb-3">← Quay lại danh sách</a>
+    <h2 class="h3 mb-4">@ViewData["Title"]</h2>
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                @if (editing)
+                {
+                    <input asp-for="Id" type="hidden" />
+                    <input asp-for="RowVersion" type="hidden" />
+                }
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="MaNhanVien" class="form-label fw-medium"></label>
+                        <input asp-for="MaNhanVien" type="text" class="form-control" />
+                        <span asp-validation-for="MaNhanVien" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="HoTen" class="form-label fw-medium"></label>
+                        <input asp-for="HoTen" type="text" class="form-control" />
+                        <span asp-validation-for="HoTen" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="SoDienThoai" class="form-label fw-medium"></label>
+                        <input asp-for="SoDienThoai" type="tel" class="form-control" />
+                        <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label fw-medium"></label>
+                        <input asp-for="Email" type="email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ChucVu" class="form-label fw-medium"></label>
+                        <input asp-for="ChucVu" type="text" class="form-control" />
+                        <span asp-validation-for="ChucVu" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NgayVaoLam" class="form-label fw-medium"></label>
+                        <input asp-for="NgayVaoLam" type="date" class="form-control" />
+                        <span asp-validation-for="NgayVaoLam" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="DiaChi" class="form-label fw-medium"></label>
+                        <textarea asp-for="DiaChi" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="DiaChi" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch my-2">
+                            <input asp-for="DangLamViec" class="form-check-input" role="switch" />
+                            <label asp-for="DangLamViec" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 pt-3 mt-4 border-top">
+                    <button type="submit" class="btn btn-primary btn-brand-primary px-4">Lưu nhân viên</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4">Hủy bỏ</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

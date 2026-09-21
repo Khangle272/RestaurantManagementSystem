@@ -1,0 +1,39 @@
+@model NguyenLieuFormViewModel
+@{
+    Layout = "_AdminLayout";
+    var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
+    ViewData["Title"] = editing ? "Cập nhật nguyên liệu" : "Thêm nguyên liệu";
+}
+<div class="container-fluid py-4">
+    <a asp-action="Index" class="text-muted text-decoration-none">← Quay lại danh sách</a>
+    <h2 class="h3 my-4">@ViewData["Title"]</h2>
+    <div class="card border-0 shadow-sm"><div class="card-body p-4">
+        <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post">
+            <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+            @if (editing) { <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /> }
+            <div class="mb-3">
+                <label asp-for="TenNguyenLieu" class="form-label">Tên nguyên liệu</label>
+                <input asp-for="TenNguyenLieu" class="form-control" />
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="DonViTinh" class="form-label">Đơn vị tính</label>
+                    <input asp-for="DonViTinh" class="form-control" list="units" />
+                    <datalist id="units">@foreach (var unit in new[] { "g", "kg", "ml", "lít", "cái", "chai", "lon", "gói", "quả" }) { <option value="@unit"></option> }</datalist>
+                    <div class="form-text">Dùng cùng đơn vị trong công thức và phiếu nhập/xuất.</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NguongCanhBao" class="form-label">Ngưỡng cảnh báo tồn kho</label>
+                    <input asp-for="NguongCanhBao" class="form-control" type="number" min="0" step="0.000001" />
+                </div>
+            </div>
+            <div class="form-check form-switch mb-4">
+                <input asp-for="DangSuDung" class="form-check-input" />
+                <label asp-for="DangSuDung" class="form-check-label">Đang sử dụng</label>
+            </div>
+            <button class="btn btn-primary btn-brand-primary" type="submit">Lưu nguyên liệu</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Hủy bỏ</a>
+        </form>
+    </div></div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

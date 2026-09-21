@@ -1,139 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ChefPOS Admin</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-
-    <!-- Bootstrap CSS -->
+    <title>@ViewData["Title"] - Quản lý nhà hàng</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    
-    <!-- Custom Admin CSS -->
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
-    
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <!-- Sidebar -->
     <aside class="admin-sidebar">
-        <div class="admin-sidebar-header">
-            <h4 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                <span class="material-symbols-outlined fs-2">restaurant_menu</span>
-                ChefPOS
-            </h4>
-        </div>
-        
+        <div class="admin-sidebar-header"><h4 class="mb-0 fw-bold">Quản lý nhà hàng</h4></div>
         <nav class="admin-sidebar-nav">
-            @{
-                var activeMenu = ViewData["ActiveMenu"]?.ToString() ?? "";
-            }
-            <a href="#" class="nav-link @(activeMenu == "Dashboard" ? "active" : "")">
-                <span class="material-symbols-outlined">dashboard</span>
-                Tổng quan
-            </a>
-            <a href="#" class="nav-link @(activeMenu == "Tables" ? "active" : "")">
-                <span class="material-symbols-outlined">table_restaurant</span>
-                Sơ đồ bàn
-            </a>
-            <a href="~/MonAn" class="nav-link @(activeMenu == "MonAn" ? "active" : "")">
-                <span class="material-symbols-outlined">restaurant</span>
-                Thực đơn món
-            </a>
-            <a href="~/NguyenLieu" class="nav-link @(activeMenu == "NguyenLieu" ? "active" : "")">
-                <span class="material-symbols-outlined">inventory_2</span>
-                Kho nguyên liệu
-            </a>
-            <a href="#" class="nav-link @(activeMenu == "Orders" ? "active" : "")">
-                <span class="material-symbols-outlined">list_alt</span>
-                Đặt bàn & Đơn hàng
-            </a>
-            <a href="#" class="nav-link @(activeMenu == "Invoices" ? "active" : "")">
-                <span class="material-symbols-outlined">receipt_long</span>
-                Thu ngân / Hóa đơn
-            </a>
-            <a href="#" class="nav-link @(activeMenu == "Staff" ? "active" : "")">
-                <span class="material-symbols-outlined">badge</span>
-                Nhân viên & Ca làm
-            </a>
-            <a href="#" class="nav-link @(activeMenu == "Reports" ? "active" : "")">
-                <span class="material-symbols-outlined">bar_chart</span>
-                Báo cáo & Thống kê
-            </a>
-            <a href="#" class="nav-link @(activeMenu == "Settings" ? "active" : "")">
-                <span class="material-symbols-outlined">settings</span>
-                Cài đặt hệ thống
-            </a>
+            @{ var activeMenu = ViewData["ActiveMenu"]?.ToString() ?? ""; }
+            <a asp-controller="MonAn" asp-action="Index" class="nav-link @(activeMenu == "MonAn" ? "active" : "")">Thực đơn món</a>
+            <a asp-controller="NguyenLieu" asp-action="Index" class="nav-link @(activeMenu == "NguyenLieu" ? "active" : "")">Kho nguyên liệu</a>
+            <a asp-controller="DanhMuc" asp-action="Index" class="nav-link @(activeMenu == "DanhMuc" ? "active" : "")">Danh mục món ăn</a>
+            <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">Bàn ăn</a>
+            <a asp-controller="NhanVien" asp-action="Index" class="nav-link @(activeMenu == "NhanVien" ? "active" : "")">Nhân viên</a>
         </nav>
-        
-        <div class="admin-sidebar-footer">
-            <span>&copy; @DateTime.Now.Year - ChefPOS v1.0</span>
-        </div>
+        <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
     </aside>
-
-    <!-- Topbar -->
-    <header class="admin-topbar">
-        <div class="breadcrumb-area">
-            @if (ViewData["Breadcrumb"] != null)
-            {
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        @Html.Raw(ViewData["Breadcrumb"])
-                    </ol>
-                </nav>
-            }
-            else
-            {
-                <h5 class="mb-0 fw-semibold text-heading">@ViewData["Title"]</h5>
-            }
-        </div>
-        
-        <div class="d-flex align-items-center gap-3">
-            <select class="form-select form-select-sm" style="width: auto;">
-                <option>Chi nhánh Quận 1</option>
-                <option>Chi nhánh Quận 3</option>
-            </select>
-            
-            <button class="btn btn-link text-secondary p-0 position-relative">
-                <span class="material-symbols-outlined">notifications</span>
-                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
-                    <span class="visually-hidden">New alerts</span>
-                </span>
-            </button>
-            
-            <div class="dropdown">
-                <button class="btn btn-link text-secondary text-decoration-none d-flex align-items-center gap-2 p-0" type="button" data-bs-toggle="dropdown">
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=E11D48&color=fff" alt="User" class="rounded-circle" width="32" height="32" />
-                    <span class="d-none d-md-inline fw-medium text-dark">Quản trị viên</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li><a class="dropdown-item" href="#">Hồ sơ</a></li>
-                    <li><a class="dropdown-item" href="#">Đổi mật khẩu</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#">Đăng xuất</a></li>
-                </ul>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="admin-main">
-        <div class="container-fluid p-0">
-            @RenderBody()
-        </div>
-    </main>
-
-    <!-- Scripts -->
+    <header class="admin-topbar"><h5 class="mb-0 fw-semibold">@ViewData["Title"]</h5></header>
+    <main class="admin-main"><div class="container-fluid p-0">@RenderBody()</div></main>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
