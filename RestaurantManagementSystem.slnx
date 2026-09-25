@@ -2,10 +2,12 @@
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
     <File Path="DESIGN.md" />
+    <File Path="prompt.md" />
     <File Path="README.md" />
     <File Path="templates_stitch/kho_nguyenlieu.html" />
     <File Path="templates_stitch/themmonan_thietlapdinhmuckho.html" />
     <File Path="templates_stitch/thucdonmonan.html" />
+    <File Path="TODO_RESERVATION_AGENT.md" />
   </Folder>
   <Project Path="RestaurantManagement.API/RestaurantManagement.API.csproj" />
   <Project Path="RestaurantManagement.Mobile/RestaurantManagement.Mobile.csproj" />

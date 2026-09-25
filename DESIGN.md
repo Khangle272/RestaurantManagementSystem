@@ -320,3 +320,68 @@ $$\text{Tỷ suất lợi nhuận} = \frac{\text{Giá bán} - \text{Giá vốn}}
 
 
 * **Xác nhận hợp lệ:** Cho phép lựa chọn giữa *"Chuyển sang trạng thái Ngừng kinh doanh (Khuyến nghị để bảo toàn lịch sử hóa đơn)"* hoặc *"Xóa hoàn toàn"*.
+
+
+
+--------------------------------------------------------------------------------
+
+#### 6. Đặc tả giao diện: Phân hệ Đặt bàn trực tuyến & Lịch sử khách hàng (Customer Portal)
+##### 6.1. Màn hình Đặt bàn trực tuyến (Views/DatBan/Index.cshtml)
+*   **Bố cục tổng thể (Card trung tâm 2 cột hoặc Step-by-Step):**
+    *   **Cột trái (Chọn thời gian & Vị trí):**
+        *   Bộ chọn Ngày đến: Datepicker giới hạn từ ngày hiện tại trở đi.
+        *   Khung giờ đến (Time Slots): Các nút Pill hiển thị các khung giờ chuẩn (11:00, 11:30, 12:00, 18:00, 18:30, 19:00...). Khung giờ hết bàn bị disable màu xám.
+        *   Số lượng khách: Bộ đếm số (+ / -) hoặc dropdown từ 1 đến 20 người.
+        *   Khu vực mong muốn: Lựa chọn radio (Tầng 1 - Sân vườn, Tầng 2 - Máy lạnh, Phòng VIP tiệc).
+    *   **Cột phải (Thông tin liên hệ & Ghi chú):**
+        *   Họ và tên khách hàng (Text input, required).
+        *   Số điện thoại (Tel input, validate đúng 10 chữ số).
+        *   Email nhận thông báo (Email input).
+        *   Ghi chú đặc biệt: Ghế trẻ em, sinh nhật, yêu cầu món trước (Textarea).
+        *   Nút CTA: "Xác nhận đặt bàn ngay" (Primary Rose #E11D48, kích thước lớn).
+
+##### 6.2. Màn hình Tra cứu Lịch sử đặt bàn & Đơn hàng (Views/DatBan/LichSu.cshtml)
+*   **Thanh tìm kiếm nhanh:** Ô nhập Số điện thoại hoặc Mã đặt bàn (`BookingCode`) để tra cứu mà không cần đăng nhập.
+*   **Danh sách kết quả (Timeline Card List):**
+    *   Mỗi lần đặt hiển thị dưới dạng một Thẻ (Card):
+        *   Header: Mã phiếu (`#DB-1002`), Ngày đặt, Trạng thái (Pill: "Chờ xác nhận", "Đã duyệt", "Đang phục vụ", "Đã hoàn tất", "Đã hủy").
+        *   Body: Thời gian đến, Số lượng người, Bàn số (nếu đã gán).
+        *   Chi tiết đơn hàng đi kèm (Accordion mở rộng): Bảng các món ăn đã dùng, số lượng, đơn giá, tổng tiền thanh toán và hình thức thanh toán.
+        *   Footer nút bấm:
+            *   Nút "Hủy đặt bàn" (Outline Danger, chỉ hiện khi đơn ở trạng thái "Chờ xác nhận" hoặc "Đã xác nhận" trước 2 tiếng).
+            *   Nút "Đánh giá bữa ăn" (Rose Primary #E11D48, chỉ xuất hiện khi trạng thái là "Đã hoàn tất").
+
+##### 6.3. Màn hình Gửi phản hồi & Đánh giá (Views/DatBan/DanhGia.cshtml)
+*   **Tiêu đề:** "Đánh giá trải nghiệm tại nhà hàng" - Hiển thị mã bàn và ngày dùng bữa.
+*   **Khu vực chấm điểm (Star Rating Interactive):**
+    *   Chất lượng món ăn: 5 ngôi sao vàng (#F59E0B), hover hiệu ứng mượt mà.
+    *   Chất lượng phục vụ & Không gian: 5 ngôi sao vàng.
+*   **Khu vực nhận xét:**
+    *   Textarea: "Chia sẻ cảm nhận chi tiết của bạn về món ăn và dịch vụ...".
+    *   Tùy chọn tải ảnh món ăn thực tế (Image uploader preview).
+*   **Nút gửi:** "Gửi đánh giá" (Primary Button).
+
+--------------------------------------------------------------------------------
+
+#### 7. Đặc tả giao diện: Phân hệ Tiếp nhận đặt bàn & Quản lý đánh giá (Admin Portal)
+##### 7.1. Màn hình Quản lý Tiếp nhận đặt bàn (Views/QuanLyDatBan/Index.cshtml)
+*   **Bộ thẻ tóm tắt (Summary Cards):**
+    *   Yêu cầu mới (Chờ duyệt): Số lượng (Badge đỏ cảnh báo).
+    *   Hôm nay cần đón: Tổng lượt đặt bàn trong ngày.
+    *   Đang phục vụ: Số bàn đã check-in.
+*   **Tab điều hướng trạng thái:**
+    *   Tab 1: Chờ xác nhận | Tab 2: Đã xác nhận (Sắp đến) | Tab 3: Đang dùng bữa | Tab 4: Lịch sử & Hủy.
+*   **Bảng dữ liệu tiếp nhận (Data Table):**
+    *   Cột: Mã ĐB, Khách hàng, SĐT, Giờ đến, Số khách, Khu vực, Bàn gán, Trạng thái, Thao tác.
+    *   Thao tác nhanh trên dòng:
+        *   Đơn "Chờ duyệt": Nút "Duyệt & Xếp bàn" (Modal chọn bàn trống) / Nút "Từ chối".
+        *   Đơn "Đã duyệt": Nút "Check-in Nhận bàn" (Chuyển bàn sang Đang phục vụ, tự sinh Hóa đơn).
+        *   Đơn trễ giờ: Nút "Hủy quá giờ".
+
+##### 7.2. Màn hình Quản lý Đánh giá & Phản hồi (Views/QuanLyDatBan/DanhGiaList.cshtml)
+*   **Bộ lọc:** Lọc theo số sao (1 sao đến 5 sao), lọc theo trạng thái (Đã phản hồi / Chưa phản hồi).
+*   **Danh sách đánh giá:**
+    *   Thẻ hiển thị: Tên khách, SĐT (che 3 số cuối), Ngày đánh giá, Số sao món ăn, Số sao dịch vụ, Nội dung đánh giá.
+    *   Khu vực phản hồi của Quản lý: Khung nhập văn bản "Nhập câu trả lời từ nhà hàng..." kèm nút "Gửi phản hồi".
+
+
