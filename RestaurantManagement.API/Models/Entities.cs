@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 namespace RestaurantManagement.API.Models;
 
 public enum TrangThaiBan { SanSang, DangPhucVu, CanDon, NgungSuDung }
-public enum TrangThaiDatBan { ChoXacNhan, ChoCoc, DaXacNhan, DaNhanBan, DaHuy, KhongDen }
+public enum TrangThaiDatBan { ChoXacNhan, ChoCoc, DaXacNhan, DaNhanBan, HoanTat, DaHuy, KhongDen }
 public enum TrangThaiCoc { ChuaCoc, DaCoc, DaHoan, DaDoiTru }
 public enum LoaiMon { MonLe, ThucUong, Set }
 public enum TrangThaiMon { DangPhucVu, TamHet, NgungKinhDoanh }
@@ -118,6 +118,7 @@ public class DatBan
     public KhachHang? KhachHang { get; set; }
     [MaxLength(120)] public string HoTenLienHe { get; set; } = "";
     [MaxLength(20)] public string? SoDienThoaiLienHe { get; set; }
+    [MaxLength(256)] public string? EmailLienHe { get; set; }
     public bool LaKhachTrucTiep { get; set; }
     public DateTimeOffset ThoiDiemTao { get; set; }
     public DateTimeOffset GioDen { get; set; }
@@ -346,6 +347,10 @@ public class DanhGia
     public int? KhachHangId { get; set; }
     public KhachHang? KhachHang { get; set; }
     public int Diem { get; set; }
+    public int DiemDichVu { get; set; }
     [MaxLength(2000)] public string? NoiDung { get; set; }
+    [MaxLength(500)] public string? HinhAnh { get; set; }
+    [MaxLength(2000)] public string? PhanHoi { get; set; }
+    public DateTimeOffset? ThoiDiemPhanHoi { get; set; }
     public DateTimeOffset ThoiDiem { get; set; }
 }

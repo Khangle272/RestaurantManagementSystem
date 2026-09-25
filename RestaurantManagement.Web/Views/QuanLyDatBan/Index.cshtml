@@ -1,0 +1,116 @@
+@using RestaurantManagement.API.Models
+@model DatBanAdminVM
+@{
+    ViewData["Title"] = "Tiếp nhận đặt bàn";
+}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2 class="h3 mb-1">Tiếp nhận đặt bàn</h2><p class="text-muted mb-0">Quản lý yêu cầu đặt bàn, xếp bàn và check-in khách hàng.</p></div>
+    </div>
+    <partial name="_ManagementMessages" />
+
+    @* Summary Cards *@
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6"><div class="card-stat"><span class="text-muted">Chờ duyệt</span><strong class="d-block fs-3" style="color:#E11D48">@Model.ChoXacNhanCount</strong></div></div>
+        <div class="col-md-3 col-6"><div class="card-stat"><span class="text-muted">Đã xác nhận</span><strong class="d-block fs-3" style="color:#3B82F6">@Model.DaXacNhanCount</strong></div></div>
+        <div class="col-md-3 col-6"><div class="card-stat"><span class="text-muted">Đang phục vụ</span><strong class="d-block fs-3" style="color:#10B981">@Model.DaNhanBanCount</strong></div></div>
+        <div class="col-md-3 col-6"><div class="card-stat"><span class="text-muted">Hoàn tất / Hủy</span><strong class="d-block fs-3">@Model.HoanTatHuyCount</strong></div></div>
+    </div>
+
+    @* Filter Tabs *@
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link @(string.IsNullOrEmpty(Model.FilterTrangThai) ? "active" : "")" asp-action="Index">Tất cả</a></li>
+        <li class="nav-item"><a class="nav-link @(Model.FilterTrangThai == "ChoXacNhan" ? "active" : "")" asp-action="Index" asp-route-status="ChoXacNhan">Chờ xác nhận <span class="badge bg-danger">@Model.ChoXacNhanCount</span></a></li>
+        <li class="nav-item"><a class="nav-link @(Model.FilterTrangThai == "DaXacNhan" ? "active" : "")" asp-action="Index" asp-route-status="DaXacNhan">Đã xác nhận</a></li>
+        <li class="nav-item"><a class="nav-link @(Model.FilterTrangThai == "DaNhanBan" ? "active" : "")" asp-action="Index" asp-route-status="DaNhanBan">Đang dùng bữa</a></li>
+        <li class="nav-item"><a class="nav-link @(Model.FilterTrangThai == "HoanTat" ? "active" : "")" asp-action="Index" asp-route-status="HoanTat">Lịch sử & Hủy</a></li>
+    </ul>
+
+    @* Data Table *@
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-admin mb-0">
+                <thead><tr><th>Mã ĐB</th><th>Khách hàng</th><th>SĐT</th><th>Giờ đến</th><th class="text-center">Số khách</th><th>Khu vực</th><th>Bàn</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.DanhSachDatBan)
+                {
+                    <tr>
+                        <td class="fw-medium">@item.MaDatBan</td>
+                        <td>@item.HoTen</td>
+                        <td>@item.SoDienThoai</td>
+                        <td>@item.GioDen.ToString("HH:mm dd/MM")</td>
+                        <td class="text-center">@item.SoNguoi</td>
+                        <td>@(item.TenKhuVuc ?? "—")</td>
+                        <td>@(item.TenBan ?? "—")</td>
+                        <td><span class="@DatBanLabels.BadgeClass(item.TrangThai)">@DatBanLabels.TrangThai(item.TrangThai)</span></td>
+                        <td class="text-end">
+                            @if (item.TrangThai == TrangThaiDatBan.ChoXacNhan)
+                            {
+                                <button class="btn btn-sm btn-brand-primary" data-bs-toggle="modal" data-bs-target="#modalXepBan" onclick="setXepBan(@item.Id)">Duyệt & Xếp bàn</button>
+                                <form asp-action="HuyBan" method="post" class="d-inline">
+                                    <input type="hidden" name="maDatBan" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hủy đơn này?')">Từ chối</button>
+                                </form>
+                            }
+                            @if (item.TrangThai == TrangThaiDatBan.DaXacNhan)
+                            {
+                                <form asp-action="NhanBan" method="post" class="d-inline">
+                                    <input type="hidden" name="maDatBan" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-brand-primary">Check-in</button>
+                                </form>
+                                <form asp-action="HuyBan" method="post" class="d-inline">
+                                    <input type="hidden" name="maDatBan" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hủy đơn này?')">Hủy</button>
+                                </form>
+                            }
+                            @if (item.TrangThai == TrangThaiDatBan.DaNhanBan)
+                            {
+                                <form asp-action="HoanTat" method="post" class="d-inline">
+                                    <input type="hidden" name="maDatBan" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-brand-outline">Hoàn tất</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.DanhSachDatBan.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">Không có dữ liệu</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* Modal chọn bàn *@
+<div class="modal fade" id="modalXepBan" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Chọn bàn trống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <form asp-action="XacNhan" method="post">
+            <div class="modal-body">
+                <input type="hidden" name="maDatBan" id="xepBanDatBanId" />
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Bàn trống</label>
+                    <select name="maBan" class="form-select" required>
+                        <option value="">-- Chọn bàn --</option>
+                        @foreach (var ban in Model.DanhSachBanTrong)
+                        {
+                            <option value="@ban.Id">@ban.MaBan — @ban.TenKhuVuc (@ban.SoChoNgoi chỗ)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-brand-outline" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-brand-primary">Xác nhận & Gán bàn</button>
+            </div>
+        </form>
+    </div></div>
+</div>
+
+@section Scripts {
+<script>
+function setXepBan(id) { document.getElementById('xepBanDatBanId').value = id; }
+</script>
+}

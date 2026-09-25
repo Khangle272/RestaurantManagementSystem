@@ -1,0 +1,50 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Đặt bàn thành công";
+}
+
+<div class="container py-5">
+    <div class="text-center" style="max-width: 600px; margin: 0 auto;">
+        <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+            <div class="card-body p-5">
+                <div style="font-size: 4rem;">🎉</div>
+                <h2 class="fw-bold mt-3" style="color: #10B981;">Đặt bàn thành công!</h2>
+                <p class="text-muted mt-2">Cảm ơn bạn đã đặt bàn tại nhà hàng chúng tôi.</p>
+
+                <div class="bg-light rounded-3 p-4 my-4">
+                    <p class="text-muted mb-1">Mã đặt bàn của bạn</p>
+                    <h1 class="fw-bold" style="color: #E11D48; letter-spacing: 2px;">@ViewBag.BookingCode</h1>
+                </div>
+
+                <div class="text-start">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Khách hàng</span>
+                        <strong>@ViewBag.HoTen</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Thời gian đến</span>
+                        <strong>@((ViewBag.GioDen as DateTimeOffset?)?.ToString("HH:mm - dd/MM/yyyy"))</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted">Số khách</span>
+                        <strong>@ViewBag.SoNguoi người</strong>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-4 text-start" style="border-radius: 8px;">
+                    <strong>📌 Lưu ý:</strong>
+                    <ul class="mb-0 mt-1">
+                        <li>Vui lòng đến đúng giờ đã đặt.</li>
+                        <li>Lưu mã đặt bàn để tra cứu lịch sử.</li>
+                        <li>Nhà hàng sẽ liên hệ xác nhận trong thời gian sớm nhất.</li>
+                    </ul>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <a asp-action="Index" class="btn btn-outline-secondary flex-fill">Đặt thêm bàn</a>
+                    <a asp-action="LichSu" class="btn flex-fill" style="background-color: #E11D48; color: white;">Xem lịch sử</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

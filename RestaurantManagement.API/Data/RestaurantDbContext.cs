@@ -102,6 +102,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<KhuyenMai>(b, "DieuKien", "[KetThuc]>[BatDau] AND [GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND [ThuTuApDung]>=0");
         Check<Voucher>(b, "Luot", "[GioiHanTongLuot]>0");
         Check<DanhGia>(b, "Diem", "[Diem] BETWEEN 1 AND 5");
+        Check<DanhGia>(b, "DiemDichVu", "[DiemDichVu] BETWEEN 1 AND 5");
 
         // Common SQL representation, enum domains and optimistic concurrency.
         foreach (var entity in b.Model.GetEntityTypes().ToList())

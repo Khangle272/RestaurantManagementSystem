@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Quản lý nhà hàng</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -18,6 +19,8 @@
             <a asp-controller="DanhMuc" asp-action="Index" class="nav-link @(activeMenu == "DanhMuc" ? "active" : "")">Danh mục món ăn</a>
             <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">Bàn ăn</a>
             <a asp-controller="NhanVien" asp-action="Index" class="nav-link @(activeMenu == "NhanVien" ? "active" : "")">Nhân viên</a>
+            <a asp-controller="QuanLyDatBan" asp-action="Index" class="nav-link @(activeMenu == "QuanLyDatBan" && ViewData["Title"]?.ToString() != "Quản lý đánh giá" ? "active" : "")">Tiếp nhận đặt bàn</a>
+            <a asp-controller="QuanLyDatBan" asp-action="DanhGia" class="nav-link @(activeMenu == "QuanLyDatBan" && ViewData["Title"]?.ToString() == "Quản lý đánh giá" ? "active" : "")">Đánh giá của khách</a>
         </nav>
         <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
     </aside>

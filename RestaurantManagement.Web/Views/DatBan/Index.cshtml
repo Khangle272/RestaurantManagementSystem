@@ -1,0 +1,136 @@
+@model DatBanCreateVM
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Đặt bàn trực tuyến";
+}
+
+<style>
+    .booking-card { max-width: 900px; margin: 0 auto; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .btn-brand { background-color: #E11D48; color: white; border: none; font-size: 1.1rem; padding: 0.75rem 2rem; border-radius: 8px; }
+    .btn-brand:hover { background-color: #BE123C; color: white; }
+    .time-pill { display: inline-block; padding: 0.4rem 1rem; border: 1px solid #E2E8F0; border-radius: 9999px; cursor: pointer; margin: 0.25rem; transition: all 0.2s; }
+    .time-pill:hover, .time-pill.active { background-color: #E11D48; color: white; border-color: #E11D48; }
+    .time-pill input { display: none; }
+    .area-option { padding: 0.75rem 1rem; border: 1px solid #E2E8F0; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .area-option:hover, .area-option.active { border-color: #E11D48; background-color: #FFF1F2; }
+    .area-option input[type=radio] { display: none; }
+</style>
+
+<div class="container py-5">
+    <div class="text-center mb-4">
+        <h1 class="fw-bold" style="color: #0F172A">🍽️ Đặt bàn trực tuyến</h1>
+        <p class="text-muted">Chọn thời gian và điền thông tin để đặt bàn tại nhà hàng</p>
+    </div>
+
+    <div class="card booking-card border-0">
+        <div class="card-body p-4 p-md-5">
+            <form asp-action="Index" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                <div class="row g-4">
+                    @* === CỘT TRÁI: Thời gian & Vị trí === *@
+                    <div class="col-lg-6">
+                        <h5 class="fw-semibold mb-3">📅 Chọn thời gian & Vị trí</h5>
+
+                        <div class="mb-3">
+                            <label asp-for="ThoiGianDen" class="form-label fw-medium">Ngày và giờ đến</label>
+                            <input asp-for="ThoiGianDen" id="ThoiGianDen" type="datetime-local" class="form-control form-control-lg"
+                                   min="@DateTime.Now.AddMinutes(30).ToString("yyyy-MM-ddTHH:mm")" />
+                            <span asp-validation-for="ThoiGianDen" class="text-danger small"></span>
+                            <div class="mt-2">
+                                <small class="text-muted d-block mb-1">Khung giờ phổ biến:</small>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var time in new[] { "11:30", "12:00", "12:30", "13:00", "18:00", "18:30", "19:00", "19:30", "20:00" })
+                                    {
+                                        <button type="button" class="time-pill btn-time-slot" data-time="@time">@time</button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="SoNguoi" class="form-label fw-medium">Số lượng khách</label>
+                            <div class="input-group" style="max-width: 200px">
+                                <button type="button" class="btn btn-outline-secondary" onclick="adjustGuests(-1)">−</button>
+                                <input asp-for="SoNguoi" type="number" class="form-control text-center" min="1" max="50" readonly />
+                                <button type="button" class="btn btn-outline-secondary" onclick="adjustGuests(1)">+</button>
+                            </div>
+                            <span asp-validation-for="SoNguoi" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Khu vực mong muốn</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var kv in Model.KhuVucOptions)
+                                {
+                                    <label class="area-option">
+                                        <input type="radio" name="MaKhuVuc" value="@kv.Value"
+                                               @(Model.MaKhuVuc?.ToString() == kv.Value ? "checked" : "") />
+                                        @kv.Text
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* === CỘT PHẢI: Thông tin liên hệ === *@
+                    <div class="col-lg-6">
+                        <h5 class="fw-semibold mb-3">📋 Thông tin liên hệ</h5>
+
+                        <div class="mb-3">
+                            <label asp-for="HoTen" class="form-label fw-medium"></label>
+                            <input asp-for="HoTen" class="form-control" placeholder="Nguyễn Văn A" />
+                            <span asp-validation-for="HoTen" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="SoDienThoai" class="form-label fw-medium"></label>
+                            <input asp-for="SoDienThoai" class="form-control" placeholder="0912345678" type="tel" />
+                            <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label fw-medium"></label>
+                            <input asp-for="Email" class="form-control" placeholder="email@example.com" type="email" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="GhiChu" class="form-label fw-medium">Ghi chú đặc biệt</label>
+                            <textarea asp-for="GhiChu" class="form-control" rows="3" placeholder="Ghế trẻ em, sinh nhật, yêu cầu đặc biệt..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-brand w-100 mt-2">🎉 Xác nhận đặt bàn ngay</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function adjustGuests(delta) {
+            var input = document.getElementById('SoNguoi');
+            var val = parseInt(input.value) + delta;
+            if (val >= 1 && val <= 50) input.value = val;
+        }
+        document.querySelectorAll('.btn-time-slot').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.btn-time-slot').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                var dtInput = document.getElementById('ThoiGianDen');
+                var currentVal = dtInput.value;
+                var datePart = currentVal ? currentVal.split('T')[0] : new Date().toISOString().split('T')[0];
+                dtInput.value = datePart + 'T' + btn.getAttribute('data-time');
+            });
+        });
+        document.querySelectorAll('.area-option').forEach(function (el) {
+            el.addEventListener('click', function () {
+                document.querySelectorAll('.area-option').forEach(function (o) { o.classList.remove('active'); });
+                el.classList.add('active');
+            });
+            if (el.querySelector('input').checked) el.classList.add('active');
+        });
+    </script>
+}

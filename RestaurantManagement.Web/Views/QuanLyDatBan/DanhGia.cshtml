@@ -1,0 +1,90 @@
+@model DanhGiaAdminVM
+@{
+    ViewData["Title"] = "Quản lý đánh giá";
+}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2 class="h3 mb-1">Đánh giá của khách hàng</h2><p class="text-muted mb-0">Xem và phản hồi đánh giá chất lượng dịch vụ.</p></div>
+    </div>
+    <partial name="_ManagementMessages" />
+
+    @* Filters *@
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small">Số sao</label>
+                    <select name="soSao" class="form-select form-select-sm">
+                        <option value="">Tất cả</option>
+                        @for (int s = 5; s >= 1; s--)
+                        {
+                            <option value="@s" selected="@(Model.FilterSoSao == s.ToString())">@s ⭐</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small">Phản hồi</label>
+                    <select name="phanHoi" class="form-select form-select-sm">
+                        <option value="">Tất cả</option>
+                        <option value="ChuaPhanHoi" selected="@(Model.FilterPhanHoi == "ChuaPhanHoi")">Chưa phản hồi</option>
+                        <option value="DaPhanHoi" selected="@(Model.FilterPhanHoi == "DaPhanHoi")">Đã phản hồi</option>
+                    </select>
+                </div>
+                <div class="col-auto"><button type="submit" class="btn btn-sm btn-brand-primary">Lọc</button></div>
+            </form>
+        </div>
+    </div>
+
+    @* Review list *@
+    @foreach (var item in Model.DanhSachDanhGia)
+    {
+        var maskedPhone = item.SoDienThoai != null && item.SoDienThoai.Length >= 7
+            ? item.SoDienThoai[..^3] + "***" : item.SoDienThoai;
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="fw-bold mb-0">@item.TenKhachHang <small class="text-muted fw-normal">@maskedPhone</small></h6>
+                        <small class="text-muted">@item.ThoiDiem.ToString("dd/MM/yyyy HH:mm") · Mã ĐB: @(item.MaDatBan ?? "—")</small>
+                    </div>
+                    <div class="text-end">
+                        <div><span class="text-muted small">Món ăn:</span> @for (int s = 1; s <= 5; s++) { <span style="color: @(s <= item.DiemMonAn ? "#F59E0B" : "#E2E8F0")">★</span> }</div>
+                        <div><span class="text-muted small">Dịch vụ:</span> @for (int s = 1; s <= 5; s++) { <span style="color: @(s <= item.DiemDichVu ? "#F59E0B" : "#E2E8F0")">★</span> }</div>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(item.NoiDung))
+                {
+                    <p class="mb-2" style="white-space: pre-line;">@item.NoiDung</p>
+                }
+                @if (!string.IsNullOrEmpty(item.HinhAnh))
+                {
+                    <img src="@item.HinhAnh" alt="Ảnh đánh giá" class="rounded mb-2" style="max-height: 200px; object-fit: cover;" />
+                }
+
+                @if (!string.IsNullOrEmpty(item.PhanHoi))
+                {
+                    <div class="bg-light rounded p-3 mt-2">
+                        <strong class="small">Phản hồi từ nhà hàng</strong> <small class="text-muted">(@item.ThoiDiemPhanHoi?.ToString("dd/MM/yyyy HH:mm"))</small>
+                        <p class="mb-0 mt-1">@item.PhanHoi</p>
+                    </div>
+                }
+                else
+                {
+                    <form asp-action="PhanHoiDanhGia" method="post" class="mt-3">
+                        <input type="hidden" name="maDanhGia" value="@item.Id" />
+                        <div class="input-group">
+                            <input name="phanHoi" class="form-control" placeholder="Nhập câu trả lời từ nhà hàng..." required />
+                            <button type="submit" class="btn btn-brand-primary">Gửi phản hồi</button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </div>
+    }
+    @if (!Model.DanhSachDanhGia.Any())
+    {
+        <div class="text-center py-5 text-muted">
+            <p>Chưa có đánh giá nào.</p>
+        </div>
+    }
+</div>
