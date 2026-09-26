@@ -12,7 +12,8 @@ public static class DbSeeder
         await AddMissingAsync(db, db.Set<NhanVien>(), x => x.MaNhanVien,
             new NhanVien { MaNhanVien = "NV001", HoTen = "Nguyễn Minh Quản", SoDienThoai = "0900000001", Email = "quan.ly@example.test", ChucVu = "Quản lý", NgayVaoLam = new DateOnly(2025, 1, 2) },
             new NhanVien { MaNhanVien = "NV002", HoTen = "Trần Thu Lễ", SoDienThoai = "0900000002", Email = "le.tan@example.test", ChucVu = "Lễ tân", NgayVaoLam = new DateOnly(2025, 2, 3) },
-            new NhanVien { MaNhanVien = "NV003", HoTen = "Lê Văn Kho", SoDienThoai = "0900000003", Email = "nhan.vien.kho@example.test", ChucVu = "Nhân viên kho", NgayVaoLam = new DateOnly(2025, 3, 4) });
+            new NhanVien { MaNhanVien = "NV003", HoTen = "Lê Văn Kho", SoDienThoai = "0900000003", Email = "nhan.vien.kho@example.test", ChucVu = "Nhân viên kho", NgayVaoLam = new DateOnly(2025, 3, 4) },
+            new NhanVien { MaNhanVien = "NV015", HoTen = "Nguyễn Minh Thu", SoDienThoai = "0900000015", Email = "thu.ngan@example.test", ChucVu = "Thu ngân", NgayVaoLam = new DateOnly(2025, 6, 2) });
 
         await AddMissingAsync(db, db.Set<KhuVuc>(), x => x.TenKhuVuc,
             new KhuVuc { TenKhuVuc = "Sảnh chung", LaPhongVip = false },
