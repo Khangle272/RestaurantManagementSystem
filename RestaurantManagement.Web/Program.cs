@@ -42,6 +42,14 @@ if (args.Contains("--init-auth", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--init-demo-accounts", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment())
+        throw new InvalidOperationException("Chỉ được tạo tài khoản thử trong môi trường Development.");
+    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
+    return;
+}
+
 // Chỉ cập nhật cấu trúc database. Dữ liệu được nhập qua CRUD hoặc script chủ động.
 using (var scope = app.Services.CreateScope())
 {

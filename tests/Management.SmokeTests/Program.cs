@@ -18,6 +18,7 @@ var connection = new SqlConnectionStringBuilder
 var options = new DbContextOptionsBuilder<RestaurantDbContext>().UseSqlServer(connection.ConnectionString).Options;
 const string adminEmail = "auth-smoke-admin@example.test";
 const string adminPassword = "TestOnly123!";
+const string demoPassword = "Demo@2026!";
 var listener = new TcpListener(IPAddress.Loopback, 0);
 listener.Start();
 var port = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -355,6 +356,28 @@ try
     await StartWeb();
     Check(!await db.NhanVien.AnyAsync(x => x.MaNhanVien == "NV001"), "Deleted seed data stays deleted after restart");
 
+    await InitDemoAccounts();
+    await InitDemoAccounts();
+    Check(await db.NhanVien.CountAsync(x => x.MaNhanVien.StartsWith("DEMO-")) == 5,
+        "Demo bootstrap creates five staff profiles only once");
+    foreach (var (email, allowed, denied) in new[]
+    {
+        ("admin.demo@example.test", "/TaiKhoanNhanVien", "/Account/Denied"),
+        ("khach.demo@example.test", "/Account/ChangePassword", "/TaiKhoanNhanVien"),
+        ("tieptan.demo@example.test", "/BanAn", "/NhanVien"),
+        ("boiban.demo@example.test", "/BanAn", "/DanhMuc"),
+        ("thungan.demo@example.test", "/HoaDon", "/MonAn"),
+        ("bep.demo@example.test", "/Home", "/MonAn"),
+        ("kho.demo@example.test", "/NguyenLieu", "/BanAn")
+    })
+    {
+        using var demo = NewClient();
+        await LoginAs(demo, email, demoPassword);
+        await CheckAccess(demo, allowed, HttpStatusCode.OK, email + " allowed");
+        if (email != "admin.demo@example.test")
+            await CheckAccess(demo, denied, HttpStatusCode.Redirect, email + " denied");
+    }
+
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch
@@ -445,6 +468,27 @@ async Task InitAuth()
     var initError = await initializer.StandardError.ReadToEndAsync();
     await initializer.WaitForExitAsync();
     Check(initializer.ExitCode == 0, "Initialize roles and Admin: " + initOutput + initError);
+}
+
+async Task InitDemoAccounts()
+{
+    using var initializer = new Process();
+    initializer.StartInfo = new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
+        UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+    };
+    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
+        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add("--init-demo-accounts");
+    initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
+    initializer.StartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+    initializer.StartInfo.Environment["AuthBootstrap__DemoPassword"] = demoPassword;
+    initializer.Start();
+    var initOutput = await initializer.StandardOutput.ReadToEndAsync();
+    var initError = await initializer.StandardError.ReadToEndAsync();
+    await initializer.WaitForExitAsync();
+    Check(initializer.ExitCode == 0, "Initialize demo accounts: " + initOutput + initError);
 }
 
 async Task<string> Get(string path)

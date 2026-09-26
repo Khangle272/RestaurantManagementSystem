@@ -19,6 +19,30 @@ dotnet run --project RestaurantManagement.Web -- --init-auth
 
 Lệnh chạy lại không đổi mật khẩu Admin và không tự nâng quyền tài khoản đã tồn tại. Không commit hoặc nhắn mật khẩu thật vào Git. Sau đó chạy `dotnet run --project RestaurantManagement.Web`; Admin đăng nhập và cấp tài khoản tại `/TaiKhoanNhanVien` cho hồ sơ nhân viên đang làm việc. Khách đăng ký ở `/Account/Register`. Nếu dữ liệu nhân viên chưa có, tạo hồ sơ qua CRUD trước rồi mới cấp tài khoản. Gửi mật khẩu khởi tạo cho người thử qua kênh riêng; họ đổi mật khẩu sau lần đăng nhập đầu.
 
+### Tài khoản thử đăng nhập ngay (chỉ database local/Development)
+
+Trên **mỗi máy**, mở PowerShell ở thư mục repo và chạy một lần:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT='Development'
+$env:AuthBootstrap__DemoPassword='Demo@2026!'
+dotnet run --project RestaurantManagement.Web -- --init-demo-accounts
+```
+
+Sau đó chạy Web bình thường và đăng nhập bằng các tài khoản dưới đây. **Tất cả dùng mật khẩu thử `Demo@2026!`**; đây là mật khẩu công khai chỉ dành cho database Development, tuyệt đối không dùng trên hệ thống thật.
+
+| Vai trò | Email đăng nhập |
+| --- | --- |
+| Admin | `admin.demo@example.test` |
+| Khách hàng | `khach.demo@example.test` |
+| Tiếp tân | `tieptan.demo@example.test` |
+| Bồi bàn | `boiban.demo@example.test` |
+| Thu ngân | `thungan.demo@example.test` |
+| Bếp | `bep.demo@example.test` |
+| Kho | `kho.demo@example.test` |
+
+Lệnh tự tạo hồ sơ thử `DEMO-*` cho năm nhân viên và hồ sơ khách thử, gán đúng vai trò Identity. Chạy lại không tạo trùng hay đổi mật khẩu. Nếu một email/hồ sơ trùng nhưng không đúng quyền hoặc mật khẩu, lệnh **dừng và báo lỗi**, không sửa tài khoản cũ. Đây là cách dựng tài khoản thử trên database local; `git pull` chỉ mang code, không mang dữ liệu đăng nhập.
+
 ## Bảng quyền hiện tại
 
 | Vai trò | Quyền hiện có trong tuần 6 | Chức năng sẽ tích hợp sau |
@@ -42,9 +66,9 @@ Thu ngân đăng nhập sẽ vào `/HoaDon`. Danh sách chia hóa đơn đang ch
 - Web hiện dùng cookie Identity. API hiện chưa có endpoint nghiệp vụ cho khách/nhân viên; khi thêm API, cần cấu hình xác thực cho API và gắn `[Authorize]` + kiểm tra sở hữu tương tự. Cookie/Web không tự bảo vệ một API mới nếu API được mở riêng.
 - Dùng trạng thái dữ liệu hiện có; không tạo thêm hệ thống vai trò hay bảng tài khoản riêng.
 
-Tài khoản thử không được hard-code vào repo. Mẫu cần chia sẻ riêng cho nhóm: `admin@example.test` (Admin do người chạy khởi tạo), một khách tự đăng ký, năm nhân viên tương ứng TiepTan/BoiBan/ThuNgan/Bep/Kho do Admin cấp. `DbSeeder` có hồ sơ Thu ngân mẫu `NV015` nhưng không tạo mật khẩu/tài khoản. `PopulateRestaurantData.sql` cũ có tài khoản `Cashier` minh họa bị khóa và không có mật khẩu; đó không phải tài khoản `ThuNgan` dùng đăng nhập. Nếu `NV004` đã gắn tài khoản cũ, dùng `NV015` hoặc tạo hồ sơ mới, không tự chỉnh mật khẩu bằng SQL. Mỗi máy có database local riêng nên tài khoản tạo trên máy này không tự xuất hiện khi thành viên khác pull Git.
+Danh sách tài khoản thử và mật khẩu Development ở mục trên; **mật khẩu thật của nhân viên không được hard-code vào repo**. `DbSeeder` có hồ sơ Thu ngân mẫu `NV015` nhưng không tạo tài khoản; lệnh demo dùng hồ sơ riêng `DEMO-TN`. `PopulateRestaurantData.sql` cũ có tài khoản `Cashier` minh họa bị khóa và không có mật khẩu: đó không phải `ThuNgan` đăng nhập được. Mỗi máy có database local riêng nên thành viên khác cần tự chạy lệnh demo sau khi pull Git.
 
-Kiểm chứng: `dotnet build tests/Management.SmokeTests/Management.SmokeTests.csproj`; `dotnet run --project tests/Management.SmokeTests --no-build`. Lần chạy trên nhánh này đạt `PASS: 256 HTTP/database checks` (build 0 cảnh báo, 0 lỗi). Bộ smoke test tạo database tên ngẫu nhiên, kiểm tra HTTP và xóa database thử sau khi hoàn tất. Không chạy lên database thật.
+Kiểm chứng: `dotnet build tests/Management.SmokeTests/Management.SmokeTests.csproj`; `dotnet run --project tests/Management.SmokeTests --no-build`. Lần chạy trên nhánh này đạt `PASS: 279 HTTP/database checks` (build 0 cảnh báo, 0 lỗi), gồm khởi tạo lặp lại và đăng nhập 7 tài khoản demo theo quyền. Bộ smoke test tạo database tên ngẫu nhiên, kiểm tra HTTP và xóa database thử sau khi hoàn tất.
 
 ## Góp ý mới của cô: đối chiếu code thật (chưa triển khai các mục dưới đây)
 

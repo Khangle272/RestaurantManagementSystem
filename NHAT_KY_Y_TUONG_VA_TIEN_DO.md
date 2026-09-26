@@ -6,7 +6,21 @@ Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm
 
 ## 0. Cập nhật phần Thành viên 1: bổ sung Thu ngân
 
-**Kiểm chứng tại thời điểm ghi mục này:** build bộ smoke test thành công (0 cảnh báo, 0 lỗi); kiểm thử HTTP/CSDL đạt `PASS: 256 HTTP/database checks`, database kiểm thử tạm đã được xóa. Đây không có nghĩa các màn hình đặt bàn, gọi món, bếp hoặc thanh toán online đã hoàn thành.
+**Tài khoản đăng nhập dùng để demo trên database local:** chạy lệnh `--init-demo-accounts` theo hướng dẫn trong `AUTH_WEEK6_HANDOFF.md` trên từng máy. Lệnh chỉ cho phép môi trường Development và tạo hồ sơ nhân viên/khách cùng vai trò Identity tương ứng. Mật khẩu dưới đây chỉ dành cho demo, không dùng cho tài khoản thật.
+
+| Vai trò | Email đăng nhập | Mật khẩu |
+| --- | --- | --- |
+| Admin | `admin.demo@example.test` | `Demo@2026!` |
+| Khách hàng | `khach.demo@example.test` | `Demo@2026!` |
+| Tiếp tân | `tieptan.demo@example.test` | `Demo@2026!` |
+| Bồi bàn | `boiban.demo@example.test` | `Demo@2026!` |
+| Thu ngân | `thungan.demo@example.test` | `Demo@2026!` |
+| Bếp | `bep.demo@example.test` | `Demo@2026!` |
+| Kho | `kho.demo@example.test` | `Demo@2026!` |
+
+Git mang theo lệnh tạo tài khoản, không mang dữ liệu trong SQL Server. Chạy lại lệnh không tạo trùng hoặc đổi mật khẩu đã có; tài khoản/hồ sơ trùng nhưng sai thông tin sẽ được báo lỗi thay vì bị ghi đè.
+
+**Kiểm chứng:** build thành công (0 cảnh báo, 0 lỗi); smoke test đạt `PASS: 279 HTTP/database checks`, bao gồm đăng nhập đủ 7 vai trò và chạy lệnh tạo tài khoản hai lần. Database kiểm thử tạm đã được xóa.
 
 **Quyết định:** tách Thu ngân khỏi Tiếp tân. Hiện có 7 vai trò đăng nhập: `Admin`, `KhachHang`, `TiepTan`, `BoiBan`, `ThuNgan`, `Bep`, `Kho`. Admin cấp tài khoản cho **5 nhóm nhân viên** (Tiếp tân, Bồi bàn, Thu ngân, Bếp, Kho); số lượng người trong từng nhóm không giới hạn. Khách tự đăng ký, Admin được khởi tạo riêng. `NhanVien.ChucVu` là chức danh hồ sơ, còn quyền truy cập thật dựa vào vai trò Identity; không suy quyền từ chuỗi chức danh.
 
