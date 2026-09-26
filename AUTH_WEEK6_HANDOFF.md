@@ -1,13 +1,15 @@
 # Bàn giao thành viên 1 — phần đã làm và góp ý tuần tiếp theo
 
-Phạm vi đã làm: khách hàng tự đăng ký; đăng nhập/đăng xuất/đổi mật khẩu; khóa tạm sau 5 lần sai trong 15 phút; Admin cấp tài khoản, đổi vai trò và khóa/mở khóa cho nhân viên đã có hồ sơ. Trang CRUD hiện hữu được chặn ở controller, không chỉ ẩn nút. Nhân viên ngừng làm hoặc khách hàng ngừng sử dụng bị đăng xuất ở yêu cầu tiếp theo.
+Nhật ký chung để nhóm/AI cập nhật sau mỗi phần hoàn thành: [NHAT_KY_Y_TUONG_VA_TIEN_DO.md](NHAT_KY_Y_TUONG_VA_TIEN_DO.md). File này ghi riêng phần Thành viên 1; không thay cho việc kiểm tra code thật.
 
-**Trạng thái:** code trên nhánh `feature/auth-week6-member1`, chưa merge `master`. Build Web và bộ smoke test đạt 240 kiểm tra HTTP/database trên CSDL tạm đã xóa sau test. Chưa làm màn hình đặt bàn, gọi món, bếp hay nghiệp vụ nhập/xuất kho hoàn chỉnh; **không được gọi các phần đó là đã xong**. Web dùng cookie Identity; API nghiệp vụ tương lai phải cấu hình xác thực và chặn quyền riêng.
+Phạm vi đã làm: khách hàng tự đăng ký; đăng nhập/đăng xuất/đổi mật khẩu; khóa tạm sau 5 lần sai trong 15 phút; Admin cấp tài khoản, đổi vai trò và khóa/mở khóa cho nhân viên đã có hồ sơ. Đã bổ sung vai trò Thu ngân cùng trang xem/in hóa đơn và xác nhận nhận đủ tiền mặt. Trang nghiệp vụ hiện hữu được chặn quyền ở controller, không chỉ ẩn nút. Nhân viên ngừng làm hoặc khách hàng ngừng sử dụng bị đăng xuất ở yêu cầu tiếp theo.
+
+**Trạng thái:** code trên nhánh `feature/auth-week6-member1`, chưa merge `master`. Chưa làm màn hình đặt bàn, gọi món, bếp, thanh toán online hay nghiệp vụ nhập/xuất kho hoàn chỉnh; **không được gọi các phần đó là đã xong**. Web dùng cookie Identity; API nghiệp vụ tương lai phải cấu hình xác thực và chặn quyền riêng.
 
 ## Cách chạy trên máy từng thành viên
 
 1. Dùng cùng migration và chuỗi kết nối SQL Server của nhóm. Web hiện đọc `ConnectionStrings:DefaultConnection`.
-2. Khởi tạo 6 vai trò và tài khoản Admin đầu tiên bằng biến môi trường **riêng trên máy** (PowerShell):
+2. Khởi tạo 7 vai trò và tài khoản Admin đầu tiên bằng biến môi trường **riêng trên máy** (PowerShell). Nếu máy đã chạy lệnh này trước đây, chạy lại để bổ sung `ThuNgan`:
 
 ```powershell
 $env:AuthBootstrap__AdminEmail='admin@example.test'
@@ -24,11 +26,14 @@ Lệnh chạy lại không đổi mật khẩu Admin và không tự nâng quy�
 | Khách hàng | Tự đăng ký, đăng nhập, đổi mật khẩu | Xem thực đơn, đặt bàn, đánh giá |
 | Tiếp tân | Xem danh sách bàn | Tiếp nhận/xác nhận đặt bàn |
 | Bồi bàn | Xem danh sách bàn | Ghi món, theo dõi bàn và nhận món từ bếp |
+| Thu ngân | Xem/in hóa đơn; xác nhận đã thu đủ tiền mặt trên bill hợp lệ | Thanh toán online sau khi có cổng thanh toán và xác nhận phía server |
 | Bếp | Đăng nhập, đổi mật khẩu | Xem và cập nhật hàng đợi món |
 | Kho | Xem/quản lý nguyên liệu theo CRUD hiện có | Nhập/xuất/tồn kho |
 | Admin | CRUD nhân viên, danh mục, món, nguyên liệu, bàn; cấp/khóa/đổi vai trò nhân viên | Quản trị nghiệp vụ bổ sung |
 
-`/NhanVien`, `/DanhMuc`, `/MonAn` và `/TaiKhoanNhanVien` chỉ cho Admin. `/BanAn` cho Admin/TiepTan/BoiBan xem, nhưng thêm/sửa/xóa bàn chỉ Admin. `/NguyenLieu` cho Admin/Kho. Khách không vào các trang nhân viên. Các trang chưa có nghiệp vụ (đặt bàn, bếp, giao món) không được quảng cáo là đã xong.
+`/NhanVien`, `/DanhMuc`, `/MonAn` và `/TaiKhoanNhanVien` chỉ cho Admin. `/BanAn` cho Admin/TiepTan/BoiBan xem, nhưng thêm/sửa/xóa bàn chỉ Admin. `/NguyenLieu` cho Admin/Kho. `/HoaDon` cho Admin/ThuNgan xem và in; POST xác nhận tiền mặt chỉ cho ThuNgan. Khách không vào các trang nhân viên. Các trang chưa có nghiệp vụ (đặt bàn, bếp, giao món) không được quảng cáo là đã xong.
+
+Thu ngân đăng nhập sẽ vào `/HoaDon`. Danh sách chia hóa đơn đang chờ và đã thanh toán (100 bill gần nhất mỗi nhóm); trang chi tiết hiển thị món, size, số lượng, đơn giá, giảm giá, cọc và `TongThanhToan` do SQL Server tính. Nút in dùng trình duyệt. Xác nhận tiền mặt chỉ nhận bill `ChuaThanhToan`, tổng dương và khớp các dòng chưa hủy; dùng `RowVersion` để từ chối bill vừa bị sửa/thu bởi người khác. Hành động lưu `DaThanhToan`, `TienMat`, thời điểm thanh toán và `NhanVienId` của Thu ngân. Không tự xác nhận bill `ThanhToanMotPhan` vì chưa lưu số đã trả từng lần. Thanh toán online chưa tích hợp, không được đổi trạng thái chỉ vì khách bấm nút hoặc tải ảnh chuyển khoản.
 
 ## Tích hợp của thành viên 2 và 3
 
@@ -37,15 +42,15 @@ Lệnh chạy lại không đổi mật khẩu Admin và không tự nâng quy�
 - Web hiện dùng cookie Identity. API hiện chưa có endpoint nghiệp vụ cho khách/nhân viên; khi thêm API, cần cấu hình xác thực cho API và gắn `[Authorize]` + kiểm tra sở hữu tương tự. Cookie/Web không tự bảo vệ một API mới nếu API được mở riêng.
 - Dùng trạng thái dữ liệu hiện có; không tạo thêm hệ thống vai trò hay bảng tài khoản riêng.
 
-Tài khoản thử không được hard-code vào repo. Mẫu cần chia sẻ riêng cho nhóm: `admin@example.test` (Admin do người chạy khởi tạo), một khách tự đăng ký, bốn nhân viên tương ứng TiepTan/BoiBan/Bep/Kho do Admin cấp. Mỗi máy có database local riêng nên tài khoản tạo trên máy này không tự xuất hiện khi thành viên khác pull Git.
+Tài khoản thử không được hard-code vào repo. Mẫu cần chia sẻ riêng cho nhóm: `admin@example.test` (Admin do người chạy khởi tạo), một khách tự đăng ký, năm nhân viên tương ứng TiepTan/BoiBan/ThuNgan/Bep/Kho do Admin cấp. `DbSeeder` có hồ sơ Thu ngân mẫu `NV015` nhưng không tạo mật khẩu/tài khoản. `PopulateRestaurantData.sql` cũ có tài khoản `Cashier` minh họa bị khóa và không có mật khẩu; đó không phải tài khoản `ThuNgan` dùng đăng nhập. Nếu `NV004` đã gắn tài khoản cũ, dùng `NV015` hoặc tạo hồ sơ mới, không tự chỉnh mật khẩu bằng SQL. Mỗi máy có database local riêng nên tài khoản tạo trên máy này không tự xuất hiện khi thành viên khác pull Git.
 
-Kiểm chứng: `dotnet build tests/Management.SmokeTests/Management.SmokeTests.csproj`; `dotnet run --project tests/Management.SmokeTests --no-build`. Bộ smoke test tạo database tên ngẫu nhiên, kiểm tra HTTP và xóa database thử sau khi hoàn tất. Không chạy lên database thật.
+Kiểm chứng: `dotnet build tests/Management.SmokeTests/Management.SmokeTests.csproj`; `dotnet run --project tests/Management.SmokeTests --no-build`. Lần chạy trên nhánh này đạt `PASS: 256 HTTP/database checks` (build 0 cảnh báo, 0 lỗi). Bộ smoke test tạo database tên ngẫu nhiên, kiểm tra HTTP và xóa database thử sau khi hoàn tất. Không chạy lên database thật.
 
 ## Góp ý mới của cô: đối chiếu code thật (chưa triển khai các mục dưới đây)
 
 | Nội dung | Đã có | Cần chỉnh |
 | --- | --- | --- |
-| Phân quyền | Admin quản lý `/MonAn`; Bếp không thấy trang này. Các trang CRUD hiện hữu có chặn quyền server | Sau khi có màn hình cho từng vai trò, đăng nhập phải chuyển đúng trang; KDS Bếp không có giá hay menu quản trị |
+| Phân quyền | Admin quản lý `/MonAn`; Bếp không thấy trang này. Thu ngân có `/HoaDon` và được chuyển vào đó khi đăng nhập. Các trang hiện hữu có chặn quyền server | Khi có KDS/mobile/tiếp tân, chuyển tiếp các vai trò còn lại đến màn hình riêng; KDS Bếp không có giá hay menu quản trị |
 | Lọc món theo Danh mục | **Đã có** ở `MonAn/Index` | Kiểm tra sau khi tích hợp, không làm lại |
 | Giá theo size | **Đã có** `MonAnSize.GiaBan` | Chỉ Admin sửa; không trả giá cho KDS |
 | Lưu Món + Size + Định mức | Controller đã dùng transaction khi nhấn Lưu | Giữ giao dịch này; không cần LocalStorage/Session chỉ để giữ các dòng trước khi submit |
@@ -63,7 +68,7 @@ Kiểm chứng: `dotnet build tests/Management.SmokeTests/Management.SmokeTests.
 2. **Thành viên 2 (đặt bàn, phục vụ, bếp):** Tiếp tân tiếp nhận/xác nhận/xếp bàn. Bồi bàn trên điện thoại/tablet mở bàn, chọn món **và size**, nhập số lượng/ghi chú rồi gửi order. KDS Bếp chỉ liệt kê món đang chờ/đang chế biến theo thứ tự gọi, bàn, lượng, ghi chú; cập nhật chế biến ở server và báo món sẵn sàng cho Bồi bàn. **Không đưa `DonGia`, tổng tiền, danh sách toàn bộ thực đơn hoặc CRUD quản trị lên KDS.** Với khách đến trực tiếp, có thể tạo bản ghi đặt/nhận bàn nội bộ không bắt buộc `KhachHangId`, để hóa đơn/món vẫn truy được bàn.
 3. **Thành viên 3 (thực đơn):** sau migration chung, sửa form Món ăn theo luồng Thông tin -> chọn nguyên liệu -> ma trận Size/Giá/Định lượng -> Lưu một lần. Combo chọn món lẻ + size + số lượng, đặt giá trọn gói; không tạo “công thức nguyên liệu thô” cho combo. Cưỡng chế trạng thái Create, thêm lý do ngừng và xử lý `TamHet` đúng; chốt tiêu chí món mới/nổi bật. Bộ lọc Danh mục và transaction đã có, không làm lại.
 
-### Hai điểm phải chốt trước khi mở rộng quyền/schema
+### Điểm cần nhớ khi mở rộng quyền/schema
 
 - **Bếp nhập công thức hay Admin nhập?** Bếp biết nguyên liệu/định lượng, nhưng góp ý của cô ghi *chỉ Admin quản lý thực đơn, gồm định mức*. Để bám đúng lời cô: Bếp cung cấp công thức, Admin nhập và chịu trách nhiệm. Nếu muốn Bếp tự nhập, hỏi cô xác nhận rồi làm màn hình công thức riêng **không có giá/không có quyền sửa thực đơn**; tuyệt đối không mở toàn bộ `MonAnController` cho Bếp.
-- **Có vai trò Thu ngân riêng không?** Hiện thống nhất sáu vai trò Admin, KhachHang, TiepTan, BoiBan, Bep, Kho. Feedback nhắc “Thu ngân/Phục vụ” nhưng chưa đủ để tự thêm vai trò/bảng/quyền mới; nhóm cần chốt ai xử lý thanh toán.
+- **Thu ngân đã chốt:** vai trò thứ 7 là `ThuNgan`. Admin cấp cho nhân viên có hồ sơ và chỉ Thu ngân được xác nhận tiền mặt. Khi thành viên khác làm gọi món/thanh toán online, sử dụng chính `HoaDon` và các trạng thái hiện có; không tạo bill trùng hoặc endpoint tự báo thanh toán thành công từ phía khách.

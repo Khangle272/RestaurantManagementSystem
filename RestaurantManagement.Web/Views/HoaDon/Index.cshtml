@@ -1,0 +1,34 @@
+@model List<RestaurantManagement.API.Models.HoaDon>
+@using RestaurantManagement.API.Models
+@{
+    ViewData["Title"] = "Hóa đơn";
+    ViewData["ActiveMenu"] = "HoaDon";
+    var daThanhToan = ViewBag.DaThanhToan is true;
+}
+<h1 class="h3 mb-3">Hóa đơn</h1>
+<div class="mb-3 d-flex gap-2">
+    <a asp-action="Index" asp-route-daThanhToan="false" class="btn @(daThanhToan ? "btn-outline-primary" : "btn-primary")">Chờ thanh toán</a>
+    <a asp-action="Index" asp-route-daThanhToan="true" class="btn @(daThanhToan ? "btn-primary" : "btn-outline-primary")">Đã thanh toán</a>
+</div>
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead><tr><th>Mã hóa đơn</th><th>Thời điểm lập</th><th>Trạng thái</th><th class="text-end">Tổng sau giảm/cọc</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.MaHoaDon</td>
+                <td>@item.ThoiDiemLap.ToString("dd/MM/yyyy HH:mm")</td>
+                <td>@(item.TrangThai == TrangThaiHoaDon.DaThanhToan ? "Đã thanh toán" : item.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan ? "Thanh toán một phần" : "Chưa thanh toán")</td>
+                <td class="text-end">@item.TongThanhToan.ToString("N0") đ</td>
+                <td><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Xem / in</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (Model.Count == 0)
+{
+    <p>Chưa có hóa đơn trong nhóm này.</p>
+}
+<p class="text-muted small">Hiển thị tối đa 100 hóa đơn gần nhất trong mỗi nhóm.</p>

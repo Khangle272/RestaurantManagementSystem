@@ -34,7 +34,9 @@ public class AccountController(
                 if (result.Succeeded)
                     return !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
                         ? LocalRedirect(model.ReturnUrl)
-                        : RedirectToAction("Index", "Home");
+                        : roles.Contains(AppRoles.ThuNgan)
+                            ? RedirectToAction("Index", "HoaDon")
+                            : RedirectToAction("Index", "Home");
                 if (result.IsLockedOut) ModelState.AddModelError("", "Tài khoản tạm khóa 15 phút sau nhiều lần đăng nhập sai.");
                 else ModelState.AddModelError("", "Email hoặc mật khẩu không đúng, hoặc tài khoản chưa được phép sử dụng.");
                 return View(model);

@@ -28,6 +28,10 @@
             {
                 <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">Bàn ăn</a>
             }
+            @if (User.IsInRole("Admin") || User.IsInRole("ThuNgan"))
+            {
+                <a asp-controller="HoaDon" asp-action="Index" class="nav-link @(activeMenu == "HoaDon" ? "active" : "")">Hóa đơn</a>
+            }
             <a asp-controller="Home" asp-action="Index" class="nav-link">Trang chủ</a>
             <a asp-controller="Account" asp-action="ChangePassword" class="nav-link">Đổi mật khẩu</a>
             <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="nav-link btn btn-link text-start w-100">Đăng xuất</button></form>

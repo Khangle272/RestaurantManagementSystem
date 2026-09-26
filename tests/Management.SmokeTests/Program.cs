@@ -48,6 +48,7 @@ try
         using var denied = await anonymous.GetAsync("/NhanVien");
         Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/Account/Login") == true,
             "Anonymous management request redirects to login");
+        await CheckAccess(anonymous, "/HoaDon", HttpStatusCode.Redirect, "Anonymous denied invoices");
     }
     await Post("/Account/Login", await Get("/Account/Login"), new()
     {
@@ -84,6 +85,7 @@ try
         Check(registered.StatusCode == HttpStatusCode.Redirect, "Customer self-registration succeeds");
         await CheckAccess(customerClient, "/BanAn", HttpStatusCode.Redirect, "Customer denied staff page");
         await CheckAccess(customerClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, "Customer denied account administration");
+        await CheckAccess(customerClient, "/HoaDon", HttpStatusCode.Redirect, "Customer denied invoices");
         var changeForm = await customerClient.GetStringAsync("/Account/ChangePassword");
         using var changed = await customerClient.PostAsync("/Account/ChangePassword", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -121,7 +123,8 @@ try
         ("NV002", "TiepTan", "/BanAn", "/NhanVien"),
         ("NV003", "Kho", "/NguyenLieu", "/BanAn"),
         ("TEST-BOIBAN", "BoiBan", "/BanAn", "/DanhMuc"),
-        ("TEST-BEP", "Bep", "/Home", "/MonAn")
+        ("TEST-BEP", "Bep", "/Home", "/MonAn"),
+        ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn")
     })
     {
         var employee = await db.NhanVien.SingleOrDefaultAsync(x => x.MaNhanVien == code);
@@ -143,6 +146,38 @@ try
         await CheckAccess(roleClient, allowed, HttpStatusCode.OK, role + " allowed page");
         await CheckAccess(roleClient, denied, HttpStatusCode.Redirect, role + " denied page");
         await CheckAccess(roleClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, role + " denied account administration");
+        if (role != "ThuNgan")
+            await CheckAccess(roleClient, "/HoaDon", HttpStatusCode.Redirect, role + " denied invoices");
+        if (role == "ThuNgan")
+        {
+            var size = await db.MonAnSize.AsNoTracking().FirstAsync();
+            var bill = new HoaDon
+            {
+                MaHoaDon = "HD-AUTH-TEST", ThoiDiemLap = DateTimeOffset.UtcNow,
+                NhanVienId = employee.Id, TrangThai = TrangThaiHoaDon.ChuaThanhToan,
+                TongTienHang = size.GiaBan, PhuongThucThanhToan = PhuongThucThanhToan.TienMat,
+                ChiTiet = [new ChiTietHoaDon
+                {
+                    MonAnId = size.MonAnId, MonAnSizeId = size.Id, TenMonLucBan = "Món kiểm thử",
+                    SoLuong = 1, DonGia = size.GiaBan, TrangThai = TrangThaiCheBien.DaPhucVu
+                }]
+            };
+            db.HoaDon.Add(bill);
+            await db.SaveChangesAsync();
+            var receipt = await roleClient.GetStringAsync($"/HoaDon/Details/{bill.Id}");
+            var receiptText = WebUtility.HtmlDecode(receipt);
+            Check(receiptText.Contains("In hóa đơn") && receiptText.Contains("Món kiểm thử"), "Cashier views printable invoice");
+            using var paid = await roleClient.PostAsync("/HoaDon/ConfirmCash", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = Hidden(receipt, "__RequestVerificationToken"),
+                ["id"] = bill.Id.ToString(), ["rowVersion"] = Hidden(receipt, "rowVersion")
+            }));
+            Check(paid.StatusCode == HttpStatusCode.Redirect, "Cashier confirms cash payment");
+            await db.Entry(bill).ReloadAsync();
+            Check(bill.TrangThai == TrangThaiHoaDon.DaThanhToan && bill.PhuongThucThanhToan == PhuongThucThanhToan.TienMat
+                && bill.ThoiDiemThanhToan is not null, "Cash payment persisted");
+            await CheckAccess(client, $"/HoaDon/Details/{bill.Id}", HttpStatusCode.OK, "Admin views paid invoice");
+        }
         if (role == "BoiBan")
         {
             await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()

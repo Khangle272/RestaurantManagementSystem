@@ -1,0 +1,86 @@
+@model RestaurantManagement.API.Models.HoaDon
+@using RestaurantManagement.API.Models
+@{
+    ViewData["Title"] = "Hóa đơn " + Model.MaHoaDon;
+    ViewData["ActiveMenu"] = "HoaDon";
+    var tables = Model.DatBan is null ? "-" : string.Join(", ", Model.DatBan.Ban.Select(x => x.BanAn.MaBan));
+    var status = Model.TrangThai switch
+    {
+        TrangThaiHoaDon.ChuaThanhToan => "Chưa thanh toán",
+        TrangThaiHoaDon.ThanhToanMotPhan => "Thanh toán một phần",
+        TrangThaiHoaDon.DaThanhToan => "Đã thanh toán",
+        _ => "Đã hủy"
+    };
+}
+<style media="print">
+    .admin-sidebar, .admin-topbar, .no-print { display: none !important; }
+    .admin-main { margin: 0 !important; padding: 0 !important; }
+    .container-fluid { padding: 0 !important; }
+    body { background: white !important; }
+</style>
+<div class="no-print mb-3 d-flex gap-2">
+    <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a>
+    <button type="button" class="btn btn-primary" onclick="window.print()">In hóa đơn</button>
+</div>
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger no-print">@error</div>
+}
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success no-print">@success</div>
+}
+<div class="mx-auto" style="max-width:760px">
+    <h1 class="h3 text-center">HÓA ĐƠN</h1>
+    <p class="text-center">Mã: @Model.MaHoaDon</p>
+    <div class="row mb-3">
+        <div class="col-sm-6">Lập lúc: @Model.ThoiDiemLap.ToString("dd/MM/yyyy HH:mm")</div>
+        <div class="col-sm-6">Bàn: @(string.IsNullOrEmpty(tables) ? "-" : tables)</div>
+        <div class="col-sm-6">Trạng thái: @status</div>
+        @if (Model.ThoiDiemThanhToan is not null)
+        {
+            <div class="col-sm-6">Thanh toán: @Model.ThoiDiemThanhToan.Value.ToString("dd/MM/yyyy HH:mm")</div>
+        }
+    </div>
+    <table class="table table-bordered">
+        <thead><tr><th>Món ăn</th><th>Size</th><th class="text-end">SL</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.ChiTiet.OrderBy(x => x.Id))
+        {
+            <tr>
+                <td>@item.TenMonLucBan @(item.TrangThai == TrangThaiCheBien.DaHuy ? "(đã hủy)" : "")</td>
+                <td>@(item.MonAnSize?.TenSize ?? "-")</td>
+                <td class="text-end">@item.SoLuong</td>
+                <td class="text-end">@item.DonGia.ToString("N0") đ</td>
+                <td class="text-end">@(item.TrangThai == TrangThaiCheBien.DaHuy ? "-" : (item.SoLuong * item.DonGia).ToString("N0") + " đ")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    @if (Model.ChiTiet.Count == 0)
+    {
+        <p>Hóa đơn chưa có món.</p>
+    }
+    <dl class="row justify-content-end">
+        <dt class="col-7 col-sm-4">Tiền món</dt><dd class="col-5 col-sm-3 text-end">@Model.TongTienHang.ToString("N0") đ</dd>
+        <dt class="col-7 col-sm-4">Giảm giá</dt><dd class="col-5 col-sm-3 text-end">@Model.TienGiam.ToString("N0") đ</dd>
+        <dt class="col-7 col-sm-4">Cọc đã trừ</dt><dd class="col-5 col-sm-3 text-end">@Model.TienCocDaTru.ToString("N0") đ</dd>
+        <dt class="col-7 col-sm-4 fs-5">Tổng thanh toán</dt><dd class="col-5 col-sm-3 text-end fs-5 fw-bold">@Model.TongThanhToan.ToString("N0") đ</dd>
+    </dl>
+    @if (Model.TrangThai == TrangThaiHoaDon.DaThanhToan)
+    {
+        <p>Phương thức: @Model.PhuongThucThanhToan</p>
+    }
+    @if (Model.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan)
+    {
+        <p class="small">Hóa đơn đã thanh toán một phần. Cần đối chiếu số đã thu trước khi thu tiếp.</p>
+    }
+    @if (User.IsInRole("ThuNgan") && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && Model.TongThanhToan > 0)
+    {
+        <form asp-action="ConfirmCash" method="post" class="no-print mt-3">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="rowVersion" value="@ViewBag.RowVersion" />
+            <button type="submit" class="btn btn-success">Xác nhận đã nhận đủ tiền mặt</button>
+        </form>
+    }
+</div>
