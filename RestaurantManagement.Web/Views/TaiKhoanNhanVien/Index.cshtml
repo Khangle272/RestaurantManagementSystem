@@ -1,0 +1,24 @@
+@model List<StaffAccountRow>
+@using RestaurantManagement.Web.Security
+@{ ViewData["Title"] = "Tài khoản nhân viên"; }
+<h1 class="h3 mb-3">Tài khoản nhân viên</h1>
+@if (TempData["Success"] is string message) { <div class="alert alert-success">@message</div> }
+<p><a asp-action="Create" class="btn btn-primary">Cấp tài khoản</a></p>
+<div class="table-responsive"><table class="table table-striped align-middle">
+<thead><tr><th>Nhân viên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+@foreach (var item in Model) {
+<tr><td>@item.MaNhanVien – @item.HoTen</td><td>@(item.Email ?? "Chưa cấp")</td><td>@item.Role</td>
+<td>@(item.DangLamViec ? (item.IsLocked ? "Đã khóa" : "Đang làm việc") : "Đã nghỉ")</td><td>
+@if (item.TaiKhoanId.HasValue) {
+<form asp-action="ChangeRole" method="post" class="d-inline-flex gap-1 mb-1">
+    <input type="hidden" name="id" value="@item.NhanVienId" />
+    <select name="role" class="form-select form-select-sm" aria-label="Vai trò của @item.HoTen">@foreach (var role in AppRoles.AssignableStaff) { <option value="@role" selected="@(role == item.Role)">@role</option> }</select>
+    <button type="submit" class="btn btn-outline-primary btn-sm">Lưu quyền</button>
+</form>
+<form asp-action="SetLocked" method="post" class="d-inline">
+    <input type="hidden" name="id" value="@item.NhanVienId" /><input type="hidden" name="locked" value="@(!item.IsLocked)" />
+    <button type="submit" class="btn btn-outline-secondary btn-sm">@(item.IsLocked ? "Mở khóa" : "Khóa")</button>
+</form>
+}</td></tr>
+}
+</tbody></table></div>

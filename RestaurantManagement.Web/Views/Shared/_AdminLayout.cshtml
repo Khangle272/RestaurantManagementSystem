@@ -13,11 +13,24 @@
         <div class="admin-sidebar-header"><h4 class="mb-0 fw-bold">Quản lý nhà hàng</h4></div>
         <nav class="admin-sidebar-nav">
             @{ var activeMenu = ViewData["ActiveMenu"]?.ToString() ?? ""; }
-            <a asp-controller="MonAn" asp-action="Index" class="nav-link @(activeMenu == "MonAn" ? "active" : "")">Thực đơn món</a>
-            <a asp-controller="NguyenLieu" asp-action="Index" class="nav-link @(activeMenu == "NguyenLieu" ? "active" : "")">Kho nguyên liệu</a>
-            <a asp-controller="DanhMuc" asp-action="Index" class="nav-link @(activeMenu == "DanhMuc" ? "active" : "")">Danh mục món ăn</a>
-            <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">Bàn ăn</a>
-            <a asp-controller="NhanVien" asp-action="Index" class="nav-link @(activeMenu == "NhanVien" ? "active" : "")">Nhân viên</a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="MonAn" asp-action="Index" class="nav-link @(activeMenu == "MonAn" ? "active" : "")">Thực đơn món</a>
+                <a asp-controller="DanhMuc" asp-action="Index" class="nav-link @(activeMenu == "DanhMuc" ? "active" : "")">Danh mục món ăn</a>
+                <a asp-controller="NhanVien" asp-action="Index" class="nav-link @(activeMenu == "NhanVien" ? "active" : "")">Nhân viên</a>
+                <a asp-controller="TaiKhoanNhanVien" asp-action="Index" class="nav-link">Tài khoản nhân viên</a>
+            }
+            @if (User.IsInRole("Admin") || User.IsInRole("Kho"))
+            {
+                <a asp-controller="NguyenLieu" asp-action="Index" class="nav-link @(activeMenu == "NguyenLieu" ? "active" : "")">Kho nguyên liệu</a>
+            }
+            @if (User.IsInRole("Admin") || User.IsInRole("TiepTan") || User.IsInRole("BoiBan"))
+            {
+                <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">Bàn ăn</a>
+            }
+            <a asp-controller="Home" asp-action="Index" class="nav-link">Trang chủ</a>
+            <a asp-controller="Account" asp-action="ChangePassword" class="nav-link">Đổi mật khẩu</a>
+            <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="nav-link btn btn-link text-start w-100">Đăng xuất</button></form>
         </nav>
         <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
     </aside>

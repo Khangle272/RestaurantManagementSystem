@@ -6,6 +6,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin)]
 public class NhanVienController(RestaurantDbContext context) : ManagementControllerBase(context)
 {
     public async Task<IActionResult> Index(string? search, string? trangThai, int page = 1)
