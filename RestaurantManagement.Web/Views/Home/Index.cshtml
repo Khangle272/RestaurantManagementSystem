@@ -1,8 +1,18 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Nhà hàng";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <h1 class="display-4">Quản lý nhà hàng</h1>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p>Xin chào @User.Identity.Name.</p>
+        <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-primary">Đổi mật khẩu</a>
+    }
+    else
+    {
+        <p>Đăng nhập để sử dụng chức năng theo vai trò của bạn.</p>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Đăng nhập</a>
+        <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Đăng ký khách hàng</a>
+    }
 </div>

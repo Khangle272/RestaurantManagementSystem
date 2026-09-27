@@ -7,6 +7,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.TiepTan + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan)]
 public class BanAnController(RestaurantDbContext context) : ManagementControllerBase(context)
 {
     public async Task<IActionResult> Index(string? search, int? khuVucId, string? trangThai, int page = 1)
@@ -21,13 +22,13 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View(await PageAsync(query.OrderByDescending(x => x.Id), page, search, trangThai, khuVucId));
     }
 
-    [HttpGet]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Create() => View("Form", new BanAnFormViewModel
     {
         KhuVucOptions = await AreaOptionsAsync(activeOnly: true)
     });
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(BanAnFormViewModel model)
     {
         await ValidateAsync(model, 0, null);
@@ -46,7 +47,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View("Form", model);
     }
 
-    [HttpGet]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await Db.BanAn.FindAsync(id);
@@ -59,7 +60,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         });
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, BanAnFormViewModel model)
     {
         if (id != model.Id) return NotFound();
@@ -80,7 +81,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View("Form", model);
     }
 
-    [HttpGet]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await Db.BanAn.FindAsync(id);
@@ -88,7 +89,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View(DeleteModel(entity, id, entity.MaBan, "bàn ăn"));
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id, DeleteRecordViewModel model)
     {
         if (id != model.Id) return NotFound();

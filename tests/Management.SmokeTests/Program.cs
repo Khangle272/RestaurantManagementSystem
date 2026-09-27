@@ -16,6 +16,9 @@ var connection = new SqlConnectionStringBuilder
     InitialCatalog = database, IntegratedSecurity = true, TrustServerCertificate = true
 };
 var options = new DbContextOptionsBuilder<RestaurantDbContext>().UseSqlServer(connection.ConnectionString).Options;
+const string adminEmail = "auth-smoke-admin@example.test";
+const string adminPassword = "TestOnly123!";
+const string demoPassword = "Demo@2026!";
 var listener = new TcpListener(IPAddress.Loopback, 0);
 listener.Start();
 var port = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -39,7 +42,19 @@ Task<string>? errors = null;
 var checks = 0;
 try
 {
+    await InitAuth();
     await StartWeb();
+    using (var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = client.BaseAddress })
+    {
+        using var denied = await anonymous.GetAsync("/NhanVien");
+        Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/Account/Login") == true,
+            "Anonymous management request redirects to login");
+        await CheckAccess(anonymous, "/HoaDon", HttpStatusCode.Redirect, "Anonymous denied invoices");
+    }
+    await Post("/Account/Login", await Get("/Account/Login"), new()
+    {
+        ["Email"] = adminEmail, ["Password"] = adminPassword
+    }, true);
 
     foreach (var controller in new[] { "NhanVien", "BanAn", "DanhMuc", "MonAn", "NguyenLieu" })
     {
@@ -58,6 +73,127 @@ try
         "Web startup creates schema without inserting sample business data");
     // Fixtures belong only to this run's isolated, disposable test database.
     await DbSeeder.SeedAsync(db);
+    using (var customerClient = NewClient())
+    {
+        var registration = await customerClient.GetStringAsync("/Account/Register");
+        using var registered = await customerClient.PostAsync("/Account/Register", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = Hidden(registration, "__RequestVerificationToken"),
+            ["HoTen"] = "Khách kiểm thử", ["SoDienThoai"] = "0909876543",
+            ["Email"] = "auth-customer@example.test", ["Password"] = adminPassword,
+            ["ConfirmPassword"] = adminPassword
+        }));
+        Check(registered.StatusCode == HttpStatusCode.Redirect, "Customer self-registration succeeds");
+        await CheckAccess(customerClient, "/BanAn", HttpStatusCode.Redirect, "Customer denied staff page");
+        await CheckAccess(customerClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, "Customer denied account administration");
+        await CheckAccess(customerClient, "/HoaDon", HttpStatusCode.Redirect, "Customer denied invoices");
+        var changeForm = await customerClient.GetStringAsync("/Account/ChangePassword");
+        using var changed = await customerClient.PostAsync("/Account/ChangePassword", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = Hidden(changeForm, "__RequestVerificationToken"),
+            ["CurrentPassword"] = adminPassword, ["NewPassword"] = "Changed123!",
+            ["ConfirmPassword"] = "Changed123!"
+        }));
+        Check(changed.StatusCode == HttpStatusCode.Redirect, "Customer changes password");
+        var logoutForm = await customerClient.GetStringAsync("/Home");
+        using var loggedOut = await customerClient.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = Hidden(logoutForm, "__RequestVerificationToken")
+        }));
+        Check(loggedOut.StatusCode == HttpStatusCode.Redirect, "Customer logs out");
+        await CheckAccess(customerClient, "/Account/ChangePassword", HttpStatusCode.Redirect, "Logged-out customer denied private page");
+        await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
+        using var failedLoginClient = NewClient();
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var loginForm = await failedLoginClient.GetStringAsync("/Account/Login");
+            using var failed = await failedLoginClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = Hidden(loginForm, "__RequestVerificationToken"),
+                ["Email"] = "auth-customer@example.test", ["Password"] = "Wrong123!"
+            }));
+            Check(failed.StatusCode == HttpStatusCode.OK, "Wrong password rejected " + (attempt + 1));
+        }
+        var lockedCustomer = await db.Users.SingleAsync(x => x.Email == "auth-customer@example.test");
+        await db.Entry(lockedCustomer).ReloadAsync();
+        Check(lockedCustomer.LockoutEnd > DateTimeOffset.UtcNow, "Five failures lock customer account");
+        await CheckAccess(customerClient, "/Account/ChangePassword", HttpStatusCode.Redirect, "Locked customer session denied");
+    }
+    foreach (var (code, role, allowed, denied) in new[]
+    {
+        ("NV002", "TiepTan", "/BanAn", "/NhanVien"),
+        ("NV003", "Kho", "/NguyenLieu", "/BanAn"),
+        ("TEST-BOIBAN", "BoiBan", "/BanAn", "/DanhMuc"),
+        ("TEST-BEP", "Bep", "/Home", "/MonAn"),
+        ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn")
+    })
+    {
+        var employee = await db.NhanVien.SingleOrDefaultAsync(x => x.MaNhanVien == code);
+        if (employee is null)
+        {
+            employee = new NhanVien { MaNhanVien = code, HoTen = code, SoDienThoai = "0909999888", ChucVu = role, NgayVaoLam = new DateOnly(2026, 9, 1) };
+            db.NhanVien.Add(employee);
+            await db.SaveChangesAsync();
+        }
+        var form = await Get("/TaiKhoanNhanVien/Create");
+        var email = $"auth-{role.ToLowerInvariant()}@example.test";
+        await Post("/TaiKhoanNhanVien/Create", form, new()
+        {
+            ["NhanVienId"] = employee.Id.ToString(), ["Email"] = email,
+            ["Password"] = adminPassword, ["Role"] = role
+        }, true);
+        using var roleClient = NewClient();
+        await LoginAs(roleClient, email);
+        await CheckAccess(roleClient, allowed, HttpStatusCode.OK, role + " allowed page");
+        await CheckAccess(roleClient, denied, HttpStatusCode.Redirect, role + " denied page");
+        await CheckAccess(roleClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, role + " denied account administration");
+        if (role != "ThuNgan")
+            await CheckAccess(roleClient, "/HoaDon", HttpStatusCode.Redirect, role + " denied invoices");
+        if (role == "ThuNgan")
+        {
+            var size = await db.MonAnSize.AsNoTracking().FirstAsync();
+            var bill = new HoaDon
+            {
+                MaHoaDon = "HD-AUTH-TEST", ThoiDiemLap = DateTimeOffset.UtcNow,
+                NhanVienId = employee.Id, TrangThai = TrangThaiHoaDon.ChuaThanhToan,
+                TongTienHang = size.GiaBan, PhuongThucThanhToan = PhuongThucThanhToan.TienMat,
+                ChiTiet = [new ChiTietHoaDon
+                {
+                    MonAnId = size.MonAnId, MonAnSizeId = size.Id, TenMonLucBan = "Món kiểm thử",
+                    SoLuong = 1, DonGia = size.GiaBan, TrangThai = TrangThaiCheBien.DaPhucVu
+                }]
+            };
+            db.HoaDon.Add(bill);
+            await db.SaveChangesAsync();
+            var receipt = await roleClient.GetStringAsync($"/HoaDon/Details/{bill.Id}");
+            var receiptText = WebUtility.HtmlDecode(receipt);
+            Check(receiptText.Contains("In hóa đơn") && receiptText.Contains("Món kiểm thử"), "Cashier views printable invoice");
+            using var paid = await roleClient.PostAsync("/HoaDon/ConfirmCash", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = Hidden(receipt, "__RequestVerificationToken"),
+                ["id"] = bill.Id.ToString(), ["rowVersion"] = Hidden(receipt, "rowVersion")
+            }));
+            Check(paid.StatusCode == HttpStatusCode.Redirect, "Cashier confirms cash payment");
+            await db.Entry(bill).ReloadAsync();
+            Check(bill.TrangThai == TrangThaiHoaDon.DaThanhToan && bill.PhuongThucThanhToan == PhuongThucThanhToan.TienMat
+                && bill.ThoiDiemThanhToan is not null, "Cash payment persisted");
+            await CheckAccess(client, $"/HoaDon/Details/{bill.Id}", HttpStatusCode.OK, "Admin views paid invoice");
+        }
+        if (role == "BoiBan")
+        {
+            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()
+            {
+                ["id"] = employee.Id.ToString(), ["locked"] = "true"
+            }, true);
+            await CheckAccess(roleClient, "/BanAn", HttpStatusCode.Redirect, "Locked employee session denied");
+            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()
+            {
+                ["id"] = employee.Id.ToString(), ["locked"] = "false"
+            }, true);
+            await LoginAs(roleClient, email);
+            await CheckAccess(roleClient, "/BanAn", HttpStatusCode.OK, "Unlocked employee can log in");
+        }
+    }
     var areaId = await db.KhuVuc.Where(x => x.DangSuDung).Select(x => x.Id).FirstAsync();
     var cases = new[]
     {
@@ -220,6 +356,28 @@ try
     await StartWeb();
     Check(!await db.NhanVien.AnyAsync(x => x.MaNhanVien == "NV001"), "Deleted seed data stays deleted after restart");
 
+    await InitDemoAccounts();
+    await InitDemoAccounts();
+    Check(await db.NhanVien.CountAsync(x => x.MaNhanVien.StartsWith("DEMO-")) == 5,
+        "Demo bootstrap creates five staff profiles only once");
+    foreach (var (email, allowed, denied) in new[]
+    {
+        ("admin.demo@example.test", "/TaiKhoanNhanVien", "/Account/Denied"),
+        ("khach.demo@example.test", "/Account/ChangePassword", "/TaiKhoanNhanVien"),
+        ("tieptan.demo@example.test", "/BanAn", "/NhanVien"),
+        ("boiban.demo@example.test", "/BanAn", "/DanhMuc"),
+        ("thungan.demo@example.test", "/HoaDon", "/MonAn"),
+        ("bep.demo@example.test", "/Home", "/MonAn"),
+        ("kho.demo@example.test", "/NguyenLieu", "/BanAn")
+    })
+    {
+        using var demo = NewClient();
+        await LoginAs(demo, email, demoPassword);
+        await CheckAccess(demo, allowed, HttpStatusCode.OK, email + " allowed");
+        if (email != "admin.demo@example.test")
+            await CheckAccess(demo, denied, HttpStatusCode.Redirect, email + " denied");
+    }
+
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch
@@ -260,13 +418,77 @@ async Task StartWeb()
     {
         try
         {
-            using var response = await client.GetAsync("/DanhMuc");
+            using var response = await client.GetAsync("/Home");
             if (response.StatusCode == HttpStatusCode.OK) { ready = true; break; }
         }
         catch (HttpRequestException) { }
         await Task.Delay(500);
     }
     Check(ready, "Application starts with migrations");
+}
+
+HttpClient NewClient() => new(new HttpClientHandler { AllowAutoRedirect = false, CookieContainer = new CookieContainer() })
+{
+    BaseAddress = client.BaseAddress, Timeout = TimeSpan.FromSeconds(10)
+};
+
+async Task LoginAs(HttpClient accountClient, string email, string password = adminPassword)
+{
+    var form = await accountClient.GetStringAsync("/Account/Login");
+    using var response = await accountClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+    {
+        ["__RequestVerificationToken"] = Hidden(form, "__RequestVerificationToken"),
+        ["Email"] = email, ["Password"] = password
+    }));
+    Check(response.StatusCode == HttpStatusCode.Redirect, email + " can log in");
+}
+
+async Task CheckAccess(HttpClient accountClient, string path, HttpStatusCode expected, string name)
+{
+    using var response = await accountClient.GetAsync(path);
+    Check(response.StatusCode == expected, name + ": " + response.StatusCode);
+}
+
+async Task InitAuth()
+{
+    using var initializer = new Process();
+    initializer.StartInfo = new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
+        UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+    };
+    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
+        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add("--init-auth");
+    initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
+    initializer.StartInfo.Environment["AuthBootstrap__AdminEmail"] = adminEmail;
+    initializer.StartInfo.Environment["AuthBootstrap__AdminPassword"] = adminPassword;
+    initializer.Start();
+    var initOutput = await initializer.StandardOutput.ReadToEndAsync();
+    var initError = await initializer.StandardError.ReadToEndAsync();
+    await initializer.WaitForExitAsync();
+    Check(initializer.ExitCode == 0, "Initialize roles and Admin: " + initOutput + initError);
+}
+
+async Task InitDemoAccounts()
+{
+    using var initializer = new Process();
+    initializer.StartInfo = new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
+        UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+    };
+    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
+        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add("--init-demo-accounts");
+    initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
+    initializer.StartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+    initializer.StartInfo.Environment["AuthBootstrap__DemoPassword"] = demoPassword;
+    initializer.Start();
+    var initOutput = await initializer.StandardOutput.ReadToEndAsync();
+    var initError = await initializer.StandardError.ReadToEndAsync();
+    await initializer.WaitForExitAsync();
+    Check(initializer.ExitCode == 0, "Initialize demo accounts: " + initOutput + initError);
 }
 
 async Task<string> Get(string path)
