@@ -1,12 +1,21 @@
 # Góp ý của cô và nhật ký quyết định khi làm đồ án (từ 27/09/2026)
 
-Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm → phần còn chờ**, để nhóm và AI khác đọc lại không nhầm ý tưởng với chức năng đã chạy. Code xác thực đang ở nhánh `feature/auth-week6-member1`; chưa tự merge hay sửa DB thật từ ghi chú này. Hai bạn làm chức năng cần thống nhất thay đổi CSDL với người phụ trách dữ liệu trước khi code form.
+Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm → phần còn chờ**, để nhóm và AI khác đọc lại không nhầm ý tưởng với chức năng đã chạy. Khi tích hợp, đối chiếu với code và nhánh mới nhất; ghi chú này không tự tạo/sửa database. Các thành viên cần thống nhất thay đổi CSDL với người phụ trách dữ liệu trước khi code form.
 
 **Cách dùng cho các lần làm sau (cả thành viên và AI):** trước khi sửa hãy đọc mục liên quan rồi đối chiếu code/nhánh hiện tại. Sau mỗi phần đã làm xong, thêm một mục có ngày, người/nhánh phụ trách, file hoặc chức năng đã đổi, kết quả build/test, và việc còn chờ người khác. Ghi rõ `Đã làm`, `Đang làm` hoặc `Dự kiến`; không đổi một ý tưởng thành “đã hoàn thành” chỉ vì nó đã có bảng CSDL. Giữ các quyết định cũ để nhìn lại vì sao nhóm đổi hướng; nếu quyết định thay đổi, ghi mục mới thay thế và lý do. Không ghi mật khẩu thật hoặc dữ liệu khách hàng thật vào file.
 
-## 0. Cập nhật phần Thành viên 1: bổ sung Thu ngân
+## 0. Nền tảng đã làm: tài khoản, phân quyền và Thu ngân
 
-**Tài khoản đăng nhập dùng để demo trên database local:** chạy lệnh `--init-demo-accounts` theo hướng dẫn trong `AUTH_WEEK6_HANDOFF.md` trên từng máy. Lệnh chỉ cho phép môi trường Development và tạo hồ sơ nhân viên/khách cùng vai trò Identity tương ứng. Mật khẩu dưới đây chỉ dành cho demo, không dùng cho tài khoản thật.
+**Đã làm:** khách tự đăng ký; đăng nhập, đăng xuất, đổi mật khẩu; khóa tạm 15 phút sau 5 lần nhập sai. Admin cấp tài khoản, đổi vai trò, khóa/mở khóa cho nhân viên đã có hồ sơ. Trang hiện hữu kiểm tra quyền ở controller/server, không chỉ ẩn menu; nhân viên ngừng làm hoặc khách ngừng sử dụng bị đăng xuất ở yêu cầu tiếp theo. Web dùng cookie Identity; API nghiệp vụ tạo về sau phải cấu hình xác thực và kiểm tra quyền riêng.
+
+**Tài khoản demo trên mỗi database local:** từ thư mục repo, chạy PowerShell dưới đây rồi khởi động Web bình thường. Lệnh chỉ chạy trong Development, tạo hồ sơ nhân viên/khách và gán đúng vai trò Identity. Mật khẩu dưới đây là mật khẩu demo công khai, không dùng cho tài khoản thật.
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT='Development'
+$env:AuthBootstrap__DemoPassword='Demo@2026!'
+dotnet run --project RestaurantManagement.Web -- --init-demo-accounts
+dotnet run --project RestaurantManagement.Web
+```
 
 | Vai trò | Email đăng nhập | Mật khẩu |
 | --- | --- | --- |
@@ -18,7 +27,19 @@ Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm
 | Bếp | `bep.demo@example.test` | `Demo@2026!` |
 | Kho | `kho.demo@example.test` | `Demo@2026!` |
 
-Git mang theo lệnh tạo tài khoản, không mang dữ liệu trong SQL Server. Chạy lại lệnh không tạo trùng hoặc đổi mật khẩu đã có; tài khoản/hồ sơ trùng nhưng sai thông tin sẽ được báo lỗi thay vì bị ghi đè.
+Git mang theo lệnh tạo tài khoản, không mang dữ liệu trong SQL Server; mỗi máy phải tự chạy lệnh. Chạy lại không tạo trùng hoặc đổi mật khẩu; tài khoản/hồ sơ trùng nhưng sai thông tin sẽ được báo lỗi thay vì bị ghi đè. Nếu muốn tạo Admin thật thay vì dùng tài khoản demo, đặt riêng `AuthBootstrap__AdminEmail` và `AuthBootstrap__AdminPassword` rồi chạy `dotnet run --project RestaurantManagement.Web -- --init-auth`; không đưa mật khẩu thật vào Git.
+
+| Vai trò | Quyền hiện chạy | Chức năng dự kiến tích hợp |
+| --- | --- | --- |
+| Admin | CRUD nhân viên, danh mục, món, nguyên liệu, bàn; cấp/khóa/đổi vai trò; xem/in hóa đơn | Quản trị nghiệp vụ bổ sung |
+| Khách hàng | Tự đăng ký, đăng nhập, đổi mật khẩu | Xem thực đơn, đặt bàn, đánh giá |
+| Tiếp tân | Xem danh sách bàn | Tiếp nhận và xếp bàn |
+| Bồi bàn | Xem danh sách bàn | Ghi món, theo dõi bàn và món từ bếp |
+| Thu ngân | Xem/in hóa đơn, xác nhận thu đủ tiền mặt trên bill hợp lệ | Thanh toán online khi có cổng thanh toán xác nhận phía server |
+| Bếp | Đăng nhập, đổi mật khẩu | Hàng đợi chế biến/KDS |
+| Kho | Xem/quản lý nguyên liệu qua CRUD hiện có | Nhập/xuất/tồn kho |
+
+`/NhanVien`, `/DanhMuc`, `/MonAn`, `/TaiKhoanNhanVien` chỉ cho Admin; `/BanAn` cho Admin/Tiếp tân/Bồi bàn xem nhưng chỉ Admin sửa; `/NguyenLieu` cho Admin/Kho; `/HoaDon` cho Admin/Thu ngân xem/in nhưng chỉ Thu ngân xác nhận tiền mặt. Khách không vào trang nhân viên. Khi thêm đặt bàn/API, phải kiểm tra **quyền sở hữu** (khách chỉ xem/sửa đặt bàn của mình), không chỉ kiểm tra vai trò. Không tạo hệ thống tài khoản hay vai trò thứ hai.
 
 **Kiểm chứng:** build thành công (0 cảnh báo, 0 lỗi); smoke test đạt `PASS: 279 HTTP/database checks`, bao gồm đăng nhập đủ 7 vai trò và chạy lệnh tạo tài khoản hai lần. Database kiểm thử tạm đã được xóa.
 
@@ -26,7 +47,7 @@ Git mang theo lệnh tạo tài khoản, không mang dữ liệu trong SQL Serve
 
 **Đã làm trên nhánh `feature/auth-week6-member1`:** thêm vai trò `ThuNgan` vào khởi tạo Identity và form cấp/đổi vai trò của Admin. Thu ngân đăng nhập được đưa đến `/HoaDon`; chỉ Thu ngân và Admin được xem danh sách, chi tiết và in hóa đơn. Thu ngân xác nhận **đã nhận đủ tiền mặt** trên hóa đơn chưa thanh toán; server đối chiếu trạng thái, tổng tiền với các dòng món và `RowVersion` để tránh ghi đè bill đã thay đổi. Khi xác nhận, hóa đơn lưu `DaThanhToan`, `TienMat`, thời điểm thanh toán và `NhanVienId` của Thu ngân đang thao tác. Admin xem/in nhưng không bấm xác nhận thu tiền; Tiếp tân, Bồi bàn, Bếp, Kho và Khách không vào trang hóa đơn. In dùng chức năng in của trình duyệt, không tạo bảng mới. `DbSeeder` bổ sung hồ sơ mẫu `NV015` (Thu ngân), **không tạo sẵn mật khẩu**.
 
-**Cách thử trên DB local:** chạy lại `dotnet run --project RestaurantManagement.Web -- --init-auth` để tạo vai trò thứ 7; Admin cấp tài khoản Thu ngân cho hồ sơ đang làm việc chưa có tài khoản, rồi đăng nhập bằng tài khoản đó. Script `PopulateRestaurantData.sql` cũ có tài khoản mẫu `Cashier` tiếng Anh nhưng bị khóa và không có mật khẩu: đó **không phải** tài khoản `ThuNgan` dùng để đăng nhập. Nếu nhân viên mẫu `NV004` đã liên kết tài khoản cũ, dùng `NV015` từ `DbSeeder` hoặc tạo hồ sơ nhân viên mới; không đổi quyền/mật khẩu của tài khoản cũ bằng SQL thủ công.
+**Lưu ý dữ liệu mẫu:** `DbSeeder` có hồ sơ Thu ngân `NV015` nhưng không tạo tài khoản; lệnh demo dùng hồ sơ riêng `DEMO-TN`. Script `PopulateRestaurantData.sql` cũ có tài khoản `Cashier` bị khóa, không có mật khẩu; đó không phải tài khoản `ThuNgan` đăng nhập được. Không sửa mật khẩu/quyền bằng SQL thủ công.
 
 **Chưa làm, cần nhóm nối tiếp:** màn hình gọi món phải tạo/cập nhật `HoaDon` và `ChiTietHoaDon` đúng giá tại thời điểm bán, giữ tổng tiền đồng bộ trước khi Thu ngân xác nhận. Thanh toán online cần cổng thanh toán và xác nhận giao dịch ở server; nút khách bấm hoặc ảnh chuyển khoản không được tự đổi sang `DaThanhToan`. Hóa đơn `ThanhToanMotPhan` chưa có dữ liệu số tiền đã thu từng lần nên không cho xác nhận tiền mặt bằng luồng mới. Việc gán voucher, hoàn/hủy giao dịch và đối soát ca là nghiệp vụ tiếp theo, không được ghi trong báo cáo là đã hoàn thành.
 

@@ -1,6 +1,6 @@
 # RestaurantManagementSystem
 
-Đọc [nhật ký ý tưởng và tiến độ](NHAT_KY_Y_TUONG_VA_TIEN_DO.md) để biết quyết định nào đã làm, phần nào còn dự kiến và cách cập nhật sau mỗi lượt. Phần xác thực/phân quyền của Thành viên 1 có [bàn giao riêng](AUTH_WEEK6_HANDOFF.md).
+Đọc [nhật ký ý tưởng và tiến độ](NHAT_KY_Y_TUONG_VA_TIEN_DO.md) để biết cách chạy tài khoản thử, quyền hiện có, quyết định đã làm và phần còn dự kiến. Sau mỗi lượt hoàn thành, cập nhật cùng file này để nhóm chỉ cần theo dõi một nơi.
 
 Giao diện quản trị Web có CRUD nhân viên (`/NhanVien`), bàn ăn (`/BanAn`) và
 danh mục món ăn (`/DanhMuc`). Các trang hỗ trợ tìm kiếm, lọc trạng thái, phân trang,
