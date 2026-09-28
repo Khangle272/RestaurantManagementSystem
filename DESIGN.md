@@ -320,3 +320,75 @@ $$\text{Tỷ suất lợi nhuận} = \frac{\text{Giá bán} - \text{Giá vốn}}
 
 
 * **Xác nhận hợp lệ:** Cho phép lựa chọn giữa *"Chuyển sang trạng thái Ngừng kinh doanh (Khuyến nghị để bảo toàn lịch sử hóa đơn)"* hoặc *"Xóa hoàn toàn"*.
+
+---
+
+## 6. Đặc tả giao diện: Portal Khách hàng (Đặt bàn & Đánh giá)
+
+Tuân thủ chặt chẽ Design Tokens: Màu chủ đạo Rose (`#E11D48`), phụ trợ Amber (`#F59E0B`), nền Slate (`#F8FAFC`), viền `#E2E8F0`.
+
+### 6.1. Màn hình Đặt bàn trực tuyến (`Views/DatBan/Index.cshtml`)
+* **Bố cục 2 cột (Grid System 5 : 7 trên Desktop, 1 cột trên Mobile):**
+  * **Cột trái - Chọn thời gian & không gian:**
+    * Bộ chọn Ngày: Ô chọn ngày (mặc định hôm nay, tối thiểu là thời điểm hiện tại).
+    * Bộ chọn Khung giờ: Nhóm nút pills (`btn-outline-danger`/`btn-check`) hiển thị các khung giờ chuẩn (11:00, 11:30, 12:00, 12:30, 18:00, 18:30, 19:00, 19:30, 20:00).
+    * Bộ chọn Số lượng khách: Thanh điều khiển +/- hoặc nút pill nhanh (2 người, 4 người, 6 người, 8 người, nhóm đông). Validate từ 1 đến 50 khách.
+    * Chọn Khu vực ưu tiên: Tầng trệt, Phòng máy lạnh, Sân vườn, Phòng VIP riêng.
+  * **Cột phải - Thông tin khách hàng & Xác nhận:**
+    * Họ và tên liên hệ (Bắt buộc).
+    * Số điện thoại liên hệ (Bắt buộc, định dạng 10 chữ số chuẩn Việt Nam).
+    * Địa chỉ Email (Để nhận thông tin xác nhận điện tử).
+    * Ghi chú bổ sung (Yêu cầu trẻ em, ghế ăn dặm, trang trí sinh nhật, dị ứng thức ăn).
+    * Nút CTA Đặt bàn: Nền `#E11D48`, chữ trắng in đậm, hiệu ứng chuyển màu khi hover sang `#BE123C`.
+
+### 6.2. Màn hình Xác nhận Đặt bàn thành công (`Views/DatBan/Success.cshtml`)
+* **Thẻ thành công (Success Receipt Card):**
+  * Biểu tượng dấu tích xanh lục `#10B981` cỡ lớn kèm thông điệp chúc mừng.
+  * **Mã đặt chỗ (Booking Code):** Kích thước chữ `28px`, phông monospace hoặc font đậm, dạng `BK-YYYYMMDD-XXXX`, có nút copy nhanh.
+  * Tóm tắt chi tiết: Họ tên, Số điện thoại, Thời gian đến, Số lượng khách, Khu vực mong muốn.
+  * Hướng dẫn đến nhà hàng: Giữ bàn trong vòng 15 phút, hotline hỗ trợ, nút in hoặc lưu biên nhận.
+  * Nút điều hướng phụ: "Tra cứu lịch sử đặt bàn" và "Quay về trang chủ".
+
+### 6.3. Màn hình Tra cứu Lịch sử đặt bàn (`Views/DatBan/LichSu.cshtml`)
+* **Thanh tìm kiếm:** Ô nhập số điện thoại hoặc mã Booking Code kèm nút tra cứu tức thì.
+* **Danh sách lịch sử dạng Card Timeline:**
+  * Mỗi đơn đặt bàn là một Card độc lập với header hiển thị Booking Code, ngày giờ đến và Huy hiệu trạng thái (Chờ xác nhận, Đã xác nhận, Đang phục vụ, Hoàn tất, Đã hủy).
+  * Thông tin bàn ăn đã được xếp (nếu có).
+  * **Accordion Chi tiết hóa đơn món ăn:**
+    * Khi đơn đã nhận bàn hoặc hoàn tất, khách hàng mở rộng để xem danh sách món ăn đã dùng, số lượng, đơn giá và tổng thanh toán.
+  * **Nút hành động:**
+    * Đơn "Hoàn tất" và chưa đánh giá: Hiển thị nút "★ Đánh giá dịch vụ" màu Amber `#F59E0B` nổi bật.
+    * Đơn đã đánh giá: Hiển thị nhãn "Đã gửi đánh giá" màu xanh lá.
+
+### 6.4. Màn hình Đánh giá chất lượng dịch vụ (`Views/DatBan/DanhGia.cshtml`)
+* **Interactive 5-star Rating:**
+  * Đánh giá chất lượng món ăn (1 - 5 sao vàng tương tác bằng icon sao).
+  * Đánh giá chất lượng phục vụ & không gian (1 - 5 sao).
+* **Vùng nhập phản hồi:** Textarea mở rộng với gợi ý (placeholder) về trải nghiệm món ăn và thái độ phục vụ.
+* **Tải ảnh trải nghiệm:** Cho phép tải ảnh chụp thực tế món ăn/hóa đơn, xem trước thumbnail.
+* Nút gửi đánh giá: Primary Button `#E11D48`.
+
+---
+
+## 7. Đặc tả giao diện: Phân hệ Quản lý Đặt bàn & Đánh giá (Admin/Lễ tân)
+
+Tích hợp vào Layout Quản trị `_AdminLayout.cshtml`, màu nền tối Sidebar `#2C7A3E`.
+
+### 7.1. Màn hình Tiếp nhận Đặt bàn (`Views/QuanLyDatBan/Index.cshtml`)
+* **Hàng thẻ tóm tắt nhanh (Summary Cards):**
+  1. *Chờ duyệt:* Số đơn mới đang chờ xếp bàn (`#F59E0B`).
+  2. *Đã xác nhận:* Số đơn đã xếp bàn sắp đến (`#0284C7`).
+  3. *Đang phục vụ:* Số bàn đang dùng bữa thực tế (`#10B981`).
+  4. *Tổng lượt hôm nay:* Số lượt khách dự kiến trong ngày.
+* **Tabs phân loại trạng thái:** Tab Chờ xác nhận, Tab Đã xác nhận, Tab Đang phục vụ, Tab Hoàn tất/Đã hủy.
+* **Bảng dữ liệu tiếp nhận:**
+  * Cột: Mã đặt bàn, Tên khách & SĐT, Giờ đến, Số khách, Khu vực/Bàn gán, Trạng thái, Thao tác.
+  * Cột thao tác nhanh:
+    * Đơn Chờ xác nhận: Nút "Xếp bàn" mở Modal chọn bàn còn trống không trùng lịch (±2 giờ).
+    * Đơn Đã xác nhận: Nút "Check-in Nhận bàn" (chuyển bàn sang Đang phục vụ, mở Hóa đơn tự động).
+    * Nút "Hủy đơn" kèm popup nhập lý do.
+
+### 7.2. Màn hình Quản lý Đánh giá của khách (`Views/QuanLyDatBan/DanhGia.cshtml`)
+* Bảng thống kê điểm hài lòng trung bình (Điểm sao trung bình, số lượt đánh giá).
+* Danh sách nhận xét của khách: Hiển thị ngày giờ, mã đơn đặt, số sao, nội dung nhận xét của khách và ảnh đính kèm (nếu có).
+* Khung phản hồi của Quản lý: Form nhập câu trả lời của nhà hàng và gửi phản hồi công khai đến khách hàng.

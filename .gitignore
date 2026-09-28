@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # UI templates
 templates_stitch/
+
+# Local Configuration files
+prompt.md
+TODO_RESERVATION_AGENT.md

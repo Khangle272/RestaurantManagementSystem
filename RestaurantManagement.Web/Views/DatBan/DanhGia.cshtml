@@ -1,0 +1,191 @@
+@model RestaurantManagement.Web.Models.DanhGiaCreateVM
+@{
+    ViewData["Title"] = "Đánh giá chất lượng dịch vụ";
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-8 col-md-10">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="p-4 p-md-5 text-white" 
+                 style="background: linear-gradient(135deg, #0F172A 0%, #E11D48 100%);">
+                <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-semibold mb-2">
+                    <i class="bi bi-star-fill me-1"></i>Ý kiến khách hàng
+                </span>
+                <h2 class="fw-bold mb-1">Đánh Giá Chất Lượng Dịch Vụ</h2>
+                <p class="mb-0 opacity-90">
+                    Cảm nhận thực tế của quý khách là động lực để nhà hàng không ngừng nâng cao chất lượng ẩm thực và cung cách phục vụ.
+                </p>
+            </div>
+
+            <div class="card-body p-4 p-md-5">
+                <!-- Tóm tắt đơn đặt bàn -->
+                <div class="p-3 rounded-3 mb-4 d-flex flex-wrap justify-content-between align-items-center bg-light border">
+                    <div>
+                        <span class="text-muted small">Mã đặt bàn:</span>
+                        <strong class="font-monospace text-danger fs-6 ms-1">@Model.MaDatBan</strong>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.TenKhachHang))
+                    {
+                        <div>
+                            <span class="text-muted small">Khách hàng:</span>
+                            <strong class="text-dark ms-1">@Model.TenKhachHang</strong>
+                        </div>
+                    }
+                    @if (Model.ThoiGianDen.HasValue)
+                    {
+                        <div>
+                            <span class="text-muted small">Thời gian:</span>
+                            <span class="text-secondary ms-1">@Model.ThoiGianDen.Value.ToLocalTime().ToString("HH:mm dd/MM/yyyy")</span>
+                        </div>
+                    }
+                </div>
+
+                <form asp-action="DanhGia" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="MaDatBan" />
+                    <input type="hidden" asp-for="TenKhachHang" />
+                    <input type="hidden" asp-for="ThoiGianDen" />
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
+
+                    <!-- 1. ĐÁNH GIÁ MÓN ĂN -->
+                    <div class="mb-4 text-center p-3 rounded-3 border bg-light">
+                        <label class="form-label fw-bold text-dark fs-6 mb-2">
+                            <i class="bi bi-egg-fried text-danger me-1"></i>Chất lượng Món ăn & Đồ uống
+                        </label>
+                        <input type="hidden" asp-for="SoSaoMonAn" id="inputSaoMonAn" value="@Model.SoSaoMonAn" />
+                        <div class="star-rating d-flex justify-content-center gap-2 fs-2 text-warning" id="ratingMonAn" role="radiogroup">
+                            <i class="bi bi-star-fill rating-star" data-rating="1" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="2" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="3" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="4" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="5" role="button"></i>
+                        </div>
+                        <div class="small fw-semibold text-secondary mt-1" id="textRatingMonAn">5 sao - Rất tuyệt vời</div>
+                        <span asp-validation-for="SoSaoMonAn" class="text-danger small"></span>
+                    </div>
+
+                    <!-- 2. ĐÁNH GIÁ DỊCH VỤ -->
+                    <div class="mb-4 text-center p-3 rounded-3 border bg-light">
+                        <label class="form-label fw-bold text-dark fs-6 mb-2">
+                            <i class="bi bi-person-heart text-danger me-1"></i>Thái độ Phục vụ & Không gian nhà hàng
+                        </label>
+                        <input type="hidden" asp-for="SoSaoDichVu" id="inputSaoDichVu" value="@Model.SoSaoDichVu" />
+                        <div class="star-rating d-flex justify-content-center gap-2 fs-2 text-warning" id="ratingDichVu" role="radiogroup">
+                            <i class="bi bi-star-fill rating-star" data-rating="1" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="2" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="3" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="4" role="button"></i>
+                            <i class="bi bi-star-fill rating-star" data-rating="5" role="button"></i>
+                        </div>
+                        <div class="small fw-semibold text-secondary mt-1" id="textRatingDichVu">5 sao - Rất hài lòng</div>
+                        <span asp-validation-for="SoSaoDichVu" class="text-danger small"></span>
+                    </div>
+
+                    <!-- 3. NHẬN XÉT CHI TIẾT -->
+                    <div class="mb-4">
+                        <label asp-for="NoiDung" class="form-label fw-semibold text-dark">
+                            <i class="bi bi-chat-quote me-1"></i>Chia sẻ cảm nhận chi tiết của quý khách <span class="text-danger">*</span>
+                        </label>
+                        <textarea asp-for="NoiDung" rows="4" class="form-control border-2" 
+                                  placeholder="Món ăn có vừa vị không? Nhân viên phục vụ ra sao? Có điểm gì nhà hàng nên cải thiện để phục vụ quý khách tốt hơn?"></textarea>
+                        <span asp-validation-for="NoiDung" class="text-danger small"></span>
+                    </div>
+
+                    <!-- 4. UPLOAD ẢNH -->
+                    <div class="mb-4">
+                        <label asp-for="HinhAnhFile" class="form-label fw-semibold text-dark">
+                            <i class="bi bi-camera me-1"></i>Tải lên hình ảnh món ăn hoặc hóa đơn (không bắt buộc)
+                        </label>
+                        <input asp-for="HinhAnhFile" type="file" class="form-control" accept="image/*" id="inputImage" />
+                        <span asp-validation-for="HinhAnhFile" class="text-danger small"></span>
+                        <div id="imagePreviewContainer" class="mt-3 d-none">
+                            <img id="imagePreview" src="#" alt="Xem trước ảnh" class="img-thumbnail rounded-3 shadow-sm" style="max-height: 200px;" />
+                        </div>
+                    </div>
+
+                    <!-- NÚT GỬI -->
+                    <div class="d-grid gap-2 pt-2">
+                        <button type="submit" class="btn btn-lg py-3 fw-bold text-white shadow"
+                                style="background-color: #E11D48; border-color: #E11D48;">
+                            <i class="bi bi-send-fill me-2"></i>GỬI ĐÁNH GIÁ NGAY
+                        </button>
+                        <a asp-action="LichSu" asp-route-bookingCode="@Model.MaDatBan" class="btn btn-light border py-2">
+                            Quay lại lịch sử đặt bàn
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const descriptions = {
+                1: "1 sao - Cần cải thiện nhiều",
+                2: "2 sao - Chưa hài lòng",
+                3: "3 sao - Bình thường / Tạm ổn",
+                4: "4 sao - Hài lòng / Ngon miệng",
+                5: "5 sao - Rất tuyệt vời"
+            };
+
+            function setupRating(containerId, inputId, textId) {
+                const container = document.getElementById(containerId);
+                const input = document.getElementById(inputId);
+                const text = document.getElementById(textId);
+                const stars = container.querySelectorAll(".rating-star");
+
+                function render(val) {
+                    stars.forEach(s => {
+                        const r = parseInt(s.getAttribute("data-rating"));
+                        if (r <= val) {
+                            s.classList.remove("bi-star");
+                            s.classList.add("bi-star-fill");
+                        } else {
+                            s.classList.remove("bi-star-fill");
+                            s.classList.add("bi-star");
+                        }
+                    });
+                    if (text && descriptions[val]) {
+                        text.innerText = descriptions[val];
+                    }
+                }
+
+                stars.forEach(s => {
+                    s.addEventListener("click", function () {
+                        const r = parseInt(this.getAttribute("data-rating"));
+                        input.value = r;
+                        render(r);
+                    });
+                });
+
+                render(parseInt(input.value) || 5);
+            }
+
+            setupRating("ratingMonAn", "inputSaoMonAn", "textRatingMonAn");
+            setupRating("ratingDichVu", "inputSaoDichVu", "textRatingDichVu");
+
+            // Preview ảnh
+            const inputImage = document.getElementById("inputImage");
+            const previewContainer = document.getElementById("imagePreviewContainer");
+            const previewImg = document.getElementById("imagePreview");
+
+            inputImage.addEventListener("change", function () {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        previewImg.src = e.target.result;
+                        previewContainer.classList.remove("d-none");
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    previewContainer.classList.add("d-none");
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,361 @@
+@model RestaurantManagement.Web.Models.DatBanAdminVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Tiếp nhận & Quản lý Đặt bàn";
+    var currentTab = ViewBag.CurrentTab as string ?? "ChoXacNhan";
+}
+
+<!-- THẺ TÓM TẮT NHANH (SUMMARY CARDS) -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <a asp-action="Index" asp-route-tab="ChoXacNhan" class="text-decoration-none">
+            <div class="card card-stat border-0 shadow-sm rounded-3 @(currentTab == "ChoXacNhan" ? "border-start border-4 border-warning" : "")">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Chờ duyệt</div>
+                        <div class="fs-3 fw-bold text-warning">@Model.ChoXacNhanCount</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-warning-subtle text-warning">
+                        <i class="bi bi-clock-history fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <a asp-action="Index" asp-route-tab="DaXacNhan" class="text-decoration-none">
+            <div class="card card-stat border-0 shadow-sm rounded-3 @(currentTab == "DaXacNhan" ? "border-start border-4 border-primary" : "")">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Đã xác nhận</div>
+                        <div class="fs-3 fw-bold text-primary">@Model.DaXacNhanCount</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-primary-subtle text-primary">
+                        <i class="bi bi-calendar2-check fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <a asp-action="Index" asp-route-tab="DangPhucVu" class="text-decoration-none">
+            <div class="card card-stat border-0 shadow-sm rounded-3 @(currentTab == "DangPhucVu" ? "border-start border-4 border-success" : "")">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Đang phục vụ</div>
+                        <div class="fs-3 fw-bold text-success">@Model.DangPhucVuCount</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-success-subtle text-success">
+                        <i class="bi bi-cup-straw fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card card-stat border-0 shadow-sm rounded-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold text-uppercase">Lượt khách hôm nay</div>
+                    <div class="fs-3 fw-bold text-dark">@Model.HomNayCount</div>
+                </div>
+                <div class="rounded-circle p-3 bg-dark-subtle text-dark">
+                    <i class="bi bi-people-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TABS VÀ THANH CÔNG CỤ LỌC -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom p-3">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <!-- Tabs -->
+            <ul class="nav nav-pills card-header-pills">
+                <li class="nav-item">
+                    <a class="nav-link @(currentTab == "ChoXacNhan" ? "active bg-warning text-dark fw-bold" : "text-dark")" 
+                       asp-action="Index" asp-route-tab="ChoXacNhan">
+                        <i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận (@Model.ChoXacNhanCount)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentTab == "DaXacNhan" ? "active bg-primary fw-bold" : "text-dark")" 
+                       asp-action="Index" asp-route-tab="DaXacNhan">
+                        <i class="bi bi-check2-circle me-1"></i>Đã xác nhận (@Model.DaXacNhanCount)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentTab == "DangPhucVu" ? "active bg-success fw-bold" : "text-dark")" 
+                       asp-action="Index" asp-route-tab="DangPhucVu">
+                        <i class="bi bi-bell-fill me-1"></i>Đang phục vụ (@Model.DangPhucVuCount)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentTab == "HoanTatHuy" ? "active bg-secondary fw-bold" : "text-dark")" 
+                       asp-action="Index" asp-route-tab="HoanTatHuy">
+                        <i class="bi bi-archive me-1"></i>Hoàn tất / Đã hủy
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Bộ lọc ngày -->
+            <form asp-action="Index" method="get" class="d-flex align-items-center gap-2">
+                <input type="hidden" name="tab" value="@currentTab" />
+                <label class="small text-muted text-nowrap">Lọc ngày:</label>
+                <input type="date" name="filterNgay" class="form-control form-control-sm" 
+                       value="@(Model.FilterNgay.HasValue ? Model.FilterNgay.Value.ToString("yyyy-MM-dd") : "")" 
+                       onchange="this.form.submit()" />
+                @if (Model.FilterNgay.HasValue)
+                {
+                    <a asp-action="Index" asp-route-tab="@currentTab" class="btn btn-sm btn-outline-secondary" title="Bỏ lọc ngày">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                }
+            </form>
+        </div>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU ĐẶT BÀN -->
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Mã đặt bàn</th>
+                        <th>Khách hàng & SĐT</th>
+                        <th>Giờ đến hẹn</th>
+                        <th class="text-center">Số khách</th>
+                        <th>Bàn ăn đã xếp</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                        <th class="text-end pe-3">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.DanhSachDatBan.Any())
+                    {
+                        @foreach (var item in Model.DanhSachDatBan)
+                        {
+                            <tr>
+                                <td class="ps-3 font-monospace fw-bold text-danger">
+                                    @item.BookingCode
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@item.HoTen</div>
+                                    <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@item.SoDienThoai</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">
+                                        <i class="bi bi-clock me-1 text-secondary"></i>@item.ThoiGianDen.ToLocalTime().ToString("HH:mm")
+                                    </div>
+                                    <div class="text-muted small">@item.ThoiGianDen.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border px-2 py-1">
+                                        <i class="bi bi-people me-1"></i>@item.SoNguoi
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (item.TenBan != "Chưa gán" && item.TenBan != "Chưa xếp bàn")
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                            <i class="bi bi-table me-1"></i>@item.TenBan
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                            Chưa xếp bàn
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @item.TrangThaiBadgeClass px-2 py-1">
+                                        @item.TrangThai
+                                    </span>
+                                </td>
+                                <td class="small text-muted" style="max-width: 200px;">
+                                    @(string.IsNullOrEmpty(item.GhiChu) ? "—" : item.GhiChu)
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="d-inline-flex gap-1">
+                                        <!-- Nút Xếp bàn (Cho Chờ xác nhận hoặc muốn đổi bàn) -->
+                                        @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Đã xác nhận")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    data-bs-toggle="modal" data-bs-target="#modalXepBan" 
+                                                    data-id="@item.MaDatBan" data-code="@item.BookingCode" 
+                                                    data-guest="@item.HoTen" data-time="@item.ThoiGianDen.ToLocalTime().ToString("HH:mm dd/MM")"
+                                                    data-curban="@(item.BanAnId ?? 0)"
+                                                    title="Duyệt & Xếp bàn ăn">
+                                                <i class="bi bi-table me-1"></i>Xếp bàn
+                                            </button>
+                                        }
+
+                                        <!-- Nút Check-in Nhận bàn (Khi đã xác nhận và có bàn) -->
+                                        @if (item.TrangThai == "Đã xác nhận")
+                                        {
+                                            <form asp-action="NhanBan" method="post" class="d-inline" 
+                                                  onsubmit="return confirm('Xác nhận khách @item.HoTen (@item.BookingCode) đã đến và nhận bàn? Bàn sẽ chuyển sang Đang phục vụ.')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="datBanId" value="@item.MaDatBan" />
+                                                <button type="submit" class="btn btn-sm btn-success fw-semibold">
+                                                    <i class="bi bi-box-arrow-in-right me-1"></i>Nhận bàn
+                                                </button>
+                                            </form>
+                                        }
+
+                                        <!-- Xem hóa đơn nếu đang phục vụ / hoàn tất -->
+                                        @if (item.HoaDonId.HasValue)
+                                        {
+                                            <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@item.HoaDonId.Value" 
+                                               class="btn btn-sm btn-outline-info" title="Xem chi tiết hóa đơn">
+                                                <i class="bi bi-receipt"></i>
+                                            </a>
+                                        }
+
+                                        <!-- Nút Hủy đơn -->
+                                        @if (item.TrangThai != "Đã hủy" && item.TrangThai != "Hoàn tất")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    data-bs-toggle="modal" data-bs-target="#modalHuyBan" 
+                                                    data-id="@item.MaDatBan" data-code="@item.BookingCode"
+                                                    title="Hủy đơn đặt bàn">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                Không có yêu cầu đặt bàn nào trong danh mục này.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XẾP BÀN ĂN -->
+<div class="modal fade" id="modalXepBan" tabindex="-1" aria-labelledby="modalXepBanTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form asp-action="XacNhan" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalXepBanTitle">
+                        <i class="bi bi-table text-primary me-2"></i>Duyệt & Xếp Bàn Ăn
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="DatBanId" id="xepBanDatBanId" />
+                    <div class="p-3 bg-light rounded-3 mb-3 small">
+                        <div>Đơn đặt bàn: <strong class="text-danger font-monospace" id="xepBanCode"></strong></div>
+                        <div>Khách hàng: <strong id="xepBanGuest"></strong></div>
+                        <div>Thời gian đến: <strong id="xepBanTime" class="text-primary"></strong></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Chọn bàn ăn còn trống <span class="text-danger">*</span></label>
+                        <select name="BanAnId" id="xepBanSelect" class="form-select form-select-lg" required>
+                            <option value="">-- Chọn bàn ăn phù hợp --</option>
+                            @foreach (var opt in Model.DanhSachBanTrong)
+                            {
+                                <option value="@opt.Value">@opt.Text</option>
+                            }
+                        </select>
+                        <div class="form-text small text-muted">
+                            <i class="bi bi-shield-check me-1"></i>Hệ thống tự động kiểm tra chống xung đột lịch đặt bàn trong khoảng ±2 giờ.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary fw-semibold px-4">
+                        <i class="bi bi-check2-circle me-1"></i>Xác nhận gán bàn
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL HỦY ĐẶT BÀN -->
+<div class="modal fade" id="modalHuyBan" tabindex="-1" aria-labelledby="modalHuyBanTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form asp-action="HuyBan" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger" id="modalHuyBanTitle">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Hủy Đơn Đặt Bàn
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="DatBanId" id="huyBanDatBanId" />
+                    <p class="text-secondary mb-3">
+                        Bạn có chắc chắn muốn hủy đơn đặt bàn <strong class="text-danger font-monospace" id="huyBanCode"></strong>?
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
+                        <textarea name="LyDoHuy" class="form-control" rows="3" required
+                                  placeholder="Ví dụ: Khách gọi báo bận đột xuất, hết bàn trống, không liên lạc được..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger fw-semibold px-4">
+                        <i class="bi bi-trash-fill me-1"></i>Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Modal Xếp bàn
+            const modalXepBan = document.getElementById("modalXepBan");
+            if (modalXepBan) {
+                modalXepBan.addEventListener("show.bs.modal", function (event) {
+                    const button = event.relatedTarget;
+                    document.getElementById("xepBanDatBanId").value = button.getAttribute("data-id");
+                    document.getElementById("xepBanCode").innerText = button.getAttribute("data-code");
+                    document.getElementById("xepBanGuest").innerText = button.getAttribute("data-guest");
+                    document.getElementById("xepBanTime").innerText = button.getAttribute("data-time");
+                    const curBan = button.getAttribute("data-curban");
+                    if (curBan && curBan !== "0") {
+                        document.getElementById("xepBanSelect").value = curBan;
+                    }
+                });
+            }
+
+            // Modal Hủy bàn
+            const modalHuyBan = document.getElementById("modalHuyBan");
+            if (modalHuyBan) {
+                modalHuyBan.addEventListener("show.bs.modal", function (event) {
+                    const button = event.relatedTarget;
+                    document.getElementById("huyBanDatBanId").value = button.getAttribute("data-id");
+                    document.getElementById("huyBanCode").innerText = button.getAttribute("data-code");
+                });
+            }
+        });
+    </script>
+}
