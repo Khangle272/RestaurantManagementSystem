@@ -1,7 +1,7 @@
 ﻿@{
-    //layout gốc
-    //Layout = "_Layout";
-
-    //layout test crud (có thể đổi thành layout khác nếu cần test crud các trang)
-    Layout = "_AdminLayout";
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    Layout = (controller == "Account" && action != "Index" && action != "ChangePassword")
+        || User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang")
+        ? "_Layout" : "_AdminLayout";
 }

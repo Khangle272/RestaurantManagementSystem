@@ -9,6 +9,8 @@ using RestaurantManagement.API.Models;
 
 // Run from the repository root. All writes target a newly generated test database.
 var root = Directory.GetCurrentDirectory();
+var webDll = Environment.GetEnvironmentVariable("SMOKE_WEB_DLL")
+    ?? Path.Combine(root, "RestaurantManagement.Web", "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll");
 var database = "RestaurantCrudTests_" + Guid.NewGuid().ToString("N");
 var connection = new SqlConnectionStringBuilder
 {
@@ -28,7 +30,7 @@ var start = new ProcessStartInfo("dotnet")
     WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
     UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
 };
-start.ArgumentList.Add(Path.Combine(start.WorkingDirectory, "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+start.ArgumentList.Add(webDll);
 start.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
 start.Environment["ASPNETCORE_URLS"] = $"http://127.0.0.1:{port}";
 start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
@@ -46,6 +48,26 @@ try
     await StartWeb();
     using (var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = client.BaseAddress })
     {
+        foreach (var (path, mediaType) in new[]
+        {
+            ("/lib/bootstrap/dist/css/bootstrap.min.css", "text/css"),
+            ("/css/admin.css", "text/css"), ("/css/site.css", "text/css"),
+            ("/css/account.css", "text/css"),
+            ("/lib/bootstrap/dist/js/bootstrap.bundle.min.js", "javascript")
+        })
+        {
+            using var asset = await anonymous.GetAsync(path);
+            Check(asset.StatusCode == HttpStatusCode.OK
+                && asset.Content.Headers.ContentType?.MediaType?.Contains(mediaType) == true,
+                "Anonymous asset loads: " + path);
+        }
+        foreach (var path in new[] { "/", "/Account/Login", "/Account/Register" })
+        {
+            var html = await anonymous.GetStringAsync(path);
+            Check(!html.Contains("action=\"/Account/Logout\"") && !html.Contains("admin-sidebar"),
+                "Anonymous public layout: " + path);
+        }
+        await CheckAccess(anonymous, "/Account", HttpStatusCode.Redirect, "Anonymous denied own account");
         using var denied = await anonymous.GetAsync("/NhanVien");
         Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/Account/Login") == true,
             "Anonymous management request redirects to login");
@@ -55,6 +77,16 @@ try
     {
         ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
+
+    using (var loginAgain = await client.GetAsync("/Account/Login"))
+        Check(loginAgain.StatusCode == HttpStatusCode.Redirect, "Signed-in login redirects");
+    var homeHtml = await Get("/");
+    Check(homeHtml.Contains("home-shortcuts") && !homeHtml.Contains("href=\"/Account/ChangePassword\""),
+        "Home contains shortcuts rather than password action");
+    var accountHtml = await Get("/Account");
+    Check(accountHtml.Contains(adminEmail) && accountHtml.Contains("href=\"/Account/ChangePassword\""),
+        "Own account contains identity and password action");
+    Check(accountHtml.Contains("class=\"role-label\""), "Signed-in account displays role label");
 
     foreach (var controller in new[] { "NhanVien", "BanAn", "DanhMuc", "MonAn", "NguyenLieu" })
     {
@@ -457,8 +489,7 @@ async Task InitAuth()
         WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
         UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
     };
-    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
-        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add(webDll);
     initializer.StartInfo.ArgumentList.Add("--init-auth");
     initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
     initializer.StartInfo.Environment["AuthBootstrap__AdminEmail"] = adminEmail;
@@ -478,8 +509,7 @@ async Task InitDemoAccounts()
         WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
         UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
     };
-    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
-        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add(webDll);
     initializer.StartInfo.ArgumentList.Add("--init-demo-accounts");
     initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
     initializer.StartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";

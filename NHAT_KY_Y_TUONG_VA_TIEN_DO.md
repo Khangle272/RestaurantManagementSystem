@@ -6,6 +6,8 @@ Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm
 
 ## 0. Nền tảng đã làm: tài khoản, phân quyền và Thu ngân
 
+**Cập nhật giao diện 28/09/2026:** giữ khung UI xanh của nhóm. Trang chủ có lối vào chức năng theo quyền; mục **Tài khoản của tôi** hiển thị tài khoản, vai trò và đổi mật khẩu. Thanh đầu hiển thị nhãn vai trò nhỏ, lấy từ quyền đăng nhập thật. Trang đăng nhập/đăng ký dùng layout công khai; CSS/JS tải được khi chưa đăng nhập, trang nghiệp vụ vẫn kiểm tra quyền ở server. Sau khi lấy bản cập nhật, dừng Web rồi chạy lại để dùng bản build mới. Không thay đổi schema hoặc dữ liệu; chưa bổ sung nghiệp vụ đặt bàn hay màn hình bếp.
+
 **Đã làm:** khách tự đăng ký; đăng nhập, đăng xuất, đổi mật khẩu; khóa tạm 15 phút sau 5 lần nhập sai. Admin cấp tài khoản, đổi vai trò, khóa/mở khóa cho nhân viên đã có hồ sơ. Trang hiện hữu kiểm tra quyền ở controller/server, không chỉ ẩn menu; nhân viên ngừng làm hoặc khách ngừng sử dụng bị đăng xuất ở yêu cầu tiếp theo. Web dùng cookie Identity; API nghiệp vụ tạo về sau phải cấu hình xác thực và kiểm tra quyền riêng.
 
 **Tài khoản demo trên mỗi database local:** từ thư mục repo, chạy PowerShell dưới đây rồi khởi động Web bình thường. Lệnh chỉ chạy trong Development, tạo hồ sơ nhân viên/khách và gán đúng vai trò Identity. Mật khẩu dưới đây là mật khẩu demo công khai, không dùng cho tài khoản thật.

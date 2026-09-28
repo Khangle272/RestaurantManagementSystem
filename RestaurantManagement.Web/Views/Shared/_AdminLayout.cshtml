@@ -6,6 +6,7 @@
     <title>@ViewData["Title"] - Quản lý nhà hàng</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -33,12 +34,12 @@
                 <a asp-controller="HoaDon" asp-action="Index" class="nav-link @(activeMenu == "HoaDon" ? "active" : "")">Hóa đơn</a>
             }
             <a asp-controller="Home" asp-action="Index" class="nav-link">Trang chủ</a>
-            <a asp-controller="Account" asp-action="ChangePassword" class="nav-link">Đổi mật khẩu</a>
+            <a asp-controller="Account" asp-action="Index" class="nav-link">Tài khoản của tôi</a>
             <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="nav-link btn btn-link text-start w-100">Đăng xuất</button></form>
         </nav>
         <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
     </aside>
-    <header class="admin-topbar"><h5 class="mb-0 fw-semibold">@ViewData["Title"]</h5></header>
+    <header class="admin-topbar"><h5 class="mb-0 fw-semibold">@ViewData["Title"]</h5><div><partial name="_RoleLabel" /></div></header>
     <main class="admin-main"><div class="container-fluid p-0">@RenderBody()</div></main>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

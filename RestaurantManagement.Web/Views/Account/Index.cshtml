@@ -1,0 +1,22 @@
+@{ ViewData["Title"] = "Tài khoản của tôi"; }
+<section class="account-shell">
+    <span class="account-label">Thông tin tài khoản</span>
+    <h1 class="h3 mb-2">Tài khoản của tôi</h1>
+    <p class="text-muted">Thông tin đăng nhập và bảo mật của bạn.</p>
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success" role="status">@success</div>
+    }
+    <dl class="my-4">
+        <dt class="small text-muted">Tài khoản đăng nhập</dt>
+        <dd class="mt-2 text-break">@User.Identity?.Name</dd>
+        <dt class="small text-muted mt-3">Vai trò</dt>
+        <dd class="mt-2">
+            <partial name="_RoleLabel" />
+        </dd>
+    </dl>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="ChangePassword" class="btn btn-primary">Đổi mật khẩu</a>
+        <form asp-action="Logout" method="post"><button class="btn btn-outline-secondary" type="submit">Đăng xuất</button></form>
+    </div>
+</section>

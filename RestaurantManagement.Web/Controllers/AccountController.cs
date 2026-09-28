@@ -15,7 +15,12 @@ public class AccountController(
     SignInManager<TaiKhoan> signIn) : Controller
 {
     [AllowAnonymous, HttpGet]
-    public IActionResult Login(string? returnUrl = null) => View(new LoginViewModel { ReturnUrl = returnUrl });
+    public IActionResult Login(string? returnUrl = null)
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToAction("Index", "Home");
+        return View(new LoginViewModel { ReturnUrl = returnUrl });
+    }
 
     [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
@@ -104,6 +109,9 @@ public class AccountController(
     }
 
     [Authorize, HttpGet]
+    public IActionResult Index() => View();
+
+    [Authorize, HttpGet]
     public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
 
     [Authorize, HttpPost, ValidateAntiForgeryToken]
@@ -120,7 +128,7 @@ public class AccountController(
         }
         await signIn.RefreshSignInAsync(user);
         TempData["Success"] = "Đã đổi mật khẩu.";
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction("Index", "Account");
     }
 
     [Authorize, HttpPost, ValidateAntiForgeryToken]

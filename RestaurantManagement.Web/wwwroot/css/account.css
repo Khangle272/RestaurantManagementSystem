@@ -1,0 +1,33 @@
+/* Bố cục trang chủ và tài khoản, giữ tông xanh của layout hiện có. */
+.account-shell {
+    max-width: 540px;
+    margin: 2.5rem auto;
+    padding: 2rem;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: .75rem;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .06);
+}
+.account-label { display: block; color: #2c7a3e; font-size: .8rem; font-weight: 700; margin-bottom: .75rem; }
+.role-label { display: inline-block; padding: .25rem .6rem; margin-left: .25rem; border-radius: 1rem; background: #eaf4ed; color: #226231; font-size: .75rem; font-weight: 600; }
+.account-shell .btn-primary, .home-welcome .btn-primary {
+    --bs-btn-bg: #2c7a3e;
+    --bs-btn-border-color: #2c7a3e;
+    --bs-btn-hover-bg: #226231;
+    --bs-btn-hover-border-color: #226231;
+    --bs-btn-active-bg: #226231;
+    --bs-btn-active-border-color: #226231;
+}
+.account-shell .form-control:focus { border-color: #2c7a3e; box-shadow: 0 0 0 .2rem rgba(44, 122, 62, .15); }
+.account-shell a:not(.btn) { color: #226231; }
+.home-welcome { background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid #2c7a3e; border-radius: .75rem; padding: 2rem; margin: 1rem 0 2rem; }
+.home-welcome p { overflow-wrap: anywhere; }
+.shortcut-card { display: block; height: 100%; padding: 1.5rem; color: #1e293b; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; text-decoration: none; }
+.shortcut-card p { color: #64748b; font-size: .9rem; line-height: 1.6; }
+.shortcut-card span { color: #2c7a3e; font-weight: 600; font-size: .85rem; }
+.shortcut-card:hover { color: #1e293b; border-color: #2c7a3e; box-shadow: 0 3px 12px rgba(44, 122, 62, .08); }
+.shortcut-card:focus-visible { outline: 3px solid #2c7a3e; outline-offset: 3px; }
+@media (max-width: 575.98px) {
+    .account-shell { margin: 1rem auto; padding: 1.25rem; }
+    .home-welcome { padding: 1.25rem; }
+}

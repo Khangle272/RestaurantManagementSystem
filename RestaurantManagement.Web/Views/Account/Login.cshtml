@@ -1,7 +1,9 @@
 @model LoginViewModel
 @{ ViewData["Title"] = "Đăng nhập"; }
-<div class="container" style="max-width:480px">
+<div class="account-shell">
+    <span class="account-label">Quản lý nhà hàng</span>
     <h1 class="h3 mb-3">Đăng nhập</h1>
+    <p class="text-muted mb-4">Dành cho khách hàng và nhân viên. Hệ thống tự nhận diện vai trò tài khoản.</p>
     <form asp-action="Login" method="post">
         <input asp-for="ReturnUrl" type="hidden" />
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
