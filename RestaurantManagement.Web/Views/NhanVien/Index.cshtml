@@ -1,15 +1,17 @@
 @using RestaurantManagement.API.Models
+@using RestaurantManagement.Web.Security
 @model PagedListViewModel<NhanVien>
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Quản lý nhân viên";
+    var accountRoles = ViewBag.AccountRoles as Dictionary<int, string> ?? new();
 }
 
 <div class="container-fluid py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
             <h2 class="h3 mb-1">@ViewData["Title"]</h2>
-            <p class="text-muted mb-0">Quản lý hồ sơ, chức vụ và tình trạng làm việc của nhân viên.</p>
+            <p class="text-muted mb-0">Quản lý hồ sơ, vai trò và tài khoản đăng nhập tại cùng một nơi.</p>
         </div>
         <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm nhân viên</a>
     </div>
@@ -45,6 +47,7 @@
                         <th scope="col">Họ tên / Địa chỉ</th>
                         <th scope="col">Liên hệ</th>
                         <th scope="col">Chức vụ</th>
+                        <th scope="col">Tài khoản</th>
                         <th scope="col">Ngày vào làm</th>
                         <th scope="col">Trạng thái</th>
                         <th scope="col" class="text-end">Thao tác</th>
@@ -53,7 +56,7 @@
                 <tbody>
                     @if (!Model.Items.Any())
                     {
-                        <tr><td colspan="7" class="text-center text-muted py-5">Không tìm thấy nhân viên phù hợp.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-5">Không tìm thấy nhân viên phù hợp.</td></tr>
                     }
                     @foreach (var item in Model.Items)
                     {
@@ -61,7 +64,10 @@
                             <td class="fw-medium">@item.MaNhanVien</td>
                             <td><div>@item.HoTen</div><small class="text-muted">@item.DiaChi</small></td>
                             <td><div>@item.SoDienThoai</div><small class="text-muted">@item.Email</small></td>
-                            <td>@item.ChucVu</td>
+                            <td>@(item.TaiKhoanId is int accountId && accountRoles.TryGetValue(accountId, out var roleLabel) ? roleLabel : AppRoles.Label(AppRoles.RoleForJob(item.ChucVu) ?? item.ChucVu))</td>
+                            <td><small class="text-break">@(item.TaiKhoan?.Email ?? "Chưa cấp")</small>
+                                @if (item.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow) { <span class="badge bg-secondary">Đã khóa</span> }
+                            </td>
                             <td>@item.NgayVaoLam.ToString("dd/MM/yyyy")</td>
                             <td><span class="badge @(item.DangLamViec ? "bg-success" : "bg-secondary")">@(item.DangLamViec ? "Đang làm việc" : "Đã nghỉ việc")</span></td>
                             <td class="text-end text-nowrap">

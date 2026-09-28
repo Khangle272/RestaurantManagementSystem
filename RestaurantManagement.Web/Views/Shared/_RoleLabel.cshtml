@@ -1,7 +1,8 @@
-@foreach (var (role, label) in new[] { ("Admin", "Quản lý"), ("KhachHang", "Khách hàng"), ("TiepTan", "Tiếp tân"), ("BoiBan", "Phục vụ"), ("ThuNgan", "Thu ngân"), ("Bep", "Bếp"), ("Kho", "Kho") })
+@using RestaurantManagement.Web.Security
+@foreach (var role in AppRoles.All)
 {
     if (User.IsInRole(role))
     {
-        <span class="role-label">@label</span>
+        <span class="role-label">@AppRoles.Label(role)</span>
     }
 }

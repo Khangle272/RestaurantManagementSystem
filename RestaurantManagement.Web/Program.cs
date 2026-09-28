@@ -26,6 +26,15 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/Denied";
+    options.Events.OnRedirectToLogin = context =>
+    {
+        var path = context.Request.Path;
+        var login = path.StartsWithSegments("/Account") || path.StartsWithSegments("/Home")
+            ? "/Account/Login" : "/Staff/Login";
+        context.Response.Redirect(context.Request.PathBase + login
+            + "?ReturnUrl=" + Uri.EscapeDataString(context.Request.PathBase + path + context.Request.QueryString));
+        return Task.CompletedTask;
+    };
 });
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
     options.ValidationInterval = TimeSpan.Zero);

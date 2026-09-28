@@ -35,17 +35,4 @@ public class CreateStaffAccountViewModel
     [Range(1, int.MaxValue)] public int NhanVienId { get; set; }
     [Required, EmailAddress, StringLength(256)] public string Email { get; set; } = "";
     [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
-    [Required] public string Role { get; set; } = "";
-}
-
-public class StaffAccountRow
-{
-    public int NhanVienId { get; set; }
-    public string MaNhanVien { get; set; } = "";
-    public string HoTen { get; set; } = "";
-    public bool DangLamViec { get; set; }
-    public int? TaiKhoanId { get; set; }
-    public string? Email { get; set; }
-    public string? Role { get; set; }
-    public bool IsLocked { get; set; }
 }

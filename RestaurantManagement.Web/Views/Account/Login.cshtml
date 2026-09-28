@@ -1,16 +1,20 @@
 @model LoginViewModel
-@{ ViewData["Title"] = "Đăng nhập"; }
-<div class="account-shell">
-    <span class="account-label">Quản lý nhà hàng</span>
-    <h1 class="h3 mb-3">Đăng nhập</h1>
-    <p class="text-muted mb-4">Dành cho khách hàng và nhân viên. Hệ thống tự nhận diện vai trò tài khoản.</p>
-    <form asp-action="Login" method="post">
+@{
+    var staff = ViewData["StaffLogin"] is true;
+    ViewData["Title"] = staff ? "Đăng nhập nhân viên" : "Đăng nhập khách hàng";
+}
+<div class="account-shell @(staff ? "staff-login" : "customer-login")">
+    <span class="account-label">@(staff ? "Hệ thống quản lý nội bộ" : "Chào mừng quý khách")</span>
+    <h1 class="h3 mb-3">@ViewData["Title"]</h1>
+    <p class="text-muted mb-4">@(staff ? "Dùng tài khoản do quản lý cấp. Chức năng được hiển thị theo vai trò của bạn." : "Đăng nhập tài khoản khách hàng để sử dụng dịch vụ của nhà hàng.")</p>
+    <form asp-action="@(staff ? "StaffLogin" : "Login")" method="post">
         <input asp-for="ReturnUrl" type="hidden" />
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
         <div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" autocomplete="username" /><span asp-validation-for="Email" class="text-danger"></span></div>
         <div class="mb-3"><label asp-for="Password" class="form-label">Mật khẩu</label><input asp-for="Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Password" class="text-danger"></span></div>
         <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
     </form>
-    <p class="mt-3">Bạn là khách hàng? <a asp-action="Register">Tạo tài khoản</a></p>
+    @if (!staff) { <p class="mt-3 mb-0">Chưa có tài khoản? <a asp-action="Register">Đăng ký khách hàng</a></p> }
+    else { <p class="mt-3 mb-0 small text-muted">Chưa có tài khoản hoặc bị khóa? Liên hệ quản lý nhà hàng.</p> }
 </div>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

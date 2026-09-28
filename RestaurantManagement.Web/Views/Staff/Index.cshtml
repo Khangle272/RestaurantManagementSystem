@@ -1,0 +1,44 @@
+﻿@{
+    ViewData["Title"] = "Khu làm việc";
+}
+
+<div class="home-welcome">
+    <span class="account-label">Quản lý nhà hàng</span>
+    <h1 class="h2 mb-3">Chào mừng trở lại</h1>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p>Xin chào @User.Identity.Name.</p>
+        <p class="text-muted mb-0">Chọn chức năng bên dưới để bắt đầu công việc của bạn.</p>
+    }
+    else
+    {
+        <p>Đăng nhập để sử dụng chức năng theo vai trò của bạn.</p>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Đăng nhập</a>
+        <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Đăng ký khách hàng</a>
+    }
+</div>
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <h2 class="h5 mb-3">Truy cập nhanh</h2>
+    <div class="row g-3 home-shortcuts">
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="col-md-6 col-xl-4"><a asp-controller="MonAn" asp-action="Index" class="shortcut-card"><h3 class="h5">Thực đơn món ăn</h3><p>Quản lý món, size và thông tin thực đơn.</p><span>Mở thực đơn →</span></a></div>
+            <div class="col-md-6 col-xl-4"><a asp-controller="NhanVien" asp-action="Index" class="shortcut-card"><h3 class="h5">Quản lý nhân viên</h3><p>Hồ sơ, vai trò và tài khoản đăng nhập của nhân viên.</p><span>Quản lý nhân viên →</span></a></div>
+            <div class="col-md-6 col-xl-4"><a asp-controller="TaiKhoanKhachHang" asp-action="Index" class="shortcut-card"><h3 class="h5">Tài khoản khách hàng</h3><p>Xem và khóa/mở khóa tài khoản khách.</p><span>Xem tài khoản khách →</span></a></div>
+        }
+        @if (User.IsInRole("Admin") || User.IsInRole("TiepTan") || User.IsInRole("BoiBan"))
+        {
+            <div class="col-md-6 col-xl-4"><a asp-controller="BanAn" asp-action="Index" class="shortcut-card"><h3 class="h5">Bàn ăn</h3><p>Xem thông tin và trạng thái bàn ăn.</p><span>Xem bàn ăn →</span></a></div>
+        }
+        @if (User.IsInRole("Admin") || User.IsInRole("ThuNgan"))
+        {
+            <div class="col-md-6 col-xl-4"><a asp-controller="HoaDon" asp-action="Index" class="shortcut-card"><h3 class="h5">Hóa đơn</h3><p>Tra cứu hóa đơn và thanh toán theo quyền.</p><span>Xem hóa đơn →</span></a></div>
+        }
+        @if (User.IsInRole("Admin") || User.IsInRole("Kho"))
+        {
+            <div class="col-md-6 col-xl-4"><a asp-controller="NguyenLieu" asp-action="Index" class="shortcut-card"><h3 class="h5">Kho nguyên liệu</h3><p>Quản lý thông tin nguyên liệu nhà hàng.</p><span>Mở kho nguyên liệu →</span></a></div>
+        }
+        <div class="col-md-6 col-xl-4"><a asp-controller="Account" asp-action="Index" class="shortcut-card"><h3 class="h5">Tài khoản của tôi</h3><p>Xem vai trò và quản lý bảo mật tài khoản.</p><span>Xem tài khoản →</span></a></div>
+    </div>
+}

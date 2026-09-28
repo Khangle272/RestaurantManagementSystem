@@ -18,22 +18,44 @@ public class AccountController(
     public IActionResult Login(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectToAction("Index", "Home");
+            return User.IsInRole(AppRoles.KhachHang)
+                ? RedirectToAction("Index", "Home") : RedirectToAction("Index", "Staff");
+        ViewData["StaffLogin"] = false;
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
     [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
+        => await LoginCore(model, staffPortal: false);
+
+    [AllowAnonymous, HttpGet("/Staff/Login")]
+    public IActionResult StaffLogin(string? returnUrl = null)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (User.Identity?.IsAuthenticated == true && !User.IsInRole(AppRoles.KhachHang))
+            return RedirectToAction("Index", "Staff");
+        ViewData["StaffLogin"] = true;
+        return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+    }
+
+    [AllowAnonymous, HttpPost("/Staff/Login"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> StaffLogin(LoginViewModel model)
+        => await LoginCore(model, staffPortal: true);
+
+    private async Task<IActionResult> LoginCore(LoginViewModel model, bool staffPortal)
+    {
+        ViewData["StaffLogin"] = staffPortal;
+        if (!ModelState.IsValid) return View("Login", model);
         var user = await users.FindByEmailAsync(model.Email.Trim());
         if (user is not null)
         {
             var roles = await users.GetRolesAsync(user);
-            var eligible = roles.Contains(AppRoles.Admin)
-                || (roles.Contains(AppRoles.KhachHang) && await db.KhachHang.AnyAsync(x => x.TaiKhoanId == user.Id && x.DangSuDung))
-                || (roles.Any(x => AppRoles.AssignableStaff.Contains(x)) && await db.NhanVien.AnyAsync(x => x.TaiKhoanId == user.Id && x.DangLamViec));
-            if (eligible)
+            var eligible = staffPortal
+                ? !roles.Contains(AppRoles.KhachHang) && ((roles.Contains(AppRoles.Admin)
+                    && await db.NhanVien.Where(x => x.TaiKhoanId == user.Id).AllAsync(x => x.DangLamViec))
+                    || (roles.Any(x => AppRoles.AssignableStaff.Contains(x)) && await db.NhanVien.AnyAsync(x => x.TaiKhoanId == user.Id && x.DangLamViec)))
+                : roles.Contains(AppRoles.KhachHang) && roles.All(x => x == AppRoles.KhachHang)
+                    && await db.KhachHang.AnyAsync(x => x.TaiKhoanId == user.Id && x.DangSuDung);
+            if (eligible && !string.IsNullOrEmpty(user.SecurityStamp))
             {
                 var result = await signIn.PasswordSignInAsync(user, model.Password, false, lockoutOnFailure: true);
                 if (result.Succeeded)
@@ -41,14 +63,14 @@ public class AccountController(
                         ? LocalRedirect(model.ReturnUrl)
                         : roles.Contains(AppRoles.ThuNgan)
                             ? RedirectToAction("Index", "HoaDon")
-                            : RedirectToAction("Index", "Home");
+                            : staffPortal ? RedirectToAction("Index", "Staff") : RedirectToAction("Index", "Home");
                 if (result.IsLockedOut) ModelState.AddModelError("", "Tài khoản tạm khóa 15 phút sau nhiều lần đăng nhập sai.");
                 else ModelState.AddModelError("", "Email hoặc mật khẩu không đúng, hoặc tài khoản chưa được phép sử dụng.");
-                return View(model);
+                return View("Login", model);
             }
         }
         ModelState.AddModelError("", "Email hoặc mật khẩu không đúng, hoặc tài khoản chưa được phép sử dụng.");
-        return View(model);
+        return View("Login", model);
     }
 
     [AllowAnonymous, HttpGet]
@@ -134,8 +156,9 @@ public class AccountController(
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        var staff = !User.IsInRole(AppRoles.KhachHang);
         await signIn.SignOutAsync();
-        return RedirectToAction("Index", "Home");
+        return staff ? RedirectToAction(nameof(StaffLogin)) : RedirectToAction("Index", "Home");
     }
 
     [AllowAnonymous]

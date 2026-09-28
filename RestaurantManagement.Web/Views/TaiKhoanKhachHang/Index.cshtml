@@ -1,0 +1,34 @@
+@using RestaurantManagement.API.Models
+@model PagedListViewModel<KhachHang>
+@{ ViewData["Title"] = "Tài khoản khách hàng"; }
+<h1 class="h3 mb-2">Tài khoản khách hàng</h1>
+<p class="text-muted">Quản lý quyền đăng nhập của khách. Không đổi khách thành nhân viên hoặc xóa lịch sử khách hàng.</p>
+<partial name="_ManagementMessages" />
+<form method="get" class="d-flex flex-wrap gap-2 mb-4">
+    <input name="search" value="@Model.Pagination.Search" class="form-control" style="max-width:360px" aria-label="Tìm tên, email hoặc số điện thoại" placeholder="Tên, email hoặc số điện thoại" />
+    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a>
+</form>
+<div class="card border-0 shadow-sm table-responsive">
+<table class="table table-hover align-middle mb-0">
+    <thead class="table-light"><tr><th>Khách hàng</th><th>Email đăng nhập</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+    <tbody>
+    @if (!Model.Items.Any()) { <tr><td colspan="4" class="text-muted text-center py-4">Chưa có tài khoản phù hợp.</td></tr> }
+    @foreach (var customer in Model.Items)
+    {
+        var locked = customer.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow;
+        <tr>
+            <td>@customer.HoTen<small class="d-block text-muted">@customer.SoDienThoai</small></td>
+            <td class="text-break">@customer.TaiKhoan?.Email</td>
+            <td>@(!customer.DangSuDung ? "Hồ sơ ngừng sử dụng" : locked ? "Đã khóa" : "Hoạt động")</td>
+            <td><form asp-action="SetLocked" method="post">
+                <input type="hidden" name="id" value="@customer.Id" />
+                <input type="hidden" name="locked" value="@(!locked)" />
+                <button class="btn btn-sm btn-outline-secondary" type="submit">@(locked ? "Mở khóa" : "Khóa")</button>
+            </form></td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>
+<partial name="_ManagementPagination" model="Model.Pagination" />

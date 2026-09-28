@@ -34,6 +34,7 @@ start.ArgumentList.Add(webDll);
 start.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
 start.Environment["ASPNETCORE_URLS"] = $"http://127.0.0.1:{port}";
 start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+start.Environment["Logging__LogLevel__Default"] = "Warning";
 using var process = new Process { StartInfo = start };
 using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CookieContainer = new CookieContainer() })
 {
@@ -61,7 +62,7 @@ try
                 && asset.Content.Headers.ContentType?.MediaType?.Contains(mediaType) == true,
                 "Anonymous asset loads: " + path);
         }
-        foreach (var path in new[] { "/", "/Account/Login", "/Account/Register" })
+        foreach (var path in new[] { "/", "/Account/Login", "/Account/Register", "/Staff/Login" })
         {
             var html = await anonymous.GetStringAsync(path);
             Check(!html.Contains("action=\"/Account/Logout\"") && !html.Contains("admin-sidebar"),
@@ -69,24 +70,36 @@ try
         }
         await CheckAccess(anonymous, "/Account", HttpStatusCode.Redirect, "Anonymous denied own account");
         using var denied = await anonymous.GetAsync("/NhanVien");
-        Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/Account/Login") == true,
+        Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/Staff/Login") == true,
             "Anonymous management request redirects to login");
         await CheckAccess(anonymous, "/HoaDon", HttpStatusCode.Redirect, "Anonymous denied invoices");
     }
     await Post("/Account/Login", await Get("/Account/Login"), new()
     {
         ["Email"] = adminEmail, ["Password"] = adminPassword
+    }, false, "Email hoặc mật khẩu");
+    await CheckAccess(client, "/Staff", HttpStatusCode.Redirect, "Admin rejected at customer portal leaves no staff session");
+    await Post("/Staff/Login", await Get("/Staff/Login"), new()
+    {
+        ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
 
     using (var loginAgain = await client.GetAsync("/Account/Login"))
         Check(loginAgain.StatusCode == HttpStatusCode.Redirect, "Signed-in login redirects");
-    var homeHtml = await Get("/");
+    var homeHtml = await Get("/Staff");
     Check(homeHtml.Contains("home-shortcuts") && !homeHtml.Contains("href=\"/Account/ChangePassword\""),
         "Home contains shortcuts rather than password action");
     var accountHtml = await Get("/Account");
     Check(accountHtml.Contains(adminEmail) && accountHtml.Contains("href=\"/Account/ChangePassword\""),
         "Own account contains identity and password action");
     Check(accountHtml.Contains("class=\"role-label\""), "Signed-in account displays role label");
+    using (var visitor = NewClient())
+    {
+        var publicHome = await visitor.GetStringAsync("/");
+        Check(!publicHome.Contains("/Staff") && !publicHome.Contains("/NhanVien"), "Public home has no staff link");
+        var staffForm = await visitor.GetStringAsync("/Staff/Login");
+        Check(!staffForm.Contains("/Account/Register"), "Staff portal has no registration link");
+    }
 
     foreach (var controller in new[] { "NhanVien", "BanAn", "DanhMuc", "MonAn", "NguyenLieu" })
     {
@@ -135,6 +148,26 @@ try
         Check(loggedOut.StatusCode == HttpStatusCode.Redirect, "Customer logs out");
         await CheckAccess(customerClient, "/Account/ChangePassword", HttpStatusCode.Redirect, "Logged-out customer denied private page");
         await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
+        await CheckAccess(customerClient, "/Staff", HttpStatusCode.Redirect, "Customer denied staff workspace");
+        await CheckAccess(customerClient, "/TaiKhoanKhachHang", HttpStatusCode.Redirect, "Customer denied customer-account administration");
+        using (var wrongPortal = NewClient())
+        {
+            var form = await wrongPortal.GetStringAsync("/Staff/Login");
+            using var rejected = await wrongPortal.PostAsync("/Staff/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = Hidden(form, "__RequestVerificationToken"),
+                ["Email"] = "auth-customer@example.test", ["Password"] = "Changed123!"
+            }));
+            Check(rejected.StatusCode == HttpStatusCode.OK, "Customer rejected at staff portal with correct password");
+            await CheckAccess(wrongPortal, "/Account", HttpStatusCode.Redirect, "Wrong portal issues no auth cookie");
+        }
+        var customerId = await db.KhachHang.Where(x => x.Email == "auth-customer@example.test").Select(x => x.Id).SingleAsync();
+        await Post("/TaiKhoanKhachHang/SetLocked", await Get("/TaiKhoanKhachHang"), new()
+        { ["id"] = customerId.ToString(), ["locked"] = "true" }, true);
+        await CheckAccess(customerClient, "/Account", HttpStatusCode.Redirect, "Admin lock invalidates customer session");
+        await Post("/TaiKhoanKhachHang/SetLocked", await Get("/TaiKhoanKhachHang"), new()
+        { ["id"] = customerId.ToString(), ["locked"] = "false" }, true);
+        await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
         using var failedLoginClient = NewClient();
         for (var attempt = 0; attempt < 5; attempt++)
         {
@@ -156,7 +189,7 @@ try
         ("NV002", "TiepTan", "/BanAn", "/NhanVien"),
         ("NV003", "Kho", "/NguyenLieu", "/BanAn"),
         ("TEST-BOIBAN", "BoiBan", "/BanAn", "/DanhMuc"),
-        ("TEST-BEP", "Bep", "/Home", "/MonAn"),
+        ("TEST-BEP", "Bep", "/Staff", "/MonAn"),
         ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn")
     })
     {
@@ -167,13 +200,17 @@ try
             db.NhanVien.Add(employee);
             await db.SaveChangesAsync();
         }
-        var form = await Get("/TaiKhoanNhanVien/Create");
+        var form = await Get("/TaiKhoanNhanVien/Create?nhanVienId=" + employee.Id);
         var email = $"auth-{role.ToLowerInvariant()}@example.test";
         await Post("/TaiKhoanNhanVien/Create", form, new()
         {
             ["NhanVienId"] = employee.Id.ToString(), ["Email"] = email,
-            ["Password"] = adminPassword, ["Role"] = role
+            ["Password"] = adminPassword, ["Role"] = "Admin"
         }, true);
+        var accountId = await db.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+        Check(await (from link in db.UserRoles join assigned in db.Roles on link.RoleId equals assigned.Id
+                     where link.UserId == accountId select assigned.Name).SingleAsync() == role,
+            "Provisioning uses profile role, not forged Admin field");
         using var roleClient = NewClient();
         await LoginAs(roleClient, email);
         await CheckAccess(roleClient, allowed, HttpStatusCode.OK, role + " allowed page");
@@ -213,17 +250,28 @@ try
         }
         if (role == "BoiBan")
         {
-            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()
+            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/NhanVien/Edit/" + employee.Id), new()
             {
                 ["id"] = employee.Id.ToString(), ["locked"] = "true"
             }, true);
             await CheckAccess(roleClient, "/BanAn", HttpStatusCode.Redirect, "Locked employee session denied");
-            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()
+            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/NhanVien/Edit/" + employee.Id), new()
             {
                 ["id"] = employee.Id.ToString(), ["locked"] = "false"
             }, true);
             await LoginAs(roleClient, email);
             await CheckAccess(roleClient, "/BanAn", HttpStatusCode.OK, "Unlocked employee can log in");
+            await db.Entry(employee).ReloadAsync();
+            await Post("/NhanVien/Edit/" + employee.Id, await Get("/NhanVien/Edit/" + employee.Id), new()
+            {
+                ["Id"] = employee.Id.ToString(), ["MaNhanVien"] = employee.MaNhanVien,
+                ["HoTen"] = employee.HoTen, ["SoDienThoai"] = employee.SoDienThoai,
+                ["ChucVu"] = "Bep", ["NgayVaoLam"] = employee.NgayVaoLam.ToString("yyyy-MM-dd"), ["DangLamViec"] = "true"
+            }, true);
+            await CheckAccess(roleClient, "/BanAn", HttpStatusCode.Redirect, "Profile role change invalidates old session");
+            await LoginAs(roleClient, email);
+            await CheckAccess(roleClient, "/MonAn", HttpStatusCode.Redirect, "Kitchen role cannot manage menu after transfer");
+            await CheckAccess(roleClient, "/BanAn", HttpStatusCode.Redirect, "Kitchen role loses serving access after transfer");
         }
     }
     var areaId = await db.KhuVuc.Where(x => x.DangSuDung).Select(x => x.Id).FirstAsync();
@@ -394,12 +442,12 @@ try
         "Demo bootstrap creates five staff profiles only once");
     foreach (var (email, allowed, denied) in new[]
     {
-        ("admin.demo@example.test", "/TaiKhoanNhanVien", "/Account/Denied"),
+        ("admin.demo@example.test", "/NhanVien", "/Account/Denied"),
         ("khach.demo@example.test", "/Account/ChangePassword", "/TaiKhoanNhanVien"),
         ("tieptan.demo@example.test", "/BanAn", "/NhanVien"),
         ("boiban.demo@example.test", "/BanAn", "/DanhMuc"),
         ("thungan.demo@example.test", "/HoaDon", "/MonAn"),
-        ("bep.demo@example.test", "/Home", "/MonAn"),
+        ("bep.demo@example.test", "/Staff", "/MonAn"),
         ("kho.demo@example.test", "/NguyenLieu", "/BanAn")
     })
     {
@@ -466,8 +514,10 @@ HttpClient NewClient() => new(new HttpClientHandler { AllowAutoRedirect = false,
 
 async Task LoginAs(HttpClient accountClient, string email, string password = adminPassword)
 {
-    var form = await accountClient.GetStringAsync("/Account/Login");
-    using var response = await accountClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+    var path = email == "auth-customer@example.test" || email == "khach.demo@example.test"
+        ? "/Account/Login" : "/Staff/Login";
+    var form = await accountClient.GetStringAsync(path);
+    using var response = await accountClient.PostAsync(path, new FormUrlEncodedContent(new Dictionary<string, string>
     {
         ["__RequestVerificationToken"] = Hidden(form, "__RequestVerificationToken"),
         ["Email"] = email, ["Password"] = password

@@ -9,6 +9,9 @@
     box-shadow: 0 4px 18px rgba(15, 23, 42, .06);
 }
 .account-label { display: block; color: #2c7a3e; font-size: .8rem; font-weight: 700; margin-bottom: .75rem; }
+.customer-login { border-top: 4px solid #2c7a3e; }
+.staff-login { border-top: 4px solid #1e293b; }
+.staff-login .account-label { color: #475569; }
 .role-label { display: inline-block; padding: .25rem .6rem; margin-left: .25rem; border-radius: 1rem; background: #eaf4ed; color: #226231; font-size: .75rem; font-weight: 600; }
 .account-shell .btn-primary, .home-welcome .btn-primary {
     --bs-btn-bg: #2c7a3e;

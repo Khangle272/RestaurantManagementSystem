@@ -6,6 +6,25 @@ Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm
 
 ## 0. Nền tảng đã làm: tài khoản, phân quyền và Thu ngân
 
+### Cập nhật hai cổng và quản lý tài khoản — 28/09/2026
+
+Mục này thay thế luồng đăng nhập chung và màn hình tài khoản nhân viên riêng ở bản trước:
+
+- **Khách:** địa chỉ chính `/` dùng giao diện công khai; `/Account/Login` chỉ nhận tài khoản `KhachHang`, `/Account/Register` chỉ tạo khách. Không hiện đường vào nhân viên trên trang công khai khi chưa đăng nhập.
+- **Nhân viên/Admin:** vào `/Staff/Login` bằng link do quản lý cấp hoặc bookmark. Chỉ nhận tài khoản nhân viên/Admin tồn tại và được phép hoạt động. Thành công vào `/Staff` (Thu ngân vào `/HoaDon`). Khách dù có mật khẩu đúng vẫn bị từ chối ở cổng nhân viên; tài khoản nhân viên/Admin cũng bị từ chối ở cổng khách. Đây là kiểm tra phía server, không phải chỉ giấu link.
+- **Quản lý nhân viên:** chỉ còn một menu `/NhanVien`. Thêm hồ sơ → chọn vai trò công việc → lưu → cấp email/mật khẩu ngay từ hồ sơ. Vai trò tài khoản lấy từ hồ sơ đã lưu, không có dropdown quyền thứ hai. Mỗi vai trò có bộ quyền cố định. Admin điều chuyển nhân viên bằng sửa vai trò trong hồ sơ; phiên cũ hết hiệu lực và nhân viên đăng nhập lại. Hồ sơ và tài khoản vẫn lưu bằng các bảng hiện có; không xóa/tạo lại tài khoản đã cấp.
+- **Tài khoản khách:** Admin xem/tìm và khóa/mở khóa tại `/TaiKhoanKhachHang`. Không đổi khách thành nhân viên, không xóa lịch sử. Trang `/Account` là tài khoản cá nhân của người đang đăng nhập, khác với chức năng quản lý tài khoản người khác.
+- **Tài khoản Admin:** vẫn khởi tạo riêng qua cấu hình/lệnh hiện có; không cấp quyền Admin bằng form nhân viên. Tài khoản thử và mật khẩu ở bảng dưới vẫn giữ nguyên. Không dùng mật khẩu demo khi triển khai thật.
+- **Giao diện:** giữ Bootstrap, sidebar xanh của nhóm. Hai form login đồng nhất bố cục nhưng phân biệt rõ khách/nội bộ; không thêm thư viện giao diện.
+
+**Phần thành viên 1 đã nối:** Auth, kiểm tra nhóm tài khoản, quyền server, quản lý tài khoản nhân viên/khách. Không thay đổi schema trong lượt này. API hiện chỉ có WeatherForecast, chưa có API nghiệp vụ để tích hợp Auth; khi nhóm bổ sung phải bảo vệ API riêng, không coi cookie Web là bảo vệ tự động API khác.
+
+**Thành viên 2 cần nối:** khách xem khả năng đặt bàn và gửi yêu cầu, tiếp tân tạo phiếu đặt bàn hộ khách/duyệt/từ chối/xếp bàn/nhận bàn, lịch sử thuộc đúng khách. Tiếp tân tạo **đặt bàn**, không thêm bàn vật lý mới; CRUD bàn vật lý vẫn Admin. Chưa có controller đặt bàn trong bản hiện tại, nên Auth không tự tạo chức năng đặt bàn.
+
+**Thành viên 3 cần nối:** thực đơn công khai (món, size, combo, hình/giá/trạng thái phục vụ), phối hợp nội dung giới thiệu nhà hàng. Khu công khai hiện là điểm nối, chưa phải website quảng bá hoàn thiện; không ghi báo cáo rằng đặt bàn, thực đơn khách hay KDS đã xong.
+
+**Kiểm chứng bản hai cổng:** build Web 0 cảnh báo/0 lỗi; `PASS: 322 HTTP/database checks`. Đã thử 7 tài khoản demo, đúng mật khẩu nhưng sai cổng, quyền bị cấm, cấp tài khoản không nhận quyền giả từ form, khóa/mở khách và nhân viên, điều chuyển vai trò làm hết phiên cũ, giữ liên kết tài khoản khi sửa hồ sơ và bảo vệ lịch sử. Database kiểm thử riêng đã được xóa; không phải dữ liệu nhóm. Sau khi merge, khởi động lại Web; Admin/nhân viên dùng `/Staff/Login`, khách dùng `/Account/Login`. Tài khoản demo vẫn phải được khởi tạo trên đúng database local của mỗi máy như lệnh bên dưới.
+
 **Cập nhật giao diện 28/09/2026:** giữ khung UI xanh của nhóm. Trang chủ có lối vào chức năng theo quyền; mục **Tài khoản của tôi** hiển thị tài khoản, vai trò và đổi mật khẩu. Thanh đầu hiển thị nhãn vai trò nhỏ, lấy từ quyền đăng nhập thật. Trang đăng nhập/đăng ký dùng layout công khai; CSS/JS tải được khi chưa đăng nhập, trang nghiệp vụ vẫn kiểm tra quyền ở server. Sau khi lấy bản cập nhật, dừng Web rồi chạy lại để dùng bản build mới. Không thay đổi schema hoặc dữ liệu; chưa bổ sung nghiệp vụ đặt bàn hay màn hình bếp.
 
 **Đã làm:** khách tự đăng ký; đăng nhập, đăng xuất, đổi mật khẩu; khóa tạm 15 phút sau 5 lần nhập sai. Admin cấp tài khoản, đổi vai trò, khóa/mở khóa cho nhân viên đã có hồ sơ. Trang hiện hữu kiểm tra quyền ở controller/server, không chỉ ẩn menu; nhân viên ngừng làm hoặc khách ngừng sử dụng bị đăng xuất ở yêu cầu tiếp theo. Web dùng cookie Identity; API nghiệp vụ tạo về sau phải cấu hình xác thực và kiểm tra quyền riêng.
@@ -45,7 +64,7 @@ Git mang theo lệnh tạo tài khoản, không mang dữ liệu trong SQL Serve
 
 **Kiểm chứng:** build thành công (0 cảnh báo, 0 lỗi); smoke test đạt `PASS: 279 HTTP/database checks`, bao gồm đăng nhập đủ 7 vai trò và chạy lệnh tạo tài khoản hai lần. Database kiểm thử tạm đã được xóa.
 
-**Quyết định:** tách Thu ngân khỏi Tiếp tân. Hiện có 7 vai trò đăng nhập: `Admin`, `KhachHang`, `TiepTan`, `BoiBan`, `ThuNgan`, `Bep`, `Kho`. Admin cấp tài khoản cho **5 nhóm nhân viên** (Tiếp tân, Bồi bàn, Thu ngân, Bếp, Kho); số lượng người trong từng nhóm không giới hạn. Khách tự đăng ký, Admin được khởi tạo riêng. `NhanVien.ChucVu` là chức danh hồ sơ, còn quyền truy cập thật dựa vào vai trò Identity; không suy quyền từ chuỗi chức danh.
+**Quyết định:** tách Thu ngân khỏi Tiếp tân. Hiện có 7 vai trò đăng nhập: `Admin`, `KhachHang`, `TiepTan`, `BoiBan`, `ThuNgan`, `Bep`, `Kho`. Admin cấp tài khoản cho **5 nhóm nhân viên** (Tiếp tân, Bồi bàn, Thu ngân, Bếp, Kho); số lượng người trong từng nhóm không giới hạn. Khách tự đăng ký, Admin được khởi tạo riêng. Từ bản hai cổng, form nhân viên chọn một vai trò chuẩn; cấp tài khoản/điều chuyển đồng bộ sang Identity trong transaction. Quyền thật vẫn kiểm tra từ Identity ở server, không chỉ từ tên chức vụ hiển thị.
 
 **Đã làm trên nhánh `feature/auth-week6-member1`:** thêm vai trò `ThuNgan` vào khởi tạo Identity và form cấp/đổi vai trò của Admin. Thu ngân đăng nhập được đưa đến `/HoaDon`; chỉ Thu ngân và Admin được xem danh sách, chi tiết và in hóa đơn. Thu ngân xác nhận **đã nhận đủ tiền mặt** trên hóa đơn chưa thanh toán; server đối chiếu trạng thái, tổng tiền với các dòng món và `RowVersion` để tránh ghi đè bill đã thay đổi. Khi xác nhận, hóa đơn lưu `DaThanhToan`, `TienMat`, thời điểm thanh toán và `NhanVienId` của Thu ngân đang thao tác. Admin xem/in nhưng không bấm xác nhận thu tiền; Tiếp tân, Bồi bàn, Bếp, Kho và Khách không vào trang hóa đơn. In dùng chức năng in của trình duyệt, không tạo bảng mới. `DbSeeder` bổ sung hồ sơ mẫu `NV015` (Thu ngân), **không tạo sẵn mật khẩu**.
 
