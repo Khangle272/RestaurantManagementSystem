@@ -4,7 +4,60 @@ Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm
 
 **Cách dùng cho các lần làm sau (cả thành viên và AI):** trước khi sửa hãy đọc mục liên quan rồi đối chiếu code/nhánh hiện tại. Sau mỗi phần đã làm xong, thêm một mục có ngày, người/nhánh phụ trách, file hoặc chức năng đã đổi, kết quả build/test, và việc còn chờ người khác. Ghi rõ `Đã làm`, `Đang làm` hoặc `Dự kiến`; không đổi một ý tưởng thành “đã hoàn thành” chỉ vì nó đã có bảng CSDL. Giữ các quyết định cũ để nhìn lại vì sao nhóm đổi hướng; nếu quyết định thay đổi, ghi mục mới thay thế và lý do. Không ghi mật khẩu thật hoặc dữ liệu khách hàng thật vào file.
 
+**Nhận bàn giao từ Git:** bản Auth đang ở `feature/auth-ui-fix`, chưa merge `master`. Khi được yêu cầu cập nhật code, kiểm tra đúng remote và `git status`, chạy `git fetch origin`, rồi lấy đúng nhánh; nếu đã có nhánh local sạch thì `git pull --ff-only origin feature/auth-ui-fix` khi đang đứng trên nhánh đó. Không kéo nhánh này trực tiếp vào nhánh đang làm của người khác để thử; nếu cần ghép, thống nhất việc merge trước. Không reset/xóa/ghi đè code local hoặc tự push/merge. Sau khi nhóm merge vào `master`, lấy bản `master` đã merge. Xem trang GitHub hoặc đọc file này **không tự cập nhật checkout local**.
+
+Đọc cập nhật mới nhất trước; những mục có ngày cũ và bảng góp ý bên dưới là bối cảnh tại thời điểm ghi, phải đối chiếu code mới trước khi kết luận một việc còn thiếu. Giữ một file nhật ký chung, cập nhật sau mỗi phần hoàn tất, không tạo file riêng cho từng tuần.
+
 ## 0. Nền tảng đã làm: tài khoản, phân quyền và Thu ngân
+
+### Bổ sung tài khoản và bàn giao — 29/09/2026
+
+Code tài khoản: `feature/auth-ui-fix`, commit `17d4ece`; chưa merge `master`. Lấy đúng nhánh và khởi động lại Web để kiểm tra. Bản bàn giao này đi cùng nhánh, không có nghĩa các chức năng đang chờ bên dưới đã hoàn thành.
+
+**Phần thành viên 1 đã bổ sung:**
+
+- Trang đăng ký có nút chuyển nhanh về đăng nhập. Hai cổng giữ nguyên: khách `/Account/Login`, nhân viên/Admin `/Staff/Login`; cổng khách từ chối tài khoản nhân viên bằng lỗi chung, đăng ký không nhận email trùng với bất kỳ tài khoản nào.
+- Khách/Admin có mục Sửa thông tin tại `/Account`: email đăng nhập, số điện thoại và họ tên khi có hồ sơ liên kết. Khách chỉ sửa chính mình. Nhân viên không tự sửa hồ sơ/vai trò, nhưng được đổi mật khẩu riêng. Admin độc lập chưa có hồ sơ nhân viên hiện chỉ sửa email/số điện thoại.
+- Admin sửa thông tin đăng nhập và đặt lại mật khẩu nhân viên/khách ngay từ các màn hình quản lý hiện có. Email liên hệ và email đăng nhập được ghi rõ; sửa thông tin đăng nhập đồng bộ sang hồ sơ. Vai trò vẫn lấy từ hồ sơ công việc, không thêm bảng chọn quyền riêng.
+- Đặt lại mật khẩu yêu cầu mật khẩu Admin xác nhận, không hiển thị mật khẩu cũ, thu hồi phiên cũ và không tự mở khóa tài khoản. Admin đổi mật khẩu của mình qua Đổi mật khẩu.
+
+Build 0 cảnh báo/0 lỗi; đạt **366 kiểm tra HTTP/CSDL**, database thử riêng đã xóa. Không thay đổi schema hoặc database nhóm.
+
+**Phần còn thiếu, bàn giao tiếp:**
+
+**Thành viên 2 — Đặt bàn khách và tiếp tân**
+
+Hiện chưa có trang/controller đặt bàn khách trong bản nhánh này. Có các bảng nghiệp vụ nhưng chưa có luồng sử dụng tương ứng; không phải khách thiếu quyền đăng nhập.
+
+1. Nối mục **Đặt bàn** và **Lịch sử đặt bàn** vào khu khách. Form nhận ngày/giờ đến, số người, thông tin liên hệ và ghi chú; kiểm tra giờ hợp lệ và sức chứa. Khách đã đăng nhập gửi yêu cầu ở trạng thái chờ tiếp tân xử lý, không tự chọn trạng thái xác nhận/đã nhận bàn.
+2. Lấy tài khoản từ phiên Identity rồi tìm `KhachHang.TaiKhoanId` để gắn `DatBan.KhachHangId`. Không tin ID khách hoặc trạng thái gửi từ form. Danh sách/chi tiết/lịch sử chỉ trả đặt bàn của chính khách; thay ID trên URL cũng không xem/sửa được đặt bàn người khác. Quy tắc khách tự sửa/hủy và hạn chót phải thống nhất trước khi mở thao tác.
+3. Tiếp tân có danh sách yêu cầu, xem chi tiết, duyệt/từ chối, xếp bàn và ghi nhận khách đến. Đồng thời được tạo phiếu đặt hộ khách qua điện thoại/trực tiếp; khách vãng lai không phải đăng ký tài khoản. Tiếp tân tạo **đặt bàn**, không được thêm/sửa bàn vật lý hoặc giá món.
+4. Dùng `DatBan`, `ChiTietDatBan`, `BanAn` và `KhachHang` hiện có. Kiểm tra trùng bàn theo khoảng `GioDen`–`GioKetThucDuKien`, không chỉ nhìn trạng thái bàn ở thời điểm hiện tại; kiểm tra lại khi lưu/duyệt để tránh hai người cùng nhận một bàn. Khi duyệt/nhận/hủy, ghi đúng người thao tác và thời điểm bằng các trường hiện có. Đối chiếu enum hiện tại trước khi chọn trạng thái từ chối/hủy, không tự thêm enum hoặc bảng.
+5. Nhóm cần chốt: khách chọn bàn cụ thể hay chỉ gửi nhu cầu; khoảng thời gian giữ bàn; điều kiện hủy và đặt cọc. Chưa có xác nhận giao dịch thì không đánh dấu đã nhận cọc/thanh toán online.
+
+**Kiểm tra xong phần đặt bàn khi:** khách gửi được yêu cầu và xem đúng lịch sử; tiếp tân đặt hộ/duyệt/xếp/nhận bàn được; khách khác không đọc/sửa được yêu cầu; không nhận trùng bàn cùng giờ; sai vai trò bị chặn cả GET/POST. Sau đó bàn giao route thật và các quyền cho thành viên 1 để nối điều hướng. Gọi món/mobile/KDS tiếp tục theo mục phân công và feedback phía dưới, không ghi đã xong chỉ vì có form đặt bàn.
+
+**Thành viên 3 — Thực đơn và nội dung công khai**
+
+1. Nối trang giới thiệu nhà hàng và thực đơn vào `/`: món, danh mục, hình, mô tả, size, giá, combo và trạng thái phục vụ. Khách/chưa đăng nhập được xem thông tin công khai; không mở quyền vào các form CRUD quản lý món của Admin. Chỉ hiện nút đặt bàn/gọi món khi đã có route và luồng xử lý thật.
+2. Giữ khung Bootstrap/màu xanh hiện có; khu khách dùng `_Layout`, nghiệp vụ nội bộ dùng `_AdminLayout`. Menu và nút phải dẫn đến chức năng thật, bỏ lời ghi chú phát triển khỏi trang khách khi nội dung hoàn chỉnh; không dựng hệ thống đăng nhập hoặc role thứ hai.
+3. Tiếp tục feedback của cô: Admin quản lý giá/thực đơn; tạo món mặc định `DangPhucVu`; định mức riêng cho từng size; combo chọn món lẻ + size + số lượng, không nhập lại nguyên liệu thô. Chờ thiết kế/migration thống nhất của thành viên 1 trước khi đổi form theo schema mới. Tiêu chí món mới/nổi bật và quy tắc `TamHet`/`NgungKinhDoanh` cần khớp báo cáo.
+
+**Kiểm tra xong phần thực đơn khi:** danh mục lọc đúng món; giá/size/combo hiển thị đúng dữ liệu; khách không sửa được món/giá; món tạm hết không nhận order mới; form Admin lưu món/size/định mức đồng bộ. Không đổi schema riêng làm lệch phần đặt món/kho.
+
+**Thành viên 1 — Tích hợp Auth và dữ liệu**
+
+1. Giữ `AccountController`, `AppRoles` và `ActiveAccountMiddleware` làm nền tài khoản/quyền; không phân quyền chỉ bằng ẩn menu hoặc chuỗi chức vụ. Khi có route đặt bàn/KDS/mobile thật, nối nút và điều hướng theo vai trò. Mọi action nghiệp vụ mới phải kiểm tra quyền ở server; API nghiệp vụ bổ sung phải có xác thực/phân quyền riêng.
+2. Quản lý nhân viên tiếp tục ở `/NhanVien`, khách ở `/TaiKhoanKhachHang`; cấp/điều chuyển quyền qua hồ sơ công việc. Không cho form khách/nhân viên tự cấp role hoặc biến khách thành nhân viên. Khi cần sửa email đăng nhập dùng `/Account/EditProfile`; khôi phục mật khẩu qua `/Account/ResetPassword`, không cập nhật hash/password bằng SQL.
+3. Thống nhất migration `DinhMucMon` gắn size và size của món thành phần combo, dữ liệu thời điểm gọi từng dòng phục vụ FIFO. Đây là việc còn chờ, chưa làm trong đợt tài khoản. Giữ dữ liệu hiện có, chốt cách chuyển dữ liệu cũ với nhóm rồi cập nhật model/seed/test/Word/ERD đồng bộ.
+4. Sau khi ghép, kiểm tra Khách/Tiếp tân/Bồi bàn/Thu ngân/Bếp/Kho/Admin với cả trang được phép và bị cấm. Khách chỉ thao tác dữ liệu của mình; Bếp không thấy giá; Bồi bàn không sửa giá; Thu ngân xử lý đúng bill; đổi vai trò/khóa/đặt lại mật khẩu làm hết phiên cũ theo luồng đã có.
+
+**Cách chạy để người nhận kiểm tra:** chạy Web từ đúng checkout, xem connection string đang trỏ database nào, khởi tạo tài khoản demo trên database local nếu chưa có theo phần Tài khoản demo bên dưới. Git không mang database/tài khoản từ máy khác; chạy lại lệnh demo không đổi mật khẩu tài khoản đã tồn tại. Dùng khách ở `/Account/Login`, nhân viên/Admin ở `/Staff/Login`. Không ghi đè mật khẩu hoặc tắt bảo mật máy để ép chạy; nếu có lỗi, báo log/nhánh/commit/database thực tế. Kết quả 366 kiểm tra ở trên chỉ xác nhận code tại commit `17d4ece`, phần mới của mỗi thành viên phải kiểm tra riêng và cập nhật nhật ký sau khi hoàn tất.
+
+**Ý tưởng cần chốt trước khi làm:**
+
+- Xác minh email/điện thoại, quên mật khẩu, xác thực thêm cho Admin: chưa triển khai; thống nhất nhu cầu và dịch vụ gửi thông báo trước. Đổi email hiện xác nhận bằng mật khẩu, chưa xác minh email mới bằng thư. Triển khai thật phải thay tài khoản/mật khẩu demo.
+- Bếp tự sửa công thức riêng cần cô xác nhận; hiện theo feedback: Admin quản lý thực đơn/giá/định mức, Bếp chỉ điều phối món và cung cấp công thức.
 
 ### Cập nhật hai cổng và quản lý tài khoản — 28/09/2026
 
