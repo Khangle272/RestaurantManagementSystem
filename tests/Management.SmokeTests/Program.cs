@@ -121,6 +121,7 @@ try
     using (var customerClient = NewClient())
     {
         var registration = await customerClient.GetStringAsync("/Account/Register");
+        Check(registration.Contains("Đã có tài khoản?") && registration.Contains("/Account/Login"), "Registration links back to customer login");
         using var registered = await customerClient.PostAsync("/Account/Register", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["__RequestVerificationToken"] = Hidden(registration, "__RequestVerificationToken"),
@@ -140,6 +141,19 @@ try
             ["ConfirmPassword"] = "Changed123!"
         }));
         Check(changed.StatusCode == HttpStatusCode.Redirect, "Customer changes password");
+        var profileForm = await customerClient.GetStringAsync("/Account/EditProfile");
+        using (var edited = await customerClient.PostAsync("/Account/EditProfile", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = Hidden(profileForm, "__RequestVerificationToken"),
+            ["Id"] = Hidden(profileForm, "Id"), ["ConcurrencyStamp"] = Hidden(profileForm, "ConcurrencyStamp"),
+            ["HoTen"] = "Khách đã cập nhật", ["SoDienThoai"] = "0909876543",
+            ["Email"] = "auth-customer@example.test", ["ConfirmPassword"] = "Changed123!", ["Role"] = "Admin"
+        })))
+            Check(edited.StatusCode == HttpStatusCode.Redirect, "Customer updates own profile with password confirmation");
+        Check(await db.KhachHang.AnyAsync(x => x.Email == "auth-customer@example.test" && x.HoTen == "Khách đã cập nhật"), "Customer profile update persists");
+        var adminId = await db.Users.Where(x => x.Email == adminEmail).Select(x => x.Id).SingleAsync();
+        await CheckAccess(customerClient, "/Account/EditProfile?id=" + adminId, HttpStatusCode.NotFound, "Customer cannot edit another account");
+        await CheckAccess(customerClient, "/Account/ResetPassword?id=" + adminId, HttpStatusCode.Redirect, "Customer cannot reset passwords administratively");
         var logoutForm = await customerClient.GetStringAsync("/Home");
         using var loggedOut = await customerClient.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -147,6 +161,52 @@ try
         }));
         Check(loggedOut.StatusCode == HttpStatusCode.Redirect, "Customer logs out");
         await CheckAccess(customerClient, "/Account/ChangePassword", HttpStatusCode.Redirect, "Logged-out customer denied private page");
+        await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
+        var customerAccountId = await db.Users.Where(x => x.Email == "auth-customer@example.test").Select(x => x.Id).SingleAsync();
+        var resetPath = "/Account/ResetPassword?id=" + customerAccountId;
+        using (var noToken = await client.PostAsync("/Account/ResetPassword", new FormUrlEncodedContent(new Dictionary<string, string>
+        { ["Id"] = customerAccountId.ToString(), ["AdminPassword"] = adminPassword, ["NewPassword"] = "Reset123!", ["ConfirmPassword"] = "Reset123!" })))
+            Check(noToken.StatusCode == HttpStatusCode.BadRequest, "Password reset rejects missing CSRF token");
+        await Post("/Account/ResetPassword", await Get(resetPath), new()
+        { ["Id"] = customerAccountId.ToString(), ["AdminPassword"] = "Wrong123!", ["NewPassword"] = "Changed123!", ["ConfirmPassword"] = "Changed123!" }, false, "Mật khẩu quản trị không đúng");
+        await CheckAccess(customerClient, "/Account", HttpStatusCode.OK, "Failed reset preserves customer session");
+        await Post("/Account/ResetPassword", await Get(resetPath), new()
+        { ["Id"] = customerAccountId.ToString(), ["AdminPassword"] = adminPassword, ["NewPassword"] = "Reset123!", ["ConfirmPassword"] = "Reset123!" }, true);
+        await CheckAccess(customerClient, "/Account", HttpStatusCode.Redirect, "Admin password reset revokes customer session");
+        using (var oldPasswordClient = NewClient())
+        {
+            var form = await oldPasswordClient.GetStringAsync("/Account/Login");
+            using var rejected = await oldPasswordClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+            { ["__RequestVerificationToken"] = Hidden(form, "__RequestVerificationToken"), ["Email"] = "auth-customer@example.test", ["Password"] = "Changed123!" }));
+            Check(rejected.StatusCode == HttpStatusCode.OK, "Password reset rejects old password");
+            await CheckAccess(oldPasswordClient, "/Account", HttpStatusCode.Redirect, "Old password grants no session");
+        }
+        await LoginAs(customerClient, "auth-customer@example.test", "Reset123!");
+        var editPath = "/Account/EditProfile?id=" + customerAccountId;
+        var accountEditForm = await Get(editPath);
+        await Post("/Account/EditProfile", accountEditForm, new()
+        { ["Id"] = customerAccountId.ToString(), ["ConcurrencyStamp"] = Hidden(accountEditForm, "ConcurrencyStamp"),
+          ["HoTen"] = "", ["SoDienThoai"] = "0909876543", ["Email"] = adminEmail, ["ConfirmPassword"] = adminPassword }, false, "Email đã được sử dụng");
+        Check(await db.Users.AnyAsync(x => x.Id == customerAccountId && x.Email == "auth-customer@example.test"), "Rejected duplicate email preserves existing account");
+        accountEditForm = await Get(editPath);
+        await Post("/Account/EditProfile", accountEditForm, new()
+        { ["Id"] = customerAccountId.ToString(), ["ConcurrencyStamp"] = Hidden(accountEditForm, "ConcurrencyStamp"),
+          ["HoTen"] = "Khách đã cập nhật", ["SoDienThoai"] = "0909876543", ["Email"] = "updated-customer@example.test", ["ConfirmPassword"] = adminPassword }, true);
+        await CheckAccess(customerClient, "/Account", HttpStatusCode.Redirect, "Admin email edit revokes customer session");
+        using (var editedLogin = NewClient())
+        {
+            var form = await editedLogin.GetStringAsync("/Account/Login");
+            using var updatedLoginResponse = await editedLogin.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+            { ["__RequestVerificationToken"] = Hidden(form, "__RequestVerificationToken"), ["Email"] = "updated-customer@example.test", ["Password"] = "Reset123!" }));
+            Check(updatedLoginResponse.StatusCode == HttpStatusCode.Redirect, "Updated email is usable as login");
+            await CheckAccess(editedLogin, "/Account", HttpStatusCode.OK, "Updated account retains customer access");
+        }
+        accountEditForm = await Get(editPath);
+        await Post("/Account/EditProfile", accountEditForm, new()
+        { ["Id"] = customerAccountId.ToString(), ["ConcurrencyStamp"] = Hidden(accountEditForm, "ConcurrencyStamp"),
+          ["HoTen"] = "Khách đã cập nhật", ["SoDienThoai"] = "0909876543", ["Email"] = "auth-customer@example.test", ["ConfirmPassword"] = adminPassword }, true);
+        await Post("/Account/ResetPassword", await Get(resetPath), new()
+        { ["Id"] = customerAccountId.ToString(), ["AdminPassword"] = adminPassword, ["NewPassword"] = "Changed123!", ["ConfirmPassword"] = "Changed123!" }, true);
         await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
         await CheckAccess(customerClient, "/Staff", HttpStatusCode.Redirect, "Customer denied staff workspace");
         await CheckAccess(customerClient, "/TaiKhoanKhachHang", HttpStatusCode.Redirect, "Customer denied customer-account administration");
@@ -213,6 +273,15 @@ try
             "Provisioning uses profile role, not forged Admin field");
         using var roleClient = NewClient();
         await LoginAs(roleClient, email);
+        await CheckAccess(roleClient, "/Account/EditProfile", HttpStatusCode.Redirect, role + " cannot self-edit staff profile");
+        await CheckAccess(roleClient, "/Account/ResetPassword?id=" + accountId, HttpStatusCode.Redirect, role + " cannot reset another password");
+        if (role == "Bep")
+        {
+            await Post("/Account/ResetPassword", await Get("/Account/ResetPassword?id=" + accountId), new()
+            { ["Id"] = accountId.ToString(), ["AdminPassword"] = adminPassword, ["NewPassword"] = adminPassword, ["ConfirmPassword"] = adminPassword }, true);
+            await CheckAccess(roleClient, "/Account", HttpStatusCode.Redirect, "Admin reset revokes staff session");
+            await LoginAs(roleClient, email);
+        }
         await CheckAccess(roleClient, allowed, HttpStatusCode.OK, role + " allowed page");
         await CheckAccess(roleClient, denied, HttpStatusCode.Redirect, role + " denied page");
         await CheckAccess(roleClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, role + " denied account administration");

@@ -21,7 +21,9 @@
             <td>@customer.HoTen<small class="d-block text-muted">@customer.SoDienThoai</small></td>
             <td class="text-break">@customer.TaiKhoan?.Email</td>
             <td>@(!customer.DangSuDung ? "Hồ sơ ngừng sử dụng" : locked ? "Đã khóa" : "Hoạt động")</td>
-            <td><form asp-action="SetLocked" method="post">
+            <td><a asp-controller="Account" asp-action="EditProfile" asp-route-id="@customer.TaiKhoanId" class="btn btn-sm btn-outline-primary mb-1">Sửa thông tin</a>
+                <a asp-controller="Account" asp-action="ResetPassword" asp-route-id="@customer.TaiKhoanId" class="btn btn-sm btn-outline-secondary mb-1">Đặt lại mật khẩu</a>
+                <form asp-action="SetLocked" method="post">
                 <input type="hidden" name="id" value="@customer.Id" />
                 <input type="hidden" name="locked" value="@(!locked)" />
                 <button class="btn btn-sm btn-outline-secondary" type="submit">@(locked ? "Mở khóa" : "Khóa")</button>

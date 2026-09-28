@@ -1,7 +1,7 @@
 ﻿@{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
-    Layout = controller == "Home" || (controller == "Account" && action != "Index" && action != "ChangePassword")
+    Layout = controller == "Home" || (controller == "Account" && (action == "Login" || action == "StaffLogin" || action == "Register" || action == "Denied"))
         || User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang")
         ? "_Layout" : "_AdminLayout";
 }

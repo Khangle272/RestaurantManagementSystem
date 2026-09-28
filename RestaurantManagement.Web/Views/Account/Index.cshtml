@@ -16,6 +16,10 @@
         </dd>
     </dl>
     <div class="d-flex flex-wrap gap-2">
+        @if (User.IsInRole("Admin") || User.IsInRole("KhachHang"))
+        {
+            <a asp-action="EditProfile" class="btn btn-outline-primary">Sửa thông tin</a>
+        }
         <a asp-action="ChangePassword" class="btn btn-primary">Đổi mật khẩu</a>
         <form asp-action="Logout" method="post"><button class="btn btn-outline-secondary" type="submit">Đăng xuất</button></form>
     </div>

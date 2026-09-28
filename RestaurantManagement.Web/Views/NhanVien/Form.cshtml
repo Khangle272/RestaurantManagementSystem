@@ -36,9 +36,10 @@
                         <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Email" class="form-label fw-medium"></label>
+                        <label asp-for="Email" class="form-label fw-medium">Email liên hệ</label>
                         <input asp-for="Email" type="email" class="form-control" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
+                        <small class="text-muted">Đổi email đăng nhập ở phần Tài khoản đăng nhập bên dưới.</small>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="ChucVu" class="form-label fw-medium">Vai trò công việc</label>
@@ -88,6 +89,13 @@
                 var locked = account.LockoutEnd > DateTimeOffset.UtcNow;
                 <p class="mb-2 text-break">@account.Email · @(ViewBag.AccountRole is string assignedRole ? AppRoles.Label(assignedRole) : "Chưa có quyền đăng nhập")</p>
                 <p class="small text-muted">@(locked ? "Tài khoản đang bị khóa." : "Đã được cấp tài khoản.") @(employee?.DangLamViec == false ? "Nhân viên đã nghỉ, không được đăng nhập dù tài khoản được mở khóa." : "")</p>
+                @if (ViewBag.AccountRole is string role && AppRoles.AssignableStaff.Contains(role))
+                {
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a asp-controller="Account" asp-action="EditProfile" asp-route-id="@account.Id" class="btn btn-outline-primary">Sửa thông tin đăng nhập</a>
+                        <a asp-controller="Account" asp-action="ResetPassword" asp-route-id="@account.Id" class="btn btn-outline-secondary">Đặt lại mật khẩu</a>
+                    </div>
+                }
                 <form asp-controller="TaiKhoanNhanVien" asp-action="SetLocked" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
                     <input type="hidden" name="locked" value="@(!locked)" />
