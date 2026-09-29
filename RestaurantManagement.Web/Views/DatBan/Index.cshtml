@@ -1,0 +1,215 @@
+@model RestaurantManagement.Web.Models.DatBanCreateVM
+@{
+    ViewData["Title"] = "Đặt bàn trực tuyến";
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-11 col-xl-10">
+        <!-- Banner chào mừng -->
+        <div class="card border-0 text-white rounded-4 shadow-sm mb-4 overflow-hidden" 
+             style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #E11D48 100%);">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-semibold me-2">
+                        <i class="bi bi-stars me-1"></i>Trải nghiệm ẩm thực tinh tế
+                    </span>
+                    <span class="text-white-50 small"><i class="bi bi-shield-check me-1"></i>Xác nhận nhanh chóng</span>
+                </div>
+                <h1 class="display-6 fw-bold mb-2">Đặt Bàn Trực Tuyến</h1>
+                <p class="lead mb-0 text-light opacity-90 fs-6">
+                    Đặt bàn trước để có chỗ ngồi lý tưởng và giúp nhà hàng chuẩn bị chu đáo nhất cho trải nghiệm ẩm thực của quý khách.
+                </p>
+            </div>
+        </div>
+
+        <form asp-action="Index" method="post" id="formDatBan">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
+
+            <div class="row g-4">
+                <!-- CỘT 1: THỜI GIAN & KHÔNG GIAN -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                            <div class="d-flex align-items-center">
+                                <span class="badge rounded-circle p-2 me-2" style="background-color: rgba(225, 29, 72, 0.1); color: #E11D48;">
+                                    <i class="bi bi-clock-history fs-5"></i>
+                                </span>
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark">Thời gian & Không gian</h5>
+                                    <small class="text-muted">Chọn lịch hẹn phù hợp</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Chọn ngày & giờ -->
+                            <div class="mb-4">
+                                <label asp-for="ThoiGianDen" class="form-label fw-semibold text-secondary">
+                                    <i class="bi bi-calendar-event me-1"></i>Thời gian đến <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="ThoiGianDen" type="datetime-local" class="form-control form-control-lg border-2" 
+                                       min="@DateTime.Now.AddMinutes(30).ToString("yyyy-MM-ddTHH:mm")" id="inputThoiGianDen" />
+                                <span asp-validation-for="ThoiGianDen" class="text-danger small"></span>
+                                <div class="form-text small text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Vui lòng đặt trước thời điểm đến ít nhất 30 phút.
+                                </div>
+                            </div>
+
+                            <!-- Khung giờ gợi ý (Pills) -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Khung giờ phổ biến</label>
+                                <div class="d-flex flex-wrap gap-2" id="timePills">
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="11:30">11:30 Trưa</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="12:00">12:00 Trưa</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="18:00">18:00 Tối</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="18:30">18:30 Tối</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="19:00">19:00 Tối</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="19:30">19:30 Tối</button>
+                                </div>
+                            </div>
+
+                            <!-- Số lượng khách -->
+                            <div class="mb-4">
+                                <label asp-for="SoNguoi" class="form-label fw-semibold text-secondary">
+                                    <i class="bi bi-people me-1"></i>Số lượng khách <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="SoNguoi" type="number" class="form-control form-control-lg fw-bold border-2" min="1" max="50" id="inputSoNguoi" />
+                                <span asp-validation-for="SoNguoi" class="text-danger small"></span>
+                                <div class="d-flex gap-1 mt-2">
+                                    <span class="badge bg-light text-dark border quick-guest" role="button" data-val="2">2 người</span>
+                                    <span class="badge bg-light text-dark border quick-guest" role="button" data-val="4">4 người</span>
+                                    <span class="badge bg-light text-dark border quick-guest" role="button" data-val="6">6 người</span>
+                                    <span class="badge bg-light text-dark border quick-guest" role="button" data-val="10">10+ người</span>
+                                </div>
+                            </div>
+
+                            <!-- Khu vực ưu tiên -->
+                            <div class="mb-2">
+                                <label asp-for="MaKhuVuc" class="form-label fw-semibold text-secondary">
+                                    <i class="bi bi-geo-alt me-1"></i>Khu vực mong muốn
+                                </label>
+                                <select asp-for="MaKhuVuc" asp-items="Model.KhuVucOptions" class="form-select form-select-lg border-2">
+                                    <option value="">-- Tùy chọn khu vực phù hợp --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CỘT 2: THÔNG TIN LIÊN HỆ & XÁC NHẬN -->
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                            <div class="d-flex align-items-center">
+                                <span class="badge rounded-circle p-2 me-2" style="background-color: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                                    <i class="bi bi-person-lines-fill fs-5"></i>
+                                </span>
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark">Thông tin người liên hệ</h5>
+                                    <small class="text-muted">Nhà hàng gửi thông tin xác nhận qua số này</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Họ tên -->
+                            <div class="mb-3">
+                                <label asp-for="HoTen" class="form-label fw-semibold text-secondary">
+                                    Họ và tên quý khách <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-light border-2 border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                                    <input asp-for="HoTen" class="form-control border-2 border-start-0 ps-0" placeholder="Nguyễn Văn A" />
+                                </div>
+                                <span asp-validation-for="HoTen" class="text-danger small"></span>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <!-- Số điện thoại -->
+                                <div class="col-md-6">
+                                    <label asp-for="SoDienThoai" class="form-label fw-semibold text-secondary">
+                                        Số điện thoại <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-light border-2 border-end-0 text-muted"><i class="bi bi-telephone"></i></span>
+                                        <input asp-for="SoDienThoai" class="form-control border-2 border-start-0 ps-0" placeholder="0912345678" />
+                                    </div>
+                                    <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
+                                </div>
+                                <!-- Email -->
+                                <div class="col-md-6">
+                                    <label asp-for="Email" class="form-label fw-semibold text-secondary">
+                                        Email (không bắt buộc)
+                                    </label>
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-light border-2 border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                                        <input asp-for="Email" type="email" class="form-control border-2 border-start-0 ps-0" placeholder="email@domain.com" />
+                                    </div>
+                                    <span asp-validation-for="Email" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <!-- Ghi chú / Yêu cầu đặc biệt -->
+                            <div class="mb-4">
+                                <label asp-for="GhiChu" class="form-label fw-semibold text-secondary">
+                                    <i class="bi bi-chat-left-dots me-1"></i>Yêu cầu đặc biệt / Ghi chú
+                                </label>
+                                <textarea asp-for="GhiChu" rows="3" class="form-control border-2" 
+                                          placeholder="Ví dụ: Cần ghế trẻ em, trang trí bàn sinh nhật, dị ứng hải sản..."></textarea>
+                                <span asp-validation-for="GhiChu" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Quy định giữ chỗ & Điều khoản -->
+                            <div class="p-3 rounded-3 mb-4" style="background-color: #F8FAFC; border: 1px dashed #CBD5E1;">
+                                <div class="d-flex">
+                                    <i class="bi bi-shield-exclamation text-warning fs-4 me-2"></i>
+                                    <div class="small text-secondary">
+                                        <strong>Chính sách giữ bàn:</strong> Bàn đặt sẽ được giữ tối đa <strong>15 phút</strong> sau giờ hẹn. Nếu quý khách đến muộn hơn, vui lòng gọi hotline nhà hàng để được hỗ trợ.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nút bấm Đặt bàn -->
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-lg py-3 fw-bold text-white shadow" 
+                                        style="background-color: #E11D48; border-color: #E11D48;">
+                                    <i class="bi bi-check-circle-fill me-2"></i>HOÀN TẤT ĐẶT BÀN NGAY
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const inputSoNguoi = document.getElementById("inputSoNguoi");
+
+            // Chọn nhanh số khách
+            document.querySelectorAll(".quick-guest").forEach(btn => {
+                btn.addEventListener("click", function() {
+                    inputSoNguoi.value = this.getAttribute("data-val");
+                });
+            });
+
+            // Chọn nhanh giờ
+            const inputThoiGian = document.getElementById("inputThoiGianDen");
+            document.querySelectorAll(".time-btn").forEach(btn => {
+                btn.addEventListener("click", function() {
+                    const time = this.getAttribute("data-time");
+                    if (inputThoiGian.value) {
+                        const datePart = inputThoiGian.value.split("T")[0];
+                        inputThoiGian.value = datePart + "T" + time;
+                    } else {
+                        const today = new Date().toISOString().split("T")[0];
+                        inputThoiGian.value = today + "T" + time;
+                    }
+                });
+            });
+        });
+    </script>
+}

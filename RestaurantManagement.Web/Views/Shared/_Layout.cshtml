@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
@@ -6,6 +6,7 @@
     <title>@ViewData["Title"] - Quản lý nhà hàng</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/RestaurantManagement.Web.styles.css" asp-append-version="true" />
 </head>
@@ -13,16 +14,32 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Nhà hàng</a>
+                <a class="navbar-brand fw-bold text-danger" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-cup-hot-fill me-1"></i>Nhà hàng
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark fw-semibold" asp-controller="DatBan" asp-action="Index">
+                                <i class="bi bi-calendar-plus me-1 text-danger"></i>Đặt bàn
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="DatBan" asp-action="LichSu">
+                                <i class="bi bi-clock-history me-1 text-secondary"></i>Lịch sử đặt bàn
+                            </a>
+                        </li>
                         @if (User.IsInRole("Admin") || User.IsInRole("TiepTan") || User.IsInRole("BoiBan"))
                         {
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="BanAn" asp-action="Index">Bàn ăn</a></li>
+                        }
+                        @if (User.IsInRole("Admin") || User.IsInRole("TiepTan"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="QuanLyDatBan" asp-action="Index">Quản lý Đặt bàn</a></li>
                         }
                         @if (User.IsInRole("Admin"))
                         {
@@ -49,6 +66,7 @@
     </header>
     <div class="container">
         <main role="main" class="pb-3">
+            <partial name="_ManagementMessages" />
             @RenderBody()
         </main>
     </div>

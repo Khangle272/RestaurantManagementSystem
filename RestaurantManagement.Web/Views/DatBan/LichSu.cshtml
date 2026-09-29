@@ -1,0 +1,176 @@
+@model RestaurantManagement.Web.Models.DatBanLookupVM
+@{
+    ViewData["Title"] = "Tra cứu lịch sử đặt bàn";
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-10">
+        <!-- Tiêu đề trang -->
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-clock-history text-danger me-2"></i>Tra Cứu Lịch Sử Đặt Bàn
+            </h2>
+            <p class="text-muted">Nhập số điện thoại hoặc mã đặt chỗ để theo dõi trạng thái và chi tiết hóa đơn món ăn.</p>
+        </div>
+
+        <!-- Khung tìm kiếm -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+            <div class="card-body p-4">
+                <form asp-action="LichSu" method="get" class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-secondary">Số điện thoại liên hệ</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted"></i></span>
+                            <input asp-for="SoDienThoai" class="form-control" placeholder="0912345678" />
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-secondary">Hoặc Mã đặt chỗ (Booking Code)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-qr-code text-muted"></i></span>
+                            <input asp-for="BookingCode" class="form-control font-monospace" placeholder="BK-20260928-XXXX" />
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-danger w-100 fw-semibold" style="background-color: #E11D48; border-color: #E11D48;">
+                            <i class="bi bi-search me-1"></i>Tra cứu
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Kết quả tra cứu -->
+        @if (Model.DanhSachDatBan.Any())
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0">Tìm thấy @Model.DanhSachDatBan.Count lượt đặt bàn</h5>
+                <span class="text-muted small">Sắp xếp theo thời gian mới nhất</span>
+            </div>
+
+            <div class="d-flex flex-column gap-3">
+                @foreach (var item in Model.DanhSachDatBan)
+                {
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center g-3">
+                                <!-- Thông tin chính -->
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-dark-subtle text-dark font-monospace fs-6 px-3 py-1 rounded-pill me-2">
+                                            @item.BookingCode
+                                        </span>
+                                        <span class="badge @item.TrangThaiBadgeClass px-3 py-1 rounded-pill">
+                                            @item.TrangThai
+                                        </span>
+                                    </div>
+                                    <div class="fw-bold fs-5 text-dark">@item.HoTen</div>
+                                    <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@item.SoDienThoai</div>
+                                </div>
+
+                                <!-- Giờ đến & Bàn ăn -->
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="bi bi-calendar3 text-danger me-2"></i>
+                                        <span class="fw-semibold">@item.ThoiGianDen.ToLocalTime().ToString("HH:mm - dd/MM/yyyy")</span>
+                                    </div>
+                                    <div class="text-secondary small mb-1">
+                                        <i class="bi bi-people me-2"></i>Số lượng: <strong>@item.SoNguoi người</strong>
+                                    </div>
+                                    <div class="text-secondary small">
+                                        <i class="bi bi-table me-2"></i>Bàn: <strong class="text-primary">@item.TenBan</strong>
+                                    </div>
+                                </div>
+
+                                <!-- Thao tác & Đánh giá -->
+                                <div class="col-md-4 text-md-end">
+                                    @if (item.TrangThai == "Hoàn tất")
+                                    {
+                                        if (!item.DaDanhGia)
+                                        {
+                                            <a asp-action="DanhGia" asp-route-id="@item.BookingCode" 
+                                               class="btn btn-warning text-dark fw-bold px-3 py-2 rounded-pill shadow-sm mb-2"
+                                               style="background-color: #F59E0B; border-color: #F59E0B;">
+                                                <i class="bi bi-star-fill text-white me-1"></i>Đánh giá ngay
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill mb-2">
+                                                <i class="bi bi-check2-all me-1"></i>Đã gửi đánh giá
+                                            </span>
+                                        }
+                                    }
+                                    @if (item.TongTienHoaDon > 0)
+                                    {
+                                        <div class="text-muted small">Tổng tiền hóa đơn:</div>
+                                        <div class="fw-bold fs-5 text-danger">@item.TongTienHoaDon.ToString("N0") VNĐ</div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Accordion xem thực đơn món ăn đã dùng -->
+                            @if (item.ChiTietMonAn.Any())
+                            {
+                                <div class="border-top mt-3 pt-3">
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#menu-@item.MaDatBan" 
+                                            aria-expanded="false" aria-controls="menu-@item.MaDatBan">
+                                        <i class="bi bi-receipt me-1"></i>Xem danh sách món ăn đã dùng (@item.ChiTietMonAn.Count món)
+                                    </button>
+
+                                    <div class="collapse mt-3" id="menu-@item.MaDatBan">
+                                        <div class="table-responsive rounded-3 border bg-light">
+                                            <table class="table table-sm table-borderless mb-0">
+                                                <thead class="table-secondary">
+                                                    <tr>
+                                                        <th class="ps-3">Tên món ăn</th>
+                                                        <th class="text-center">Số lượng</th>
+                                                        <th class="text-end">Đơn giá</th>
+                                                        <th class="text-end pe-3">Thành tiền</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var mon in item.ChiTietMonAn)
+                                                    {
+                                                        <tr>
+                                                            <td class="ps-3 fw-semibold">@mon.TenMon</td>
+                                                            <td class="text-center">@mon.SoLuong</td>
+                                                            <td class="text-end">@mon.DonGia.ToString("N0") đ</td>
+                                                            <td class="text-end pe-3 fw-bold text-danger">@mon.ThanhTien.ToString("N0") đ</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                                <tfoot class="border-top">
+                                                    <tr>
+                                                        <td colspan="3" class="ps-3 fw-bold text-end">Tổng cộng:</td>
+                                                        <td class="text-end pe-3 fw-bold text-danger fs-6">
+                                                            @item.TongTienHoaDon.ToString("N0") đ
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(Model.SoDienThoai) || !string.IsNullOrWhiteSpace(Model.BookingCode))
+        {
+            <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+                <i class="bi bi-calendar-x display-4 text-muted mb-3"></i>
+                <h5 class="fw-bold text-dark">Không tìm thấy thông tin đặt bàn</h5>
+                <p class="text-muted mb-3">Vui lòng kiểm tra lại số điện thoại hoặc mã đặt bàn của quý khách.</p>
+                <div>
+                    <a asp-action="Index" class="btn btn-danger px-4 py-2 rounded-pill fw-semibold" style="background-color: #E11D48;">
+                        <i class="bi bi-calendar-plus me-1"></i>Đặt bàn mới ngay
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>

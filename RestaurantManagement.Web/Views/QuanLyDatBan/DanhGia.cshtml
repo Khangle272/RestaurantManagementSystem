@@ -1,0 +1,189 @@
+@model RestaurantManagement.Web.Models.DanhGiaAdminVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Đánh giá của khách hàng";
+}
+
+<!-- THẺ THỐNG KÊ ĐÁNH GIÁ -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card card-stat border-0 shadow-sm rounded-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold text-uppercase">Điểm hài lòng trung bình</div>
+                    <div class="fs-2 fw-bold text-warning">
+                        @Model.DiemTrungBinh.ToString("0.0") <span class="fs-5 text-muted">/ 5.0</span>
+                    </div>
+                    <div class="text-warning">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            if (i <= Math.Round(Model.DiemTrungBinh))
+                            {
+                                <i class="bi bi-star-fill"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-star"></i>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="rounded-circle p-3 bg-warning-subtle text-warning">
+                    <i class="bi bi-stars fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-stat border-0 shadow-sm rounded-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold text-uppercase">Tổng số lượt đánh giá</div>
+                    <div class="fs-2 fw-bold text-dark">@Model.TongSoDanhGia</div>
+                    <small class="text-success"><i class="bi bi-shield-check me-1"></i>Từ khách đã hoàn tất dịch vụ</small>
+                </div>
+                <div class="rounded-circle p-3 bg-success-subtle text-success">
+                    <i class="bi bi-chat-heart-fill fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-stat border-0 shadow-sm rounded-3 bg-white">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold text-uppercase">Tỷ lệ đã phản hồi</div>
+                    @{
+                        var repliedCount = Model.DanhSachDanhGia.Count(x => !string.IsNullOrEmpty(x.PhanHoiAdmin));
+                        var rate = Model.TongSoDanhGia > 0 ? (repliedCount * 100 / Model.TongSoDanhGia) : 0;
+                    }
+                    <div class="fs-2 fw-bold text-primary">@rate%</div>
+                    <small class="text-muted">Đã trả lời @repliedCount / @Model.TongSoDanhGia phản hồi</small>
+                </div>
+                <div class="rounded-circle p-3 bg-primary-subtle text-primary">
+                    <i class="bi bi-reply-fill fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DANH SÁCH ĐÁNH GIÁ -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-chat-square-quote text-danger me-2"></i>Danh sách nhận xét & Đánh giá dịch vụ
+        </h5>
+        <span class="badge bg-light text-secondary border">Mới nhất lên đầu</span>
+    </div>
+
+    <div class="card-body p-4">
+        @if (Model.DanhSachDanhGia.Any())
+        {
+            <div class="d-flex flex-column gap-4">
+                @foreach (var item in Model.DanhSachDanhGia)
+                {
+                    <div class="p-4 rounded-3 border bg-light">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                            <div>
+                                <strong class="fs-6 text-dark me-2">@item.TenKhachHang</strong>
+                                <span class="badge bg-dark-subtle text-dark font-monospace rounded-pill">
+                                    Đơn: @item.BookingCode
+                                </span>
+                            </div>
+                            <div class="text-muted small">
+                                <i class="bi bi-calendar3 me-1"></i>@item.ThoiDiem.ToLocalTime().ToString("HH:mm - dd/MM/yyyy")
+                            </div>
+                        </div>
+
+                        <!-- Điểm sao phân mục -->
+                        <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+                            <div class="text-warning fs-5">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    if (s <= item.Diem)
+                                    {
+                                        <i class="bi bi-star-fill"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-star"></i>
+                                    }
+                                }
+                                <span class="badge bg-warning-subtle text-dark ms-1 fs-6">@item.Diem/5 sao</span>
+                            </div>
+                            <span class="badge bg-white text-secondary border">
+                                <i class="bi bi-egg-fried me-1 text-danger"></i>Món ăn: @item.SoSaoMonAn★
+                            </span>
+                            <span class="badge bg-white text-secondary border">
+                                <i class="bi bi-person-heart me-1 text-primary"></i>Dịch vụ: @item.SoSaoDichVu★
+                            </span>
+                        </div>
+
+                        <!-- Nội dung nhận xét -->
+                        <div class="p-3 bg-white rounded-3 border mb-3 text-secondary">
+                            <i class="bi bi-quote fs-4 text-muted me-1"></i>@item.NoiDung
+                        </div>
+
+                        <!-- Ảnh đính kèm nếu có -->
+                        @if (!string.IsNullOrEmpty(item.HinhAnhUrl))
+                        {
+                            <div class="mb-3">
+                                <div class="small text-muted mb-1"><i class="bi bi-image me-1"></i>Ảnh chụp từ khách:</div>
+                                <a href="@item.HinhAnhUrl" target="_blank">
+                                    <img src="@item.HinhAnhUrl" alt="Ảnh đánh giá" class="img-thumbnail rounded-3 shadow-sm" style="max-height: 140px;" />
+                                </a>
+                            </div>
+                        }
+
+                        <!-- Phản hồi hiện tại của Nhà hàng (nếu đã có) -->
+                        @if (!string.IsNullOrEmpty(item.PhanHoiAdmin))
+                        {
+                            <div class="p-3 rounded-3 border-start border-4 border-success bg-white mb-3">
+                                <div class="d-flex align-items-center text-success fw-bold small mb-1">
+                                    <i class="bi bi-check-circle-fill me-2"></i>Phản hồi từ Nhà hàng
+                                </div>
+                                <div class="text-dark small">@item.PhanHoiAdmin</div>
+                            </div>
+                        }
+
+                        <!-- Nút / Form trả lời phản hồi -->
+                        <div class="pt-2">
+                            <button class="btn btn-sm btn-outline-primary rounded-pill" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#reply-@item.Id" 
+                                    aria-expanded="false" aria-controls="reply-@item.Id">
+                                <i class="bi bi-reply me-1"></i>@(string.IsNullOrEmpty(item.PhanHoiAdmin) ? "Viết phản hồi" : "Cập nhật câu trả lời")
+                            </button>
+
+                            <div class="collapse mt-3" id="reply-@item.Id">
+                                <form asp-action="PhanHoiDanhGia" method="post" class="card card-body bg-white border">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="DanhGiaId" value="@item.Id" />
+                                    <label class="form-label small fw-semibold text-secondary">
+                                        Nội dung câu trả lời của Nhà hàng gửi tới khách hàng:
+                                    </label>
+                                    <textarea name="NoiDungPhanHoi" rows="3" class="form-control mb-2" required
+                                              placeholder="Cảm ơn quý khách đã ghé thăm nhà hàng và góp ý...">@item.PhanHoiAdmin</textarea>
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold">
+                                            <i class="bi bi-send-fill me-1"></i>Gửi phản hồi
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-chat-square-dots fs-1 d-block mb-2"></i>
+                Chưa có đánh giá nào từ khách hàng.
+            </div>
+        }
+    </div>
+</div>

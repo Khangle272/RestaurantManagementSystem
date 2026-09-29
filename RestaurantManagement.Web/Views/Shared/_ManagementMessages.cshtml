@@ -1,11 +1,21 @@
-@if (TempData["Success"] is string success)
+@{
+    var successMsg = TempData["SuccessMessage"]?.ToString() ?? TempData["Success"]?.ToString();
+    var errorMsg = TempData["ErrorMessage"]?.ToString() ?? TempData["Error"]?.ToString();
+}
+@if (!string.IsNullOrEmpty(successMsg))
 {
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @success
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div>@successMsg</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 }
-@if (TempData["Error"] is string error)
+@if (!string.IsNullOrEmpty(errorMsg))
 {
-    <div class="alert alert-danger" role="alert">@error</div>
+    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <div>@errorMsg</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
 }
+

@@ -1,0 +1,111 @@
+@model RestaurantManagement.API.Models.DatBan
+@{
+    ViewData["Title"] = "Đặt bàn thành công";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-8 col-md-10">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white">
+            <!-- Header biên nhận -->
+            <div class="p-4 p-md-5 text-center text-white" 
+                 style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+                <div class="d-inline-flex p-3 rounded-circle bg-white text-success shadow mb-3">
+                    <i class="bi bi-check2-circle display-4"></i>
+                </div>
+                <h2 class="fw-bold mb-1">Đặt Bàn Thành Công!</h2>
+                <p class="mb-0 opacity-90">Nhà hàng đã tiếp nhận yêu cầu đặt chỗ của quý khách.</p>
+            </div>
+
+            <div class="card-body p-4 p-md-5">
+                <!-- Mã đặt chỗ Booking Code -->
+                <div class="text-center p-3 p-md-4 rounded-4 mb-4" 
+                     style="background-color: #F8FAFC; border: 2px dashed #E2E8F0;">
+                    <div class="text-uppercase small fw-bold text-muted mb-1">Mã đặt chỗ của quý khách</div>
+                    <div class="display-6 fw-bold text-danger my-1 font-monospace letter-spacing-1" id="bookingCodeText">
+                        @Model.MaDatBan
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="copyBookingCode()">
+                            <i class="bi bi-clipboard me-1"></i>Sao chép mã
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tóm tắt thông tin đặt bàn -->
+                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                    <i class="bi bi-info-circle text-primary me-2"></i>Chi tiết lịch hẹn
+                </h5>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Người liên hệ:</div>
+                        <div class="fw-semibold fs-6">@Model.HoTenLienHe</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Số điện thoại:</div>
+                        <div class="fw-semibold fs-6">@Model.SoDienThoaiLienHe</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Thời gian đến:</div>
+                        <div class="fw-bold fs-6 text-danger">
+                            <i class="bi bi-clock me-1"></i>@Model.GioDen.ToLocalTime().ToString("HH:mm - dddd, dd/MM/yyyy")
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Số lượng khách:</div>
+                        <div class="fw-semibold fs-6">@(Model.SoNguoiLon + Model.SoTreEm) người</div>
+                    </div>
+                    @if (Model.Ban.Any())
+                    {
+                        <div class="col-sm-6">
+                            <div class="text-muted small">Bàn ăn đã xếp:</div>
+                            <div class="badge bg-success-subtle text-success fs-6 px-3 py-1 rounded-pill">
+                                @string.Join(", ", Model.Ban.Select(b => b.BanAn.MaBan))
+                            </div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.YeuCau))
+                    {
+                        <div class="col-12">
+                            <div class="text-muted small">Ghi chú & Yêu cầu:</div>
+                            <div class="p-2 bg-light rounded text-secondary fst-italic small">@Model.YeuCau</div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Hướng dẫn khách đến -->
+                <div class="alert alert-warning border-0 d-flex rounded-3 p-3 mb-4" role="alert">
+                    <i class="bi bi-bell-fill fs-4 me-3 text-warning"></i>
+                    <div class="small">
+                        <strong>Lưu ý quan trọng:</strong> Quý khách vui lòng đến đúng giờ hẹn. Nhà hàng xin phép giữ bàn tối đa <strong>15 phút</strong>. 
+                        Khi đến, quý khách chỉ cần đọc số điện thoại hoặc cung cấp mã <strong>@Model.MaDatBan</strong> cho nhân viên lễ tân.
+                    </div>
+                </div>
+
+                <!-- Cụm nút hành động -->
+                <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-2">
+                    <a asp-action="LichSu" asp-route-bookingCode="@Model.MaDatBan" class="btn btn-outline-danger px-4 py-2 rounded-pill fw-semibold">
+                        <i class="bi bi-search me-1"></i>Theo dõi lịch sử đơn này
+                    </a>
+                    <a asp-action="Index" class="btn btn-danger px-4 py-2 rounded-pill fw-semibold" style="background-color: #E11D48; border-color: #E11D48;">
+                        <i class="bi bi-calendar-plus me-1"></i>Đặt thêm bàn khác
+                    </a>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-light border px-4 py-2 rounded-pill">
+                        <i class="bi bi-house me-1"></i>Trang chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyBookingCode() {
+            const code = document.getElementById("bookingCodeText").innerText.trim();
+            navigator.clipboard.writeText(code).then(() => {
+                alert("Đã sao chép mã đặt bàn: " + code);
+            });
+        }
+    </script>
+}
