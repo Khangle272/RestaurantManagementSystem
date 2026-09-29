@@ -1,0 +1,14 @@
+@model LoginViewModel
+@{ Layout = "_Layout"; ViewData["Title"] = "Đăng nhập quản trị"; }
+<section class="auth-page admin-auth" aria-labelledby="admin-login-title">
+    <div class="auth-story auth-story-admin"><div class="auth-story-pattern" aria-hidden="true"><i class="bi bi-shield-check"></i></div><div class="auth-story-content"><p class="eyebrow eyebrow-light">KHU VỰC QUẢN TRỊ</p><h1>Điều hành<br />từ một nơi.</h1><p>Tài khoản quản trị và nhân viên được cấp quyền sẽ đi thẳng đến phần việc của mình.</p><a asp-controller="Home" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Trở về trang chủ</a></div></div>
+    <div class="auth-panel-wrap"><div class="auth-panel"><div class="auth-form-heading"><span class="auth-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span><p class="eyebrow">CỔNG NỘI BỘ</p><h2 id="admin-login-title">Đăng nhập quản trị</h2><p>Sử dụng tài khoản do quản trị viên cấp.</p></div>
+        <form asp-controller="Admin" asp-action="Index" method="post"><input asp-for="ReturnUrl" type="hidden" /><div asp-validation-summary="ModelOnly" class="auth-error" role="alert"></div>
+            <div class="auth-field"><label asp-for="Email">Email công việc</label><input asp-for="Email" class="form-control" autocomplete="username" inputmode="email" placeholder="nhanvien@example.com" /><span asp-validation-for="Email" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="Password">Mật khẩu</label><div class="password-input"><input asp-for="Password" class="form-control" autocomplete="current-password" placeholder="Nhập mật khẩu" /><button type="button" class="password-toggle" data-password-toggle="Password" aria-label="Hiện mật khẩu" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button></div><span asp-validation-for="Password" class="field-error"></span></div>
+            <button type="submit" class="btn btn-restaurant auth-submit">Vào khu vực quản trị <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+        </form>
+        <div class="auth-switch">Bạn là khách hàng? <a asp-controller="Account" asp-action="Login">Đăng nhập tại đây <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+    </div></div>
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

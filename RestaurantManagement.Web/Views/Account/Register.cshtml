@@ -1,16 +1,24 @@
 @model RegisterViewModel
-@{ ViewData["Title"] = "Đăng ký khách hàng"; }
-<div class="container" style="max-width:540px">
-    <h1 class="h3 mb-3">Đăng ký tài khoản khách hàng</h1>
-    <form asp-action="Register" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-        <div class="mb-3"><label asp-for="HoTen" class="form-label">Họ tên</label><input asp-for="HoTen" class="form-control" /><span asp-validation-for="HoTen" class="text-danger"></span></div>
-        <div class="mb-3"><label asp-for="SoDienThoai" class="form-label">Số điện thoại</label><input asp-for="SoDienThoai" class="form-control" /><span asp-validation-for="SoDienThoai" class="text-danger"></span></div>
-        <div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" autocomplete="username" /><span asp-validation-for="Email" class="text-danger"></span></div>
-        <div class="mb-3"><label asp-for="Password" class="form-label">Mật khẩu</label><input asp-for="Password" class="form-control" autocomplete="new-password" /><span asp-validation-for="Password" class="text-danger"></span></div>
-        <div class="mb-3"><label asp-for="ConfirmPassword" class="form-label">Nhập lại mật khẩu</label><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="text-danger"></span></div>
-        <div class="form-check mb-3"><input asp-for="DongYNhanUuDai" class="form-check-input" /><label asp-for="DongYNhanUuDai" class="form-check-label">Tôi đồng ý nhận thông tin ưu đãi</label></div>
-        <button type="submit" class="btn btn-primary w-100">Tạo tài khoản</button>
-    </form>
-</div>
+@{ Layout = "_Layout"; ViewData["Title"] = "Đăng ký khách hàng"; }
+<section class="auth-page auth-register" aria-labelledby="register-title">
+    <div class="auth-story">
+        <img src="~/images/hero-vietnamese-table.png" alt="Hình minh họa món ăn Việt được bày trên bàn" />
+        <div class="auth-story-content"><p class="eyebrow eyebrow-light">BẮT ĐẦU TỪ ĐÂY</p><h1>Một chỗ ngồi<br />đang chờ bạn.</h1><p>Tạo tài khoản để đặt bàn nhanh hơn và theo dõi lịch sử đặt bàn của mình.</p><a asp-controller="Home" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Trở về trang chủ</a></div>
+    </div>
+    <div class="auth-panel-wrap"><div class="auth-panel">
+        <div class="auth-form-heading"><span class="auth-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span><p class="eyebrow">TÀI KHOẢN KHÁCH HÀNG</p><h2 id="register-title">Tạo tài khoản</h2><p>Chỉ mất vài bước để bắt đầu.</p></div>
+        <form asp-action="Register" method="post">
+            <div asp-validation-summary="ModelOnly" class="auth-error" role="alert"></div>
+            <div class="auth-field"><label asp-for="HoTen">Họ và tên</label><input asp-for="HoTen" class="form-control" autocomplete="name" placeholder="Nguyễn Văn A" /><span asp-validation-for="HoTen" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="SoDienThoai">Số điện thoại</label><input asp-for="SoDienThoai" class="form-control" type="tel" autocomplete="tel" inputmode="tel" placeholder="09xx xxx xxx" /><span asp-validation-for="SoDienThoai" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="Email">Email</label><input asp-for="Email" class="form-control" autocomplete="username" inputmode="email" placeholder="ban@example.com" /><span asp-validation-for="Email" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="Password">Mật khẩu</label><div class="password-input"><input asp-for="Password" class="form-control" autocomplete="new-password" placeholder="Tạo mật khẩu" aria-describedby="password-help" /><button type="button" class="password-toggle" data-password-toggle="Password" aria-label="Hiện mật khẩu" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button></div><small id="password-help" class="auth-help">Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.</small><span asp-validation-for="Password" class="field-error"></span></div>
+            <div class="auth-field"><label asp-for="ConfirmPassword">Nhập lại mật khẩu</label><div class="password-input"><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" placeholder="Nhập lại mật khẩu" /><button type="button" class="password-toggle" data-password-toggle="ConfirmPassword" aria-label="Hiện mật khẩu" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button></div><span asp-validation-for="ConfirmPassword" class="field-error"></span></div>
+            <div class="form-check auth-consent"><input asp-for="DongYNhanUuDai" class="form-check-input" /><label asp-for="DongYNhanUuDai" class="form-check-label">Tôi muốn nhận thông tin ưu đãi từ nhà hàng <span>(không bắt buộc)</span></label></div>
+            <button type="submit" class="btn btn-restaurant auth-submit">Tạo tài khoản <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+        </form>
+        <p class="auth-next">Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></p>
+        <div class="auth-switch">Bạn là nhân viên? <a asp-controller="Admin" asp-action="Index">Đến cổng quản trị <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+    </div></div>
+</section>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

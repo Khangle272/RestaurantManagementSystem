@@ -13,7 +13,7 @@ var database = "RestaurantCrudTests_" + Guid.NewGuid().ToString("N");
 var connection = new SqlConnectionStringBuilder
 {
     DataSource = Environment.GetEnvironmentVariable("CRUD_TEST_SQL_SERVER") ?? @".\SQLEXPRESS",
-    InitialCatalog = database, IntegratedSecurity = true, TrustServerCertificate = true
+    InitialCatalog = database, IntegratedSecurity = true, TrustServerCertificate = true, ConnectTimeout = 5
 };
 var options = new DbContextOptionsBuilder<RestaurantDbContext>().UseSqlServer(connection.ConnectionString).Options;
 const string adminEmail = "auth-smoke-admin@example.test";
@@ -46,12 +46,21 @@ try
     await StartWeb();
     using (var anonymous = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = client.BaseAddress })
     {
+        using var css = await anonymous.GetAsync("/css/site.css");
+        Check(css.StatusCode == HttpStatusCode.OK && css.Content.Headers.ContentType?.MediaType == "text/css",
+            "Public stylesheet is served without login");
+        using var image = await anonymous.GetAsync("/images/hero-vietnamese-table.png");
+        Check(image.StatusCode == HttpStatusCode.OK && image.Content.Headers.ContentType?.MediaType == "image/png",
+            "Public hero image is served without login");
+        using var script = await anonymous.GetAsync("/js/site.js");
+        Check(script.StatusCode == HttpStatusCode.OK && script.Content.Headers.ContentType?.MediaType == "text/javascript",
+            "Public form script is served without login");
         using var denied = await anonymous.GetAsync("/NhanVien");
-        Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/Account/Login") == true,
+        Check(denied.StatusCode == HttpStatusCode.Redirect && denied.Headers.Location?.OriginalString.Contains("/admin") == true,
             "Anonymous management request redirects to login");
         await CheckAccess(anonymous, "/HoaDon", HttpStatusCode.Redirect, "Anonymous denied invoices");
     }
-    await Post("/Account/Login", await Get("/Account/Login"), new()
+    await Post("/admin", await Get("/admin"), new()
     {
         ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
@@ -73,6 +82,22 @@ try
         "Web startup creates schema without inserting sample business data");
     // Fixtures belong only to this run's isolated, disposable test database.
     await DbSeeder.SeedAsync(db);
+    using (var publicClient = NewClient())
+    {
+        var firstDish = await db.MonAn.AsNoTracking().FirstAsync();
+        var home = WebUtility.HtmlDecode(await publicClient.GetStringAsync("/"));
+        Check(home.Contains("Thực đơn") && home.Contains(firstDish.TenMon), "Public home lists database dishes");
+        var details = WebUtility.HtmlDecode(await publicClient.GetStringAsync($"/Home/MonAn/{firstDish.Id}"));
+        Check(details.Contains(firstDish.TenMon) && details.Contains("Giá bán"), "Public dish page lists price");
+        await CheckAccess(publicClient, "/Home/MonAn/2147483647", HttpStatusCode.NotFound, "Missing public dish returns 404");
+        var customerPortal = await publicClient.GetStringAsync("/Account/Login");
+        using var rejectedAdmin = await publicClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = Hidden(customerPortal, "__RequestVerificationToken"),
+            ["Email"] = adminEmail, ["Password"] = adminPassword
+        }));
+        Check(rejectedAdmin.StatusCode == HttpStatusCode.OK, "Admin cannot sign in through customer portal");
+    }
     using (var customerClient = NewClient())
     {
         var registration = await customerClient.GetStringAsync("/Account/Register");
@@ -121,11 +146,13 @@ try
     }
     foreach (var (code, role, allowed, denied) in new[]
     {
-        ("NV002", "TiepTan", "/BanAn", "/NhanVien"),
+        ("NV002", "TiepTan", "/QuanLyDatBan", "/BanAn"),
         ("NV003", "Kho", "/NguyenLieu", "/BanAn"),
         ("TEST-BOIBAN", "BoiBan", "/BanAn", "/DanhMuc"),
-        ("TEST-BEP", "Bep", "/Home", "/MonAn"),
-        ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn")
+        ("TEST-BEP", "Bep", "/Bep", "/MonAn"),
+        ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn"),
+        ("TEST-THUCDON", "ThucDon", "/MonAn", "/DanhMuc"),
+        ("TEST-DANHMUC", "DanhMucMon", "/DanhMuc", "/MonAn")
     })
     {
         var employee = await db.NhanVien.SingleOrDefaultAsync(x => x.MaNhanVien == code);
@@ -358,17 +385,19 @@ try
 
     await InitDemoAccounts();
     await InitDemoAccounts();
-    Check(await db.NhanVien.CountAsync(x => x.MaNhanVien.StartsWith("DEMO-")) == 5,
-        "Demo bootstrap creates five staff profiles only once");
+    Check(await db.NhanVien.CountAsync(x => x.MaNhanVien.StartsWith("DEMO-")) == 7,
+        "Demo bootstrap creates seven staff profiles only once");
     foreach (var (email, allowed, denied) in new[]
     {
         ("admin.demo@example.test", "/TaiKhoanNhanVien", "/Account/Denied"),
         ("khach.demo@example.test", "/Account/ChangePassword", "/TaiKhoanNhanVien"),
-        ("tieptan.demo@example.test", "/BanAn", "/NhanVien"),
+        ("tieptan.demo@example.test", "/QuanLyDatBan", "/BanAn"),
         ("boiban.demo@example.test", "/BanAn", "/DanhMuc"),
         ("thungan.demo@example.test", "/HoaDon", "/MonAn"),
-        ("bep.demo@example.test", "/Home", "/MonAn"),
-        ("kho.demo@example.test", "/NguyenLieu", "/BanAn")
+        ("bep.demo@example.test", "/Bep", "/MonAn"),
+        ("kho.demo@example.test", "/NguyenLieu", "/BanAn"),
+        ("thucdon.demo@example.test", "/MonAn", "/DanhMuc"),
+        ("danhmuc.demo@example.test", "/DanhMuc", "/MonAn")
     })
     {
         using var demo = NewClient();
@@ -434,8 +463,10 @@ HttpClient NewClient() => new(new HttpClientHandler { AllowAutoRedirect = false,
 
 async Task LoginAs(HttpClient accountClient, string email, string password = adminPassword)
 {
-    var form = await accountClient.GetStringAsync("/Account/Login");
-    using var response = await accountClient.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+    var route = email.Contains("khach", StringComparison.OrdinalIgnoreCase) || email.Contains("customer", StringComparison.OrdinalIgnoreCase)
+        ? "/Account/Login" : "/admin";
+    var form = await accountClient.GetStringAsync(route);
+    using var response = await accountClient.PostAsync(route, new FormUrlEncodedContent(new Dictionary<string, string>
     {
         ["__RequestVerificationToken"] = Hidden(form, "__RequestVerificationToken"),
         ["Email"] = email, ["Password"] = password

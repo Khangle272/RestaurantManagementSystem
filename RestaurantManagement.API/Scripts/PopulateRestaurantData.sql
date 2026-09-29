@@ -1,6 +1,6 @@
 -- Bộ dữ liệu tự soạn cho thực hành; không phải giao dịch hoặc thông tin người thật.
 -- Chạy sau PopulateCrudData.sql trên database đã có migrations.
--- Chỉ thêm bản ghi còn thiếu, không ghi đè dữ liệu đã có.
+-- Chỉ thêm bản ghi còn thiếu; riêng tài khoản mẫu đang khóa từ bản cũ được kích hoạt khi hồ sơ/quyền khớp.
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 BEGIN TRY
@@ -241,25 +241,108 @@ FROM HoaDon h JOIN @Bookings b ON h.MaHoaDon=REPLACE(b.Ma,N'DB-',N'HD-')
 CROSS APPLY(SELECT TOP(1) Id FROM ChiTietHoaDon WHERE HoaDonId=h.Id ORDER BY Id)c
 WHERE NOT EXISTS(SELECT 1 FROM DanhGia WITH(UPDLOCK,HOLDLOCK) WHERE HoaDonId=h.Id AND ChiTietHoaDonId=c.Id);
 
--- Tài khoản minh họa không có mật khẩu và đang khóa; không cấp tài khoản đăng nhập sử dụng được.
+-- Mật khẩu mẫu được băm bằng ASP.NET Identity PasswordHasher (V3).
+-- Chỉ dùng cho môi trường Development; không chèn mật khẩu rõ vào database.
+DECLARE @DemoCredentials TABLE(Email nvarchar(256) PRIMARY KEY, PasswordHash nvarchar(500));
+INSERT @DemoCredentials VALUES
+(N'admin.mau@example.test',N'AQAAAAIAAYagAAAAEP7VWF5IYIzn4/kRJYIfIgIIGQn5A5jPCVOmPhFsUcw2f6UYt+ICngQn8qqpClLIjA=='),
+(N'thucdon.mau@example.test',N'AQAAAAIAAYagAAAAEDmjZ5bgbFPYtBuueT6SljeZrgNwOmAERL+6e607KcKkCkv5HbQA4zR7BzY4MVrpeg=='),
+(N'danhmuc.mau@example.test',N'AQAAAAIAAYagAAAAEEAe1OBYcNrqTdp3ks0csm4eA083r9Fp6A63cchb5rWWdOu+dUHO1/J7/2xPWASuYA=='),
+(N'letan.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAEAzwusUeX0XBycf/NmqCOm/zpHXk5kfVthNerg17WpnZV2Zq5UQllEu/vFDuSrOV5w=='),
+(N'phucvu.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAENlBcOBkNkeP+v1t7dK6sZjtjlSzj5LJGUML5xtCkQ/AqIgGi0cociV6B5WUGm9brg=='),
+(N'thungan.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAEIV6Cl/+n9drnQNrSYaQlhVmAhseyQygTW7oYP//e7iJXA+Z0pFCA7pCTOSmykd1JA=='),
+(N'bep.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAEMzNSiiELVDpcE33rnBOQHEl934qU592Xfj73otdhE402OilsrtJT07kNzYcUGcMYg=='),
+(N'kho.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAEL5+CkrS6i55N7F+t7pzluU4WQFamm0hAl+FcHokmQzmWJisqFjXz10UGf/yXYgL1Q==');
+DECLARE @NewSampleAccounts TABLE(UserId int PRIMARY KEY);
+
+-- Các tài khoản này đăng nhập được ngay khi nạp SQL vào database mới.
 INSERT VaiTro(Name,NormalizedName,ConcurrencyStamp)
 SELECT v.Name,UPPER(v.Name),CONVERT(nvarchar(36),NEWID())
-FROM(VALUES(N'Manager'),(N'Hostess'),(N'Waiter'),(N'Cashier'),(N'Kitchen'),(N'Stockkeeper'))v(Name)
+FROM(VALUES(N'TiepTan'),(N'BoiBan'),(N'ThuNgan'),(N'Bep'),(N'Kho'))v(Name)
 WHERE NOT EXISTS(SELECT 1 FROM VaiTro WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedName=UPPER(v.Name));
 DECLARE @Accounts TABLE(MaNV nvarchar(20), Username nvarchar(256), RoleName nvarchar(256));
-INSERT @Accounts VALUES(N'NV004',N'thungan.minhhoa',N'Cashier'),(N'NV005',N'letan.minhhoa',N'Hostess'),(N'NV006',N'phucvu.minhhoa',N'Waiter'),(N'NV008',N'bep.minhhoa',N'Kitchen'),(N'NV012',N'kho.minhhoa',N'Stockkeeper');
+INSERT @Accounts VALUES(N'NV004',N'thungan.minhhoa',N'ThuNgan'),(N'NV005',N'letan.minhhoa',N'TiepTan'),(N'NV006',N'phucvu.minhhoa',N'BoiBan'),(N'NV008',N'bep.minhhoa',N'Bep'),(N'NV012',N'kho.minhhoa',N'Kho');
 INSERT TaiKhoan(UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount)
-SELECT v.Username,UPPER(v.Username),v.Username+N'@nhahang.example.test',UPPER(v.Username+N'@nhahang.example.test'),0,NULL,CONVERT(nvarchar(36),NEWID()),CONVERT(nvarchar(36),NEWID()),NULL,0,0,'2099-01-01T00:00:00+07:00',1,0
-FROM @Accounts v WHERE NOT EXISTS(SELECT 1 FROM TaiKhoan WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedUserName=UPPER(v.Username));
+OUTPUT inserted.Id INTO @NewSampleAccounts
+SELECT v.Username,UPPER(v.Username),v.Username+N'@nhahang.example.test',UPPER(v.Username+N'@nhahang.example.test'),1,d.PasswordHash,CONVERT(nvarchar(36),NEWID()),CONVERT(nvarchar(36),NEWID()),NULL,0,0,NULL,1,0
+FROM @Accounts v JOIN @DemoCredentials d ON d.Email=v.Username+N'@nhahang.example.test'
+WHERE NOT EXISTS(SELECT 1 FROM TaiKhoan WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedUserName=UPPER(v.Username) OR NormalizedEmail=UPPER(d.Email));
 -- Chỉ gắn tài khoản do script tạo, không sửa liên kết tài khoản có sẵn.
 UPDATE n SET TaiKhoanId=u.Id FROM NhanVien n JOIN @Accounts v ON v.MaNV=n.MaNhanVien
 JOIN TaiKhoan u ON u.NormalizedUserName=UPPER(v.Username)
-WHERE n.TaiKhoanId IS NULL AND u.Email=v.Username+N'@nhahang.example.test' AND u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()
+WHERE n.TaiKhoanId IS NULL AND u.Email=v.Username+N'@nhahang.example.test'
+AND (EXISTS(SELECT 1 FROM @NewSampleAccounts created WHERE created.UserId=u.Id)
+     OR (u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()))
 AND NOT EXISTS(SELECT 1 FROM NhanVien other WHERE other.TaiKhoanId=u.Id);
+-- Nâng cấp năm tài khoản khóa được tạo bởi bản SQL cũ sang vai trò hiện tại.
+DELETE link FROM TaiKhoanVaiTro link
+JOIN TaiKhoan u ON u.Id=link.UserId JOIN @Accounts v ON u.NormalizedUserName=UPPER(v.Username)
+JOIN NhanVien n ON n.MaNhanVien=v.MaNV AND n.TaiKhoanId=u.Id
+JOIN VaiTro oldRole ON oldRole.Id=link.RoleId
+WHERE u.Email=v.Username+N'@nhahang.example.test' AND u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()
+AND oldRole.NormalizedName IN(N'HOSTESS',N'WAITER',N'CASHIER',N'KITCHEN',N'STOCKKEEPER');
 INSERT TaiKhoanVaiTro(UserId,RoleId)
 SELECT u.Id,r.Id FROM @Accounts v JOIN TaiKhoan u ON u.NormalizedUserName=UPPER(v.Username) JOIN VaiTro r ON r.NormalizedName=UPPER(v.RoleName)
-WHERE u.Email=v.Username+N'@nhahang.example.test' AND u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()
-AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro WITH(UPDLOCK,HOLDLOCK) WHERE UserId=u.Id AND RoleId=r.Id);
+JOIN NhanVien n ON n.MaNhanVien=v.MaNV AND n.TaiKhoanId=u.Id
+WHERE u.Email=v.Username+N'@nhahang.example.test'
+AND (EXISTS(SELECT 1 FROM @NewSampleAccounts created WHERE created.UserId=u.Id)
+     OR (u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()))
+AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro WITH(UPDLOCK,HOLDLOCK) WHERE UserId=u.Id);
+
+-- Tài khoản mẫu của giao diện hiện tại. Chỉ tạo nếu email chưa tồn tại.
+-- Nếu tài khoản đã hoạt động, không thay đổi mật khẩu hoặc trạng thái.
+DECLARE @WebAccounts TABLE(MaNV nvarchar(20), HoTen nvarchar(120), Phone nvarchar(20), Email nvarchar(256), RoleName nvarchar(256));
+INSERT @WebAccounts VALUES
+(N'MENU-001',N'Nguyễn Minh Anh',N'0999000101',N'thucdon.mau@example.test',N'ThucDon'),
+(N'MENU-002',N'Trần Gia Hân',N'0999000102',N'danhmuc.mau@example.test',N'DanhMucMon');
+INSERT VaiTro(Name,NormalizedName,ConcurrencyStamp)
+SELECT v.Name,UPPER(v.Name),CONVERT(nvarchar(36),NEWID())
+FROM(VALUES(N'Admin'),(N'ThucDon'),(N'DanhMucMon'))v(Name)
+WHERE NOT EXISTS(SELECT 1 FROM VaiTro WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedName=UPPER(v.Name));
+INSERT NhanVien(MaNhanVien,HoTen,SoDienThoai,Email,ChucVu,NgayVaoLam,DangLamViec)
+SELECT v.MaNV,v.HoTen,v.Phone,v.Email,v.RoleName,'2026-09-01',1
+FROM @WebAccounts v
+WHERE NOT EXISTS(SELECT 1 FROM NhanVien WITH(UPDLOCK,HOLDLOCK) WHERE MaNhanVien=v.MaNV);
+DECLARE @WebUsers TABLE(Email nvarchar(256), RoleName nvarchar(256));
+INSERT @WebUsers VALUES
+(N'admin.mau@example.test',N'Admin'),
+(N'thucdon.mau@example.test',N'ThucDon'),
+(N'danhmuc.mau@example.test',N'DanhMucMon');
+INSERT TaiKhoan(UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount)
+OUTPUT inserted.Id INTO @NewSampleAccounts
+SELECT v.Email,UPPER(v.Email),v.Email,UPPER(v.Email),1,d.PasswordHash,CONVERT(nvarchar(36),NEWID()),CONVERT(nvarchar(36),NEWID()),NULL,0,0,NULL,1,0
+FROM @WebUsers v JOIN @DemoCredentials d ON d.Email=v.Email
+WHERE NOT EXISTS(SELECT 1 FROM TaiKhoan WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedUserName=UPPER(v.Email) OR NormalizedEmail=UPPER(v.Email));
+UPDATE n SET TaiKhoanId=u.Id
+FROM NhanVien n JOIN @WebAccounts v ON v.MaNV=n.MaNhanVien
+JOIN TaiKhoan u ON u.NormalizedUserName=UPPER(v.Email) AND u.NormalizedEmail=UPPER(v.Email)
+WHERE n.TaiKhoanId IS NULL AND n.Email=v.Email
+AND NOT EXISTS(SELECT 1 FROM NhanVien other WHERE other.TaiKhoanId=u.Id)
+AND NOT EXISTS(SELECT 1 FROM KhachHang k WHERE k.TaiKhoanId=u.Id);
+INSERT TaiKhoanVaiTro(UserId,RoleId)
+SELECT u.Id,r.Id FROM @WebUsers v JOIN TaiKhoan u ON u.NormalizedUserName=UPPER(v.Email) AND u.NormalizedEmail=UPPER(v.Email)
+JOIN VaiTro r ON r.NormalizedName=UPPER(v.RoleName)
+WHERE (EXISTS(SELECT 1 FROM @NewSampleAccounts created WHERE created.UserId=u.Id)
+       OR (u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()))
+AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro existing WHERE existing.UserId=u.Id)
+AND (v.RoleName=N'Admin' OR EXISTS(SELECT 1 FROM NhanVien n JOIN @WebAccounts staff ON staff.MaNV=n.MaNhanVien WHERE n.TaiKhoanId=u.Id AND staff.Email=v.Email));
+
+-- Kích hoạt các tài khoản mẫu bị khóa do bản SQL trước tạo, chỉ khi hồ sơ và quyền khớp.
+UPDATE u SET PasswordHash=d.PasswordHash,LockoutEnd=NULL,EmailConfirmed=1,
+    SecurityStamp=CONVERT(nvarchar(36),NEWID()),AccessFailedCount=0
+FROM TaiKhoan u JOIN @DemoCredentials d ON d.Email=u.Email
+JOIN TaiKhoanVaiTro link ON link.UserId=u.Id JOIN VaiTro role ON role.Id=link.RoleId
+WHERE u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()
+AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro other WHERE other.UserId=u.Id AND other.RoleId<>link.RoleId)
+AND (
+    (u.Email=N'admin.mau@example.test' AND role.NormalizedName=N'ADMIN'
+     AND NOT EXISTS(SELECT 1 FROM NhanVien n WHERE n.TaiKhoanId=u.Id)
+     AND NOT EXISTS(SELECT 1 FROM KhachHang k WHERE k.TaiKhoanId=u.Id))
+    OR EXISTS(SELECT 1 FROM @Accounts a JOIN NhanVien n ON n.MaNhanVien=a.MaNV AND n.TaiKhoanId=u.Id
+              WHERE u.Email=a.Username+N'@nhahang.example.test' AND role.NormalizedName=UPPER(a.RoleName))
+    OR EXISTS(SELECT 1 FROM @WebAccounts a JOIN NhanVien n ON n.MaNhanVien=a.MaNV AND n.TaiKhoanId=u.Id
+              WHERE u.Email=a.Email AND role.NormalizedName=UPPER(a.RoleName))
+);
 
 -- Kiểm tra tính nhất quán trước khi commit.
 IF EXISTS(SELECT 1 FROM HoaDon h JOIN @Bookings b ON h.MaHoaDon=REPLACE(b.Ma,N'DB-',N'HD-')

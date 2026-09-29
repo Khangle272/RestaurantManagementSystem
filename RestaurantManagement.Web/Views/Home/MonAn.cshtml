@@ -1,0 +1,15 @@
+@model MenuItemViewModel
+@using RestaurantManagement.API.Models
+@{ Layout = "_Layout"; ViewData["Title"] = Model.Name; }
+<nav class="detail-breadcrumb"><a asp-action="Index">Trang chủ</a><i class="bi bi-chevron-right"></i><a asp-action="Index" asp-fragment="thuc-don">Thực đơn</a><i class="bi bi-chevron-right"></i><span>@Model.Name</span></nav>
+<article class="dish-detail">
+    <div class="dish-detail-image">@if (!string.IsNullOrWhiteSpace(Model.Image)) { <img src="@Model.Image" alt="@Model.Name" /> } else { <i class="bi bi-cup-hot" aria-hidden="true"></i> }</div>
+    <div class="dish-detail-copy"><p class="eyebrow">@Model.Category · @(Model.Type == LoaiMon.Set ? "SET / COMBO" : Model.Type == LoaiMon.ThucUong ? "THỨC UỐNG" : "MÓN LẺ")</p><h1>@Model.Name</h1>
+        <p class="dish-description">@(string.IsNullOrWhiteSpace(Model.Description) ? "Thông tin món ăn đang được cập nhật." : Model.Description)</p>
+        <p class="availability @(Model.Status == TrangThaiMon.TamHet ? "unavailable" : "")"><span></span>@(Model.Status == TrangThaiMon.TamHet ? "Tạm hết món" : "Đang phục vụ")</p>
+        @if (Model.Sizes.Count > 0) { <div class="dish-prices"><h2>Giá bán</h2>@foreach (var size in Model.Sizes) { <div><span>@size.Name</span><strong>@size.Price.ToString("N0") ₫</strong></div> }</div> }
+        @if (Model.ComboItems.Count > 0) { <div class="dish-components"><h2>Trong set gồm</h2><ul>@foreach (var component in Model.ComboItems) { <li>@component</li> }</ul></div> }
+        @if (Model.Promotions.Count > 0) { <div class="dish-promotions"><h2>Ưu đãi áp dụng</h2>@foreach (var offer in Model.Promotions) { <p><i class="bi bi-tag"></i> @offer.Name — @offer.Summary</p> }</div> }
+        <a class="btn btn-restaurant mt-4" asp-controller="DatBan" asp-action="Index">Đặt bàn để thưởng thức <i class="bi bi-arrow-right"></i></a>
+    </div>
+</article>

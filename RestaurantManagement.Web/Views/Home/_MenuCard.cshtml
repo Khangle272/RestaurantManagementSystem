@@ -1,0 +1,11 @@
+@model MenuItemViewModel
+@using RestaurantManagement.API.Models
+<article class="menu-card">
+    <a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id" class="menu-card-image" aria-label="Xem @Model.Name">
+        @if (!string.IsNullOrWhiteSpace(Model.Image)) { <img src="@Model.Image" alt="@Model.Name" loading="lazy" /> }
+        else { <i class="bi bi-cup-hot" aria-hidden="true"></i> }
+        @if (Model.Status == TrangThaiMon.TamHet) { <span class="menu-status">Tạm hết</span> }
+        else if (Model.IsNew) { <span class="menu-status menu-status-new">Món mới</span> }
+    </a>
+    <div class="menu-card-body"><span class="menu-category">@Model.Category · @(Model.Type == LoaiMon.Set ? "Set / Combo" : Model.Type == LoaiMon.ThucUong ? "Thức uống" : "Món lẻ")</span><h3><a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id">@Model.Name</a></h3><p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Khám phá hương vị của món ăn này." : Model.Description)</p><div class="menu-card-footer"><strong>@(Model.FromPrice.HasValue ? $"Từ {Model.FromPrice.Value:N0} ₫" : "Liên hệ nhà hàng")</strong><a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id" aria-label="Chi tiết @Model.Name"><i class="bi bi-arrow-up-right"></i></a></div></div>
+</article>

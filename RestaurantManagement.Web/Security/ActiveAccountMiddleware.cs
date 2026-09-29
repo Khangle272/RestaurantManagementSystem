@@ -14,7 +14,8 @@ public sealed class ActiveAccountMiddleware(RequestDelegate next)
         if (context.User.Identity?.IsAuthenticated == true)
         {
             var user = await users.GetUserAsync(context.User);
-            var active = user is not null && !await users.IsLockedOutAsync(user) &&
+            IList<string> roles = user is null ? [] : await users.GetRolesAsync(user);
+            var active = user is not null && roles.Count == 1 && !await users.IsLockedOutAsync(user) &&
                 (context.User.IsInRole(AppRoles.Admin)
                 || (context.User.IsInRole(AppRoles.KhachHang)
                     && await db.KhachHang.AnyAsync(x => x.TaiKhoanId == user.Id && x.DangSuDung))

@@ -25,7 +25,9 @@ public static class AuthSetup
             ("boiban.demo@example.test", AppRoles.BoiBan, "DEMO-BB", "Bồi bàn thử", "0999000002"),
             ("thungan.demo@example.test", AppRoles.ThuNgan, "DEMO-TN", "Thu ngân thử", "0999000003"),
             ("bep.demo@example.test", AppRoles.Bep, "DEMO-BEP", "Bếp thử", "0999000004"),
-            ("kho.demo@example.test", AppRoles.Kho, "DEMO-KHO", "Kho thử", "0999000005")
+            ("kho.demo@example.test", AppRoles.Kho, "DEMO-KHO", "Kho thử", "0999000005"),
+            ("thucdon.demo@example.test", AppRoles.ThucDon, "DEMO-MON", "Thực đơn thử", "0999000006"),
+            ("danhmuc.demo@example.test", AppRoles.DanhMucMon, "DEMO-DM", "Danh mục thử", "0999000007")
         };
 
         await using var transaction = await db.Database.BeginTransactionAsync();
@@ -112,7 +114,17 @@ public static class AuthSetup
             Console.WriteLine($"Đã tạo tài khoản Admin: {email}");
         }
         else if (await users.IsInRoleAsync(existing, AppRoles.Admin))
-            Console.WriteLine("Tài khoản Admin đã tồn tại; không đổi mật khẩu.");
+        {
+            if (existing.PasswordHash == null && existing.LockoutEnd > DateTimeOffset.UtcNow)
+            {
+                var result = await users.AddPasswordAsync(existing, password);
+                if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+                result = await users.SetLockoutEndDateAsync(existing, null);
+                if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+                Console.WriteLine($"Đã kích hoạt tài khoản Admin: {email}");
+            }
+            else Console.WriteLine("Tài khoản Admin đã tồn tại; không đổi mật khẩu.");
+        }
         else
             throw new InvalidOperationException("Email đã thuộc tài khoản khác; không tự nâng quyền Admin.");
     }

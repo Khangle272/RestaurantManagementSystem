@@ -4,6 +4,8 @@ Giữ file này làm nơi ghi **góp ý → quyết định → phần đã làm
 
 **Cách dùng cho các lần làm sau (cả thành viên và AI):** trước khi sửa hãy đọc mục liên quan rồi đối chiếu code/nhánh hiện tại. Sau mỗi phần đã làm xong, thêm một mục có ngày, người/nhánh phụ trách, file hoặc chức năng đã đổi, kết quả build/test, và việc còn chờ người khác. Ghi rõ `Đã làm`, `Đang làm` hoặc `Dự kiến`; không đổi một ý tưởng thành “đã hoàn thành” chỉ vì nó đã có bảng CSDL. Giữ các quyết định cũ để nhìn lại vì sao nhóm đổi hướng; nếu quyết định thay đổi, ghi mục mới thay thế và lý do. Không ghi mật khẩu thật hoặc dữ liệu khách hàng thật vào file.
 
+**Quy trình đang dùng:** xem README để tạo database và tài khoản mẫu từ SQL. Các lệnh khởi tạo nhân viên/mật khẩu mẫu ghi ở các mục cũ bên dưới là lịch sử thay đổi, đã được gỡ khỏi Web.
+
 ## 0. Nền tảng đã làm: tài khoản, phân quyền và Thu ngân
 
 **Đã làm:** khách tự đăng ký; đăng nhập, đăng xuất, đổi mật khẩu; khóa tạm 15 phút sau 5 lần nhập sai. Admin cấp tài khoản, đổi vai trò, khóa/mở khóa cho nhân viên đã có hồ sơ. Trang hiện hữu kiểm tra quyền ở controller/server, không chỉ ẩn menu; nhân viên ngừng làm hoặc khách ngừng sử dụng bị đăng xuất ở yêu cầu tiếp theo. Web dùng cookie Identity; API nghiệp vụ tạo về sau phải cấu hình xác thực và kiểm tra quyền riêng.
@@ -111,3 +113,44 @@ Không tạo bảng mới chỉ để "đủ số lượng". Sửa quan hệ tro
 - **Không để Bếp sửa toàn bộ món** chỉ để nhập công thức; sẽ lộ giá và quyền kinh doanh.
 - **Không tự trừ kho theo món bán** trước khi định mức theo size và quy tắc phiếu xuất được chốt, tránh sai tồn.
 - **Không push/merge thay đổi schema khi chưa đối chiếu DB hiện có và nhóm chưa đồng ý.**
+
+## 2026-09-29 — Trang chủ, cổng đăng nhập và phạm vi nhân viên
+
+- Trang `/` hiển thị thực đơn theo danh mục, món mới/nổi bật, giá thấp nhất của size đang dùng, trạng thái còn/tạm hết và các khuyến mãi đang hiệu lực không cần voucher. Trang `/Home/MonAn/{id}` hiện chi tiết món, giá theo size, thành phần set và ưu đãi gắn với món. Dữ liệu đọc trực tiếp từ database; không chèn món/giá giả vào giao diện.
+- Khách hàng đăng nhập ở `/Account/Login`; cổng `/admin` dành cho Admin và nhân viên đang làm việc. Tài khoản khách không đăng nhập được ở `/admin`, tài khoản quản trị/nhân viên không đăng nhập được ở form khách. URL quản lý chưa đăng nhập chuyển về `/admin`.
+- Mỗi tài khoản nhân viên được cấp đúng một vai trò; Admin có thể cấp/đổi qua `/TaiKhoanNhanVien`. Hai phần việc thực đơn mới là `ThucDon` (món, size, công thức, combo) và `DanhMucMon` (danh mục). Theo cấu trúc hiện có, “một phần việc” có thể cập nhật nhiều bảng con liên kết; đây là ranh giới hợp lý hơn một bảng SQL vật lý. Bồi bàn quản lý bàn ăn, Bếp có màn hình cập nhật trạng thái dòng món, các vai trò khác giữ phần việc hiện có.
+- Lệnh `--init-menu-staff` trong Development tạo hai hồ sơ/tài khoản mẫu `MENU-001` và `MENU-002` với email `.test`, chỉ khi cung cấp `AuthBootstrap__MenuStaffPassword` qua biến môi trường. Lệnh lặp lại không ghi đè tài khoản khác.
+- Kiểm tra: `dotnet build RestaurantManagement.Web/RestaurantManagement.Web.csproj --no-restore` đạt 0 lỗi/cảnh báo. Smoke test chạy bằng tài khoản Windows của máy đạt `PASS: 303 HTTP/database checks`; database kiểm thử tạm đã được xóa. Web chạy với `RestaurantDB` thật trả HTTP 200 ở `/` và `/admin`. Trên instance `.\SQLEXPRESS`, lệnh nạp đã tạo database `RestaurantDB`, hai nhân viên mẫu `MENU-001`/`MENU-002` và tài khoản Admin mẫu `admin.mau@example.test`. Database mới chưa có món ăn/danh mục; cần nhập qua giao diện hoặc script dữ liệu thực đơn. Tài khoản sandbox không đăng nhập SQL bằng Windows Authentication nên các lệnh nạp/kiểm thử phải chạy với tài khoản Windows có quyền SQL.
+
+## 2026-09-29 — Làm lại giao diện công khai và biểu mẫu tài khoản
+
+- Trang chủ dùng ảnh món ăn minh họa lưu tại `RestaurantManagement.Web/wwwroot/images/hero-vietnamese-table.png` (tạo bằng ImageGen tích hợp), bố cục chia nội dung/ảnh, mục ưu đãi, món nổi bật/món mới, bộ lọc danh mục và trạng thái thực đơn trống. Ảnh chỉ minh họa, không gán thành món trong database.
+- Form đăng nhập khách, đăng ký khách và đăng nhập quản trị dùng chung hệ màu xanh, bố cục ảnh/nội dung và trường nhập dễ đọc. Form đăng ký có mô tả yêu cầu mật khẩu, đồng ý nhận ưu đãi tùy chọn; các form có nút hiện/ẩn mật khẩu. Thông báo kiểm tra dữ liệu của form đăng ký đã đổi sang tiếng Việt.
+- Sửa `UseStaticFiles()` trước xác thực để khách chưa đăng nhập vẫn tải được CSS, JavaScript và ảnh. Đã kiểm tra giao diện ở kích thước màn hình nhỏ và lớn. Build sạch; smoke test đạt `PASS: 306 HTTP/database checks`, gồm ba kiểm tra mới cho tệp tĩnh công khai; database kiểm thử đã xóa.
+
+## 2026-09-29 — Nạp dữ liệu SQL và đồng bộ tài khoản mẫu
+
+- `PopulateRestaurantData.sql` nay lưu thêm hồ sơ/tài khoản mẫu Admin, Thực đơn (`MENU-001`) và Danh mục (`MENU-002`) đúng vai trò ứng dụng. Tài khoản mới do SQL thêm luôn khóa và không có mật khẩu; lệnh `--init-auth` / `--init-menu-staff` dùng ASP.NET Identity để kích hoạt bằng mật khẩu từ biến môi trường. Tài khoản đã tồn tại không bị đổi mật khẩu.
+- Thêm lệnh Development `--import-sql-data` chạy `PopulateCrudData.sql`, sau đó `PopulateRestaurantData.sql` và in số bản ghi chính.
+- Đã nạp vào `RestaurantDB` tại `.\SQLEXPRESS` và chạy lại để xác nhận không tạo trùng: 14 nhân viên, 10 danh mục, 16 món, 19 size, 18 bàn, 8 khách, 8 đặt bàn, 4 hóa đơn, 8 tài khoản (3 tài khoản đã kích hoạt từ lượt trước và 5 tài khoản minh họa cũ đang khóa). Build với output riêng đạt 0 lỗi/cảnh báo vì tiến trình Web đang mở giữ file build mặc định.
+
+## 2026-09-29 — Kích hoạt các chức vụ nghiệp vụ còn lại
+
+- Năm tài khoản SQL gắn NV004/NV005/NV006/NV008/NV012 nay dùng vai trò ứng dụng `ThuNgan`/`TiepTan`/`BoiBan`/`Bep`/`Kho`, mỗi tài khoản đúng một vai trò. Script có bước nâng cấp các liên kết vai trò tiếng Anh cũ chỉ khi tài khoản vẫn khóa và chưa có mật khẩu.
+- Thêm `--init-other-staff` trong Development, nhận `AuthBootstrap__OtherStaffPassword` từ biến môi trường, yêu cầu đã nạp SQL và kích hoạt qua ASP.NET Identity; không ghi mật khẩu vào repository và không thay đổi mật khẩu tài khoản đã hoạt động.
+- Đã nạp lại script vào `RestaurantDB` và kích hoạt cả năm tài khoản. Tổng vẫn là 14 nhân viên và 8 tài khoản; build đạt 0 lỗi/cảnh báo.
+
+## 2026-09-29 — Mật khẩu riêng cho tám tài khoản mẫu
+
+- Thêm lệnh Development `--set-sample-passwords`, yêu cầu tám mật khẩu khác nhau từ biến môi trường, xác minh email/vai trò/hồ sơ mẫu rồi đổi bằng ASP.NET Identity trong một transaction. Lệnh kiểm tra mật khẩu mới và mở khóa tài khoản sau khi đổi; không ghi mật khẩu rõ vào SQL/repository.
+- Đã đổi và kiểm tra cả tám tài khoản hiện có trong `RestaurantDB` (Admin, Thực đơn, Danh mục, Tiếp tân, Bồi bàn, Thu ngân, Bếp, Kho). Các mật khẩu cũ đã hết hiệu lực. Build đạt 0 lỗi/cảnh báo.
+
+## 2026-09-29 — SQL tạo tài khoản đăng nhập được ngay
+
+- `PopulateRestaurantData.sql` nay chèn tám mã băm ASP.NET Identity cho tám mật khẩu mẫu riêng; database mới sau khi chạy `InitialSchema.sql`, `PopulateCrudData.sql`, `PopulateRestaurantData.sql` có thể đăng nhập ngay, không cần ba lệnh kích hoạt và lệnh đổi mật khẩu. SQL không ghi đè mật khẩu tài khoản đã hoạt động.
+- Đã kiểm tra trên một database tạm tạo từ schema SQL: chạy hai script dữ liệu, chạy lặp script nghiệp vụ, xác nhận 8/8 tài khoản hoạt động và mỗi tài khoản có đúng một vai trò; database tạm đã xóa. Chạy lại script trên `RestaurantDB` hiện tại xác nhận cả tám mật khẩu/trạng thái không đổi.
+
+## 2026-09-29 — Dọn các đường khởi tạo cũ
+
+- Gỡ `--init-menu-staff`, `--init-other-staff`, `--set-sample-passwords`, mã hỗ trợ và hướng dẫn tương ứng vì SQL hiện tạo sẵn tám tài khoản mẫu có thể đăng nhập. Giữ `--init-auth` và `--init-demo-accounts` vì bộ smoke test vẫn sử dụng; giữ `--import-sql-data` cho cách nạp SQL bằng một lệnh.
+- Xóa trang Privacy mặc định của template vì chỉ chứa văn bản giữ chỗ và không có liên kết trong giao diện; xóa CSS mặc định của layout vì giao diện không nạp stylesheet cô lập đó; dọn chú thích layout thử nghiệm trong `_ViewStart`. Các trang chủ, đăng nhập, thực đơn, Bếp và ảnh minh họa còn được tham chiếu nên giữ nguyên.

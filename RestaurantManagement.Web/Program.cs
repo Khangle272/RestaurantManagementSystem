@@ -26,6 +26,16 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/Denied";
+    options.Events.OnRedirectToLogin = context =>
+    {
+        var path = context.Request.Path.Value ?? "";
+        var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien",
+            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/HoaDon", "/Bep" };
+        var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)) ? "/admin" : "/Account/Login";
+        context.Response.Redirect(login + "?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
+        return Task.CompletedTask;
+    };
 });
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
     options.ValidationInterval = TimeSpan.Zero);
@@ -50,12 +60,17 @@ if (args.Contains("--init-demo-accounts", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
-// Chỉ cập nhật cấu trúc database. Dữ liệu được nhập qua CRUD hoặc script chủ động.
-using (var scope = app.Services.CreateScope())
+if (args.Contains("--import-sql-data", StringComparer.OrdinalIgnoreCase))
 {
-    var db = scope.ServiceProvider.GetRequiredService<RestaurantDbContext>();
-    await db.Database.MigrateAsync();
+    if (!app.Environment.IsDevelopment())
+        throw new InvalidOperationException("Chỉ được nạp dữ liệu mẫu trong môi trường Development.");
+    await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
+    await SampleDataImport.RunAsync(app.Services);
+    return;
 }
+
+// Đồng bộ schema và các vai trò; tài khoản nhân viên được cấp qua giao diện quản trị.
+await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -66,6 +81,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
