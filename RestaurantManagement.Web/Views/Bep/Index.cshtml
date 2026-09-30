@@ -1,0 +1,7 @@
+@model List<RestaurantManagement.Web.Controllers.BepRow>
+@using RestaurantManagement.API.Models
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Món đang chế biến"; }
+<div class="container-fluid py-4"><h1 class="h3 mb-2">Món đang chế biến</h1><p class="text-muted mb-4">Các món đang chờ hoặc đang được bếp chuẩn bị. Giá bán không hiển thị ở đây.</p>
+@if (Model.Count == 0) { <div class="alert alert-light border py-4">Hiện chưa có món cần chế biến.</div> }
+else { <div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Hóa đơn / Bàn</th><th>Món</th><th>Số lượng</th><th>Ghi chú</th><th>Trạng thái</th><th></th></tr></thead><tbody>@foreach (var item in Model) { <tr><td>@item.MaHoaDon<br /><small class="text-muted">@item.Ban</small></td><td class="fw-semibold">@item.Mon</td><td>@item.SoLuong</td><td>@(item.GhiChu ?? "—")</td><td>@(item.TrangThai == TrangThaiCheBien.ChoCheBien ? "Chờ chế biến" : "Đang chế biến")</td><td><form asp-action="CapNhat" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="trangThai" value="@(item.TrangThai == TrangThaiCheBien.ChoCheBien ? TrangThaiCheBien.DangCheBien : TrangThaiCheBien.SanSang)" /><button type="submit" class="btn btn-sm btn-primary">@(item.TrangThai == TrangThaiCheBien.ChoCheBien ? "Bắt đầu" : "Hoàn thành")</button></form></td></tr> }</tbody></table></div> }
+</div>

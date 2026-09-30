@@ -23,10 +23,16 @@
                     <i class="bi bi-star me-2"></i>Đánh giá của khách
                 </a>
             }
-            @if (User.IsInRole("Admin"))
+            @if (User.IsInRole("Admin") || User.IsInRole("ThucDon"))
             {
                 <a asp-controller="MonAn" asp-action="Index" class="nav-link @(activeMenu == "MonAn" ? "active" : "")">Thực đơn món</a>
+            }
+            @if (User.IsInRole("Admin") || User.IsInRole("DanhMucMon"))
+            {
                 <a asp-controller="DanhMuc" asp-action="Index" class="nav-link @(activeMenu == "DanhMuc" ? "active" : "")">Danh mục món ăn</a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
                 <a asp-controller="NhanVien" asp-action="Index" class="nav-link @(activeMenu == "NhanVien" ? "active" : "")">Nhân viên</a>
                 <a asp-controller="TaiKhoanNhanVien" asp-action="Index" class="nav-link">Tài khoản nhân viên</a>
             }
@@ -34,7 +40,11 @@
             {
                 <a asp-controller="NguyenLieu" asp-action="Index" class="nav-link @(activeMenu == "NguyenLieu" ? "active" : "")">Kho nguyên liệu</a>
             }
-            @if (User.IsInRole("Admin") || User.IsInRole("TiepTan") || User.IsInRole("BoiBan"))
+            @if (User.IsInRole("Admin") || User.IsInRole("Bep"))
+            {
+                <a asp-controller="Bep" asp-action="Index" class="nav-link">Bếp chế biến</a>
+            }
+            @if (User.IsInRole("Admin") || User.IsInRole("BoiBan"))
             {
                 <a asp-controller="BanAn" asp-action="Index" class="nav-link @(activeMenu == "BanAn" ? "active" : "")">Bàn ăn</a>
             }

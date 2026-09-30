@@ -1,18 +1,84 @@
-﻿@{
-    ViewData["Title"] = "Nhà hàng";
+@model HomeViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Thực đơn & đặt bàn";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Quản lý nhà hàng</h1>
-    @if (User.Identity?.IsAuthenticated == true)
+<section class="restaurant-hero" aria-labelledby="hero-title">
+    <div class="restaurant-hero-copy">
+        <span class="eyebrow eyebrow-light"><span class="eyebrow-line"></span> HƯƠNG VỊ CHO MỖI CUỘC HẸN</span>
+        <h1 id="hero-title">Một bữa ăn ngon, một dịp đáng nhớ.</h1>
+        <p>Khám phá thực đơn món lẻ, thức uống và set dùng chung. Chọn món bạn thích, xem giá rõ ràng và đặt bàn cho buổi gặp gỡ tiếp theo.</p>
+        <div class="hero-actions">
+            <a class="btn btn-restaurant" href="#thuc-don">Khám phá thực đơn <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            <a class="btn btn-hero-outline" asp-controller="DatBan" asp-action="Index">Đặt bàn ngay</a>
+        </div>
+        <div class="hero-footnote"><i class="bi bi-check-circle" aria-hidden="true"></i> Giá và tình trạng món được cập nhật từ thực đơn</div>
+    </div>
+    <div class="restaurant-hero-media">
+        <img src="~/images/hero-vietnamese-table.png" alt="Hình minh họa bữa ăn Việt với món nướng, cơm và rau thơm" fetchpriority="high" />
+        <div class="hero-media-caption"><span>HÌNH ẢNH MINH HỌA</span><strong>Hương vị thân quen,<br />trình bày tinh tế.</strong></div>
+    </div>
+</section>
+
+<div class="restaurant-intro-line" aria-label="Điểm nổi bật">
+    <span><i class="bi bi-journal-text" aria-hidden="true"></i> Thực đơn rõ ràng</span>
+    <span><i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt bàn thuận tiện</span>
+    <span><i class="bi bi-stars" aria-hidden="true"></i> Ưu đãi đang áp dụng</span>
+</div>
+
+@if (Model.Promotions.Count > 0)
+{
+    <section class="restaurant-section" aria-labelledby="offers-title">
+        <div class="section-heading"><div><p class="eyebrow">DÀNH CHO BẠN</p><h2 id="offers-title">Ưu đãi đang diễn ra</h2></div></div>
+        <div class="offers-grid">
+            @foreach (var offer in Model.Promotions)
+            {
+                <article class="offer-card"><span class="offer-icon"><i class="bi bi-tag" aria-hidden="true"></i></span><div><strong>@offer.Name</strong><p>@offer.Summary</p><small>Đến @offer.End.ToLocalTime().ToString("dd/MM/yyyy")</small></div></article>
+            }
+        </div>
+    </section>
+}
+
+@if (Model.Featured.Count > 0)
+{
+    <section class="restaurant-section" aria-labelledby="featured-title">
+        <div class="section-heading"><div><p class="eyebrow">GỢI Ý HÔM NAY</p><h2 id="featured-title">Món nổi bật</h2></div><a href="#thuc-don">Xem toàn bộ thực đơn <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+        <div class="menu-grid">@foreach (var item in Model.Featured) { <partial name="_MenuCard" model="item" /> }</div>
+    </section>
+}
+
+@if (Model.NewItems.Count > 0)
+{
+    <section class="restaurant-section" aria-labelledby="new-title">
+        <div class="section-heading"><div><p class="eyebrow">VỪA THÊM VÀO THỰC ĐƠN</p><h2 id="new-title">Món mới</h2></div></div>
+        <div class="menu-grid">@foreach (var item in Model.NewItems) { <partial name="_MenuCard" model="item" /> }</div>
+    </section>
+}
+
+<section class="restaurant-section menu-section" id="thuc-don" aria-labelledby="menu-title">
+    <div class="section-heading"><div><p class="eyebrow">CHỌN MÓN BẠN YÊU THÍCH</p><h2 id="menu-title">Khám phá thực đơn</h2></div><span class="section-count">@Model.Menu.Count món</span></div>
+    <nav class="category-list" aria-label="Lọc thực đơn theo danh mục">
+        <a asp-action="Index" asp-fragment="thuc-don" class="@(Model.CategoryId == null ? "selected" : "")" aria-current="@(Model.CategoryId == null ? "page" : null)">Tất cả</a>
+        @foreach (var category in Model.Categories)
+        {
+            <a asp-action="Index" asp-route-danhMucId="@category.Id" asp-fragment="thuc-don" class="@(Model.CategoryId == category.Id ? "selected" : "")" aria-current="@(Model.CategoryId == category.Id ? "page" : null)">@category.TenDanhMuc</a>
+        }
+    </nav>
+    @if (Model.Menu.Count == 0)
     {
-        <p>Xin chào @User.Identity.Name.</p>
-        <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-primary">Đổi mật khẩu</a>
+        <div class="menu-empty">
+            <span class="menu-empty-icon"><i class="bi bi-journal-richtext" aria-hidden="true"></i></span>
+            <h3>@(Model.CategoryId.HasValue ? "Chưa có món trong danh mục này" : "Thực đơn đang được cập nhật")</h3>
+            <p>@(Model.CategoryId.HasValue ? "Hãy thử một danh mục khác để khám phá thêm món ngon." : "Nhà hàng đang chuẩn bị thông tin món ăn. Bạn có thể quay lại sau hoặc đặt bàn trước.")</p>
+            @if (Model.CategoryId.HasValue) { <a asp-action="Index" asp-fragment="thuc-don" class="btn btn-outline-restaurant">Xem tất cả món</a> }
+            else { <a asp-controller="DatBan" asp-action="Index" class="btn btn-outline-restaurant">Đặt bàn trước</a> }
+        </div>
     }
     else
     {
-        <p>Đăng nhập để sử dụng chức năng theo vai trò của bạn.</p>
-        <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Đăng nhập</a>
-        <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Đăng ký khách hàng</a>
+        <div class="menu-grid">@foreach (var item in Model.Menu) { <partial name="_MenuCard" model="item" /> }</div>
     }
-</div>
+</section>
+
+<section class="booking-banner"><div><p class="eyebrow eyebrow-light">HẸN GẶP BẠN TẠI NHÀ HÀNG</p><h2>Giữ chỗ cho bữa ăn sắp tới.</h2><p>Chọn thời gian phù hợp để nhà hàng chuẩn bị bàn cho bạn.</p></div><a class="btn btn-restaurant" asp-controller="DatBan" asp-action="Index">Đặt bàn <i class="bi bi-arrow-right" aria-hidden="true"></i></a></section>

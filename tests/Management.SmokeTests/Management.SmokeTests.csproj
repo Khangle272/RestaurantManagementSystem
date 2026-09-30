@@ -8,5 +8,6 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../RestaurantManagement.Web/RestaurantManagement.Web.csproj" />
+    <ProjectReference Include="../../RestaurantManagement.API/RestaurantManagement.API.csproj" />
   </ItemGroup>
 </Project>

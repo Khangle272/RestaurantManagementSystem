@@ -3,82 +3,50 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Quản lý nhà hàng</title>
-    <script type="importmap"></script>
+    <title>@ViewData["Title"] - Nhà hàng</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/RestaurantManagement.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-bold text-danger" asp-area="" asp-controller="Home" asp-action="Index">
-                    <i class="bi bi-cup-hot-fill me-1"></i>Nhà hàng
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark fw-semibold" asp-controller="DatBan" asp-action="Index">
-                                <i class="bi bi-calendar-plus me-1 text-danger"></i>Đặt bàn
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="DatBan" asp-action="LichSu">
-                                <i class="bi bi-clock-history me-1 text-secondary"></i>Lịch sử đặt bàn
-                            </a>
-                        </li>
-                        @if (User.IsInRole("Admin") || User.IsInRole("TiepTan") || User.IsInRole("BoiBan"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="BanAn" asp-action="Index">Bàn ăn</a></li>
-                        }
-                        @if (User.IsInRole("Admin") || User.IsInRole("TiepTan"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="QuanLyDatBan" asp-action="Index">Quản lý Đặt bàn</a></li>
-                        }
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="NhanVien" asp-action="Index">Quản trị</a></li>
-                        }
-                        @if (User.IsInRole("Admin") || User.IsInRole("ThuNgan"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="HoaDon" asp-action="Index">Hóa đơn</a></li>
-                        }
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword">Đổi mật khẩu</a></li>
-                            <li class="nav-item"><form asp-controller="Account" asp-action="Logout" method="post"><button class="nav-link text-dark btn btn-link" type="submit">Đăng xuất</button></form></li>
-                        }
-                        else
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Đăng nhập</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Đăng ký</a></li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            <partial name="_ManagementMessages" />
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; @DateTime.Now.Year - Quản lý nhà hàng
+<header class="restaurant-nav">
+    <nav class="navbar navbar-expand-lg restaurant-shell" aria-label="Điều hướng chính">
+        <a class="navbar-brand" asp-controller="Home" asp-action="Index"><span class="brand-mark"><i class="bi bi-cup-hot-fill" aria-hidden="true"></i></span>Nhà hàng</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#restaurantNav" aria-controls="restaurantNav" aria-expanded="false" aria-label="Mở menu"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="restaurantNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index" asp-fragment="thuc-don">Thực đơn</a></li>
+                <li class="nav-item"><a class="nav-link" asp-controller="DatBan" asp-action="Index">Đặt bàn</a></li>
+                @if (User.IsInRole("KhachHang"))
+                {
+                    <li class="nav-item"><a class="nav-link" asp-controller="DatBan" asp-action="LichSu">Lịch sử đặt bàn</a></li>
+                }
+                @if (User.IsInRole("Admin"))
+                {
+                    <li class="nav-item"><a class="nav-link" asp-controller="MonAn" asp-action="Index">Quản trị</a></li>
+                }
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="ChangePassword">Tài khoản</a></li>
+                    <li class="nav-item"><form asp-controller="Account" asp-action="Logout" method="post"><button class="nav-link btn btn-link" type="submit">Đăng xuất</button></form></li>
+                }
+                else
+                {
+                    <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Register">Đăng ký</a></li>
+                    <li class="nav-item"><a class="nav-link nav-login" asp-controller="Account" asp-action="Login">Đăng nhập <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></li>
+                }
+            </ul>
         </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    </nav>
+</header>
+<main class="restaurant-main restaurant-shell" role="main">
+    <partial name="_ManagementMessages" />
+    @RenderBody()
+</main>
+<footer class="restaurant-footer"><div class="restaurant-shell d-flex justify-content-between flex-wrap gap-2"><strong>Nhà hàng</strong><span>&copy; @DateTime.Now.Year · Món ngon cho mọi cuộc gặp gỡ</span><a asp-controller="Admin" asp-action="Index">Khu vực quản trị</a></div></footer>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

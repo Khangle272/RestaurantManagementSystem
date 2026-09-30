@@ -4,7 +4,7 @@ namespace RestaurantManagement.Web.Models;
 
 public class LoginViewModel
 {
-    [Required(ErrorMessage = "Vui lòng nhập email."), EmailAddress]
+    [Required(ErrorMessage = "Vui lòng nhập email."), EmailAddress(ErrorMessage = "Email không đúng định dạng.")]
     public string Email { get; set; } = "";
     [Required(ErrorMessage = "Vui lòng nhập mật khẩu."), DataType(DataType.Password)]
     public string Password { get; set; } = "";
@@ -13,11 +13,15 @@ public class LoginViewModel
 
 public class RegisterViewModel
 {
-    [Required, StringLength(120)] public string HoTen { get; set; } = "";
-    [Required, Phone, StringLength(20)] public string SoDienThoai { get; set; } = "";
-    [Required, EmailAddress, StringLength(256)] public string Email { get; set; } = "";
-    [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
-    [Compare(nameof(Password), ErrorMessage = "Mật khẩu xác nhận không khớp."), DataType(DataType.Password)]
+    [Required(ErrorMessage = "Vui lòng nhập họ và tên."), StringLength(120, ErrorMessage = "Họ và tên tối đa 120 ký tự.")]
+    public string HoTen { get; set; } = "";
+    [Required(ErrorMessage = "Vui lòng nhập số điện thoại."), Phone(ErrorMessage = "Số điện thoại không đúng định dạng."), StringLength(20, ErrorMessage = "Số điện thoại tối đa 20 ký tự.")]
+    public string SoDienThoai { get; set; } = "";
+    [Required(ErrorMessage = "Vui lòng nhập email."), EmailAddress(ErrorMessage = "Email không đúng định dạng."), StringLength(256, ErrorMessage = "Email tối đa 256 ký tự.")]
+    public string Email { get; set; } = "";
+    [Required(ErrorMessage = "Vui lòng nhập mật khẩu."), RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$", ErrorMessage = "Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt."), DataType(DataType.Password)]
+    public string Password { get; set; } = "";
+    [Required(ErrorMessage = "Vui lòng nhập lại mật khẩu."), Compare(nameof(Password), ErrorMessage = "Mật khẩu xác nhận không khớp."), DataType(DataType.Password)]
     public string ConfirmPassword { get; set; } = "";
     public bool DongYNhanUuDai { get; set; }
 }
