@@ -1,6 +1,6 @@
 # Tiến độ, quyết định nghiệp vụ và bàn giao
 
-Cập nhật: **02/10/2026 — Thành viên 1**, nhánh `codex/member1-update`, phát triển trên `master` của nhóm tại `dd834bf`.
+Cập nhật: **02/10/2026 — Thành viên 1**, nhánh `member1-update`, phát triển trên `master` của nhóm tại `dd834bf`.
 File mô tả trạng thái của nhánh đang đọc; không mặc nhiên có nghĩa đã merge vào `master`.
 
 ## Cách cập nhật file này
