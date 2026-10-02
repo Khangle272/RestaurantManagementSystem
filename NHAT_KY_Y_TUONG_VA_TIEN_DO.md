@@ -119,8 +119,8 @@ Phân công hiện tại: **TV1 — sơ đồ/tiếp nhận bàn + nền tài kh
 | Phần | Đã có trên bản nhóm/nhánh này | Cần tiếp tục |
 | --- | --- | --- |
 | Trang khách | Trang chủ, thực đơn/chi tiết, yêu cầu đặt bàn và lịch sử có kiểm tra sở hữu | Hoàn thiện nội dung nhà hàng và trải nghiệm đặt bàn khi nhóm có nội dung thật; không làm lại cổng đăng nhập |
-| Món/size/định mức — phần thực đơn đợt trước | Lọc danh mục/chờ duyệt, Admin duyệt giá, Bếp chuẩn bị kỹ thuật, lưu món + các bảng con bằng transaction | Định mức hiện gắn `MonAnId`, chưa gắn từng size. Cần migration chung và form chọn tập nguyên liệu một lần, nhập lượng riêng cho từng size, Lưu một lần. Không tự nhân công thức chung cho mọi size rồi coi là đủ |
-| Combo | Chọn món lẻ + số lượng, giá trọn gói; không nhập lại nguyên liệu thô | Chưa chọn size của món thành phần. Thêm liên kết size và chuyển dữ liệu có kiểm tra; không tự đoán size của combo cũ |
+| Nguyên liệu theo size — phần thực đơn đợt trước | Đã có món, các size/giá và công thức chung của món; Bếp chuẩn bị món, Admin duyệt bán | Chưa nhập/lưu lượng nguyên liệu riêng cho size nhỏ, vừa, lớn. Cần bổ sung như ví dụ ngay dưới bảng |
+| Size của món trong combo | Đã chọn được món lẻ, số lượng và giá bán trọn combo | Chưa chọn được size của từng món trong combo. Cần bổ sung như ví dụ ngay dưới bảng |
 | Trạng thái/nhãn món | Tạo `DangPhucVu`, duyệt mở bán riêng, `TamHet` không đổi order cũ, ngừng kinh doanh phải có lý do | Món mới/nổi bật chưa có tiêu chí chính thức: cần chốt số ngày “mới”, tiêu chí bestseller/đặc sản; chưa tự thêm thuật toán xếp hạng |
 | Gọi món — TV2 | Hóa đơn/chi tiết và trạng thái chế biến đã có trong CSDL; tên món/giá có dữ liệu chốt lúc bán | Luồng mobile từ bàn đang phục vụ: món + size + lượng + ghi chú → gửi bếp; kiểm tra trạng thái món/giá ở server, giữ tổng bill đúng. Bổ sung snapshot tên size và dùng trên bill/KDS; không đọc tên size đang sửa trong thực đơn làm lịch sử. Tiếp tục đơn mang đi/giao hàng theo đề cương |
 | Bếp — TV2 | KDS lọc món chờ/đang chế biến, hiện bàn/lượng/ghi chú, không tiền; không hiển thị/cập nhật món trên bill đã hủy | FIFO đang theo thời điểm lập bill, chưa đúng khi gọi thêm món trên bill cũ. Cần thời điểm từng lần gọi/dòng order và hiển thị size. Bồi bàn thấy món sẵn sàng và xác nhận đã mang ra (`SanSang` → `DaPhucVu`). KDS không gộp với màn hình chuẩn bị món của Quản lý bếp |
@@ -128,10 +128,54 @@ Phân công hiện tại: **TV1 — sơ đồ/tiếp nhận bàn + nền tài kh
 | Kho — TV3 | CRUD nguyên liệu/đơn vị/ngưỡng cảnh báo, nhãn Cần bổ sung khi tồn ≤ ngưỡng; dữ liệu nhà cung cấp/chứng từ và tồn tính từ nhập trừ xuất đã ghi sổ | Hoàn thiện UI/nghiệp vụ nhà cung cấp, nhập/xuất, xử lý cảnh báo, thanh lý và báo cáo. Chưa tự trừ kho theo món khi định mức từng size chưa được chốt |
 | Báo cáo Word — cả nhóm | Luồng/vai trò hiện tại ghi trong file này | Cập nhật sơ đồ, đặc tả, ma trận quyền, luồng bàn/bếp, công thức giá combo và các trạng thái theo code thật; không ghi phần bàn giao còn thiếu là đã làm |
 
+### Hai góp ý thực đơn cần làm tiếp — giải thích bằng ví dụ
+
+**Nguyên liệu theo size:** Cùng một món nhưng phần nhỏ và phần lớn sẽ dùng lượng nguyên liệu khác nhau. Ví dụ Gỏi size S dùng 100g tôm, size L dùng 200g tôm. Hiện code mới lưu công thức chung cho món Gỏi, chưa phân biệt lượng theo size. Người tiếp tục phần thực đơn cần sửa form: chọn các nguyên liệu của món một lần, rồi nhập lượng riêng cho từng size; bấm Lưu món mới lưu toàn bộ. Bếp nhập size/công thức, Admin nhập giá và duyệt bán. Đây là dữ liệu để sau này tính đúng lượng xuất kho, không phải Kho tự quyết định công thức nấu.
+
+**Size của món trong combo:** Combo phải ghi rõ gồm món gì, size nào và bao nhiêu phần. Ví dụ Combo gia đình gồm 1 Gỏi size L và 2 Canh size S. Hiện code chọn được món và số lượng nhưng chưa chọn size, nên chưa biết phải làm phần nhỏ hay lớn. Người tiếp tục phần thực đơn cần thêm lựa chọn Món → Size → Số lượng cho từng dòng combo. Không nhập lại nguyên liệu vì đã lấy từ công thức của món/size được chọn; giá bán trọn combo vẫn do Admin đặt, không bắt buộc bằng tổng giá từng món lẻ.
+
+Hai mục này là **phần thực đơn chưa hoàn tất theo góp ý của cô**, không phải yêu cầu làm lại tài khoản/phân quyền hoặc sơ đồ bàn. Nhóm phân người tiếp tục thực đơn; không tự giao toàn bộ việc này cho TV3 khi TV3 đang làm kho. Khi triển khai phải bổ sung cách lưu dữ liệu tương ứng, không chỉ thêm ô trên giao diện; công thức/combo cũ thiếu size cần được kiểm tra và chọn lại, không tự đoán.
+
+### Hướng dẫn triển khai cho người hoặc AI nhận phần thực đơn
+
+**Trạng thái hiện tại:** Đây là yêu cầu cần làm tiếp, không phải mô tả tính năng đã hoàn thành. Đã có size, giá theo size và duyệt mở bán. Chưa có lượng nguyên liệu theo từng size, chưa có size của từng món trong combo. Không ghi “đã xong” hai mục này khi chỉ mới chỉnh form hoặc sửa tài liệu.
+
+**Duyệt mở bán, không phải “duyệt giá” riêng:** Bếp tạo/sửa món thì món chuyển về Chờ duyệt. Admin nhập hoặc kiểm tra giá của các size rồi chọn Duyệt mở bán cho món. Hệ thống kiểm tra giá hợp lệ, không tự đánh giá giá đó đắt/rẻ hay tạo một quy trình xin duyệt giá riêng. Cách mô tả đúng là: “Đã có size, giá từng size và duyệt mở bán; còn thiếu lượng nguyên liệu theo từng size và size của món thành phần combo.”
+
+**1. Đọc đúng chỗ trước khi sửa**
+
+- `RestaurantManagement.API/Models/Entities.cs`: `MonAnSize` đã có tên/giá; `DinhMucMon` hiện lưu `MonAnId + NguyenLieuId + SoLuong`, tức lượng chung cho món; `ChiTietCombo` chỉ có món thành phần và số lượng, chưa có size.
+- `RestaurantManagement.API/Data/RestaurantDbContext.cs`: khóa định mức đang theo món/nguyên liệu, khóa combo theo combo/món. Không chỉ thêm thuộc tính rồi quên quan hệ, khóa và các truy vấn dùng khóa cũ.
+- `RestaurantManagement.Web/Models/MonAnViewModels.cs`, `Controllers/MonAnController.cs`, `Views/MonAn/Form.cshtml`, `wwwroot/js/dish-form.js`: form hiện có danh sách size, một danh sách định mức chung và danh sách món trong combo. Sửa trên các phần này, giữ giao diện nhóm và cách kiểm tra quyền hiện tại; không tạo ứng dụng hoặc bộ form song song.
+- Tìm các chỗ đọc/ghi `DinhMucMon`, `ChiTietCombo`, `ChiTietComboSnapshot` trong seed, trang khách, bill, đặt trước, KDS và kiểm thử. Đặc biệt `HomeController` phải hiển thị/kiểm tra size của thành phần combo; các kiểm tra xóa size/xóa món cũng phải tính quan hệ mới. Phân biệt phần cần sửa trong lượt này với điểm cần bàn giao cho TV2/TV3; không nối trừ kho tự động chỉ vì đã thêm công thức.
+
+**2. Làm nguyên liệu theo size thành một luồng đầy đủ**
+
+- Thông tin chung vẫn gồm tên món, danh mục có sẵn, ảnh và mô tả. Chọn tập nguyên liệu của món một lần; mọi size đang dùng đều có cùng tập nguyên liệu này, nhưng lượng của mỗi nguyên liệu khác nhau.
+- Với từng size, nhập tên size và lượng của các nguyên liệu đã chọn. Ví dụ Gỏi S dùng 100g tôm, Gỏi L dùng 200g tôm. Lượng lưu phải theo đơn vị của nguyên liệu: nếu đơn vị là kg thì hai lượng tương ứng là 0,1kg và 0,2kg, không lưu số 100 vào cột đang hiểu là kg. Hiện chưa có hệ thống đổi đơn vị tự động; phải hướng dẫn đơn vị ngay trên form, không tự suy đoán.
+- Bếp nhập nội dung/size/công thức, không nhập giá. Admin nhập giá của từng size và duyệt mở bán. Giữ việc Bếp sửa món thì món cần được duyệt lại; giá cũ không bị dữ liệu Bếp gửi lên ghi đè, món chưa duyệt không public.
+- Các size đang nhập nằm trong bảng tạm trên form: thêm/sửa/xóa trước khi lưu, chưa ghi từng dòng xuống DB. Khi bấm Lưu món, server kiểm tra toàn bộ rồi lưu món, size và định lượng trong một transaction; lỗi ở một phần thì không giữ lại món hoặc size lưu dở. Tái sử dụng transaction, RowVersion, chống giả mạo form và xử lý ảnh hiện có.
+- Dữ liệu đích phải xác định được **mỗi size → mỗi nguyên liệu → lượng sử dụng**. Cập nhật cả model, quan hệ/khóa, migration/snapshot, dữ liệu gửi từ form và truy vấn đọc lại. Tên field/index khi thêm hoặc xóa dòng bằng JS phải đúng để server nhận đủ các size và lượng tương ứng.
+- Kiểm tra phía server: size thuộc đúng món; nguyên liệu tồn tại và hợp lệ; lượng của nguyên liệu đã chọn lớn hơn 0; không lặp nguyên liệu trong cùng size; không nhận size ID của món khác; tập nguyên liệu giữa các size đang dùng không bị lệch. Không chỉ kiểm tra bằng JavaScript.
+
+**3. Làm size của món trong combo**
+
+- Chỉ Admin cấu hình combo. Mỗi dòng chọn một món lẻ/thức uống đã có, sau đó chọn size của chính món đó và số lượng nguyên. Ví dụ 1 Gỏi L + 2 Canh S. Không chọn combo làm thành phần của combo khác, không nhập nguyên liệu thô vào form combo.
+- Khi đổi món ở một dòng, phải chọn lại size hợp lệ; server từ chối size thuộc món khác, size ngừng dùng, lượng ≤ 0 hoặc món không đủ điều kiện bán. Giá trọn gói của combo do Admin đặt; giá các món lẻ chỉ phục vụ tham khảo nếu cần, không tự thay giá combo thành tổng giá lẻ.
+- Lưu đầy đủ món, size và số lượng của từng dòng. Rà lại khóa/truy vấn cũ chỉ theo `MonAnId`: không để việc thay size sửa nhầm dòng hoặc mất thành phần. Nếu cho phép cùng một món với hai size khác nhau thì cả khóa và form phải phân biệt được hai dòng; không mở lựa chọn đó trên UI khi server vẫn coi là dòng trùng.
+- Màn hình chi tiết combo phải đọc lại đúng size đã chọn. Bàn giao TV2 cùng cấu trúc này để lúc gọi combo biết cần làm món gì/size nào; khi công thức theo size đã hoàn tất, nhu cầu nguyên liệu lấy từ size thành phần × số phần × số combo, không tạo công thức nguyên liệu độc lập cho combo. Việc xuất kho thật vẫn thuộc lượt tích hợp kho.
+
+**4. Giữ dữ liệu cũ và kiểm tra trước khi bàn giao**
+
+- Thêm migration, không chạy lại `InitialSchema.sql`, xóa database hoặc xóa định mức/combo cũ để “làm mới”. Giữ công thức cũ để đối chiếu. Một công thức chung không chứng minh S/L dùng cùng lượng; combo cũ thiếu size cũng không chứng minh phải chọn size đầu tiên. Dữ liệu chưa xác định phải được người phụ trách kiểm tra/chọn lại; không tự đoán rồi dùng để trừ kho.
+- Không sửa ngược hóa đơn, giá chốt, đặt trước hoặc chứng từ kho cũ khi cập nhật thực đơn. Giữ snapshot thành phần combo đã chốt trong đơn cũ; phần tên size trên bill/KDS vẫn là điểm TV2 phải nối như bảng bàn giao. Nếu cần bỏ cột/bảng cũ sau chuyển đổi, phải xác minh không còn nơi sử dụng và xin chốt riêng, không làm ngầm trong lượt bổ sung này.
+- Cập nhật seed và kiểm thử theo dữ liệu mới; không xóa ca phân quyền, dữ liệu cũ hoặc tranh chấp chỉ để test đạt. Cả `DbSeeder` và `PopulateRestaurantData.sql` còn ghi công thức/combo kiểu cũ. SQL còn tạo phiếu xuất minh họa từ công thức theo món; đó là dữ liệu demo, không phải tính năng tự trừ kho đang chạy. Khi đổi seed, chạy lại không được đổi chứng từ đã ghi sổ. Kiểm tra tối thiểu: lưu/mở lại Gỏi S và L vẫn đúng lượng khác nhau; sửa lượng S không đổi L; form lỗi không lưu dở; size/nguyên liệu giả bị từ chối; Bếp không đặt giá/duyệt/tạo combo; Admin duyệt rồi khách mới xem được món; combo lưu đúng món/size/số lượng; nâng schema giữ dữ liệu lịch sử.
+- Hoàn thành thì cập nhật đúng bảng “Đã có/Cần tiếp tục” phía trên, ngày và kết quả kiểm chứng. Ghi rõ TV2/TV3 cần dùng dữ liệu nào và phần nào chưa tích hợp. Không ghi trọn luồng gọi món/xuất kho đã xong chỉ vì lưu được định lượng và combo.
+
 ### Thứ tự nối tiếp để demo được trọn luồng
 
 1. **TV2 — bàn → gọi món → bếp → phục vụ → thanh toán → kết thúc/dọn bàn.** Hiện Bếp chỉ cập nhật tới `SanSang`, chưa có thao tác Bồi bàn xác nhận `DaPhucVu`. Với bill có món, đây là điểm còn thiếu để kết thúc bàn qua giao diện, dù đã thu tiền. Phải bổ sung bước phục vụ thật; không bỏ kiểm tra của `TableService`, tự đánh dấu món đã mang ra khi bếp làm xong hoặc sửa thẳng CSDL để coi là demo hoàn chỉnh.
-2. **Người tiếp tục thực đơn — chốt dữ liệu trước khi nối kho.** Định lượng từng size và size của món trong combo phải lưu đúng quan hệ, có migration/seed/chuyển dữ liệu cũ an toàn. Bếp chuẩn bị công thức, Admin quyết định giá và mở bán; giữ cùng tập nguyên liệu theo món, lượng khác nhau theo size.
+2. **Người tiếp tục thực đơn — làm hai mục ở ví dụ trên trước khi nối kho.** Kiểm tra lưu và mở lại món vẫn đúng lượng của từng size; combo vẫn đúng món/size/số lượng đã chọn. Không coi đã xong chỉ vì form có thêm ô. Các yêu cầu chuyển dữ liệu và giữ lịch sử nằm ở mục 6.
 3. **TV3 — chứng từ nhập/xuất và kiểm soát tồn.** Luồng gọn dự kiến: Kho thấy thiếu → lập nhu cầu nhập → Admin duyệt → người phụ trách liên hệ nhà cung cấp → Kho nhận hàng/ghi chứng từ. Đề xuất/duyệt mua chưa có trên bản hiện tại; nhóm chốt phạm vi trước khi bổ sung, không cần hệ thống mua hàng/email tự động khi đề cương chưa yêu cầu.
 
 Chưa chốt: số ngày để gọi là món mới, tiêu chí món nổi bật và hình thức thanh toán ngoài tiền mặt sẽ triển khai thật. Chưa làm OTP/MFA hay cơ chế giấu đường dẫn như một lớp bảo mật. Nhóm thống nhất trước rồi cập nhật đúng mục, không thêm tính năng giả để lấp chỗ trống.
