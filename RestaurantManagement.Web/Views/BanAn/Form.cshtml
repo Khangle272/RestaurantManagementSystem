@@ -42,7 +42,7 @@
                     <div class="col-md-6">
                         <label asp-for="TrangThai" class="form-label fw-medium"></label>
                         <select asp-for="TrangThai" class="form-select">
-                            @foreach (var status in Enum.GetValues<RestaurantManagement.API.Models.TrangThaiBan>())
+                            @foreach (var status in new[] { RestaurantManagement.API.Models.TrangThaiBan.SanSang, RestaurantManagement.API.Models.TrangThaiBan.NgungSuDung })
                             {
                                 <option value="@status">@BanAnLabels.TrangThai(status)</option>
                             }

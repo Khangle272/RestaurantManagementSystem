@@ -1,0 +1,30 @@
+@{
+    var customer = User.IsInRole("KhachHang");
+    Layout = customer ? "_Layout" : "_AdminLayout";
+}
+@if (customer)
+{
+    <section class="auth-page" aria-label="Tài khoản khách hàng">
+        <div class="auth-story">
+            <img src="~/images/hero-vietnamese-table.png" alt="Bữa ăn Việt được bày trên bàn" />
+            <div class="auth-story-content">
+                <p class="eyebrow eyebrow-light">TÀI KHOẢN KHÁCH HÀNG</p>
+                <h1>Những cuộc hẹn,<br />thêm gần nhau.</h1>
+                <p>Quản lý thông tin và bảo mật tài khoản cho những lần ghé nhà hàng.</p>
+                <a asp-controller="Home" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Trở về trang chủ</a>
+            </div>
+        </div>
+        <div class="auth-panel-wrap"><div class="auth-panel">@RenderBody()</div></div>
+    </section>
+}
+else
+{
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <section class="card border-0 shadow-sm">
+                <div class="card-body p-4 p-md-5">@RenderBody()</div>
+            </section>
+        </div>
+    </div>
+}
+@section Scripts { @await RenderSectionAsync("Scripts", required: false) }

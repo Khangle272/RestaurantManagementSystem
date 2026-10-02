@@ -8,11 +8,12 @@ using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.Admin + "," + AppRoles.TiepTan)]
-public class QuanLyDatBanController(RestaurantDbContext context) : ManagementControllerBase(context)
+public class QuanLyDatBanController(RestaurantDbContext context, TableService tables) : ManagementControllerBase(context)
 {
     // GET /QuanLyDatBan
     [HttpGet]
@@ -22,36 +23,37 @@ public class QuanLyDatBanController(RestaurantDbContext context) : ManagementCon
         ViewBag.CurrentTab = tab ?? "ChoXacNhan";
 
         var allQuery = Db.DatBan
+            .AsSplitQuery()
             .Include(x => x.Ban).ThenInclude(b => b.BanAn).ThenInclude(b => b.KhuVuc)
             .Include(x => x.HoaDon).ThenInclude(h => h.ChiTiet)
-            .AsNoTracking();
+            .AsTracking();
 
         DateOnly? parsedDate = null;
         if (!string.IsNullOrWhiteSpace(filterNgay) && DateOnly.TryParse(filterNgay, out var d))
         {
             parsedDate = d;
-            var startUtc = new DateTimeOffset(d.ToDateTime(TimeOnly.MinValue));
-            var endUtc = new DateTimeOffset(d.ToDateTime(TimeOnly.MaxValue));
+            var startUtc = TableService.VietnamTime(d.ToDateTime(TimeOnly.MinValue));
+            var endUtc = TableService.VietnamTime(d.ToDateTime(TimeOnly.MaxValue));
             allQuery = allQuery.Where(x => x.GioDen >= startUtc && x.GioDen <= endUtc);
         }
 
-        var todayStart = new DateTimeOffset(DateTime.Today);
-        var todayEnd = new DateTimeOffset(DateTime.Today.AddDays(1).AddTicks(-1));
+        var todayStart = TableService.VietnamTime(TableService.VietnamNow.Date);
+        var todayEnd = todayStart.AddDays(1);
 
         // Thống kê nhanh theo tab
         var choXacNhanCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc);
         var daXacNhanCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaXacNhan);
-        var dangPhucVuCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && !x.HoaDon.Any(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan));
-        var homNayCount = await Db.DatBan.CountAsync(x => x.GioDen >= todayStart && x.GioDen <= todayEnd);
+        var dangPhucVuCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc == null);
+        var homNayCount = await Db.DatBan.CountAsync(x => x.GioDen >= todayStart && x.GioDen < todayEnd);
 
         // Lọc dữ liệu theo tab đã chọn
         var tabQuery = tab switch
         {
             "DaXacNhan" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaXacNhan),
-            "DangPhucVu" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && !x.HoaDon.Any(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan)),
+            "DangPhucVu" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc == null),
             "HoanTatHuy" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaHuy
                                                 || x.TrangThai == TrangThaiDatBan.KhongDen
-                                                || (x.TrangThai == TrangThaiDatBan.DaNhanBan && x.HoaDon.Any(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan))),
+                                                || (x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc != null)),
             _ => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc)
         };
 
@@ -70,13 +72,13 @@ public class QuanLyDatBanController(RestaurantDbContext context) : ManagementCon
             {
                 var invoice = x.HoaDon.OrderByDescending(h => h.Id).FirstOrDefault();
                 var daThanhToan = invoice?.TrangThai == TrangThaiHoaDon.DaThanhToan;
-                var isCompleted = x.TrangThai == TrangThaiDatBan.DaNhanBan && daThanhToan;
+                var isCompleted = x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc.HasValue;
 
                 string badgeClass = x.TrangThai switch
                 {
                     TrangThaiDatBan.ChoXacNhan => "badge-status-warning",
                     TrangThaiDatBan.DaXacNhan => "badge-status-info text-white bg-primary",
-                    TrangThaiDatBan.DaNhanBan when !daThanhToan => "badge-status-success",
+                    TrangThaiDatBan.DaNhanBan when !isCompleted => "badge-status-success",
                     TrangThaiDatBan.DaHuy => "badge-status-danger",
                     _ => isCompleted ? "badge-status-success" : "badge-secondary"
                 };
@@ -85,7 +87,7 @@ public class QuanLyDatBanController(RestaurantDbContext context) : ManagementCon
                 {
                     TrangThaiDatBan.ChoXacNhan => "Chờ xác nhận",
                     TrangThaiDatBan.DaXacNhan => "Đã xác nhận",
-                    TrangThaiDatBan.DaNhanBan when !daThanhToan => "Đang phục vụ",
+                    TrangThaiDatBan.DaNhanBan when !isCompleted => "Đang phục vụ",
                     TrangThaiDatBan.DaHuy => "Đã hủy",
                     TrangThaiDatBan.KhongDen => "Không đến",
                     _ => isCompleted ? "Hoàn tất" : x.TrangThai.ToString()
@@ -94,6 +96,7 @@ public class QuanLyDatBanController(RestaurantDbContext context) : ManagementCon
                 return new DatBanItemVM
                 {
                     MaDatBan = x.Id,
+                    RowVersion = VersionOf(x),
                     BookingCode = x.MaDatBan,
                     HoTen = x.HoTenLienHe,
                     SoDienThoai = x.SoDienThoaiLienHe ?? "",
@@ -116,153 +119,89 @@ public class QuanLyDatBanController(RestaurantDbContext context) : ManagementCon
 
     // POST /QuanLyDatBan/XacNhan
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> XacNhan(int datBanId, int banAnId)
+    public async Task<IActionResult> XacNhan(int datBanId, int[] banAnIds, string? rowVersion, int banAnId = 0)
     {
-        if (datBanId <= 0 || banAnId <= 0)
-        {
-            TempData["ErrorMessage"] = "Vui lòng chọn bàn ăn hợp lệ.";
-            return RedirectToAction(nameof(Index), new { tab = "ChoXacNhan" });
-        }
-
-        var datBan = await Db.DatBan.Include(x => x.Ban).FirstOrDefaultAsync(x => x.Id == datBanId);
-        if (datBan == null) return NotFound();
-
-        var banAn = await Db.BanAn.Include(b => b.KhuVuc).FirstOrDefaultAsync(b => b.Id == banAnId);
-        if (banAn == null)
-        {
-            TempData["ErrorMessage"] = "Không tìm thấy thông tin bàn ăn được chọn.";
-            return RedirectToAction(nameof(Index), new { tab = "ChoXacNhan" });
-        }
-
-        // Kiểm tra xung đột thời gian trong khoảng +/- 2 tiếng
-        var windowStart = datBan.GioDen.AddHours(-2);
-        var windowEnd = datBan.GioDen.AddHours(2);
-
-        var conflict = await Db.ChiTietDatBan
-            .Include(c => c.DatBan)
-            .AnyAsync(c => c.BanAnId == banAnId
-                && c.DatBanId != datBan.Id
-                && (c.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan || c.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan)
-                && c.DatBan.GioDen > windowStart
-                && c.DatBan.GioDen < windowEnd);
-
-        if (conflict)
-        {
-            TempData["ErrorMessage"] = $"Bàn '{banAn.MaBan}' đã có khách đặt trong khoảng +/- 2 tiếng xung quanh thời điểm {datBan.GioDen.ToLocalTime():HH:mm dd/MM/yyyy}. Vui lòng chọn bàn khác!";
-            return RedirectToAction(nameof(Index), new { tab = "ChoXacNhan" });
-        }
-
-        // Gán bàn
-        Db.ChiTietDatBan.RemoveRange(datBan.Ban);
-        Db.ChiTietDatBan.Add(new ChiTietDatBan { DatBanId = datBan.Id, BanAnId = banAnId });
-        datBan.TrangThai = TrangThaiDatBan.DaXacNhan;
-
-        await Db.SaveChangesAsync();
-        TempData["SuccessMessage"] = $"Xác nhận thành công đơn '{datBan.MaDatBan}' và đã xếp bàn '{banAn.MaBan}'.";
-        return RedirectToAction(nameof(Index), new { tab = "DaXacNhan" });
+        if (banAnIds.Length == 0 && banAnId > 0) banAnIds = [banAnId];
+        var error = await tables.Assign(datBanId, banAnIds, rowVersion, await StaffId());
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã xác nhận và xếp bàn cho khách.";
+        return RedirectToAction("Index", "SoDoBan", error is null ? null : new { datBanId });
     }
 
-    // POST /QuanLyDatBan/NhanBan
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> NhanBan(int datBanId)
+    public async Task<IActionResult> NhanBan(int datBanId, string? rowVersion)
     {
-        var datBan = await Db.DatBan
-            .Include(x => x.Ban).ThenInclude(b => b.BanAn)
-            .FirstOrDefaultAsync(x => x.Id == datBanId);
-
-        if (datBan == null) return NotFound();
-
-        if (!datBan.Ban.Any())
-        {
-            TempData["ErrorMessage"] = "Đơn đặt bàn chưa được xếp bàn ăn. Vui lòng bấm 'Xếp bàn' trước khi nhận bàn!";
-            return RedirectToAction(nameof(Index), new { tab = "ChoXacNhan" });
-        }
-
-        // Tìm nhân viên hiện hành
-        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var accId);
-        var staffId = await Db.NhanVien
-            .Where(x => (x.TaiKhoanId == accId || accId == 0) && x.DangLamViec)
-            .Select(x => x.Id)
-            .FirstOrDefaultAsync();
-
-        // Giao dịch nguyên tử (Atomic Database Transaction)
-        await using var tx = await Db.Database.BeginTransactionAsync();
-        try
-        {
-            // 1. Chuyển trạng thái DatBan sang DaNhanBan
-            datBan.TrangThai = TrangThaiDatBan.DaNhanBan;
-            datBan.ThoiDiemNhanBan = DateTimeOffset.UtcNow;
-
-            // 2. Chuyển trạng thái BanAn sang DangPhucVu
-            foreach (var item in datBan.Ban)
-            {
-                item.BanAn.TrangThai = TrangThaiBan.DangPhucVu;
-            }
-
-            // 3. Tự động khởi tạo HoaDon nếu chưa có
-            var invoiceExists = await Db.HoaDon.AnyAsync(h => h.DatBanId == datBan.Id && h.TrangThai != TrangThaiHoaDon.DaHuy);
-            if (!invoiceExists)
-            {
-                string maHoaDon;
-                do
-                {
-                    maHoaDon = $"HD-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
-                } while (await Db.HoaDon.AnyAsync(h => h.MaHoaDon == maHoaDon));
-
-                var hoaDon = new HoaDon
-                {
-                    MaHoaDon = maHoaDon,
-                    DatBanId = datBan.Id,
-                    KhachHangId = datBan.KhachHangId,
-                    NhanVienId = staffId,
-                    ThoiDiemLap = DateTimeOffset.UtcNow,
-                    TrangThai = TrangThaiHoaDon.ChuaThanhToan,
-                    TongTienHang = 0,
-                    TienGiam = 0,
-                    TienCocDaTru = 0,
-                    PhuongThucThanhToan = PhuongThucThanhToan.TienMat
-                };
-                Db.HoaDon.Add(hoaDon);
-            }
-
-            await Db.SaveChangesAsync();
-            await tx.CommitAsync();
-
-            TempData["SuccessMessage"] = $"Nhận bàn thành công cho đơn '{datBan.MaDatBan}'. Bàn đã chuyển sang trạng thái 'Đang phục vụ' và mở Hóa đơn mới.";
-        }
-        catch (Exception ex)
-        {
-            await tx.RollbackAsync();
-            TempData["ErrorMessage"] = $"Lỗi khi thực hiện giao dịch nhận bàn: {ex.Message}";
-        }
-
-        return RedirectToAction(nameof(Index), new { tab = "DangPhucVu" });
+        var error = await tables.CheckIn(datBanId, rowVersion, await StaffId());
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Khách đã nhận bàn. Bàn chuyển sang đang phục vụ.";
+        return RedirectToAction(nameof(Index), new { tab = error is null ? "DangPhucVu" : "DaXacNhan" });
     }
 
-    // POST /QuanLyDatBan/HuyBan
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> HuyBan(int datBanId, string lyDoHuy)
+    public async Task<IActionResult> HuyBan(int datBanId, string? lyDoHuy, string? rowVersion)
     {
-        var datBan = await Db.DatBan.Include(x => x.Ban).ThenInclude(b => b.BanAn).FirstOrDefaultAsync(x => x.Id == datBanId);
-        if (datBan == null) return NotFound();
+        var error = await tables.Cancel(datBanId, rowVersion, lyDoHuy, await StaffId());
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã hủy yêu cầu đặt bàn.";
+        return RedirectToAction(nameof(Index));
+    }
 
-        datBan.TrangThai = TrangThaiDatBan.DaHuy;
-        datBan.ThoiDiemHuy = DateTimeOffset.UtcNow;
-        datBan.LyDoHuy = string.IsNullOrWhiteSpace(lyDoHuy) ? "Quản lý/Lễ tân hủy" : lyDoHuy.Trim();
+    private Task<int?> StaffId()
+    {
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var accountId);
+        return Db.NhanVien.Where(x => x.TaiKhoanId == accountId && x.DangLamViec).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+    }
 
-        // Nếu bàn đang ở trạng thái DangPhucVu do đơn này, trả về Sẵn sàng
-        foreach (var item in datBan.Ban)
+    [HttpGet]
+    public async Task<IActionResult> Create(int? banAnId)
+    {
+        var model = new ReceptionBookingViewModel { Areas = await Db.KhuVuc.Where(x => x.DangSuDung).ToListAsync() };
+        if (banAnId.HasValue)
         {
-            if (item.BanAn.TrangThai == TrangThaiBan.DangPhucVu)
+            var table = await RequestedTable(banAnId.Value);
+            if (table is null) return NotFound();
+            model.BanAnId = table.Id;
+            model.KhuVucId = table.KhuVucId;
+            model.RequestedTableName = $"{table.MaBan} · {table.KhuVuc.TenKhuVuc} · {table.SoChoNgoi} chỗ";
+        }
+        return View(model);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(ReceptionBookingViewModel model)
+    {
+        model.Areas = await Db.KhuVuc.Where(x => x.DangSuDung).ToListAsync();
+        var arrival = TableService.VietnamTime(model.GioDen);
+        if (arrival < DateTimeOffset.UtcNow.AddMinutes(-15) || arrival > DateTimeOffset.UtcNow.AddDays(180))
+            ModelState.AddModelError(nameof(model.GioDen), "Chọn giờ đến từ hiện tại đến tối đa 180 ngày.");
+        if (model.KhuVucId.HasValue && !model.Areas.Any(x => x.Id == model.KhuVucId))
+            ModelState.AddModelError(nameof(model.KhuVucId), "Khu vực không còn sử dụng.");
+        if (string.IsNullOrWhiteSpace(model.HoTen)) ModelState.AddModelError(nameof(model.HoTen), "Nhập họ tên khách.");
+        if (model.BanAnId is int requestedId)
+        {
+            var table = await RequestedTable(requestedId);
+            if (table is null) ModelState.AddModelError(nameof(model.BanAnId), "Bàn đã ngừng sử dụng hoặc không tồn tại. Chọn bàn khác trên sơ đồ.");
+            else
             {
-                item.BanAn.TrangThai = TrangThaiBan.SanSang;
+                model.RequestedTableName = $"{table.MaBan} · {table.KhuVuc.TenKhuVuc} · {table.SoChoNgoi} chỗ";
+                if (model.KhuVucId != table.KhuVucId)
+                    ModelState.AddModelError(nameof(model.KhuVucId), "Khu vực cần khớp với bàn đã chọn. Quay lại sơ đồ nếu muốn đổi bàn.");
             }
         }
-
-        await Db.SaveChangesAsync();
-        TempData["SuccessMessage"] = $"Đã hủy đơn đặt bàn '{datBan.MaDatBan}'.";
-        return RedirectToAction(nameof(Index), new { tab = "HoanTatHuy" });
+        if (!ModelState.IsValid) return View(model);
+        var customerId = await Db.KhachHang.Where(x => x.SoDienThoai == model.SoDienThoai).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+        var booking = new DatBan {
+            MaDatBan = TableService.NewCode("BK"), HoTenLienHe = model.HoTen.Trim(), SoDienThoaiLienHe = model.SoDienThoai,
+            KhachHangId = customerId, LaKhachTrucTiep = true, ThoiDiemTao = DateTimeOffset.UtcNow,
+            GioDen = arrival, GioKetThucDuKien = arrival.AddMinutes(model.SoPhut), SoNguoiLon = model.SoNguoi,
+            KhuVucUuTienId = model.KhuVucId, YeuCau = model.GhiChu?.Trim(), TrangThai = TrangThaiDatBan.ChoXacNhan,
+            NhanVienTiepNhanId = await StaffId()
+        };
+        Db.DatBan.Add(booking);
+        if (!await SaveAsync("", "Không tạo được yêu cầu. Vui lòng thử lại.")) return View(model);
+        TempData["SuccessMessage"] = "Đã ghi nhận khách. Chọn bàn phù hợp để xác nhận.";
+        return RedirectToAction("Index", "SoDoBan", new { datBanId = booking.Id, khuVucId = model.KhuVucId, preferredTableId = model.BanAnId });
     }
+
+    private Task<BanAn?> RequestedTable(int id) => Db.BanAn.AsNoTracking().Include(x => x.KhuVuc)
+        .SingleOrDefaultAsync(x => x.Id == id && x.KhuVuc.DangSuDung && x.TrangThai != TrangThaiBan.NgungSuDung);
 
     // GET /QuanLyDatBan/DanhGia
     [HttpGet]

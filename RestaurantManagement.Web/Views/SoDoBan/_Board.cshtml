@@ -1,0 +1,36 @@
+@model TableBoardViewModel
+@using RestaurantManagement.API.Models
+@foreach (var group in Model.Tables.GroupBy(x => x.Table.KhuVucId)) {
+    var area = group.First().Table.KhuVuc;
+    <section class="mb-4"><div class="d-flex justify-content-between mb-3"><h2 class="h5 mb-0">@area.TenKhuVuc <span class="small text-muted">· @(area.Tang == 0 ? "Tầng trệt" : $"Tầng {area.Tang}") @(area.LaPhongVip ? "· VIP" : "")</span></h2><span class="small text-muted">@group.Count() bàn</span></div>
+    <div class="table-grid">
+    @foreach (var card in group) {
+        var table = card.Table;
+        var label = table.TrangThai switch { TrangThaiBan.SanSang => "Sẵn sàng", TrangThaiBan.DangPhucVu => "Đang phục vụ", TrangThaiBan.CanDon => "Cần dọn", _ => "Ngừng sử dụng" };
+        var css = table.TrangThai switch { TrangThaiBan.SanSang => "ready", TrangThaiBan.DangPhucVu => "occupied", TrangThaiBan.CanDon => "cleaning", _ => "inactive" };
+        var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan");
+        <article class="table-card @css @(card.IsSuggested ? "suggested" : "") @(card.IsSelected ? "is-selected" : "")"><div class="d-flex justify-content-between align-items-start"><h3 class="h5 mb-0">
+            @if (Model.Booking is null && reception && area.DangSuDung && table.TrangThai != TrangThaiBan.NgungSuDung) { <a asp-controller="QuanLyDatBan" asp-action="Create" asp-route-banAnId="@table.Id" class="text-body text-decoration-none">@table.MaBan</a> } else { @table.MaBan }
+        </h3><span class="table-status">@label</span></div>
+            <p class="small text-muted mt-2 mb-2">@table.SoChoNgoi chỗ ngồi @(!area.DangSuDung ? "· Khu vực đã ngừng" : "")</p>
+            @if (card.Occupant is { } guest) { <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span></p> }
+            @if (card.Conflicts.Count > 0) { <div class="table-bookings small"><strong>Có lịch @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</strong>
+                @foreach (var scheduled in card.Conflicts) { <div>@scheduled.MaDatBan · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</div> }
+            </div> }
+            @if (card.IsSuggested) { <span class="small text-success fw-semibold mb-2">Gợi ý · đủ chỗ, không trùng lịch</span> }
+            @if (Model.CanAssign && reception) {
+                <label class="table-select small"><input class="form-check-input me-2" type="checkbox" name="banAnIds" value="@table.Id" form="assign-booking"
+                    data-seats="@table.SoChoNgoi" data-area="@table.KhuVucId" data-suggested="@(card.IsSuggested ? "true" : "false")" checked="@card.IsSelected" disabled="@(!card.CanChoose)" />Chọn bàn này</label>
+            } else if (Model.Booking is null && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (table.TrangThai == TrangThaiBan.CanDon || table.TrangThai == TrangThaiBan.DangPhucVu)) {
+                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="mt-auto pt-2">
+                    <input type="hidden" name="id" value="@table.Id" /><input type="hidden" name="rowVersion" value="@card.Version" />
+                    <input type="hidden" name="clean" value="@(table.TrangThai == TrangThaiBan.CanDon ? "true" : "false")" />
+                    <button class="btn btn-sm btn-outline-success w-100" type="submit">@(table.TrangThai == TrangThaiBan.CanDon ? "Dọn xong" : "Kết thúc phục vụ")</button>
+                </form>
+            }
+            @if (Model.Booking is null && reception && area.DangSuDung && table.TrangThai != TrangThaiBan.NgungSuDung) { <a asp-controller="QuanLyDatBan" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-outline-success mt-2">Đặt lịch tại bàn này</a> }
+        </article>
+    }
+    </div></section>
+}
+@if (Model.Tables.Count == 0) { <div class="alert alert-light border">Chưa có bàn trong khu vực này. Quản lý có thể thêm khu vực và bàn trong phần cấu hình.</div> }

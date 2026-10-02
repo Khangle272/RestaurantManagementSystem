@@ -11,7 +11,8 @@
         <p>Khám phá thực đơn món lẻ, thức uống và set dùng chung. Chọn món bạn thích, xem giá rõ ràng và đặt bàn cho buổi gặp gỡ tiếp theo.</p>
         <div class="hero-actions">
             <a class="btn btn-restaurant" href="#thuc-don">Khám phá thực đơn <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-            <a class="btn btn-hero-outline" asp-controller="DatBan" asp-action="Index">Đặt bàn ngay</a>
+            @if (User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang"))
+            { <a class="btn btn-hero-outline" asp-controller="DatBan" asp-action="Index">Đặt bàn ngay</a> }
         </div>
         <div class="hero-footnote"><i class="bi bi-check-circle" aria-hidden="true"></i> Giá và tình trạng món được cập nhật từ thực đơn</div>
     </div>
@@ -72,7 +73,8 @@
             <h3>@(Model.CategoryId.HasValue ? "Chưa có món trong danh mục này" : "Thực đơn đang được cập nhật")</h3>
             <p>@(Model.CategoryId.HasValue ? "Hãy thử một danh mục khác để khám phá thêm món ngon." : "Nhà hàng đang chuẩn bị thông tin món ăn. Bạn có thể quay lại sau hoặc đặt bàn trước.")</p>
             @if (Model.CategoryId.HasValue) { <a asp-action="Index" asp-fragment="thuc-don" class="btn btn-outline-restaurant">Xem tất cả món</a> }
-            else { <a asp-controller="DatBan" asp-action="Index" class="btn btn-outline-restaurant">Đặt bàn trước</a> }
+            else if (User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang"))
+            { <a asp-controller="DatBan" asp-action="Index" class="btn btn-outline-restaurant">Đặt bàn trước</a> }
         </div>
     }
     else
@@ -81,4 +83,7 @@
     }
 </section>
 
-<section class="booking-banner"><div><p class="eyebrow eyebrow-light">HẸN GẶP BẠN TẠI NHÀ HÀNG</p><h2>Giữ chỗ cho bữa ăn sắp tới.</h2><p>Chọn thời gian phù hợp để nhà hàng chuẩn bị bàn cho bạn.</p></div><a class="btn btn-restaurant" asp-controller="DatBan" asp-action="Index">Đặt bàn <i class="bi bi-arrow-right" aria-hidden="true"></i></a></section>
+@if (User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang"))
+{
+    <section class="booking-banner"><div><p class="eyebrow eyebrow-light">HẸN GẶP BẠN TẠI NHÀ HÀNG</p><h2>Giữ chỗ cho bữa ăn sắp tới.</h2><p>Chọn thời gian phù hợp để nhà hàng chuẩn bị bàn cho bạn.</p></div><a class="btn btn-restaurant" asp-controller="DatBan" asp-action="Index">Đặt bàn <i class="bi bi-arrow-right" aria-hidden="true"></i></a></section>
+}

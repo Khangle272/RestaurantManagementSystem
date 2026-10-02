@@ -1,0 +1,6 @@
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Trang chủ"; }
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div><p class="small text-success fw-semibold mb-1">KHU LÀM VIỆC</p><h1 class="h3 mb-2">Chào mừng bạn trở lại</h1><p class="text-muted mb-0">Chọn công việc cần xử lý. Các chức năng hiển thị theo quyền của bạn.</p></div>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Xem trang nhà hàng</a>
+</div>
+@await Html.PartialAsync("_ManagementNavigation", true)

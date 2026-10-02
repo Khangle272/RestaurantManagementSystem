@@ -1,21 +1,29 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
+using RestaurantManagement.Web.Security;
 
 namespace RestaurantManagement.Web.Controllers;
 
-[Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.ThucDon)]
+[Authorize(Roles = AppRoles.Admin + "," + AppRoles.Bep)]
 public class MonAnController(RestaurantDbContext context, IWebHostEnvironment environment) : ManagementControllerBase(context)
 {
+    private bool IsAdmin => User.IsInRole(AppRoles.Admin);
+
     public async Task<IActionResult> Index(string? search, int? danhMucId, string? trangThai, int page = 1)
     {
-        var query = Db.MonAn.AsNoTracking();
+        var admin = IsAdmin;
+        var all = Db.MonAn.AsNoTracking();
+        if (!admin) all = all.Where(x => x.Loai != LoaiMon.Set);
+        var query = all;
         search = search?.Trim();
         if (!string.IsNullOrEmpty(search)) query = query.Where(x => x.TenMon.Contains(search));
         if (danhMucId > 0) query = query.Where(x => x.DanhMucId == danhMucId);
-        if (Enum.TryParse<TrangThaiMon>(trangThai, out var status) && Enum.IsDefined(status))
+        if (trangThai == "ChoDuyet") query = query.Where(x => !x.DaDuyet);
+        else if (Enum.TryParse<TrangThaiMon>(trangThai, out var status) && Enum.IsDefined(status))
             query = query.Where(x => x.TrangThai == status);
         var count = await query.CountAsync();
         var pages = Math.Max(1, (int)Math.Ceiling(count / 6d));
@@ -26,17 +34,17 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                 .Select(x => new MonAnCardViewModel
                 {
                     Id = x.Id, TenMon = x.TenMon, MoTa = x.MoTa, HinhAnh = x.HinhAnh,
-                    TenDanhMuc = x.DanhMuc.TenDanhMuc, TrangThai = x.TrangThai,
-                    GiaBan = x.Sizes.Where(s => s.DangSuDung).Min(s => (decimal?)s.GiaBan),
+                    TenDanhMuc = x.DanhMuc.TenDanhMuc, TrangThai = x.TrangThai, DaDuyet = x.DaDuyet,
+                    GiaBan = admin ? x.Sizes.Where(s => s.DangSuDung).Min(s => (decimal?)s.GiaBan) : null,
                     SoSize = x.Sizes.Count(s => s.DangSuDung)
                 }).ToListAsync(),
             DanhMucList = await Db.DanhMuc.AsNoTracking().OrderBy(x => x.TenDanhMuc).ToListAsync(),
             Search = search, DanhMucId = danhMucId, TrangThai = trangThai,
             CurrentPage = page, TotalPages = pages, TotalItems = count,
-            TotalCount = await Db.MonAn.CountAsync(),
-            DangPhucVuCount = await Db.MonAn.CountAsync(x => x.TrangThai == TrangThaiMon.DangPhucVu),
-            TamHetCount = await Db.MonAn.CountAsync(x => x.TrangThai == TrangThaiMon.TamHet),
-            NgungKinhDoanhCount = await Db.MonAn.CountAsync(x => x.TrangThai == TrangThaiMon.NgungKinhDoanh)
+            TotalCount = await all.CountAsync(), ChoDuyetCount = await all.CountAsync(x => !x.DaDuyet),
+            DangPhucVuCount = await all.CountAsync(x => x.DaDuyet && x.TrangThai == TrangThaiMon.DangPhucVu),
+            TamHetCount = await all.CountAsync(x => x.DaDuyet && x.TrangThai == TrangThaiMon.TamHet),
+            NgungKinhDoanhCount = await all.CountAsync(x => x.DaDuyet && x.TrangThai == TrangThaiMon.NgungKinhDoanh)
         });
     }
 
@@ -56,14 +64,16 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
     {
         var entity = await Db.MonAn.Include(x => x.Sizes).SingleOrDefaultAsync(x => x.Id == id);
         if (entity == null) return NotFound();
+        if (!IsAdmin && entity.Loai == LoaiMon.Set) return Forbid();
         var model = new MonAnFormViewModel
         {
             Id = id, RowVersion = VersionOf(entity), TenMon = entity.TenMon, DanhMucId = entity.DanhMucId,
             MoTa = entity.MoTa, HinhAnh = entity.HinhAnh, Loai = entity.Loai, TrangThai = entity.TrangThai,
-            LaMonMoi = entity.LaMonMoi, LaMonNoiBat = entity.LaMonNoiBat,
+            LaMonMoi = entity.LaMonMoi, LaMonNoiBat = entity.LaMonNoiBat, DaDuyet = entity.DaDuyet,
+            LyDoNgung = entity.LyDoNgung,
             Sizes = entity.Sizes.OrderBy(x => x.Id).Select(x => new MonAnSizeFormViewModel
             {
-                Id = x.Id, TenSize = x.TenSize, GiaBan = x.GiaBan, DangSuDung = x.DangSuDung
+                Id = x.Id, TenSize = x.TenSize, GiaBan = IsAdmin ? x.GiaBan : 0, DangSuDung = x.DangSuDung
             }).ToList(),
             DinhMucItems = await Db.DinhMucMon.Where(x => x.MonAnId == id).OrderBy(x => x.NguyenLieuId)
                 .Select(x => new DinhMucItemViewModel { NguyenLieuId = x.NguyenLieuId, SoLuong = x.SoLuong }).ToListAsync(),
@@ -80,12 +90,32 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
         if (id != model.Id) return NotFound();
         var entity = await Db.MonAn.Include(x => x.Sizes).SingleOrDefaultAsync(x => x.Id == id);
         if (entity == null) return NotFound();
+        if (!IsAdmin && entity.Loai == LoaiMon.Set) return Forbid();
         return await SaveFormAsync(model, entity);
     }
 
     private async Task<IActionResult> SaveFormAsync(MonAnFormViewModel model, MonAn? entity)
     {
         var creating = entity == null;
+        model.Sizes ??= new(); model.DinhMucItems ??= new(); model.ComboItems ??= new();
+        if (!IsAdmin)
+        {
+            if (model.Loai == LoaiMon.Set || model.ComboItems.Count > 0) return Forbid();
+            // Business fields are server-owned; never trust prices/approval posted by kitchen users.
+            model.DaDuyet = false;
+            model.TrangThai = entity?.TrangThai ?? TrangThaiMon.DangPhucVu;
+            model.LyDoNgung = entity?.LyDoNgung;
+            model.LaMonMoi = entity?.LaMonMoi ?? false;
+            model.LaMonNoiBat = entity?.LaMonNoiBat ?? false;
+            foreach (var field in new[] { nameof(model.DaDuyet), nameof(model.TrangThai), nameof(model.LyDoNgung), nameof(model.LaMonMoi), nameof(model.LaMonNoiBat) })
+                ModelState.Remove(field);
+            for (var i = 0; i < model.Sizes.Count; i++)
+            {
+                model.Sizes[i].GiaBan = entity?.Sizes.SingleOrDefault(x => x.Id == model.Sizes[i].Id)?.GiaBan ?? 0;
+                ModelState.Remove($"Sizes[{i}].GiaBan");
+            }
+        }
+        if (creating) model.TrangThai = TrangThaiMon.DangPhucVu;
         var currentCategory = entity?.DanhMucId;
         model.HinhAnh = entity?.HinhAnh;
         var imageExtension = await ValidateFormAsync(model, entity);
@@ -113,6 +143,7 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                 entity.MoTa = model.MoTa?.Trim(); entity.HinhAnh = model.HinhAnh;
                 entity.Loai = model.Loai; entity.TrangThai = model.TrangThai;
                 entity.LaMonMoi = model.LaMonMoi; entity.LaMonNoiBat = model.LaMonNoiBat;
+                entity.DaDuyet = model.DaDuyet; entity.LyDoNgung = model.LyDoNgung?.Trim();
                 if (creating) Db.Add(entity);
                 else
                 {
@@ -149,7 +180,8 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                     {
                         await transaction.CommitAsync();
                         committed = true;
-                        TempData["Success"] = creating ? "Thêm món ăn thành công." : "Cập nhật món ăn thành công.";
+                    TempData["Success"] = !IsAdmin ? "Đã lưu thông tin kỹ thuật. Món chờ Quản lý duyệt trước khi mở bán."
+                        : creating ? "Thêm món ăn thành công." : "Cập nhật món ăn thành công.";
                         return RedirectToAction(nameof(Index));
                     }
                 }
@@ -183,6 +215,10 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
             ModelState.AddModelError(nameof(model.DanhMucId), "Danh mục không tồn tại hoặc đã ngừng sử dụng.");
         if (model.Sizes.Count == 0 || !model.Sizes.Any(x => x.DangSuDung))
             ModelState.AddModelError("", "Món ăn cần ít nhất một size đang sử dụng.");
+        if (IsAdmin && model.DaDuyet && model.Sizes.Any(x => x.DangSuDung && x.GiaBan <= 0))
+            ModelState.AddModelError("", "Mỗi size đang sử dụng phải có giá lớn hơn 0 trước khi duyệt mở bán.");
+        if (IsAdmin && model.TrangThai == TrangThaiMon.NgungKinhDoanh && string.IsNullOrWhiteSpace(model.LyDoNgung))
+            ModelState.AddModelError(nameof(model.LyDoNgung), "Nhập lý do ngừng kinh doanh.");
         if (model.Sizes.GroupBy(x => x.TenSize?.Trim(), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
             ModelState.AddModelError("", "Tên size không được trùng nhau.");
         var ids = model.Sizes.Where(x => x.Id != 0).Select(x => x.Id).ToList();
@@ -196,7 +232,7 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                 ModelState.AddModelError("", "Size đã có trong đặt bàn/hóa đơn. Hãy ngừng sử dụng size thay vì xóa.");
             if (entity.Loai != model.Loai && await Db.ChiTietCombo.AnyAsync(x => x.MonAnId == entity.Id) && model.Loai == LoaiMon.Set)
                 ModelState.AddModelError(nameof(model.Loai), "Món đang là thành phần combo nên không thể chuyển thành set.");
-            if (entity.TrangThai == TrangThaiMon.DangPhucVu && model.TrangThai != TrangThaiMon.DangPhucVu
+            if (model.TrangThai == TrangThaiMon.NgungKinhDoanh
                 && await Db.ChiTietHoaDon.AnyAsync(x => x.MonAnId == entity.Id && x.TrangThai != TrangThaiCheBien.DaHuy
                     && (x.HoaDon.TrangThai == TrangThaiHoaDon.ChuaThanhToan || x.HoaDon.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan)))
                 ModelState.AddModelError(nameof(model.TrangThai), "Món đang có trong hóa đơn chưa thanh toán, chưa thể ngừng phục vụ.");
@@ -210,8 +246,12 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
             ModelState.AddModelError(nameof(model.Loai), "Chỉ món loại Set mới có thành phần combo.");
         if (model.Loai == LoaiMon.Set && model.ComboItems.Count == 0)
             ModelState.AddModelError("", "Set cần ít nhất một món thành phần.");
+        if (model.Loai == LoaiMon.Set && model.DinhMucItems.Count > 0)
+            ModelState.AddModelError("", "Combo dùng công thức của các món thành phần, không nhập lại nguyên liệu thô.");
         var dishIds = model.ComboItems.Select(x => x.MonAnId).ToList();
-        var allowedDishes = await Db.MonAn.Where(x => x.Loai != LoaiMon.Set && x.Id != entityId).Select(x => x.Id).ToListAsync();
+        var allowedDishes = await Db.MonAn.Where(x => x.Loai != LoaiMon.Set && x.Id != entityId
+            && (!model.DaDuyet || (x.DaDuyet && x.TrangThai == TrangThaiMon.DangPhucVu && x.DanhMuc.DangSuDung
+                && x.Sizes.Any(s => s.DangSuDung && s.GiaBan > 0)))).Select(x => x.Id).ToListAsync();
         if (dishIds.Distinct().Count() != dishIds.Count || dishIds.Any(id => !allowedDishes.Contains(id)))
             ModelState.AddModelError("", "Món thành phần bị trùng, không tồn tại hoặc là một set khác.");
         if (model.HinhAnhFile == null) return null;
@@ -235,17 +275,17 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
         model.DanhMucList = await Db.DanhMuc.AsNoTracking().Where(x => x.DangSuDung || x.Id == currentCategory).OrderBy(x => x.TenDanhMuc).ToListAsync();
         var ingredientIds = model.DinhMucItems.Select(x => x.NguyenLieuId).ToList();
         model.NguyenLieuList = await Db.NguyenLieu.AsNoTracking().Where(x => x.DangSuDung || ingredientIds.Contains(x.Id)).OrderBy(x => x.TenNguyenLieu).ToListAsync();
-        model.MonLeList = await Db.MonAn.AsNoTracking().Where(x => x.Id != model.Id && x.Loai != LoaiMon.Set).OrderBy(x => x.TenMon).ToListAsync();
+        model.MonLeList = IsAdmin ? await Db.MonAn.AsNoTracking().Where(x => x.Id != model.Id && x.Loai != LoaiMon.Set).OrderBy(x => x.TenMon).ToListAsync() : [];
     }
 
-    [HttpGet]
+    [Authorize(Roles = AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await Db.MonAn.FindAsync(id);
         return entity == null ? NotFound() : View(DeleteModel(entity, id, entity.TenMon, "món ăn"));
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id, DeleteRecordViewModel model)
     {
         if (id != model.Id) return NotFound();

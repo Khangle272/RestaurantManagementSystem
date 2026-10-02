@@ -1,0 +1,2 @@
+/* Nhãn vai trò dùng chung; bố cục tài khoản dùng CSS hiện có của từng khu vực. */
+.role-label { display: inline-block; padding: .25rem .6rem; margin-left: .25rem; border-radius: 1rem; background: #eaf4ed; color: #226231; font-size: .75rem; font-weight: 600; }

@@ -246,8 +246,6 @@ WHERE NOT EXISTS(SELECT 1 FROM DanhGia WITH(UPDLOCK,HOLDLOCK) WHERE HoaDonId=h.I
 DECLARE @DemoCredentials TABLE(Email nvarchar(256) PRIMARY KEY, PasswordHash nvarchar(500));
 INSERT @DemoCredentials VALUES
 (N'admin.mau@example.test',N'AQAAAAIAAYagAAAAEP7VWF5IYIzn4/kRJYIfIgIIGQn5A5jPCVOmPhFsUcw2f6UYt+ICngQn8qqpClLIjA=='),
-(N'thucdon.mau@example.test',N'AQAAAAIAAYagAAAAEDmjZ5bgbFPYtBuueT6SljeZrgNwOmAERL+6e607KcKkCkv5HbQA4zR7BzY4MVrpeg=='),
-(N'danhmuc.mau@example.test',N'AQAAAAIAAYagAAAAEEAe1OBYcNrqTdp3ks0csm4eA083r9Fp6A63cchb5rWWdOu+dUHO1/J7/2xPWASuYA=='),
 (N'letan.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAEAzwusUeX0XBycf/NmqCOm/zpHXk5kfVthNerg17WpnZV2Zq5UQllEu/vFDuSrOV5w=='),
 (N'phucvu.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAENlBcOBkNkeP+v1t7dK6sZjtjlSzj5LJGUML5xtCkQ/AqIgGi0cociV6B5WUGm9brg=='),
 (N'thungan.minhhoa@nhahang.example.test',N'AQAAAAIAAYagAAAAEIV6Cl/+n9drnQNrSYaQlhVmAhseyQygTW7oYP//e7iJXA+Z0pFCA7pCTOSmykd1JA=='),
@@ -291,41 +289,26 @@ AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro WITH(UPDLOCK,HOLDLOCK) WHERE UserId=
 
 -- Tài khoản mẫu của giao diện hiện tại. Chỉ tạo nếu email chưa tồn tại.
 -- Nếu tài khoản đã hoạt động, không thay đổi mật khẩu hoặc trạng thái.
-DECLARE @WebAccounts TABLE(MaNV nvarchar(20), HoTen nvarchar(120), Phone nvarchar(20), Email nvarchar(256), RoleName nvarchar(256));
-INSERT @WebAccounts VALUES
-(N'MENU-001',N'Nguyễn Minh Anh',N'0999000101',N'thucdon.mau@example.test',N'ThucDon'),
-(N'MENU-002',N'Trần Gia Hân',N'0999000102',N'danhmuc.mau@example.test',N'DanhMucMon');
+-- Không tạo mới hai vị trí ThucDon/DanhMucMon. Hồ sơ đã có được giữ lại;
+-- Admin phải phân công lại qua Quản lý nhân viên, không tự nâng quyền.
 INSERT VaiTro(Name,NormalizedName,ConcurrencyStamp)
 SELECT v.Name,UPPER(v.Name),CONVERT(nvarchar(36),NEWID())
-FROM(VALUES(N'Admin'),(N'ThucDon'),(N'DanhMucMon'))v(Name)
+FROM(VALUES(N'Admin'))v(Name)
 WHERE NOT EXISTS(SELECT 1 FROM VaiTro WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedName=UPPER(v.Name));
-INSERT NhanVien(MaNhanVien,HoTen,SoDienThoai,Email,ChucVu,NgayVaoLam,DangLamViec)
-SELECT v.MaNV,v.HoTen,v.Phone,v.Email,v.RoleName,'2026-09-01',1
-FROM @WebAccounts v
-WHERE NOT EXISTS(SELECT 1 FROM NhanVien WITH(UPDLOCK,HOLDLOCK) WHERE MaNhanVien=v.MaNV);
 DECLARE @WebUsers TABLE(Email nvarchar(256), RoleName nvarchar(256));
 INSERT @WebUsers VALUES
-(N'admin.mau@example.test',N'Admin'),
-(N'thucdon.mau@example.test',N'ThucDon'),
-(N'danhmuc.mau@example.test',N'DanhMucMon');
+(N'admin.mau@example.test',N'Admin');
 INSERT TaiKhoan(UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount)
 OUTPUT inserted.Id INTO @NewSampleAccounts
 SELECT v.Email,UPPER(v.Email),v.Email,UPPER(v.Email),1,d.PasswordHash,CONVERT(nvarchar(36),NEWID()),CONVERT(nvarchar(36),NEWID()),NULL,0,0,NULL,1,0
 FROM @WebUsers v JOIN @DemoCredentials d ON d.Email=v.Email
 WHERE NOT EXISTS(SELECT 1 FROM TaiKhoan WITH(UPDLOCK,HOLDLOCK) WHERE NormalizedUserName=UPPER(v.Email) OR NormalizedEmail=UPPER(v.Email));
-UPDATE n SET TaiKhoanId=u.Id
-FROM NhanVien n JOIN @WebAccounts v ON v.MaNV=n.MaNhanVien
-JOIN TaiKhoan u ON u.NormalizedUserName=UPPER(v.Email) AND u.NormalizedEmail=UPPER(v.Email)
-WHERE n.TaiKhoanId IS NULL AND n.Email=v.Email
-AND NOT EXISTS(SELECT 1 FROM NhanVien other WHERE other.TaiKhoanId=u.Id)
-AND NOT EXISTS(SELECT 1 FROM KhachHang k WHERE k.TaiKhoanId=u.Id);
 INSERT TaiKhoanVaiTro(UserId,RoleId)
 SELECT u.Id,r.Id FROM @WebUsers v JOIN TaiKhoan u ON u.NormalizedUserName=UPPER(v.Email) AND u.NormalizedEmail=UPPER(v.Email)
 JOIN VaiTro r ON r.NormalizedName=UPPER(v.RoleName)
 WHERE (EXISTS(SELECT 1 FROM @NewSampleAccounts created WHERE created.UserId=u.Id)
        OR (u.PasswordHash IS NULL AND u.LockoutEnd>SYSDATETIMEOFFSET()))
-AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro existing WHERE existing.UserId=u.Id)
-AND (v.RoleName=N'Admin' OR EXISTS(SELECT 1 FROM NhanVien n JOIN @WebAccounts staff ON staff.MaNV=n.MaNhanVien WHERE n.TaiKhoanId=u.Id AND staff.Email=v.Email));
+AND NOT EXISTS(SELECT 1 FROM TaiKhoanVaiTro existing WHERE existing.UserId=u.Id);
 
 -- Kích hoạt các tài khoản mẫu bị khóa do bản SQL trước tạo, chỉ khi hồ sơ và quyền khớp.
 UPDATE u SET PasswordHash=d.PasswordHash,LockoutEnd=NULL,EmailConfirmed=1,
@@ -340,8 +323,6 @@ AND (
      AND NOT EXISTS(SELECT 1 FROM KhachHang k WHERE k.TaiKhoanId=u.Id))
     OR EXISTS(SELECT 1 FROM @Accounts a JOIN NhanVien n ON n.MaNhanVien=a.MaNV AND n.TaiKhoanId=u.Id
               WHERE u.Email=a.Username+N'@nhahang.example.test' AND role.NormalizedName=UPPER(a.RoleName))
-    OR EXISTS(SELECT 1 FROM @WebAccounts a JOIN NhanVien n ON n.MaNhanVien=a.MaNV AND n.TaiKhoanId=u.Id
-              WHERE u.Email=a.Email AND role.NormalizedName=UPPER(a.RoleName))
 );
 
 -- Kiểm tra tính nhất quán trước khi commit.

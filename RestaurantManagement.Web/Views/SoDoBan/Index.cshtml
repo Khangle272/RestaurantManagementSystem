@@ -1,0 +1,76 @@
+@model TableBoardViewModel
+@{ ViewData["Title"] = "Sơ đồ bàn"; var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan"); }
+@section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
+<div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
+    <div><p class="small text-success fw-semibold mb-1">KHU VỰC PHỤC VỤ</p><h1 class="h3 mb-1">Sơ đồ bàn</h1><p class="text-muted mb-0">Theo dõi bàn hiện tại và xếp lịch theo khu vực, tầng.</p></div>
+    <div class="d-flex gap-2 flex-wrap">
+        @if (User.IsInRole("Admin") || User.IsInRole("TiepTan")) {
+            <a asp-controller="QuanLyDatBan" asp-action="Create" class="btn btn-success">Đặt bàn cho khách</a>
+            <a asp-controller="QuanLyDatBan" asp-action="Index" class="btn btn-outline-secondary">Yêu cầu đặt bàn</a>
+        }
+        @if (User.IsInRole("Admin")) {
+            <a asp-controller="KhuVuc" asp-action="Index" class="btn btn-outline-secondary">Khu vực / tầng</a>
+            <a asp-controller="BanAn" asp-action="Index" class="btn btn-outline-secondary">Cấu hình bàn</a>
+        }
+    </div>
+</div>
+<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-end">
+    <input type="hidden" name="datBanId" value="@Model.Booking?.Id" />
+    <input type="hidden" name="preferredTableId" value="@Model.PreferredTableId" />
+    <div><label for="floor" class="form-label small">Tầng</label><select id="floor" name="tang" class="form-select"><option value="">Tất cả tầng</option>
+        @foreach (var floor in Model.Areas.Select(x => x.Tang).Distinct()) { <option value="@floor" selected="@(floor == Model.Floor)">@(floor == 0 ? "Tầng trệt" : $"Tầng {floor}")</option> }
+    </select></div>
+    <div><label for="area" class="form-label small">Khu vực</label><select id="area" name="khuVucId" class="form-select"><option value="">Tất cả khu vực</option>
+        @foreach (var area in Model.Areas) { <option value="@area.Id" selected="@(area.Id == Model.AreaId)">@area.TenKhuVuc · tầng @area.Tang</option> }
+    </select></div>
+    <button class="btn btn-success">Lọc sơ đồ</button><a asp-action="Index" asp-route-datBanId="@Model.Booking?.Id" asp-route-preferredTableId="@Model.PreferredTableId" class="btn btn-outline-secondary">Bỏ lọc</a>
+    <span id="board-refresh" class="small text-muted ms-auto" role="status">Tự cập nhật mỗi 10 giây</span>
+</form>
+@if (reception) { <div class="d-flex d-lg-none gap-2 mb-3"><a href="#booking-context" class="btn btn-sm btn-outline-success">Yêu cầu đặt bàn</a><a href="#table-board" class="btn btn-sm btn-outline-success">Xem sơ đồ</a></div> }
+<div class="@(reception ? "booking-workspace" : "")">
+@if (reception) {
+    <aside id="booking-context" class="booking-context">
+    @if (Model.Booking is { } booking) {
+        var suggested = Model.Tables.FirstOrDefault(x => x.IsSuggested);
+        <section class="card border-0 shadow-sm mb-3"><div class="card-body">
+            <p class="small text-success fw-semibold mb-1">YÊU CẦU ĐANG XỬ LÝ</p><h2 class="h5">@booking.MaDatBan</h2>
+            <p class="fw-semibold mb-1">@booking.HoTenLienHe · @(booking.SoNguoiLon + booking.SoTreEm) khách</p>
+            <p class="small mb-1">@booking.SoDienThoaiLienHe</p>
+            <p class="small mb-2">@booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @booking.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</p>
+            @if (booking.KhuVucUuTienId is int preferred) { <p class="small text-muted mb-2">Ưu tiên: @Model.Areas.FirstOrDefault(x => x.Id == preferred)?.TenKhuVuc. Có thể đổi sau khi thống nhất với khách.</p> }
+            @if (booking.YeuCauVip) { <p class="small fw-semibold mb-2">Cần khu vực VIP.</p> }
+            @if (!string.IsNullOrWhiteSpace(booking.YeuCau)) { <p class="small bg-light rounded p-2">@booking.YeuCau</p> }
+            @if (Model.CanAssign) {
+                @if (suggested is not null) {
+                    <p class="small mb-2">Gợi ý: <strong>@suggested.Table.MaBan</strong> · @suggested.Table.SoChoNgoi chỗ · @suggested.Table.KhuVuc.TenKhuVuc</p>
+                    <button id="choose-suggestion" type="button" class="btn btn-sm btn-outline-success w-100 mb-3">Chọn bàn gợi ý</button>
+                } else { <p class="small text-muted">Không có bàn đơn phù hợp trong bộ lọc này. Thử khu vực khác hoặc chọn ghép các bàn cùng khu vực.</p> }
+                <form id="assign-booking" asp-controller="QuanLyDatBan" asp-action="XacNhan" method="post" data-guests="@(booking.SoNguoiLon + booking.SoTreEm)">
+                    <input type="hidden" name="datBanId" value="@booking.Id" /><input type="hidden" name="rowVersion" value="@Model.BookingVersion" />
+                    <p id="table-selection-summary" class="small text-muted" role="status">Chọn bàn trên sơ đồ bên cạnh.</p>
+                    <button class="btn btn-success w-100">Xác nhận các bàn đã chọn</button>
+                </form>
+                <p class="small text-muted mt-2 mb-0">Gợi ý chưa giữ bàn. Khi xác nhận, hệ thống kiểm tra lại lịch và sức chứa.</p>
+            } else { <div class="alert alert-light border small mb-0">Yêu cầu này chưa thể xếp bàn hoặc đã kết thúc. Kiểm tra trạng thái tại danh sách yêu cầu.</div> }
+        </div></section>
+    }
+    <details class="card border-0 shadow-sm" open="@(Model.Booking is null)">
+        <summary class="p-3 fw-semibold">Yêu cầu chờ xếp bàn</summary>
+        <div class="booking-request-list">
+        @foreach (var request in Model.Requests) {
+            <a asp-action="Index" asp-route-datBanId="@request.Id" asp-route-khuVucId="@request.KhuVucUuTienId" class="booking-request @(request.Id == Model.Booking?.Id ? "selected" : "")">
+                <strong>@request.HoTenLienHe</strong><span class="small">@(request.SoNguoiLon + request.SoTreEm) khách · @request.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span><span class="small text-muted">@request.MaDatBan</span>
+            </a>
+        }
+        @if (Model.Requests.Count == 0) { <p class="small text-muted px-3">Không có yêu cầu đang chờ xếp bàn.</p> }
+        </div>
+        <a asp-controller="QuanLyDatBan" asp-action="Index" class="small p-3">Xem toàn bộ yêu cầu và trạng thái</a>
+    </details>
+    </aside>
+}
+<section class="booking-board-panel" aria-label="Sơ đồ bàn và lịch đặt">
+    <p class="small text-muted mb-3">@(Model.Booking is null ? "Trạng thái bàn hiện tại và lịch sắp tới" : "Kiểm tra lịch cho yêu cầu đang chọn") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm"). Bàn đang trống không đồng nghĩa trống vào giờ đặt.</p>
+    <div id="table-board" data-poll="@(Model.Booking is null ? "true" : "false")"><partial name="_Board" model="Model" /></div>
+</section>
+</div>
+@section Scripts { <script src="~/js/tables.js" asp-append-version="true"></script> }

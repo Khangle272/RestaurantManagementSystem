@@ -1,0 +1,10 @@
+@model AreaFormViewModel
+@{ ViewData["Title"] = Model.Id == 0 ? "Thêm khu vực" : "Sửa khu vực"; }
+<section class="card border-0 shadow-sm" style="max-width:720px"><div class="card-body p-4"><h1 class="h4 mb-4">@ViewData["Title"]</h1>
+<form method="post" asp-action="Edit"><input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /><div asp-validation-summary="All" class="text-danger"></div>
+<div class="mb-3"><label asp-for="TenKhuVuc" class="form-label">Tên khu vực</label><input asp-for="TenKhuVuc" class="form-control" /></div>
+<div class="mb-3"><label asp-for="Tang" class="form-label">Tầng (0 = tầng trệt)</label><input asp-for="Tang" class="form-control" type="number" min="0" max="99" /></div>
+<div class="form-check mb-3"><input asp-for="LaPhongVip" class="form-check-input" /><label asp-for="LaPhongVip" class="form-check-label">Phòng VIP</label></div>
+<div class="form-check mb-4"><input asp-for="DangSuDung" class="form-check-input" /><label asp-for="DangSuDung" class="form-check-label">Đang sử dụng</label></div>
+<button class="btn btn-success">Lưu khu vực</button><a asp-action="Index" class="btn btn-outline-secondary ms-2">Hủy</a></form></div></section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -507,6 +507,9 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<int?>("KhachHangId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("KhuVucUuTienId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("LaKhachTrucTiep")
                         .HasColumnType("bit");
 
@@ -546,6 +549,9 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<DateTimeOffset?>("ThoiDiemHuy")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("ThoiDiemKetThuc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset?>("ThoiDiemNhanBan")
                         .HasColumnType("datetimeoffset");
 
@@ -583,6 +589,8 @@ namespace RestaurantManagement.API.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("KhachHangId");
+
+                    b.HasIndex("KhuVucUuTienId");
 
                     b.HasIndex("MaDatBan")
                         .IsUnique();
@@ -798,6 +806,11 @@ namespace RestaurantManagement.API.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("Tang")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("TenKhuVuc")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -906,6 +919,11 @@ namespace RestaurantManagement.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("DaDuyet")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<int>("DanhMucId")
                         .HasColumnType("int");
 
@@ -923,6 +941,10 @@ namespace RestaurantManagement.API.Migrations
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("LyDoNgung")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("MoTa")
                         .HasMaxLength(1000)
@@ -1633,6 +1655,11 @@ namespace RestaurantManagement.API.Migrations
                         .HasForeignKey("KhachHangId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("RestaurantManagement.API.Models.KhuVuc", "KhuVucUuTien")
+                        .WithMany()
+                        .HasForeignKey("KhuVucUuTienId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("RestaurantManagement.API.Models.NhanVien", "NhanVienHuy")
                         .WithMany()
                         .HasForeignKey("NhanVienHuyId")
@@ -1644,6 +1671,8 @@ namespace RestaurantManagement.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("KhachHang");
+
+                    b.Navigation("KhuVucUuTien");
 
                     b.Navigation("NhanVienHuy");
 

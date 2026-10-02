@@ -1,4 +1,6 @@
 @model NhanVienFormViewModel
+@using RestaurantManagement.API.Models
+@using RestaurantManagement.Web.Security
 @{
     Layout = "_AdminLayout";
     var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
@@ -34,13 +36,19 @@
                         <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Email" class="form-label fw-medium"></label>
+                        <label asp-for="Email" class="form-label fw-medium">Email liên hệ</label>
                         <input asp-for="Email" type="email" class="form-control" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
+                        <small class="text-muted">Đổi email đăng nhập ở phần Tài khoản đăng nhập bên dưới.</small>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="ChucVu" class="form-label fw-medium"></label>
-                        <input asp-for="ChucVu" type="text" class="form-control" />
+                        <label asp-for="ChucVu" class="form-label fw-medium">Vai trò công việc</label>
+                        <select asp-for="ChucVu" class="form-select">
+                            <option value="">Chọn vai trò</option>
+                            @if (Model.ChucVu == AppRoles.Admin) { <option value="Admin">Quản lý (tài khoản hiện có)</option> }
+                            @foreach (var role in AppRoles.AssignableStaff) { <option value="@role">@AppRoles.Label(role)</option> }
+                        </select>
+                        <small class="text-muted">Mỗi vai trò có bộ quyền cố định. Đổi vai trò sẽ yêu cầu nhân viên đăng nhập lại.</small>
                         <span asp-validation-for="ChucVu" class="text-danger small"></span>
                     </div>
                     <div class="col-md-6">
@@ -68,6 +76,41 @@
         </div>
     </div>
 </div>
+
+@if (editing)
+{
+    var employee = ViewBag.Employee as NhanVien;
+    var account = ViewBag.Account as TaiKhoan;
+    <section class="card border-0 shadow-sm mt-4">
+        <div class="card-body p-4">
+            <h3 class="h5">Tài khoản đăng nhập</h3>
+            @if (account is not null)
+            {
+                var locked = account.LockoutEnd > DateTimeOffset.UtcNow;
+                <p class="mb-2 text-break">@account.Email · @(ViewBag.AccountRole is string assignedRole ? AppRoles.Label(assignedRole) : "Chưa có quyền đăng nhập")</p>
+                <p class="small text-muted">@(locked ? "Tài khoản đang bị khóa." : "Đã được cấp tài khoản.") @(employee?.DangLamViec == false ? "Nhân viên đã nghỉ, không được đăng nhập dù tài khoản được mở khóa." : "")</p>
+                @if (ViewBag.AccountRole is string role && AppRoles.AssignableStaff.Contains(role))
+                {
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a asp-controller="Account" asp-action="EditProfile" asp-route-id="@account.Id" class="btn btn-outline-primary">Sửa thông tin đăng nhập</a>
+                        <a asp-controller="Account" asp-action="ResetPassword" asp-route-id="@account.Id" class="btn btn-outline-secondary">Đặt lại mật khẩu</a>
+                    </div>
+                }
+                <form asp-controller="TaiKhoanNhanVien" asp-action="SetLocked" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="locked" value="@(!locked)" />
+                    <button class="btn btn-outline-secondary" type="submit">@(locked ? "Mở khóa tài khoản" : "Khóa tài khoản")</button>
+                </form>
+            }
+            else if (employee?.DangLamViec == true && AppRoles.AssignableStaff.Contains(AppRoles.RoleForJob(employee.ChucVu) ?? ""))
+            {
+                <p class="text-muted">Nhân viên chưa có tài khoản. Lưu vai trò công việc trước khi cấp.</p>
+                <a asp-controller="TaiKhoanNhanVien" asp-action="Create" asp-route-nhanVienId="@Model.Id" class="btn btn-primary btn-brand-primary">Cấp tài khoản</a>
+            }
+            else { <p class="text-muted mb-0">Không cấp tài khoản cho hồ sơ đã nghỉ hoặc chưa có vai trò nhân viên hợp lệ. Tài khoản Admin được khởi tạo riêng.</p> }
+        </div>
+    </section>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

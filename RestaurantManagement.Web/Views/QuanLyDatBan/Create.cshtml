@@ -1,0 +1,16 @@
+@model ReceptionBookingViewModel
+@{ ViewData["Title"] = "Đặt bàn cho khách"; }
+<div class="mb-3"><a asp-controller="SoDoBan" asp-action="Index" class="text-muted">← Sơ đồ bàn</a></div>
+<section class="card border-0 shadow-sm" style="max-width:860px"><div class="card-body p-4"><h1 class="h3 mb-2">Đặt bàn cho khách</h1><p class="text-muted">Tiếp nhận khách gọi điện, nhắn tin hoặc khách đến trực tiếp. Sau khi lưu, chọn bàn trên sơ đồ để xác nhận.</p>
+<form method="post" asp-action="Create"><div asp-validation-summary="All" class="text-danger" role="alert"></div><div class="row g-3">
+<input asp-for="BanAnId" type="hidden" />
+@if (Model.RequestedTableName is not null) { <div class="col-12"><div class="alert alert-success mb-0">Bàn dự kiến: <strong>@Model.RequestedTableName</strong><br /><span class="small">Chưa giữ bàn. Sau khi lưu, hệ thống kiểm tra lịch theo giờ bạn nhập; có thể chọn thêm bàn nếu nhóm đông.</span></div></div> }
+<div class="col-md-6"><label asp-for="HoTen" class="form-label">Họ tên khách</label><input asp-for="HoTen" class="form-control" /></div>
+<div class="col-md-6"><label asp-for="SoDienThoai" class="form-label">Số điện thoại</label><input asp-for="SoDienThoai" class="form-control" type="tel" /></div>
+<div class="col-md-6"><label asp-for="GioDen" class="form-label">Giờ đến (giờ Việt Nam)</label><input asp-for="GioDen" class="form-control" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" /></div>
+<div class="col-md-3"><label asp-for="SoNguoi" class="form-label">Số khách</label><input asp-for="SoNguoi" class="form-control" min="1" max="50" /></div>
+<div class="col-md-3"><label asp-for="SoPhut" class="form-label">Thời lượng (phút)</label><input asp-for="SoPhut" class="form-control" min="30" max="360" /></div>
+<div class="col-12"><label asp-for="KhuVucId" class="form-label">Khu vực ưu tiên</label><select asp-for="KhuVucId" class="form-select"><option value="">Không yêu cầu</option>@foreach (var area in Model.Areas) { <option value="@area.Id">@area.TenKhuVuc · tầng @area.Tang</option> }</select></div>
+<div class="col-12"><label asp-for="GhiChu" class="form-label">Ghi chú / yêu cầu của khách</label><textarea asp-for="GhiChu" class="form-control" rows="3"></textarea></div>
+</div><button class="btn btn-success mt-4">Lưu và chọn bàn</button><a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-secondary mt-4 ms-2">Hủy</a></form></div></section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

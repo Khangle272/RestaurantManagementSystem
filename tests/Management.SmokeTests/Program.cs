@@ -9,6 +9,8 @@ using RestaurantManagement.API.Models;
 
 // Run from the repository root. All writes target a newly generated test database.
 var root = Directory.GetCurrentDirectory();
+var webDll = Environment.GetEnvironmentVariable("CRUD_TEST_WEB_DLL")
+    ?? Path.Combine(root, "RestaurantManagement.Web", "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll");
 var database = "RestaurantCrudTests_" + Guid.NewGuid().ToString("N");
 var connection = new SqlConnectionStringBuilder
 {
@@ -28,7 +30,7 @@ var start = new ProcessStartInfo("dotnet")
     WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
     UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
 };
-start.ArgumentList.Add(Path.Combine(start.WorkingDirectory, "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+start.ArgumentList.Add(webDll);
 start.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
 start.Environment["ASPNETCORE_URLS"] = $"http://127.0.0.1:{port}";
 start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
@@ -120,6 +122,17 @@ try
             ["ConfirmPassword"] = "Changed123!"
         }));
         Check(changed.StatusCode == HttpStatusCode.Redirect, "Customer changes password");
+        var profile = await customerClient.GetStringAsync("/Account/EditProfile");
+        using (var edited = await customerClient.PostAsync("/Account/EditProfile", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = Hidden(profile, "__RequestVerificationToken"),
+            ["Id"] = Hidden(profile, "Id"), ["ConcurrencyStamp"] = Hidden(profile, "ConcurrencyStamp"),
+            ["HoTen"] = "Khách cập nhật", ["Email"] = "auth-customer@example.test", ["SoDienThoai"] = "0909876543",
+            ["ConfirmPassword"] = "Changed123!", ["Role"] = "Admin"
+        }))) Check(edited.StatusCode == HttpStatusCode.Redirect, "Customer updates own profile without granting posted role");
+        Check(await db.KhachHang.AnyAsync(x => x.HoTen == "Khách cập nhật" && x.Email == "auth-customer@example.test"), "Customer profile saved");
+        var adminId = await db.Users.Where(x => x.Email == adminEmail).Select(x => x.Id).SingleAsync();
+        await CheckAccess(customerClient, "/Account/EditProfile?id=" + adminId, HttpStatusCode.NotFound, "Customer cannot edit Admin");
         var logoutForm = await customerClient.GetStringAsync("/Home");
         using var loggedOut = await customerClient.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -127,6 +140,15 @@ try
         }));
         Check(loggedOut.StatusCode == HttpStatusCode.Redirect, "Customer logs out");
         await CheckAccess(customerClient, "/Account/ChangePassword", HttpStatusCode.Redirect, "Logged-out customer denied private page");
+        await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
+        var customerId = await db.Users.Where(x => x.Email == "auth-customer@example.test").Select(x => x.Id).SingleAsync();
+        var resetForm = await Get("/Account/ResetPassword?id=" + customerId);
+        await Post("/Account/ResetPassword", resetForm, new()
+        { ["Id"] = customerId.ToString(), ["AdminPassword"] = "Wrong123!", ["NewPassword"] = "Changed123!", ["ConfirmPassword"] = "Changed123!" }, false, "Mật khẩu quản trị không đúng");
+        await CheckAccess(customerClient, "/Account", HttpStatusCode.OK, "Wrong Admin password cannot reset customer");
+        await Post("/Account/ResetPassword", await Get("/Account/ResetPassword?id=" + customerId), new()
+        { ["Id"] = customerId.ToString(), ["AdminPassword"] = adminPassword, ["NewPassword"] = "Changed123!", ["ConfirmPassword"] = "Changed123!" }, true);
+        await CheckAccess(customerClient, "/Account", HttpStatusCode.Redirect, "Admin reset revokes customer session");
         await LoginAs(customerClient, "auth-customer@example.test", "Changed123!");
         using var failedLoginClient = NewClient();
         for (var attempt = 0; attempt < 5; attempt++)
@@ -146,13 +168,11 @@ try
     }
     foreach (var (code, role, allowed, denied) in new[]
     {
-        ("NV002", "TiepTan", "/QuanLyDatBan", "/BanAn"),
+        ("NV002", "TiepTan", "/QuanLyDatBan", "/BanAn/Create"),
         ("NV003", "Kho", "/NguyenLieu", "/BanAn"),
-        ("TEST-BOIBAN", "BoiBan", "/BanAn", "/DanhMuc"),
-        ("TEST-BEP", "Bep", "/Bep", "/MonAn"),
-        ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn"),
-        ("TEST-THUCDON", "ThucDon", "/MonAn", "/DanhMuc"),
-        ("TEST-DANHMUC", "DanhMucMon", "/DanhMuc", "/MonAn")
+        ("TEST-BOIBAN", "BoiBan", "/SoDoBan", "/DanhMuc"),
+        ("TEST-BEP", "Bep", "/Bep", "/DanhMuc"),
+        ("TEST-THUNGAN", "ThuNgan", "/HoaDon", "/MonAn")
     })
     {
         var employee = await db.NhanVien.SingleOrDefaultAsync(x => x.MaNhanVien == code);
@@ -162,15 +182,36 @@ try
             db.NhanVien.Add(employee);
             await db.SaveChangesAsync();
         }
-        var form = await Get("/TaiKhoanNhanVien/Create");
+        employee.ChucVu = role;
+        await db.SaveChangesAsync();
+        var form = await Get("/TaiKhoanNhanVien/Create?nhanVienId=" + employee.Id);
         var email = $"auth-{role.ToLowerInvariant()}@example.test";
         await Post("/TaiKhoanNhanVien/Create", form, new()
         {
             ["NhanVienId"] = employee.Id.ToString(), ["Email"] = email,
-            ["Password"] = adminPassword, ["Role"] = role
+            ["Password"] = adminPassword, ["Role"] = "Admin"
         }, true);
+        var accountId = await db.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
+        Check(await (from link in db.UserRoles join assigned in db.Roles on link.RoleId equals assigned.Id
+                     where link.UserId == accountId select assigned.Name).SingleAsync() == role,
+            role + " derives permission from employee job, ignoring forged role");
         using var roleClient = NewClient();
         await LoginAs(roleClient, email);
+        var publicHome = await roleClient.GetStringAsync("/");
+        Check(!publicHome.Contains("href=\"/DatBan") && publicHome.Contains("href=\"/admin/TrangChu\""),
+            role + " can inspect restaurant but has no customer booking links");
+        var accountPage = WebUtility.HtmlDecode(await roleClient.GetStringAsync("/Account"));
+        Check(accountPage.Contains(email), role + " views own account");
+        Check(accountPage.Contains("Thông tin cá nhân") && accountPage.Contains($"href=\"{allowed}\"")
+            && !accountPage.Contains($"href=\"{denied}\""), role + " navigation uses shared labels and filters forbidden functions");
+        Check(accountPage.Contains("aria-controls=\"management-menu\"") && accountPage.Contains("aria-expanded=\"false\"")
+            && accountPage.Contains("management-sidebar-content collapse d-md-flex"),
+            role + " small-screen menu starts collapsed and stays visible on desktop");
+        var workspace = WebUtility.HtmlDecode(await roleClient.GetStringAsync("/admin/TrangChu"));
+        Check(workspace.Contains("KHU LÀM VIỆC") && workspace.Contains($"href=\"{allowed}\"")
+            && !workspace.Contains($"href=\"{denied}\""), role + " workspace shares the permission-filtered navigation");
+        await CheckAccess(roleClient, "/Account/EditProfile", HttpStatusCode.Redirect, role + " cannot self-edit staff profile");
+        await CheckAccess(roleClient, "/Account/ResetPassword?id=" + accountId, HttpStatusCode.Redirect, role + " cannot administer passwords");
         await CheckAccess(roleClient, allowed, HttpStatusCode.OK, role + " allowed page");
         await CheckAccess(roleClient, denied, HttpStatusCode.Redirect, role + " denied page");
         await CheckAccess(roleClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, role + " denied account administration");
@@ -195,6 +236,15 @@ try
             var receipt = await roleClient.GetStringAsync($"/HoaDon/Details/{bill.Id}");
             var receiptText = WebUtility.HtmlDecode(receipt);
             Check(receiptText.Contains("In hóa đơn") && receiptText.Contains("Món kiểm thử"), "Cashier views printable invoice");
+            foreach (var invalidVersion in new[] { "", "not-base64", "AQ==" })
+            {
+                using var invalid = await roleClient.PostAsync("/HoaDon/ConfirmCash", new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["__RequestVerificationToken"] = Hidden(receipt, "__RequestVerificationToken"),
+                    ["id"] = bill.Id.ToString(), ["rowVersion"] = invalidVersion
+                }));
+                Check(invalid.StatusCode == HttpStatusCode.BadRequest, "Malformed/missing invoice version is rejected without HTTP 500");
+            }
             using var paid = await roleClient.PostAsync("/HoaDon/ConfirmCash", new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["__RequestVerificationToken"] = Hidden(receipt, "__RequestVerificationToken"),
@@ -206,19 +256,28 @@ try
                 && bill.ThoiDiemThanhToan is not null, "Cash payment persisted");
             await CheckAccess(client, $"/HoaDon/Details/{bill.Id}", HttpStatusCode.OK, "Admin views paid invoice");
         }
-        if (role == "BoiBan")
         {
-            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()
+            var resetPath = "/Account/ResetPassword?id=" + accountId;
+            await Post("/Account/ResetPassword", await Get(resetPath), new()
+            {
+                ["Id"] = accountId.ToString(), ["AdminPassword"] = adminPassword,
+                ["NewPassword"] = adminPassword, ["ConfirmPassword"] = adminPassword
+            }, true);
+            await CheckAccess(roleClient, "/Account", HttpStatusCode.Redirect, role + " reset revokes old session");
+            await LoginAs(roleClient, email);
+        }
+        {
+            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/NhanVien/Edit/" + employee.Id), new()
             {
                 ["id"] = employee.Id.ToString(), ["locked"] = "true"
             }, true);
-            await CheckAccess(roleClient, "/BanAn", HttpStatusCode.Redirect, "Locked employee session denied");
-            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/TaiKhoanNhanVien"), new()
+            await CheckAccess(roleClient, allowed, HttpStatusCode.Redirect, role + " locked employee session denied");
+            await Post("/TaiKhoanNhanVien/SetLocked", await Get("/NhanVien/Edit/" + employee.Id), new()
             {
                 ["id"] = employee.Id.ToString(), ["locked"] = "false"
             }, true);
             await LoginAs(roleClient, email);
-            await CheckAccess(roleClient, "/BanAn", HttpStatusCode.OK, "Unlocked employee can log in");
+            await CheckAccess(roleClient, allowed, HttpStatusCode.OK, role + " unlocked employee can log in");
         }
     }
     var areaId = await db.KhuVuc.Where(x => x.DangSuDung).Select(x => x.Id).FirstAsync();
@@ -291,8 +350,9 @@ try
     {
         ["DinhMucItems[1].NguyenLieuId"] = ingredientId.ToString(), ["DinhMucItems[1].SoLuong"] = "10"
     }, false, "không được trùng");
-    await Post("/MonAn/Create", await Get("/MonAn/Create"), dishFields, true);
+    await Post("/MonAn/Create", await Get("/MonAn/Create"), new(dishFields) { ["TrangThai"] = "TamHet" }, true);
     var dishId = await db.MonAn.Where(x => x.TenMon == "TEST-DISH").Select(x => x.Id).SingleAsync();
+    Check(await db.MonAn.AnyAsync(x => x.Id == dishId && x.TrangThai == TrangThaiMon.DangPhucVu), "New dish always starts serving even when a different state is posted");
     var sizeId = await db.MonAnSize.Where(x => x.MonAnId == dishId).Select(x => x.Id).SingleAsync();
     Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId && x.NguyenLieuId == ingredientId && x.SoLuong == 120), "Recipe persisted with dish");
     await BlockDelete("NguyenLieu", ingredientId);
@@ -311,6 +371,17 @@ try
     Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId && x.SoLuong == 150), "Stale dish edit leaves recipe unchanged");
     var otherSize = await db.MonAnSize.Where(x => x.MonAnId != dishId).Select(x => x.Id).FirstAsync();
     await Post($"/MonAn/Edit/{dishId}", await Get($"/MonAn/Edit/{dishId}"), new(changedDish) { ["Sizes[0].Id"] = otherSize.ToString() }, false, "Size không thuộc");
+    var busyBill = new HoaDon { MaHoaDon = "TEST-TEMP-OUT", NhanVienId = await db.NhanVien.Select(x => x.Id).FirstAsync(),
+        ThoiDiemLap = DateTimeOffset.UtcNow, TongTienHang = 65000, TrangThai = TrangThaiHoaDon.ChuaThanhToan };
+    busyBill.ChiTiet.Add(new ChiTietHoaDon { MonAnId = dishId, MonAnSizeId = sizeId, TenMonLucBan = "TEST-DISH",
+        SoLuong = 1, DonGia = 65000, TrangThai = TrangThaiCheBien.ChoCheBien });
+    db.HoaDon.Add(busyBill); await db.SaveChangesAsync();
+    await Post($"/MonAn/Edit/{dishId}", await Get($"/MonAn/Edit/{dishId}"), new(changedDish) { ["TrangThai"] = "TamHet" }, true);
+    Check(await db.MonAn.AnyAsync(x => x.Id == dishId && x.TrangThai == TrangThaiMon.TamHet), "Temporary stockout is allowed without blocking an existing unpaid order");
+    Check(await db.HoaDon.AnyAsync(x => x.Id == busyBill.Id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan
+        && x.ChiTiet.Any(c => c.MonAnId == dishId && c.TrangThai == TrangThaiCheBien.ChoCheBien && c.DonGia == 65000 && c.SoLuong == 1)),
+        "Temporary stockout leaves existing cooking and payment state intact");
+    db.ChiTietHoaDon.RemoveRange(busyBill.ChiTiet); db.HoaDon.Remove(busyBill); await db.SaveChangesAsync();
     var ingredientIndex = WebUtility.HtmlDecode(await Get("/NguyenLieu?donViTinh=g"));
     Check(ingredientIndex.Contains("Tồn kho") && ingredientIndex.Contains("10000"), "Inventory reads posted receipt quantities");
     Check(!ingredientIndex.Contains("Xuất Excel") && !ingredientIndex.Contains("Chi nhánh Quận") && !ingredientIndex.Contains("ui-avatars.com"), "Ingredient UI removes nonfunctional mock controls");
@@ -385,19 +456,17 @@ try
 
     await InitDemoAccounts();
     await InitDemoAccounts();
-    Check(await db.NhanVien.CountAsync(x => x.MaNhanVien.StartsWith("DEMO-")) == 7,
-        "Demo bootstrap creates seven staff profiles only once");
+    Check(await db.NhanVien.CountAsync(x => x.MaNhanVien.StartsWith("DEMO-")) == 5,
+        "Demo bootstrap creates five staff profiles only once, plus standalone Admin and customer");
     foreach (var (email, allowed, denied) in new[]
     {
-        ("admin.demo@example.test", "/TaiKhoanNhanVien", "/Account/Denied"),
+        ("admin.demo@example.test", "/NhanVien", "/Account/Denied"),
         ("khach.demo@example.test", "/Account/ChangePassword", "/TaiKhoanNhanVien"),
-        ("tieptan.demo@example.test", "/QuanLyDatBan", "/BanAn"),
-        ("boiban.demo@example.test", "/BanAn", "/DanhMuc"),
+        ("tieptan.demo@example.test", "/QuanLyDatBan", "/BanAn/Create"),
+        ("boiban.demo@example.test", "/SoDoBan", "/DanhMuc"),
         ("thungan.demo@example.test", "/HoaDon", "/MonAn"),
-        ("bep.demo@example.test", "/Bep", "/MonAn"),
-        ("kho.demo@example.test", "/NguyenLieu", "/BanAn"),
-        ("thucdon.demo@example.test", "/MonAn", "/DanhMuc"),
-        ("danhmuc.demo@example.test", "/DanhMuc", "/MonAn")
+        ("bep.demo@example.test", "/Bep", "/DanhMuc"),
+        ("kho.demo@example.test", "/NguyenLieu", "/BanAn")
     })
     {
         using var demo = NewClient();
@@ -407,6 +476,8 @@ try
             await CheckAccess(demo, denied, HttpStatusCode.Redirect, email + " denied");
     }
 
+    await MenuSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
+    await TableSmoke.Run(db, client, NewClient, Hidden, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch
@@ -488,8 +559,7 @@ async Task InitAuth()
         WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
         UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
     };
-    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
-        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add(webDll);
     initializer.StartInfo.ArgumentList.Add("--init-auth");
     initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
     initializer.StartInfo.Environment["AuthBootstrap__AdminEmail"] = adminEmail;
@@ -509,8 +579,7 @@ async Task InitDemoAccounts()
         WorkingDirectory = Path.Combine(root, "RestaurantManagement.Web"),
         UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
     };
-    initializer.StartInfo.ArgumentList.Add(Path.Combine(initializer.StartInfo.WorkingDirectory,
-        "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll"));
+    initializer.StartInfo.ArgumentList.Add(webDll);
     initializer.StartInfo.ArgumentList.Add("--init-demo-accounts");
     initializer.StartInfo.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
     initializer.StartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";

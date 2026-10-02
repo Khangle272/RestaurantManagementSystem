@@ -9,22 +9,35 @@ public static class AppRoles
     public const string ThuNgan = "ThuNgan";
     public const string Bep = "Bep";
     public const string Kho = "Kho";
-    public const string ThucDon = "ThucDon";
-    public const string DanhMucMon = "DanhMucMon";
-
-    public const string NhanVien = Admin + "," + TiepTan + "," + BoiBan + "," + ThuNgan + "," + Bep + "," + Kho + "," + ThucDon + "," + DanhMucMon;
-    public static readonly string[] All = [Admin, KhachHang, TiepTan, BoiBan, ThuNgan, Bep, Kho, ThucDon, DanhMucMon];
-    public static readonly string[] AssignableStaff = [TiepTan, BoiBan, ThuNgan, Bep, Kho, ThucDon, DanhMucMon];
+    public const string NhanVien = Admin + "," + TiepTan + "," + BoiBan + "," + ThuNgan + "," + Bep + "," + Kho;
+    public static readonly string[] All = [Admin, KhachHang, TiepTan, BoiBan, ThuNgan, Bep, Kho];
+    public static readonly string[] AssignableStaff = [TiepTan, BoiBan, ThuNgan, Bep, Kho];
+    public static string Label(string? role) => role switch
+    {
+        Admin => "Quản lý", KhachHang => "Khách hàng", TiepTan => "Tiếp tân",
+        BoiBan => "Phục vụ", ThuNgan => "Thu ngân", Bep => "Quản lý bếp", Kho => "Kho",
+        "ThucDon" or "DanhMucMon" => "Vai trò cũ — cần phân công lại",
+        _ => role ?? "Chưa cấp tài khoản"
+    };
+    public static string? RoleForJob(string? job) => job?.Trim() switch
+    {
+        Admin or "Quản lý" or "Quản trị" => Admin,
+        TiepTan or "Tiếp tân" or "Lễ tân" => TiepTan,
+        BoiBan or "Bồi bàn" or "Phục vụ" => BoiBan,
+        ThuNgan or "Thu ngân" => ThuNgan,
+        Bep or "Bếp" or "Đầu bếp" or "Quản lý bếp" => Bep,
+        Kho or "Nhân viên kho" => Kho,
+        _ => null
+    };
     public static string? StaffDestination(string role) => role switch
     {
-        ThucDon => "MonAn", DanhMucMon => "DanhMuc", TiepTan => "QuanLyDatBan",
-        BoiBan => "BanAn", ThuNgan => "HoaDon", Kho => "NguyenLieu", Bep => "Bep", _ => null
+        TiepTan => "QuanLyDatBan",
+        BoiBan => "SoDoBan", ThuNgan => "HoaDon", Kho => "NguyenLieu", Bep => "Bep", _ => null
     };
     public static string StaffLabel(string role) => role switch
     {
         TiepTan => "Tiếp tân · Đặt bàn", BoiBan => "Bồi bàn · Bàn ăn",
-        ThuNgan => "Thu ngân · Hóa đơn", Bep => "Bếp · Chế biến",
-        Kho => "Kho · Nguyên liệu", ThucDon => "Thực đơn · Món ăn, size & combo",
-        DanhMucMon => "Thực đơn · Danh mục món", _ => role
+        ThuNgan => "Thu ngân · Hóa đơn", Bep => "Quản lý bếp · Điều phối & chuẩn bị món",
+        Kho => "Kho · Nguyên liệu", _ => Label(role)
     };
 }

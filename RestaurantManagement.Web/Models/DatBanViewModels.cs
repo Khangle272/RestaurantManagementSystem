@@ -22,7 +22,7 @@ public class DatBanCreateVM : IValidatableObject
 
     [Required(ErrorMessage = "Vui lòng chọn thời gian đến.")]
     [Display(Name = "Thời gian đến")]
-    public DateTime ThoiGianDen { get; set; } = DateTime.Now.AddHours(2);
+    public DateTime ThoiGianDen { get; set; } = Services.TableService.VietnamNow.AddHours(2);
 
     [Range(1, 50, ErrorMessage = "Số lượng khách từ 1 đến 50 người.")]
     [Display(Name = "Số lượng khách")]
@@ -39,7 +39,7 @@ public class DatBanCreateVM : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (ThoiGianDen <= DateTime.Now.AddMinutes(29))
+        if (ThoiGianDen <= Services.TableService.VietnamNow.AddMinutes(29) || ThoiGianDen > Services.TableService.VietnamNow.AddDays(180))
         {
             yield return new ValidationResult(
                 "Thời gian đến phải lớn hơn thời gian hiện tại ít nhất 30 phút.",
@@ -61,6 +61,7 @@ public class DatBanLookupVM
 
 public class DatBanItemVM
 {
+    public string RowVersion { get; set; } = "";
     public int MaDatBan { get; set; }
     public string BookingCode { get; set; } = "";
     public string HoTen { get; set; } = "";
