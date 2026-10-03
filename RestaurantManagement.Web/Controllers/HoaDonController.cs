@@ -9,7 +9,7 @@ using RestaurantManagement.Web.Security;
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
-public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users) : Controller
+public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users, RestaurantManagement.Web.Services.OrderService orderService) : Controller
 {
     public async Task<IActionResult> Index(bool daThanhToan = false)
     {
@@ -77,5 +77,34 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         }
         TempData["Success"] = "Đã xác nhận thu tiền mặt.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ThanhToan(RestaurantManagement.Web.Models.PaymentFormModel form)
+    {
+        if (!int.TryParse(users.GetUserId(User), out var accountId)) return Challenge();
+        var cashierId = await db.NhanVien.AsNoTracking()
+            .Where(x => x.TaiKhoanId == accountId && x.DangLamViec)
+            .Select(x => x.Id).SingleOrDefaultAsync();
+
+        if (cashierId == 0 && User.IsInRole(AppRoles.Admin))
+        {
+            cashierId = await db.NhanVien.AsNoTracking().Where(x => x.DangLamViec).Select(x => x.Id).FirstOrDefaultAsync();
+        }
+
+        if (cashierId == 0) return Forbid();
+
+        var error = await orderService.ProcessPaymentAsync(form, cashierId);
+        if (error != null)
+        {
+            TempData["Error"] = error;
+        }
+        else
+        {
+            TempData["Success"] = $"Đã thanh toán hóa đơn thành công bằng hình thức {form.PhuongThuc}.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id = form.Id });
     }
 }

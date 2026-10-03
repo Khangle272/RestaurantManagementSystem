@@ -22,11 +22,16 @@
                 <label class="table-select small"><input class="form-check-input me-2" type="checkbox" name="banAnIds" value="@table.Id" form="assign-booking"
                     data-seats="@table.SoChoNgoi" data-area="@table.KhuVucId" data-suggested="@(card.IsSuggested ? "true" : "false")" checked="@card.IsSelected" disabled="@(!card.CanChoose)" />Chọn bàn này</label>
             } else if (Model.Booking is null && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (table.TrangThai == TrangThaiBan.CanDon || table.TrangThai == TrangThaiBan.DangPhucVu)) {
-                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="mt-auto pt-2">
+                <div class="mt-auto pt-2 d-flex flex-column gap-1">
+                @if (table.TrangThai == TrangThaiBan.DangPhucVu) {
+                    <a asp-controller="DonHang" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-primary w-100">Gọi món / Order</a>
+                }
+                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100">
                     <input type="hidden" name="id" value="@table.Id" /><input type="hidden" name="rowVersion" value="@card.Version" />
                     <input type="hidden" name="clean" value="@(table.TrangThai == TrangThaiBan.CanDon ? "true" : "false")" />
                     <button class="btn btn-sm btn-outline-success w-100" type="submit">@(table.TrangThai == TrangThaiBan.CanDon ? "Dọn xong" : "Kết thúc phục vụ")</button>
                 </form>
+                </div>
             }
             @if (Model.Booking is null && reception && area.DangSuDung && table.TrangThai != TrangThaiBan.NgungSuDung) { <a asp-controller="QuanLyDatBan" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-outline-success mt-2">Đặt lịch tại bàn này</a> }
         </article>

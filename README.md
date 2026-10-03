@@ -94,7 +94,19 @@ Sơ đồ bàn ở `/SoDoBan`; Tiếp tân tạo yêu cầu đặt bàn cho khá
 Sơ đồ có danh sách yêu cầu bên cạnh và gợi ý bàn phù hợp theo lịch/sức chứa/khu vực/VIP. Bấm mã bàn để tạo yêu cầu điền sẵn bàn; gợi ý và chọn bàn chưa giữ chỗ, vẫn cần tiếp tân xác nhận để server kiểm tra lại.
 Thanh toán không tự trả bàn: bồi bàn bấm **Kết thúc phục vụ** sau khi xử lý xong và đủ điều kiện thanh toán, sau đó bấm **Dọn xong** để bàn sẵn sàng.
 
-Xem **NHAT_KY_Y_TUONG_VA_TIEN_DO.md** để biết ma trận 7 vai trò (6 nội bộ + Khách), bộ demo đủ vai trò, các phần đã bổ sung và bàn giao cần tiếp tục. Không còn hai role `ThucDon`/`DanhMucMon`: Admin quản lý danh mục/giá/combo/duyệt mở bán, Quản lý bếp chuẩn bị nội dung kỹ thuật trên màn hình riêng, không có quyền sửa giá. Món Bếp tạo/sửa phải được Admin duyệt lại trước khi public.
+Màn hình POS gọi món và quản lý đơn hàng tại `/DonHang`:
+- Tạo đơn gọi món tại bàn đang phục vụ, đơn mang đi hoặc giao hàng tận nơi (`/DonHang/Create`) kèm giỏ hàng tức thì, phân loại danh mục, tìm kiếm món, chọn kích cỡ món và ghi chú riêng từng món.
+- Gọi thêm món vào đơn đang mở (`/DonHang/AddDishes`), lưu snapshot tên size và thời điểm gọi để bếp chế biến theo thứ tự vào trước ra trước (FIFO).
+- Bếp theo dõi và chế biến món tại màn hình KDS `/Bep` (`ChoCheBien` → `DangCheBien` → `SanSang`).
+- Bồi bàn / Tiếp tân / Admin xác nhận món đã mang ra bàn (`SanSang` → `DaPhucVu`) tại trang chi tiết `/DonHang/Details/{id}`, giải phóng hoàn toàn điều kiện kết thúc phục vụ bàn. Hỗ trợ hủy món chưa nấu (`ChoCheBien` → `DaHuy`) và tự động khấu trừ tiền hóa đơn.
+
+Thanh toán đa hình thức tại `/HoaDon/Details/{id}`:
+- **Tiền mặt**: Nhập số tiền khách đưa, tự động tính tiền thối lại và kiểm tra đủ tiền thanh toán.
+- **Chuyển khoản ngân hàng (VietQR)**: Sinh mã QR động chuẩn Napas/VietQR (MBBank 999988889999) kèm nội dung chuyển khoản tự động và lưu mã giao dịch ngân hàng.
+- **Quẹt thẻ POS**: Lưu thông tin loại thẻ (Visa, MasterCard, JCB, Napas), 4 số cuối và mã chuẩn chi giao dịch.
+- Tự động khấu trừ tiền cọc đặt bàn và áp dụng mã giảm giá voucher; in hóa đơn tức thì chuẩn định dạng in nhiệt K80 và khổ A5.
+
+Xem **NHAT_KY_Y_TUONG_VA_TIEN_DO.md** để biết ma trận 7 vai trò (6 nội bộ + Khách), bộ demo đủ vai trò, các phần đã bổ sung và bàn giao chi tiết. Không còn hai role `ThucDon`/`DanhMucMon`: Admin quản lý danh mục/giá/combo/duyệt mở bán, Quản lý bếp chuẩn bị nội dung kỹ thuật trên màn hình riêng, không có quyền sửa giá. Món Bếp tạo/sửa phải được Admin duyệt lại trước khi public.
 Nhân viên xem trang nhà hàng được nhưng không thấy nút đặt bàn của khách. Dọn role/tài khoản mẫu cũ trên database Development bằng `--remove-retired-menu-roles` theo hướng dẫn và điều kiện bảo toàn lịch sử trong nhật ký; không tự xóa lúc khởi động.
 
-Kiểm chứng bản cập nhật ngày 02/10/2026: build **0 cảnh báo, 0 lỗi**, **PASS: 481 HTTP/database checks** trên database tạm đã dọn. Xem mục 5–7 của nhật ký để biết phần đã có và điểm còn thiếu; hiện chưa có UI xác nhận món đã mang ra (`SanSang` → `DaPhucVu`), nên TV2 cần nối bước này trước khi demo trọn luồng kết thúc bàn có món. Không coi build/test đạt là toàn bộ đồ án đã hoàn thành.
+Kiểm chứng bản cập nhật ngày 03/10/2026: build **0 cảnh báo, 0 lỗi**, **PASS: 532 HTTP/database checks** trên database tạm đã dọn. Hệ thống đã hoàn thiện liên thông luồng nghiệp vụ trọn vẹn: Đặt bàn/Xếp bàn → Gọi món POS/Thêm món → KDS Bếp chế biến → Phục vụ bàn → Thanh toán đa phương thức & In bill → Kết thúc phục vụ & Dọn bàn sẵn sàng.

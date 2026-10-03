@@ -66,10 +66,12 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<MonDatTruoc>().HasOne(x => x.DatBan).WithMany(x => x.MonDatTruoc).HasForeignKey(x => x.DatBanId);
         b.Entity<MonDatTruoc>().HasOne(x => x.MonAnSize).WithMany().HasForeignKey(x => x.MonAnSizeId);
         b.Entity<HoaDon>().HasIndex(x => x.MaHoaDon).IsUnique();
+        b.Entity<HoaDon>().Property(x => x.LoaiDonHang).HasDefaultValue(LoaiDonHang.TaiBan);
         b.Entity<HoaDon>().HasOne(x => x.DatBan).WithMany(x => x.HoaDon).HasForeignKey(x => x.DatBanId);
         b.Entity<HoaDon>().HasOne(x => x.Voucher).WithMany().HasForeignKey(x => x.VoucherId);
         b.Entity<HoaDon>().Property(x => x.TongThanhToan)
             .HasComputedColumnSql("[TongTienHang]-[TienGiam]-[TienCocDaTru]", stored: true);
+        b.Entity<ChiTietHoaDon>().Property(x => x.ThoiDiemGoi).HasDefaultValueSql("SYSDATETIMEOFFSET()");
         b.Entity<ChiTietHoaDon>().HasOne(x => x.HoaDon).WithMany(x => x.ChiTiet).HasForeignKey(x => x.HoaDonId);
         b.Entity<ChiTietHoaDon>().HasOne(x => x.MonAnSize).WithMany().HasForeignKey(x => x.MonAnSizeId);
         b.Entity<ChiTietHoaDon>().HasOne(x => x.MonDatTruoc).WithOne().HasForeignKey<ChiTietHoaDon>(x => x.MonDatTruocId);
