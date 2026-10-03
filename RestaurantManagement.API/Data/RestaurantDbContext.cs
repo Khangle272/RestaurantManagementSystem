@@ -28,6 +28,8 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
     public DbSet<ChiTietPhieuNhap> ChiTietPhieuNhap => Set<ChiTietPhieuNhap>();
     public DbSet<PhieuXuat> PhieuXuat => Set<PhieuXuat>();
     public DbSet<ChiTietPhieuXuat> ChiTietPhieuXuat => Set<ChiTietPhieuXuat>();
+    public DbSet<PhieuThanhLy> PhieuThanhLy => Set<PhieuThanhLy>();
+    public DbSet<ChiTietPhieuThanhLy> ChiTietPhieuThanhLy => Set<ChiTietPhieuThanhLy>();
     public DbSet<KhuyenMai> KhuyenMai => Set<KhuyenMai>();
     public DbSet<KhuyenMaiMon> KhuyenMaiMon => Set<KhuyenMaiMon>();
     public DbSet<Voucher> Voucher => Set<Voucher>();
@@ -80,6 +82,10 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<DinhMucMon>().HasKey(x => new { x.MonAnId, x.NguyenLieuId });
         b.Entity<PhieuNhap>().HasIndex(x => x.MaPhieu).IsUnique();
         b.Entity<PhieuXuat>().HasIndex(x => x.MaPhieu).IsUnique();
+        b.Entity<PhieuThanhLy>().HasIndex(x => x.MaPhieu).IsUnique();
+        b.Entity<PhieuThanhLy>().HasOne(x => x.NhanVien).WithMany().HasForeignKey(x => x.NhanVienId);
+        b.Entity<ChiTietPhieuThanhLy>().HasOne(x => x.PhieuThanhLy).WithMany(x => x.ChiTiet).HasForeignKey(x => x.PhieuThanhLyId);
+        b.Entity<ChiTietPhieuThanhLy>().HasOne(x => x.NguyenLieu).WithMany().HasForeignKey(x => x.NguyenLieuId);
         b.Entity<ChiTietPhieuXuat>().HasOne(x => x.LoNhap).WithMany().HasForeignKey(x => x.ChiTietPhieuNhapId);
         b.Entity<KhuyenMaiMon>().HasKey(x => new { x.KhuyenMaiId, x.MonAnId });
         b.Entity<Voucher>().HasIndex(x => x.Ma).IsUnique();
@@ -104,6 +110,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<PhieuNhap>(b, "NhaCungCap", "[LyDo]<>'MuaHang' OR [NhaCungCapId] IS NOT NULL");
         Check<ChiTietPhieuNhap>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
         Check<ChiTietPhieuXuat>(b, "SoLuong", "[SoLuong]>0");
+        Check<ChiTietPhieuThanhLy>(b, "LuongGia", "[SoLuong]>0 AND [DonGiaVon]>=0");
         Check<KhuyenMai>(b, "DieuKien", "[KetThuc]>[BatDau] AND [GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND [ThuTuApDung]>=0");
         Check<Voucher>(b, "Luot", "[GioiHanTongLuot]>0");
         Check<DanhGia>(b, "Diem", "[Diem] BETWEEN 1 AND 5");
@@ -121,7 +128,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
             {
                 if (p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?))
                 {
-                    bool quantity = p.Name is "SoLuong" or "NguongCanhBao";
+                    bool quantity = p.Name is "SoLuong" or "NguongCanhBao" or "SoLuongTon";
                     b.Entity(entity.ClrType).Property(p.Name).HasPrecision(18, quantity ? 6 : 2);
                 }
                 if (p.ClrType.IsEnum)

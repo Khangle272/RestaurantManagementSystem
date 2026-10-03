@@ -30,7 +30,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     {
         var path = context.Request.Path.Value ?? "";
         var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien",
-            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword" };
+            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword",
+            "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap" };
         var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
             || path.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)) ? "/admin" : "/Account/Login";
         context.Response.Redirect(login + "?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));

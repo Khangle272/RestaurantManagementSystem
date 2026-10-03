@@ -1,0 +1,297 @@
+@model PhieuThanhLyCreateVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Lập Biên Bản Thanh Lý / Tiêu Hủy";
+    var nguyenLieuList = ViewBag.NguyenLieuList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>Lập Biên Bản Thanh Lý / Tiêu Hủy</h1>
+            <p class="text-muted mb-0">Tiêu hủy nguyên liệu hư hỏng, ẩm mốc hoặc hết hạn; giảm trừ tồn kho và ghi nhận chi phí thiệt hại.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-brand-outline">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <form asp-action="Create" method="post" id="formThanhLy">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <!-- Master Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-subtle">
+                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin biên bản tiêu hủy</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label asp-for="NgayThanhLy" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
+                        <input asp-for="NgayThanhLy" type="datetime-local" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" required />
+                        <span asp-validation-for="NgayThanhLy" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="LyDoThanhLy" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
+                        <select asp-for="LyDoThanhLy" class="form-select" required>
+                            <option value="Hết hạn sử dụng">Hết hạn sử dụng (Quá date)</option>
+                            <option value="Hư hỏng / ẩm mốc">Hư hỏng / Ẩm mốc trong kho</option>
+                            <option value="Rơi vỡ / sơ chế hỏng">Rơi vỡ / Sơ chế hỏng trong ca</option>
+                            <option value="Lỗi bảo quản thiết bị lạnh">Lỗi bảo quản (Mất điện tủ đông)</option>
+                            <option value="Khác">Lý do khác (Ghi rõ bên dưới)</option>
+                        </select>
+                        <span asp-validation-for="LyDoThanhLy" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="GhiChu" class="form-label fw-semibold"></label>
+                        <input asp-for="GhiChu" class="form-control" placeholder="Biên bản số, nhân chứng kiểm kê..." />
+                        <span asp-validation-for="GhiChu" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-subtle d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-list-task me-2 text-danger"></i>Danh mục mặt hàng tiêu hủy</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnThemDong">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm nguyên liệu
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-admin align-middle mb-0" id="bangChiTiet">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th style="min-width: 260px;">Nguyên Liệu Tiêu Hủy <span class="text-danger">*</span></th>
+                                <th style="width: 130px;">Tồn Kho Hiện Có</th>
+                                <th style="width: 90px;">ĐVT</th>
+                                <th style="width: 160px;">Số Lượng Hủy <span class="text-danger">*</span></th>
+                                <th style="width: 140px;" class="text-end">Đơn Giá Vốn</th>
+                                <th style="width: 160px;" class="text-end">Thiệt Hại (VNĐ)</th>
+                                <th style="width: 200px;">Ghi Chú Tình Trạng</th>
+                                <th style="width: 60px;" class="text-center">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chiTietRows">
+                            <!-- Rows added dynamically via JS -->
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="fw-bold py-3 text-secondary">
+                                    Tổng cộng: <span id="lblTongSoMatHang" class="badge bg-secondary">0 mặt hàng</span>
+                                </td>
+                                <td colspan="3" class="text-end fw-bold text-dark fs-5 py-3">
+                                    Tổng thiệt hại ước tính:
+                                </td>
+                                <td class="text-end fw-bold text-danger fs-4 py-3" id="lblTongTien">
+                                    0 VNĐ
+                                </td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white py-3 border-subtle">
+                <div class="alert alert-danger mb-0 d-flex align-items-center gap-2 small">
+                    <i class="bi bi-exclamation-octagon-fill fs-5 text-danger"></i>
+                    <div>
+                        <strong>Lưu ý:</strong> Số lượng thanh lý không được vượt quá số lượng tồn kho thực tế. Toàn bộ giá trị tiêu hủy sẽ được hạch toán vào chi phí tổn thất của nhà hàng.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="d-flex justify-content-end gap-2 mb-5">
+            <a asp-action="Index" class="btn btn-brand-outline">Hủy bỏ</a>
+            <button type="submit" class="btn btn-brand-primary btn-lg shadow-sm" id="btnSubmit">
+                <i class="bi bi-check2-circle me-1"></i> Xác Nhận Thanh Lý & Hạch Toán Thiệt Hại
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Raw data for JS ingredients lookup -->
+<script type="application/json" id="rawIngredients">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(nguyenLieuList))
+</script>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const rawData = JSON.parse(document.getElementById("rawIngredients").textContent);
+        const rowsContainer = document.getElementById("chiTietRows");
+        const btnThemDong = document.getElementById("btnThemDong");
+        const lblTongSoMatHang = document.getElementById("lblTongSoMatHang");
+        const lblTongTien = document.getElementById("lblTongTien");
+        const btnSubmit = document.getElementById("btnSubmit");
+        let rowIndex = 0;
+
+        function addRow(preselectedId = null, preQty = 1) {
+            const tr = document.createElement("tr");
+            tr.className = "item-row";
+            tr.dataset.index = rowIndex;
+
+            let optionsHtml = '<option value="">-- Chọn nguyên liệu thanh lý --</option>';
+            rawData.forEach(item => {
+                const selected = preselectedId && item.Id === preselectedId ? "selected" : "";
+                optionsHtml += `<option value="${item.Id}" data-dvt="${item.DonViTinh}" data-stock="${item.SoLuongTon}" data-price="${item.DonGia}" ${selected}>${item.TenNguyenLieu} (Tồn: ${item.SoLuongTon} ${item.DonViTinh})</option>`;
+            });
+
+            tr.innerHTML = `
+                <td class="stt-cell text-muted fw-semibold">${rowIndex + 1}</td>
+                <td>
+                    <select name="ChiTiets[${rowIndex}].MaNguyenLieu" class="form-select select-nguyenlieu" required>
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <span class="badge bg-light text-dark border text-stock fw-bold">0</span>
+                </td>
+                <td>
+                    <span class="badge bg-light text-secondary border text-unit">—</span>
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0.01" name="ChiTiets[${rowIndex}].SoLuong" class="form-control input-soluong" value="${preQty}" required />
+                    <div class="error-feedback text-danger small mt-1 d-none"><i class="bi bi-x-circle me-1"></i>Vượt tồn kho!</div>
+                </td>
+                <td class="text-end text-dongia text-muted">
+                    0 VNĐ
+                </td>
+                <td class="text-end fw-bold text-danger text-thanhtien">
+                    0 VNĐ
+                </td>
+                <td>
+                    <input type="text" name="ChiTiets[${rowIndex}].GhiChu" class="form-control form-control-sm" placeholder="Mô tả hư hỏng..." />
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-xoadong" title="Xóa dòng này">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            rowsContainer.appendChild(tr);
+
+            const selectEl = tr.querySelector(".select-nguyenlieu");
+            const stockEl = tr.querySelector(".text-stock");
+            const dvtEl = tr.querySelector(".text-unit");
+            const priceEl = tr.querySelector(".text-dongia");
+
+            function updateFromSelection() {
+                const sel = selectEl.options[selectEl.selectedIndex];
+                if (sel && sel.value) {
+                    const stock = parseFloat(sel.dataset.stock) || 0;
+                    const price = parseFloat(sel.dataset.price) || 0;
+                    stockEl.textContent = stock.toLocaleString("vi-VN");
+                    dvtEl.textContent = sel.dataset.dvt || "—";
+                    priceEl.textContent = price.toLocaleString("vi-VN") + " VNĐ";
+                    tr.dataset.stock = stock;
+                    tr.dataset.price = price;
+                } else {
+                    stockEl.textContent = "0";
+                    dvtEl.textContent = "—";
+                    priceEl.textContent = "0 VNĐ";
+                    tr.dataset.stock = 0;
+                    tr.dataset.price = 0;
+                }
+                updateRow(tr);
+            }
+
+            selectEl.addEventListener("change", updateFromSelection);
+            tr.querySelector(".input-soluong").addEventListener("input", () => updateRow(tr));
+
+            tr.querySelector(".btn-xoadong").addEventListener("click", function () {
+                tr.remove();
+                reindexRows();
+                updateTotals();
+            });
+
+            updateFromSelection();
+            rowIndex++;
+            reindexRows();
+            updateTotals();
+        }
+
+        function updateRow(tr) {
+            const qtyInput = tr.querySelector(".input-soluong");
+            const errorDiv = tr.querySelector(".error-feedback");
+            const qty = parseFloat(qtyInput.value) || 0;
+            const stock = parseFloat(tr.dataset.stock) || 0;
+            const price = parseFloat(tr.dataset.price) || 0;
+
+            if (qty > stock) {
+                qtyInput.classList.add("is-invalid");
+                errorDiv.classList.remove("d-none");
+            } else {
+                qtyInput.classList.remove("is-invalid");
+                errorDiv.classList.add("d-none");
+            }
+
+            const total = qty * price;
+            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " VNĐ";
+            updateTotals();
+        }
+
+        function reindexRows() {
+            const rows = rowsContainer.querySelectorAll(".item-row");
+            rows.forEach((r, idx) => {
+                r.querySelector(".stt-cell").textContent = idx + 1;
+                r.querySelector(".select-nguyenlieu").name = `ChiTiets[${idx}].MaNguyenLieu`;
+                r.querySelector(".input-soluong").name = `ChiTiets[${idx}].SoLuong`;
+                const note = r.querySelector("input[placeholder='Mô tả hư hỏng...']");
+                if (note) note.name = `ChiTiets[${idx}].GhiChu`;
+            });
+            lblTongSoMatHang.textContent = `${rows.length} mặt hàng`;
+        }
+
+        function updateTotals() {
+            let sum = 0;
+            let hasError = false;
+            const rows = rowsContainer.querySelectorAll(".item-row");
+
+            rows.forEach(tr => {
+                const qtyInput = tr.querySelector(".input-soluong");
+                const qty = parseFloat(qtyInput.value) || 0;
+                const stock = parseFloat(tr.dataset.stock) || 0;
+                const price = parseFloat(tr.dataset.price) || 0;
+
+                if (qty <= 0 || qty > stock) {
+                    hasError = true;
+                }
+                sum += qty * price;
+            });
+
+            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " VNĐ";
+
+            if (rows.length === 0 || hasError) {
+                btnSubmit.disabled = true;
+            } else {
+                btnSubmit.disabled = false;
+            }
+        }
+
+        btnThemDong.addEventListener("click", () => addRow());
+
+        if (rawData.length > 0) {
+            addRow(rawData[0].Id, 1);
+        } else {
+            addRow();
+        }
+
+        document.getElementById("formThanhLy").addEventListener("submit", function (e) {
+            const rows = rowsContainer.querySelectorAll(".item-row");
+            if (rows.length === 0) {
+                e.preventDefault();
+                alert("Vui lòng thêm ít nhất một nguyên liệu cần thanh lý.");
+            }
+        });
+    });
+</script>
+}

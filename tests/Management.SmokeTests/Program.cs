@@ -479,6 +479,7 @@ try
     await MenuSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
     await TableSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.OrderSmoke.Run(db, client, NewClient, Hidden, Check);
+    await InventorySmoke.Run(db, client, NewClient, Hidden, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch

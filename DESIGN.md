@@ -392,3 +392,71 @@ Tích hợp vào Layout Quản trị `_AdminLayout.cshtml`, màu nền tối Sid
 * Bảng thống kê điểm hài lòng trung bình (Điểm sao trung bình, số lượt đánh giá).
 * Danh sách nhận xét của khách: Hiển thị ngày giờ, mã đơn đặt, số sao, nội dung nhận xét của khách và ảnh đính kèm (nếu có).
 * Khung phản hồi của Quản lý: Form nhập câu trả lời của nhà hàng và gửi phản hồi công khai đến khách hàng.
+
+---
+
+### 8. ĐẶC TẢ GIAO DIỆN PHÂN HỆ QUẢN LÝ KHO NGUYÊN LIỆU (WEEK 8)
+Tuân thủ toàn bộ Design Tokens tại Mục 1: Primary Rose (#E11D48), Dark Navy (#0F172A), Amber (#F59E0B), Emerald (#10B981) và nền Slate (#F8FAFC).
+
+#### 8.1. Màn hình Quản lý Nhà cung cấp (`Views/NhaCungCap/Index.cshtml`)
+- **Summary Cards (Đầu trang):**
+  + Card 1: Tổng số Nhà cung cấp đang quản lý.
+  + Card 2: Nhà cung cấp đang hoạt động/giao dịch tích cực (Badge Emerald).
+  + Card 3: Nhà cung cấp tạm ngưng hợp tác.
+- **Toolbar & Bộ lọc:**
+  + Ô tìm kiếm nhanh: Tìm theo Mã NCC, Tên NCC, SĐT hoặc Mã số thuế.
+  + Dropdown trạng thái: "Tất cả", "Đang hợp tác", "Ngừng hợp tác".
+  + Nút CTA chính: `+ Thêm Nhà Cung Cấp` (Nút Rose #E11D48, mở Modal).
+- **Bảng dữ liệu Nhà cung cấp:**
+  + Cột: Mã NCC (#NCC001), Tên đơn vị (In đậm), Người liên hệ, Điện thoại, Email, Địa chỉ, Trạng thái (Pill xanh/xám), Thao tác (Xem lịch sử nhập, Sửa, Đổi trạng thái).
+- **Modal Thêm/Sửa Nhà Cung Cấp:**
+  + Bố cục Form Grid 2 cột: Tên NCC (Required), Mã số thuế, Người liên hệ, Số điện thoại (Required, Regex Phone), Email, Địa chỉ kho/văn phòng, Ghi chú.
+
+#### 8.2. Màn hình Quản lý Nhập kho (`Views/NhapKho/Index.cshtml` & `Create.cshtml`)
+- **Danh sách phiếu nhập (`Index.cshtml`):**
+  + Bảng phiếu nhập: Số phiếu (`PN-YYYYMMDD-XXXX`), Ngày nhập, Nhà cung cấp, Nhân viên lập phiếu, Tổng tiền hàng (Format VNĐ), Trạng thái ("Đã nhập kho" - Xanh, "Lưu tạm" - Vàng, "Đã hủy" - Đỏ), Thao tác (Xem chi tiết/In phiếu, Hủy phiếu).
+  + Bộ lọc: Khoảng ngày nhập (Từ ngày - Đến ngày), lọc theo Nhà cung cấp.
+  + Nút CTA: `+ Lập Phiếu Nhập Kho` dẫn sang trang `Create.cshtml`.
+- **Giao diện Tạo phiếu nhập kho (`Create.cshtml` - Bố cục Master-Detail):**
+  + *Khối Thông tin chung (Master - Phía trên hoặc Cột trái 35%):* Chọn Nhà cung cấp (Select2/Searchable dropdown), Ngày nhập, Số hóa đơn đỏ/chứng từ kèm theo, Ghi chú nhập hàng.
+  + *Khối Danh sách hàng nhập (Detail - Bảng động bên phải/phía dưới):*
+    - Thanh chọn nhanh: Dropdown chọn Nguyên liệu + Số lượng + Đơn vị tính + Đơn giá nhập + Hạn sử dụng (Date picker) + Nút "+ Thêm dòng".
+    - Bảng chi tiết: STT, Tên nguyên liệu, ĐVT, Số lượng, Đơn giá nhập, Thành tiền, HSD, Nút xóa dòng.
+    - Chân bảng: Tổng số lượng mặt hàng, **Tổng tiền thanh toán** (Chữ to màu đỏ #E11D48).
+  + *Nút hành động cuối trang:* "Lưu tạm", "Hủy bỏ" (Outline button) và "Xác nhận Nhập kho & Tăng tồn" (Primary Rose button).
+
+#### 8.3. Màn hình Quản lý Xuất kho phục vụ chế biến (`Views/XuatKho/Index.cshtml` & `Create.cshtml`)
+- **Danh sách phiếu xuất (`Index.cshtml`):**
+  + Bảng phiếu xuất: Số phiếu (`PX-YYYYMMDD-XXXX`), Ngày xuất, Bộ phận nhận (Bếp nóng, Bếp lạnh, Bar), Nhân viên xuất, Lý do xuất ("Phục vụ ca sáng", "Bổ sung đột xuất"), Trạng thái, Thao tác (Xem chi tiết/In phiếu).
+- **Giao diện Lập phiếu xuất kho (`Create.cshtml`):**
+  + Thông tin chung: Bộ phận/Người nhận hàng, Ngày xuất, Ca làm việc, Ghi chú.
+  + Bảng chọn nguyên liệu xuất:
+    - Hiển thị cột: Tên nguyên liệu | Tồn kho hiện tại | Số lượng xuất | ĐVT.
+    - Ràng buộc trực quan: Ô nhập số lượng xuất tự động báo lỗi đỏ và chặn bấm lưu nếu số lượng xuất > số lượng tồn hiện có.
+
+#### 8.4. Màn hình Theo dõi tồn kho & Cảnh báo sắp hết (`Views/Kho/TonKho.cshtml`)
+- **Thẻ cảnh báo nổi bật (Stock Alert Banner):**
+  + Thanh Alert màu cam/vàng: *"Hiện có X nguyên liệu đang dưới định mức an toàn và Y nguyên liệu đã cạn kho. Vui lòng tạo phiếu nhập hàng!"* kèm nút thao tác nhanh `Lập phiếu nhập ngay`.
+- **Bảng dữ liệu Tồn kho chi tiết:**
+  + Cột: Mã NL, Tên nguyên liệu, Danh mục, ĐVT, Tồn kho thực tế, Định mức tối thiểu, Giá trị vốn tồn kho (= Tồn * Giá nhập), Trạng thái (Pill: "An toàn" - Xanh lá, "Sắp hết" - Vàng, "Cạn kho" - Đỏ), Thao tác (Nhập thêm, Lịch sử thẻ kho).
+- **Bộ lọc thông minh:**
+  + Switch Toggle: "Chỉ hiển thị nguyên liệu cần cảnh báo nhập hàng".
+  + Dropdown lọc theo Danh mục nguyên liệu (Thịt, Hải sản, Rau củ, Gia vị, Đồ khô...).
+
+#### 8.5. Màn hình Quản lý Thanh lý / Hủy nguyên liệu (`Views/ThanhLy/Index.cshtml` & `Create.cshtml`)
+- **Danh sách phiếu thanh lý (`Index.cshtml`):**
+  + Hiển thị các đợt tiêu hủy hoặc thanh lý nguyên vật liệu hỏng/hết hạn.
+  + Cột: Số phiếu (`TL-YYYYMMDD-XXXX`), Ngày lập, Nhân viên lập, Lý do (Hết hạn / Ẩm mốc hư hỏng / Đổ vỡ), Tổng giá trị thiệt hại (VNĐ), Thao tác (Xem chi tiết).
+- **Giao diện Lập phiếu thanh lý (`Create.cshtml`):**
+  + Form Master: Chọn Ngày thanh lý, Lý do chính (Dropdown: Hết hạn sử dụng, Hư hỏng/ẩm mốc, Rơi vỡ/sơ chế hỏng, Khác), Biên bản xác nhận.
+  + Bảng Detail: Chọn nguyên liệu cần thanh lý, Số lượng hủy (kiểm tra <= Tồn kho), Đơn giá vốn, Thành tiền thiệt hại, Ghi chú tình trạng từng món.
+
+#### 8.6. Màn hình Báo cáo Nhập - Xuất - Tồn (`Views/Kho/BaoCaoTonKho.cshtml`)
+- **Bộ điều khiển báo cáo (Control Bar):**
+  + Chọn khoảng thời gian: Dropdown (Hôm nay, Tuần này, Tháng này, Tháng trước, Tùy chọn Từ ngày - Đến ngày).
+  + Nút chức năng: "Xem báo cáo", "Xuất file Excel" (Icon file-earmark-excel màu xanh lá), "In báo cáo" (Icon printer).
+- **Thống kê chỉ số kỳ báo cáo (KPI Summary):**
+  + 4 Thẻ chỉ số: [Giá trị tồn đầu kỳ] | [Tổng giá trị nhập] | [Tổng giá trị xuất chế biến] | [Giá trị hao hụt thanh lý] | [Giá trị tồn cuối kỳ].
+- **Bảng tổng hợp Nhập - Xuất - Tồn chi tiết:**
+  + Cột: Mã NL | Tên nguyên liệu | ĐVT | [Tồn đầu kỳ (SL & Tiền)] | [Nhập trong kỳ (SL & Tiền)] | [Xuất chế biến (SL & Tiền)] | [Thanh lý/Hủy (SL & Tiền)] | [Tồn cuối kỳ (SL & Tiền)].
+

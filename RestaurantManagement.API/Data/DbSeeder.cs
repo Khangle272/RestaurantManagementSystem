@@ -56,17 +56,35 @@ public static class DbSeeder
         await AddSizeAsync(db, dishes["Set gia đình"].Id, "Mặc định", 229000);
 
         await AddMissingAsync(db, db.Set<NguyenLieu>(), x => x.TenNguyenLieu,
-            new NguyenLieu { TenNguyenLieu = "Thịt bò", DonViTinh = "g", NguongCanhBao = 1000 },
-            new NguyenLieu { TenNguyenLieu = "Rau xà lách", DonViTinh = "g", NguongCanhBao = 500 },
-            new NguyenLieu { TenNguyenLieu = "Gạo", DonViTinh = "g", NguongCanhBao = 2000 },
-            new NguyenLieu { TenNguyenLieu = "Nước cam", DonViTinh = "ml", NguongCanhBao = 2000 },
-            new NguyenLieu { TenNguyenLieu = "Trứng gà", DonViTinh = "cái", NguongCanhBao = 20 });
+            new NguyenLieu { TenNguyenLieu = "Thịt bò", DonViTinh = "g", DanhMuc = "Thịt", NguongCanhBao = 1000, SoLuongTon = 10000, DonGia = 220 },
+            new NguyenLieu { TenNguyenLieu = "Rau xà lách", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 500, SoLuongTon = 5000, DonGia = 30 },
+            new NguyenLieu { TenNguyenLieu = "Gạo", DonViTinh = "g", DanhMuc = "Đồ khô", NguongCanhBao = 2000, SoLuongTon = 20000, DonGia = 22 },
+            new NguyenLieu { TenNguyenLieu = "Nước cam", DonViTinh = "ml", DanhMuc = "Đồ uống", NguongCanhBao = 2000, SoLuongTon = 12000, DonGia = 50 },
+            new NguyenLieu { TenNguyenLieu = "Trứng gà", DonViTinh = "cái", DanhMuc = "Thực phẩm khác", NguongCanhBao = 20, SoLuongTon = 100, DonGia = 3000 });
 
         await AddMissingAsync(db, db.Set<NhaCungCap>(), x => x.TenNhaCungCap,
-            new NhaCungCap { TenNhaCungCap = "Nhà cung cấp minh họa", SoDienThoai = "0900000010", DiaChi = "TP. Hồ Chí Minh" });
+            new NhaCungCap { TenNhaCungCap = "Công ty TNHH Thực phẩm Tươi Sạch Sài Gòn", SoDienThoai = "0901234567", Email = "tuoisach@sgfood.vn", DiaChi = "Q. Bình Thạnh, TP.HCM", MaSoThue = "0312345678", NguoiLienHe = "Nguyễn Văn Tuấn" },
+            new NhaCungCap { TenNhaCungCap = "Nông trại Rau Củ Đà Lạt Xanh", SoDienThoai = "0908765432", Email = "lienhe@dalatgreen.vn", DiaChi = "TP. Đà Lạt, Lâm Đồng", MaSoThue = "5801234567", NguoiLienHe = "Trần Thị Mai" },
+            new NhaCungCap { TenNhaCungCap = "Đại lý Gia Vị & Đồ Khô Phú Thịnh", SoDienThoai = "0912345678", Email = "giavi.phuthinh@gmail.com", DiaChi = "Q.5, TP.HCM", MaSoThue = "0309876543", NguoiLienHe = "Lê Phú Thịnh" });
         await db.SaveChangesAsync();
 
         var ingredients = await db.Set<NguyenLieu>().ToDictionaryAsync(x => x.TenNguyenLieu);
+        foreach (var (ten, item) in ingredients)
+        {
+            if (item.SoLuongTon == 0)
+            {
+                if (ten == "Thịt bò") { item.SoLuongTon = 10000; item.DonGia = 220; item.DanhMuc = "Thịt"; }
+                else if (ten == "Rau xà lách") { item.SoLuongTon = 5000; item.DonGia = 30; item.DanhMuc = "Rau củ"; }
+                else if (ten == "Gạo") { item.SoLuongTon = 20000; item.DonGia = 22; item.DanhMuc = "Đồ khô"; }
+                else if (ten == "Nước cam") { item.SoLuongTon = 12000; item.DonGia = 50; item.DanhMuc = "Đồ uống"; }
+                else if (ten == "Trứng gà") { item.SoLuongTon = 100; item.DonGia = 3000; item.DanhMuc = "Thực phẩm khác"; }
+            }
+        }
+        await db.SaveChangesAsync();
+
+        var suppliers = await db.Set<NhaCungCap>().ToListAsync();
+        var ncc1 = suppliers.FirstOrDefault(x => x.TenNhaCungCap.Contains("Tươi Sạch")) ?? suppliers.First();
+
         dishes = await db.Set<MonAn>().ToDictionaryAsync(x => x.TenMon);
 
         await AddRecipeAsync(db, dishes["Salad rau"].Id, ingredients["Rau xà lách"].Id, 120);
@@ -86,17 +104,19 @@ public static class DbSeeder
             {
                 MaPhieu = "PN-TONDAUKY-001",
                 NhanVienId = warehouseEmployee.Id,
+                NhaCungCapId = ncc1.Id,
                 ThoiDiem = new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.FromHours(7)),
                 TrangThai = TrangThaiPhieu.DaGhiSo,
                 LyDo = LyDoNhap.TonDauKy,
-                GhiChu = "Dữ liệu minh họa phục vụ kiểm thử CRUD",
+                TongTien = 3690000,
+                GhiChu = "Dữ liệu tồn đầu kỳ và minh họa phục vụ kiểm thử phân hệ kho",
                 ChiTiet =
                 {
-                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Thịt bò"].Id, SoLuong = 10000, DonGia = 220 },
-                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Rau xà lách"].Id, SoLuong = 5000, DonGia = 30 },
-                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Gạo"].Id, SoLuong = 20000, DonGia = 22 },
-                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Nước cam"].Id, SoLuong = 12000, DonGia = 50 },
-                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Trứng gà"].Id, SoLuong = 100, DonGia = 3000 }
+                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Thịt bò"].Id, SoLuong = 10000, DonGia = 220, ThanhTien = 2200000 },
+                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Rau xà lách"].Id, SoLuong = 5000, DonGia = 30, ThanhTien = 150000 },
+                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Gạo"].Id, SoLuong = 20000, DonGia = 22, ThanhTien = 440000 },
+                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Nước cam"].Id, SoLuong = 12000, DonGia = 50, ThanhTien = 600000 },
+                    new ChiTietPhieuNhap { NguyenLieuId = ingredients["Trứng gà"].Id, SoLuong = 100, DonGia = 3000, ThanhTien = 300000 }
                 }
             });
         }

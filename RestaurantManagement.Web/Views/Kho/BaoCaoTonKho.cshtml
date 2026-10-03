@@ -1,0 +1,206 @@
+@model BaoCaoTonKhoVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Báo Cáo Nhập - Xuất - Tồn Kho";
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-file-earmark-bar-graph me-2 text-danger"></i>Báo Cáo Nhập - Xuất - Tồn Kho</h1>
+            <p class="text-muted mb-0">Đối soát toàn diện luân chuyển nguyên vật liệu theo chu kỳ: Tồn đầu + Nhập - Xuất - Thanh lý = Tồn cuối.</p>
+        </div>
+        <div class="d-flex gap-2 d-print-none">
+            <button onclick="window.print()" class="btn btn-brand-outline d-inline-flex align-items-center gap-2">
+                <i class="bi bi-printer"></i> In Báo Cáo
+            </button>
+            <a asp-action="ExportCsv" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")" asp-route-preset="@Model.Preset" class="btn btn-success d-inline-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-file-earmark-excel-fill"></i> Xuất File CSV / Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Control Filter Bar (Hidden during print) -->
+    <div class="card border-0 shadow-sm mb-4 d-print-none">
+        <div class="card-body">
+            <form asp-action="BaoCao" method="get" class="row g-3 align-items-end" id="formBaoCao">
+                <div class="col-12 col-md-3">
+                    <label for="preset" class="form-label small fw-semibold text-secondary">Kỳ báo cáo nhanh</label>
+                    <select id="preset" name="preset" class="form-select" onchange="toggleCustomDates()">
+                        <option value="thangnay" selected="@(Model.Preset == "thangnay")">Tháng này (Từ đầu tháng đến nay)</option>
+                        <option value="tuannay" selected="@(Model.Preset == "tuannay")">Tuần này (Từ thứ 2 đến nay)</option>
+                        <option value="homnay" selected="@(Model.Preset == "homnay")">Hôm nay</option>
+                        <option value="thangtruoc" selected="@(Model.Preset == "thangtruoc")">Tháng trước (Toàn bộ tháng)</option>
+                        <option value="tuychon" selected="@(Model.Preset == "tuychon")">Tùy chọn khoảng ngày...</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 date-range-picker" id="divTuNgay">
+                    <label for="tuNgay" class="form-label small fw-semibold text-secondary">Từ ngày</label>
+                    <input type="date" id="tuNgay" name="tuNgay" value="@(Model.TuNgay.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3 date-range-picker" id="divDenNgay">
+                    <label for="denNgay" class="form-label small fw-semibold text-secondary">Đến ngày</label>
+                    <input type="date" id="denNgay" name="denNgay" value="@(Model.DenNgay.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button class="btn btn-brand-primary w-100" type="submit">
+                        <i class="bi bi-search me-1"></i> Xem Báo Cáo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5 KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl">
+            <div class="card card-stat border-0 h-100">
+                <div class="text-muted small fw-semibold text-uppercase">Tồn Đầu Kỳ</div>
+                <div class="fs-4 fw-bold text-secondary mt-1">@Model.TongGiaTriDauKy.ToString("N0") <small class="fs-6">đ</small></div>
+                <div class="text-muted small mt-1">Giá trị tồn đầu</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="card card-stat border-0 h-100">
+                <div class="text-muted small fw-semibold text-uppercase">Nhập Trong Kỳ</div>
+                <div class="fs-4 fw-bold text-primary mt-1">+@Model.TongGiaTriNhap.ToString("N0") <small class="fs-6">đ</small></div>
+                <div class="text-primary small mt-1">Tiền nhập NCC</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="card card-stat border-0 h-100">
+                <div class="text-muted small fw-semibold text-uppercase">Xuất Chế Biến</div>
+                <div class="fs-4 fw-bold text-danger mt-1">-@Model.TongGiaTriXuat.ToString("N0") <small class="fs-6">đ</small></div>
+                <div class="text-danger small mt-1">Xuất Bếp & Bar</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="card card-stat border-0 h-100">
+                <div class="text-muted small fw-semibold text-uppercase">Hao Hụt Thanh Lý</div>
+                <div class="fs-4 fw-bold text-warning mt-1">-@Model.TongGiaTriThanhLy.ToString("N0") <small class="fs-6">đ</small></div>
+                <div class="text-warning small mt-1">Hết hạn, hư hỏng</div>
+            </div>
+        </div>
+        <div class="col-12 col-xl">
+            <div class="card card-stat border-0 h-100" style="background-color: #ECFDF5; border-left: 4px solid #10B981 !important;">
+                <div class="text-success small fw-semibold text-uppercase">Tồn Cuối Kỳ</div>
+                <div class="fs-3 fw-bold text-success mt-1">@Model.TongGiaTriCuoiKy.ToString("N0") <small class="fs-6">đ</small></div>
+                <div class="text-muted small mt-1">Giá trị tồn thực tế</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Inventory Movement Table -->
+    <div class="card border-0 shadow-sm invoice-printable">
+        <div class="card-header bg-white py-3 border-subtle d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-table me-2 text-primary"></i>Bảng Tổng Hợp Chi Tiết Nhập - Xuất - Tồn</h5>
+                <small class="text-muted">Kỳ đối soát: @Model.TuNgay.ToString("dd/MM/yyyy") đến @Model.DenNgay.ToString("dd/MM/yyyy")</small>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-admin align-middle mb-0 text-nowrap">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th rowspan="2" style="width: 50px;">STT</th>
+                        <th rowspan="2" style="min-width: 220px;" class="text-start">Tên Nguyên Liệu</th>
+                        <th rowspan="2" style="width: 70px;">ĐVT</th>
+                        <th rowspan="2" style="width: 120px;" class="text-end">Đơn Giá Nhập</th>
+                        <th colspan="2" class="bg-light">Tồn Đầu Kỳ</th>
+                        <th colspan="2" class="bg-primary bg-opacity-10 text-primary">Nhập Trong Kỳ</th>
+                        <th colspan="2" class="bg-danger bg-opacity-10 text-danger">Xuất Chế Biến</th>
+                        <th colspan="2" class="bg-warning bg-opacity-10 text-warning">Thanh Lý / Hủy</th>
+                        <th colspan="2" class="bg-success bg-opacity-10 text-success">Tồn Cuối Kỳ</th>
+                    </tr>
+                    <tr>
+                        <th style="width: 90px;">SL</th>
+                        <th style="width: 120px;" class="text-end">Thành Tiền</th>
+                        <th style="width: 90px;">SL</th>
+                        <th style="width: 120px;" class="text-end">Thành Tiền</th>
+                        <th style="width: 90px;">SL</th>
+                        <th style="width: 120px;" class="text-end">Thành Tiền</th>
+                        <th style="width: 90px;">SL</th>
+                        <th style="width: 120px;" class="text-end">Thành Tiền</th>
+                        <th style="width: 90px;">SL</th>
+                        <th style="width: 130px;" class="text-end">Thành Tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var stt = 1; }
+                    @foreach (var row in Model.ChiTietBaoCao)
+                    {
+                        <tr>
+                            <td class="text-center text-muted">@(stt++)</td>
+                            <td class="fw-bold text-dark text-start">
+                                @row.TenNguyenLieu
+                                @if (!string.IsNullOrEmpty(row.DanhMuc))
+                                {
+                                    <small class="badge bg-light text-muted border ms-1">@row.DanhMuc</small>
+                                }
+                            </td>
+                            <td class="text-center">@row.DonViTinh</td>
+                            <td class="text-end text-muted">@row.DonGia.ToString("N0")</td>
+
+                            <!-- Tồn đầu -->
+                            <td class="text-center">@row.TonDauKySL.ToString("0.##")</td>
+                            <td class="text-end text-secondary">@row.TonDauKyTien.ToString("N0")</td>
+
+                            <!-- Nhập -->
+                            <td class="text-center text-primary fw-semibold">@(row.NhapTrongKySL > 0 ? "+" + row.NhapTrongKySL.ToString("0.##") : "—")</td>
+                            <td class="text-end text-primary">@(row.NhapTrongKyTien > 0 ? row.NhapTrongKyTien.ToString("N0") : "—")</td>
+
+                            <!-- Xuất -->
+                            <td class="text-center text-danger fw-semibold">@(row.XuatTrongKySL > 0 ? "-" + row.XuatTrongKySL.ToString("0.##") : "—")</td>
+                            <td class="text-end text-danger">@(row.XuatTrongKyTien > 0 ? row.XuatTrongKyTien.ToString("N0") : "—")</td>
+
+                            <!-- Thanh lý -->
+                            <td class="text-center text-warning fw-semibold">@(row.ThanhLyTrongKySL > 0 ? "-" + row.ThanhLyTrongKySL.ToString("0.##") : "—")</td>
+                            <td class="text-end text-warning">@(row.ThanhLyTrongKyTien > 0 ? row.ThanhLyTrongKyTien.ToString("N0") : "—")</td>
+
+                            <!-- Tồn cuối -->
+                            <td class="text-center fw-bold @(row.TonCuoiKySL <= 0 ? "text-danger" : "text-success")">@row.TonCuoiKySL.ToString("0.##")</td>
+                            <td class="text-end fw-bold @(row.TonCuoiKySL <= 0 ? "text-danger" : "text-success")">@row.TonCuoiKyTien.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-light fw-bold text-end">
+                    <tr>
+                        <td colspan="4" class="text-center text-uppercase py-3">TỔNG CỘNG GIÁ TRỊ (VNĐ):</td>
+                        <td></td>
+                        <td class="text-secondary py-3">@Model.TongGiaTriDauKy.ToString("N0")</td>
+                        <td></td>
+                        <td class="text-primary py-3">+@Model.TongGiaTriNhap.ToString("N0")</td>
+                        <td></td>
+                        <td class="text-danger py-3">-@Model.TongGiaTriXuat.ToString("N0")</td>
+                        <td></td>
+                        <td class="text-warning py-3">-@Model.TongGiaTriThanhLy.ToString("N0")</td>
+                        <td></td>
+                        <td class="text-success fs-5 py-3">@Model.TongGiaTriCuoiKy.ToString("N0")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function toggleCustomDates() {
+        const preset = document.getElementById("preset").value;
+        const form = document.getElementById("formBaoCao");
+        if (preset !== "tuychon") {
+            form.submit();
+        }
+    }
+</script>
+}
+
+<style>
+    @@media print {
+        body { background-color: #fff !important; }
+        .admin-sidebar, .admin-topbar, .admin-sidebar-footer, .d-print-none { display: none !important; }
+        .admin-main { margin: 0 !important; padding: 0 !important; }
+        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    }
+</style>
