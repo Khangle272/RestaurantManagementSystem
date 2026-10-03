@@ -4,6 +4,7 @@
     var action = ViewContext.RouteData.Values["action"]?.ToString();
     var admin = User.IsInRole("Admin");
     var reception = admin || User.IsInRole("TiepTan");
+    var staffOrder = admin || User.IsInRole("BoiBan") || User.IsInRole("ThuNgan") || User.IsInRole("TiepTan");
     var entries = new (string Group, string Controller, string Action, string Label, bool Allowed)[] {
         ("Tài khoản", "Account", "Index", "Thông tin cá nhân", true),
         ("Tài khoản", "NhanVien", "Index", "Quản lý nhân viên", admin),
@@ -12,6 +13,8 @@
         ("Bàn & Đặt bàn", "QuanLyDatBan", "Index", "Yêu cầu đặt bàn", reception),
         ("Thực đơn", "MonAn", "Index", admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức", admin || User.IsInRole("Bep")),
         ("Thực đơn", "DanhMuc", "Index", "Quản lý danh mục món", admin),
+        ("Vận hành", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
+        ("Vận hành", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
         ("Vận hành", "Bep", "Index", "Bếp chế biến", admin || User.IsInRole("Bep")),
         ("Vận hành", "NguyenLieu", "Index", "Kho nguyên liệu", admin || User.IsInRole("Kho")),
         ("Vận hành", "HoaDon", "Index", "Hóa đơn & Thanh toán", admin || User.IsInRole("ThuNgan")),
@@ -19,7 +22,8 @@
     };
     bool IsActive(string targetController, string targetAction) =>
         (controller == targetController || (targetController == "NhanVien" && controller == "TaiKhoanNhanVien"))
-        && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"));
+        && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"))
+        && (targetController != "DonHang" || action == targetAction);
 }
 <div class="@(Model ? "row g-3" : "management-navigation")">
 @foreach (var group in entries.Where(x => x.Allowed).GroupBy(x => x.Group))

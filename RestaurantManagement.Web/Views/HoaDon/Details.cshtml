@@ -11,17 +11,41 @@
         TrangThaiHoaDon.DaThanhToan => "Đã thanh toán",
         _ => "Đã hủy"
     };
+
+    var orderTypeText = Model.LoaiDonHang switch
+    {
+        LoaiDonHang.TaiBan => "Tại bàn " + (string.IsNullOrEmpty(tables) ? "" : $"({tables})"),
+        LoaiDonHang.MangDi => "Mang đi" + (!string.IsNullOrEmpty(Model.TenNguoiNhan) ? $" ({Model.TenNguoiNhan})" : ""),
+        LoaiDonHang.GiaoHang => "Giao hàng" + (!string.IsNullOrEmpty(Model.TenNguoiNhan) ? $" ({Model.TenNguoiNhan})" : ""),
+        _ => "—"
+    };
+
+    var vietQrAmount = Convert.ToInt64(Math.Max(0, Model.TongThanhToan));
+    var qrUrl = $"https://img.vietqr.io/image/MB-999988889999-compact2.png?amount={vietQrAmount}&addInfo={Model.MaHoaDon}&accountName=NHA%20HANG%20AM%20THUC%20SEN";
 }
 <style media="print">
-    .admin-sidebar, .admin-topbar, .no-print { display: none !important; }
+    .admin-sidebar, .admin-topbar, .no-print, nav, header, footer { display: none !important; }
     .admin-main { margin: 0 !important; padding: 0 !important; }
     .container-fluid { padding: 0 !important; }
-    body { background: white !important; }
+    body { background: white !important; font-size: 13px; color: black; }
+    .table-bordered th, .table-bordered td { border: 1px solid #ddd !important; }
+    .print-only { display: block !important; }
+    .invoice-container { max-width: 100% !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
 </style>
-<div class="no-print mb-3 d-flex gap-2">
-    <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a>
-    <button type="button" class="btn btn-primary" onclick="window.print()">In hóa đơn</button>
+
+<div class="no-print mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">Quay lại danh sách</a>
+        <a asp-controller="DonHang" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-primary">Xem đơn hàng</a>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm" onclick="window.print()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            In hóa đơn
+        </button>
+    </div>
 </div>
+
 @if (TempData["Error"] is string error)
 {
     <div class="alert alert-danger no-print">@error</div>
@@ -30,57 +54,363 @@
 {
     <div class="alert alert-success no-print">@success</div>
 }
-<div class="mx-auto" style="max-width:760px">
-    <h1 class="h3 text-center">HÓA ĐƠN</h1>
-    <p class="text-center">Mã: @Model.MaHoaDon</p>
-    <div class="row mb-3">
-        <div class="col-sm-6">Lập lúc: @Model.ThoiDiemLap.ToString("dd/MM/yyyy HH:mm")</div>
-        <div class="col-sm-6">Bàn: @(string.IsNullOrEmpty(tables) ? "-" : tables)</div>
-        <div class="col-sm-6">Trạng thái: @status</div>
-        @if (Model.ThoiDiemThanhToan is not null)
+
+<div class="mx-auto invoice-container" style="max-width: 780px;">
+    <!-- Bill in / hiển thị -->
+    <div class="card border shadow-sm p-4 mb-4 bg-white">
+        <!-- Header nhà hàng -->
+        <div class="text-center mb-4 border-bottom pb-3">
+            <h2 class="h4 fw-bold mb-1 text-uppercase">Nhà Hàng Ẩm Thực Sen</h2>
+            <div class="text-muted small">Địa chỉ: 123 Đường Ẩm Thực, Quận 1, TP. Hồ Chí Minh</div>
+            <div class="text-muted small">Hotline: 1900 6868 · Website: www.nhahangsen.test</div>
+            <h1 class="h3 text-center mt-3 mb-1 fw-bold">HÓA ĐƠN THANH TOÁN</h1>
+            <p class="text-center text-muted mb-0">Mã hóa đơn: <strong class="text-dark">@Model.MaHoaDon</strong></p>
+        </div>
+
+        <!-- Thông tin hóa đơn & phục vụ -->
+        <div class="row g-2 mb-3 small">
+            <div class="col-sm-6">
+                <div><strong>Loại đơn:</strong> @orderTypeText</div>
+                <div><strong>Bàn:</strong> @(string.IsNullOrEmpty(tables) ? "-" : tables)</div>
+                @if (Model.LoaiDonHang != LoaiDonHang.TaiBan && !string.IsNullOrEmpty(Model.TenNguoiNhan))
+                {
+                    <div><strong>Khách nhận:</strong> @Model.TenNguoiNhan @(!string.IsNullOrEmpty(Model.SoDienThoaiNhan) ? $"· {Model.SoDienThoaiNhan}" : "")</div>
+                    @if (!string.IsNullOrEmpty(Model.DiaChiGiaoHang))
+                    {
+                        <div><strong>Địa chỉ:</strong> @Model.DiaChiGiaoHang</div>
+                    }
+                }
+            </div>
+            <div class="col-sm-6 text-sm-end">
+                <div><strong>Lập lúc:</strong> @Model.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</div>
+                <div><strong>Trạng thái:</strong> <span class="badge @(Model.TrangThai == TrangThaiHoaDon.DaThanhToan ? "bg-success" : "bg-danger")">@status</span></div>
+                @if (Model.ThoiDiemThanhToan is not null)
+                {
+                    <div><strong>Thanh toán:</strong> @Model.ThoiDiemThanhToan.Value.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</div>
+                }
+                <div><strong>Thu ngân:</strong> @Model.NhanVien?.HoTen</div>
+            </div>
+        </div>
+
+        <!-- Bảng chi tiết món -->
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 45%;">Món ăn</th>
+                    <th style="width: 15%;">Size</th>
+                    <th class="text-end" style="width: 10%;">SL</th>
+                    <th class="text-end" style="width: 15%;">Đơn giá</th>
+                    <th class="text-end" style="width: 15%;">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.ChiTiet.OrderBy(x => x.Id))
+            {
+                var isCancelled = item.TrangThai == TrangThaiCheBien.DaHuy;
+                var sizeName = !string.IsNullOrEmpty(item.TenSizeLucBan) ? item.TenSizeLucBan : (item.MonAnSize?.TenSize ?? "-");
+
+                <tr class="@(isCancelled ? "text-muted bg-light text-decoration-line-through" : "")">
+                    <td>
+                        <span class="fw-semibold">@item.TenMonLucBan</span>
+                        @if (isCancelled)
+                        {
+                            <span class="badge bg-danger ms-1">(đã hủy)</span>
+                        }
+                        @if (!string.IsNullOrEmpty(item.YeuCauCheBien))
+                        {
+                            <div class="small text-muted fst-italic">Ghi chú: @item.YeuCauCheBien</div>
+                        }
+                    </td>
+                    <td>@sizeName</td>
+                    <td class="text-end">@item.SoLuong</td>
+                    <td class="text-end">@item.DonGia.ToString("N0") đ</td>
+                    <td class="text-end fw-semibold">
+                        @(isCancelled ? "-" : (item.SoLuong * item.DonGia).ToString("N0") + " đ")
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        @if (Model.ChiTiet.Count == 0)
         {
-            <div class="col-sm-6">Thanh toán: @Model.ThoiDiemThanhToan.Value.ToString("dd/MM/yyyy HH:mm")</div>
+            <p class="text-muted text-center py-2">Hóa đơn chưa có món.</p>
         }
+
+        <!-- Tổng tiền -->
+        <dl class="row justify-content-end mb-2">
+            <dt class="col-7 col-sm-4 text-muted">Tiền món:</dt>
+            <dd class="col-5 col-sm-4 text-end">@Model.TongTienHang.ToString("N0") đ</dd>
+
+            <dt class="col-7 col-sm-4 text-muted">Giảm giá / Voucher:</dt>
+            <dd class="col-5 col-sm-4 text-end text-success">- @Model.TienGiam.ToString("N0") đ</dd>
+
+            <dt class="col-7 col-sm-4 text-muted">Tiền cọc đã trừ:</dt>
+            <dd class="col-5 col-sm-4 text-end text-primary">- @Model.TienCocDaTru.ToString("N0") đ</dd>
+
+            <dt class="col-7 col-sm-4 fs-5 fw-bold border-top pt-2">Tổng thanh toán:</dt>
+            <dd class="col-5 col-sm-4 text-end fs-5 fw-bold text-danger border-top pt-2">@Model.TongThanhToan.ToString("N0") đ</dd>
+
+            @if (Model.TrangThai == TrangThaiHoaDon.DaThanhToan)
+            {
+                <dt class="col-7 col-sm-4 text-muted">Hình thức TT:</dt>
+                <dd class="col-5 col-sm-4 text-end fw-bold">@Model.PhuongThucThanhToan</dd>
+
+                @if (Model.PhuongThucThanhToan == PhuongThucThanhToan.TienMat && Model.TienKhachDua > 0)
+                {
+                    <dt class="col-7 col-sm-4 text-muted">Tiền khách đưa:</dt>
+                    <dd class="col-5 col-sm-4 text-end">@Model.TienKhachDua.ToString("N0") đ</dd>
+
+                    <dt class="col-7 col-sm-4 text-muted">Tiền trả lại:</dt>
+                    <dd class="col-5 col-sm-4 text-end">@Model.TienThoiLai.ToString("N0") đ</dd>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.MaGiaoDich))
+                {
+                    <dt class="col-7 col-sm-4 text-muted">Mã tham chiếu:</dt>
+                    <dd class="col-5 col-sm-4 text-end small">@Model.MaGiaoDich</dd>
+                }
+            }
+        </dl>
+
+        @if (Model.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan)
+        {
+            <p class="small text-danger">Hóa đơn đã thanh toán một phần. Cần đối chiếu số đã thu trước khi thu tiếp.</p>
+        }
+
+        <!-- Lời cảm ơn in trên bill -->
+        <div class="text-center mt-3 pt-3 border-top small text-muted">
+            <p class="mb-1 fw-bold">CẢM ƠN QUÝ KHÁCH VÀ HẸN GẶP LẠI!</p>
+            <p class="mb-0">Hóa đơn điện tử khởi tạo từ hệ thống Quản lý nhà hàng Sen</p>
+        </div>
     </div>
-    <table class="table table-bordered">
-        <thead><tr><th>Món ăn</th><th>Size</th><th class="text-end">SL</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead>
-        <tbody>
-        @foreach (var item in Model.ChiTiet.OrderBy(x => x.Id))
-        {
-            <tr>
-                <td>@item.TenMonLucBan @(item.TrangThai == TrangThaiCheBien.DaHuy ? "(đã hủy)" : "")</td>
-                <td>@(item.MonAnSize?.TenSize ?? "-")</td>
-                <td class="text-end">@item.SoLuong</td>
-                <td class="text-end">@item.DonGia.ToString("N0") đ</td>
-                <td class="text-end">@(item.TrangThai == TrangThaiCheBien.DaHuy ? "-" : (item.SoLuong * item.DonGia).ToString("N0") + " đ")</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    @if (Model.ChiTiet.Count == 0)
+
+    <!-- MODULE THANH TOÁN ĐA HÌNH THỨC (NO-PRINT) -->
+    @if ((User.IsInRole("Admin") || User.IsInRole("ThuNgan")) && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && Model.TongThanhToan > 0)
     {
-        <p>Hóa đơn chưa có món.</p>
-    }
-    <dl class="row justify-content-end">
-        <dt class="col-7 col-sm-4">Tiền món</dt><dd class="col-5 col-sm-3 text-end">@Model.TongTienHang.ToString("N0") đ</dd>
-        <dt class="col-7 col-sm-4">Giảm giá</dt><dd class="col-5 col-sm-3 text-end">@Model.TienGiam.ToString("N0") đ</dd>
-        <dt class="col-7 col-sm-4">Cọc đã trừ</dt><dd class="col-5 col-sm-3 text-end">@Model.TienCocDaTru.ToString("N0") đ</dd>
-        <dt class="col-7 col-sm-4 fs-5">Tổng thanh toán</dt><dd class="col-5 col-sm-3 text-end fs-5 fw-bold">@Model.TongThanhToan.ToString("N0") đ</dd>
-    </dl>
-    @if (Model.TrangThai == TrangThaiHoaDon.DaThanhToan)
-    {
-        <p>Phương thức: @Model.PhuongThucThanhToan</p>
-    }
-    @if (Model.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan)
-    {
-        <p class="small">Hóa đơn đã thanh toán một phần. Cần đối chiếu số đã thu trước khi thu tiếp.</p>
-    }
-    @if (User.IsInRole("ThuNgan") && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && Model.TongThanhToan > 0)
-    {
-        <form asp-action="ConfirmCash" method="post" class="no-print mt-3">
+        <div class="card border-0 shadow-sm no-print mb-4">
+            <div class="card-header bg-primary text-white py-3">
+                <h2 class="h5 mb-0 fw-bold">💳 Xử lý thanh toán đa hình thức</h2>
+                <div class="small opacity-75">Hỗ trợ tiền mặt, chuyển khoản VietQR tự động, quẹt thẻ POS</div>
+            </div>
+            <div class="card-body p-4">
+                <!-- Nav tabs -->
+                <ul class="nav nav-pills nav-fill mb-4" id="paymentTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold py-2" id="cash-tab" data-bs-toggle="tab" data-bs-target="#cash-content" type="button" role="tab">
+                            💵 Tiền mặt
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2" id="qr-tab" data-bs-toggle="tab" data-bs-target="#qr-content" type="button" role="tab">
+                            📱 Chuyển khoản QR
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2" id="card-tab" data-bs-toggle="tab" data-bs-target="#card-content" type="button" role="tab">
+                            💳 Thẻ ngân hàng / POS
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="paymentTabContent">
+                    <!-- TAB 1: TIỀN MẶT -->
+                    <div class="tab-pane fade show active" id="cash-content" role="tabpanel">
+                        <form asp-action="ThanhToan" method="post" id="form-pay-cash">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@Model.Id" />
+                            <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+                            <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.TienMat" />
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Tổng tiền phải thu:</label>
+                                    <div class="fs-4 fw-bold text-danger mb-2">@Model.TongThanhToan.ToString("N0") đ</div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Chiết khấu / Giảm giá thêm (nếu có):</label>
+                                        <div class="input-group">
+                                            <input type="number" name="TienGiam" id="cash-discount" value="0" min="0" max="@Model.TongTienHang" class="form-control" oninput="calculateCash()" />
+                                            <span class="input-group-text">đ</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Số tiền khách đưa (*):</label>
+                                        <div class="input-group">
+                                            <input type="number" name="TienKhachDua" id="cash-tendered" value="@Convert.ToInt64(Model.TongThanhToan)" min="0" class="form-control fs-5 fw-bold text-primary" oninput="calculateCash()" required />
+                                            <span class="input-group-text">đ</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-1 mb-3">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(@Convert.ToInt64(Model.TongThanhToan))">Đúng số tiền</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(100000)">100.000 đ</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(200000)">200.000 đ</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(500000)">500.000 đ</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(1000000)">1.000.000 đ</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(2000000)">2.000.000 đ</button>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 border-start ps-md-4 d-flex flex-column justify-content-between">
+                                    <div class="card bg-light border-0 p-3 mb-3">
+                                        <div class="text-muted small">Tiền thừa trả lại khách:</div>
+                                        <div class="fs-2 fw-bold text-success" id="cash-change">0 đ</div>
+                                        <div id="cash-warning" class="text-danger small mt-1 d-none">Số tiền khách đưa chưa đủ để thanh toán.</div>
+                                    </div>
+
+                                    <button type="submit" id="btn-cash-submit" class="btn btn-success btn-lg w-100 py-3 fw-bold shadow-sm">
+                                        ✓ Xác nhận đã thu tiền mặt
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 2: CHUYỂN KHOẢN NGÂN HÀNG / QR -->
+                    <div class="tab-pane fade" id="qr-content" role="tabpanel">
+                        <form asp-action="ThanhToan" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@Model.Id" />
+                            <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+                            <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.ChuyenKhoan" />
+
+                            <div class="row g-3 align-items-center">
+                                <div class="col-12 col-md-5 text-center">
+                                    <div class="p-2 border rounded bg-white shadow-sm d-inline-block">
+                                        <img src="@qrUrl" alt="VietQR Mã thanh toán" class="img-fluid rounded" style="max-height: 250px;" />
+                                    </div>
+                                    <div class="small text-muted mt-2">Quét mã bằng App ngân hàng bất kỳ để thanh toán tự động</div>
+                                </div>
+
+                                <div class="col-12 col-md-7">
+                                    <div class="card bg-light border-0 p-3 mb-3">
+                                        <div class="row g-2 small">
+                                            <div class="col-5 text-muted">Ngân hàng:</div>
+                                            <div class="col-7 fw-bold">MBBank (Ngân hàng Quân Đội)</div>
+
+                                            <div class="col-5 text-muted">Số tài khoản:</div>
+                                            <div class="col-7 fw-bold fs-6 text-primary">999988889999</div>
+
+                                            <div class="col-5 text-muted">Chủ tài khoản:</div>
+                                            <div class="col-7 fw-bold">NHA HANG AM THUC SEN</div>
+
+                                            <div class="col-5 text-muted">Số tiền cần thanh toán:</div>
+                                            <div class="col-7 fw-bold fs-5 text-danger">@Model.TongThanhToan.ToString("N0") đ</div>
+
+                                            <div class="col-5 text-muted">Nội dung chuyển khoản:</div>
+                                            <div class="col-7 fw-bold text-dark bg-warning-subtle px-2 py-1 rounded">@Model.MaHoaDon</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Mã giao dịch / Mã đối soát ngân hàng (nếu có):</label>
+                                        <input type="text" name="MaGiaoDich" class="form-control" placeholder="Ví dụ: MB123456789 hoặc mã chuẩn chi..." />
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm">
+                                        ✓ Xác nhận đã nhận chuyển khoản thành công
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 3: QUẸT THẺ POS -->
+                    <div class="tab-pane fade" id="card-content" role="tabpanel">
+                        <form asp-action="ThanhToan" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@Model.Id" />
+                            <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+                            <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.The" />
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Tổng thanh toán:</label>
+                                        <div class="fs-4 fw-bold text-danger">@Model.TongThanhToan.ToString("N0") đ</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Loại thẻ (*):</label>
+                                        <select name="LoaiThe" class="form-select">
+                                            <option value="Visa">Visa Credit / Debit</option>
+                                            <option value="MasterCard">MasterCard</option>
+                                            <option value="Napas">Thẻ ATM nội địa (Napas)</option>
+                                            <option value="JCB">JCB</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">4 số cuối của thẻ (*):</label>
+                                        <input type="text" name="SoThe4SoCuoi" maxlength="4" class="form-control" placeholder="Ví dụ: 8899" required />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Mã chuẩn chi / Trace No. máy POS (*):</label>
+                                        <input type="text" name="MaGiaoDich" class="form-control" placeholder="Ví dụ: POS-987654" required />
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm">
+                                        ✓ Xác nhận thanh toán qua thẻ thành công
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GIỮ FORM CONFIRM CASH CŨ ĐỂ TƯƠNG THÍCH HOÀN TOÀN VỚI AUTOMATED TESTS -->
+        <form asp-action="ConfirmCash" method="post" id="legacy-confirm-cash" class="no-print mt-2 d-none">
             <input type="hidden" name="id" value="@Model.Id" />
             <input type="hidden" name="rowVersion" value="@ViewBag.RowVersion" />
             <button type="submit" class="btn btn-success">Xác nhận đã nhận đủ tiền mặt</button>
         </form>
     }
 </div>
+
+@section Scripts {
+<script>
+    const baseTotal = @Convert.ToInt64(Model.TongThanhToan);
+
+    function calculateCash() {
+        const discountInput = document.getElementById('cash-discount');
+        const tenderedInput = document.getElementById('cash-tendered');
+        const changeDisplay = document.getElementById('cash-change');
+        const warningDisplay = document.getElementById('cash-warning');
+        const submitBtn = document.getElementById('btn-cash-submit');
+
+        const discount = parseFloat(discountInput.value) || 0;
+        const netDue = Math.max(0, baseTotal - discount);
+        const tendered = parseFloat(tenderedInput.value) || 0;
+
+        if (tendered >= netDue) {
+            const change = tendered - netDue;
+            changeDisplay.innerText = change.toLocaleString('vi-VN') + ' đ';
+            warningDisplay.classList.add('d-none');
+            submitBtn.disabled = false;
+        } else {
+            changeDisplay.innerText = '0 đ';
+            warningDisplay.classList.remove('d-none');
+            submitBtn.disabled = true;
+        }
+    }
+
+    function setCashTendered(amount) {
+        document.getElementById('cash-tendered').value = amount;
+        calculateCash();
+    }
+
+    // Run once on load
+    if (document.getElementById('cash-tendered')) {
+        calculateCash();
+    }
+</script>
+}

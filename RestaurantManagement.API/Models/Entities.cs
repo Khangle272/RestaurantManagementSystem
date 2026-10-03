@@ -16,6 +16,7 @@ public enum LyDoNhap { MuaHang, TonDauKy, DieuChinhTang }
 public enum LyDoXuat { CheBien, ThanhLy, HuyHong, TraNhaCungCap, DieuChinhGiam }
 public enum PhamViUuDai { MonAn, HoaDon }
 public enum KieuGiam { PhanTram, SoTien }
+public enum LoaiDonHang { TaiBan, MangDi, GiaoHang }
 
 public class TaiKhoan : IdentityUser<int> { }
 
@@ -182,6 +183,14 @@ public class HoaDon
     public int Id { get; set; }
     [MaxLength(30)] public string MaHoaDon { get; set; } = "";
     public DateTimeOffset ThoiDiemLap { get; set; }
+    public LoaiDonHang LoaiDonHang { get; set; } = LoaiDonHang.TaiBan;
+    [MaxLength(120)] public string? TenNguoiNhan { get; set; }
+    [MaxLength(20)] public string? SoDienThoaiNhan { get; set; }
+    [MaxLength(300)] public string? DiaChiGiaoHang { get; set; }
+    [MaxLength(500)] public string? GhiChuDonHang { get; set; }
+    [MaxLength(100)] public string? MaGiaoDich { get; set; }
+    public decimal TienKhachDua { get; set; }
+    public decimal TienThoiLai { get; set; }
     public int? DatBanId { get; set; }
     public DatBan? DatBan { get; set; }
     public int? KhachHangId { get; set; }
@@ -211,6 +220,8 @@ public class ChiTietHoaDon
     public int? MonAnSizeId { get; set; }
     public MonAnSize? MonAnSize { get; set; }
     [MaxLength(150)] public string TenMonLucBan { get; set; } = "";
+    [MaxLength(50)] public string? TenSizeLucBan { get; set; }
+    public DateTimeOffset ThoiDiemGoi { get; set; } = DateTimeOffset.UtcNow;
     public int SoLuong { get; set; }
     public decimal DonGia { get; set; }
     [MaxLength(500)] public string? YeuCauCheBien { get; set; }

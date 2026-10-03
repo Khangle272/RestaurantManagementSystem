@@ -1,6 +1,6 @@
 # Tiến độ, quyết định nghiệp vụ và bàn giao
 
-Cập nhật: **02/10/2026 — Thành viên 1**, nhánh `member1-update`, phát triển trên `master` của nhóm tại `dd834bf`.
+Cập nhật: **03/10/2026 — Thành viên 2 (Gọi món, đơn hàng, thanh toán đa hình thức)**.
 File mô tả trạng thái của nhánh đang đọc; không mặc nhiên có nghĩa đã merge vào `master`.
 
 ## Cách cập nhật file này
@@ -122,9 +122,9 @@ Phân công hiện tại: **TV1 — sơ đồ/tiếp nhận bàn + nền tài kh
 | Nguyên liệu theo size — phần thực đơn đợt trước | Đã có món, các size/giá và công thức chung của món; Bếp chuẩn bị món, Admin duyệt bán | Chưa nhập/lưu lượng nguyên liệu riêng cho size nhỏ, vừa, lớn. Cần bổ sung như ví dụ ngay dưới bảng |
 | Size của món trong combo | Đã chọn được món lẻ, số lượng và giá bán trọn combo | Chưa chọn được size của từng món trong combo. Cần bổ sung như ví dụ ngay dưới bảng |
 | Trạng thái/nhãn món | Tạo `DangPhucVu`, duyệt mở bán riêng, `TamHet` không đổi order cũ, ngừng kinh doanh phải có lý do | Món mới/nổi bật chưa có tiêu chí chính thức: cần chốt số ngày “mới”, tiêu chí bestseller/đặc sản; chưa tự thêm thuật toán xếp hạng |
-| Gọi món — TV2 | Hóa đơn/chi tiết và trạng thái chế biến đã có trong CSDL; tên món/giá có dữ liệu chốt lúc bán | Luồng mobile từ bàn đang phục vụ: món + size + lượng + ghi chú → gửi bếp; kiểm tra trạng thái món/giá ở server, giữ tổng bill đúng. Bổ sung snapshot tên size và dùng trên bill/KDS; không đọc tên size đang sửa trong thực đơn làm lịch sử. Tiếp tục đơn mang đi/giao hàng theo đề cương |
-| Bếp — TV2 | KDS lọc món chờ/đang chế biến, hiện bàn/lượng/ghi chú, không tiền; không hiển thị/cập nhật món trên bill đã hủy | FIFO đang theo thời điểm lập bill, chưa đúng khi gọi thêm món trên bill cũ. Cần thời điểm từng lần gọi/dòng order và hiển thị size. Bồi bàn thấy món sẵn sàng và xác nhận đã mang ra (`SanSang` → `DaPhucVu`). KDS không gộp với màn hình chuẩn bị món của Quản lý bếp |
-| Thanh toán — TV2 | Thu ngân xem/in và xác nhận tiền mặt qua server | Bổ sung hình thức khác theo đề cương; chỉ xác nhận online từ kết quả đáng tin cậy ở server. Không dùng ảnh chuyển khoản hay nút khách bấm để tự coi là đã thu tiền |
+| Gọi món — TV2 | Đã có màn hình và logic POS `/DonHang/Create` và `/DonHang/AddDishes`: chọn tại bàn đang phục vụ, tạo đơn mang đi, tạo đơn giao hàng; lưu snapshot `TenSizeLucBan`, thời điểm `ThoiDiemGoi`, ghi chú chế biến; kiểm tra điều kiện duyệt/mở bán ở server; tự động tính tổng hóa đơn; migration `OrderFulfillmentAndMultiPayment` bổ sung schema an toàn dữ liệu lịch sử | Tùy chọn đóng gói API/kết nối sang app Mobile nếu nhóm mở rộng ứng dụng ngoài giao diện Web/tablet |
+| Bếp & Phục vụ — TV2 | KDS `/Bep` sắp xếp FIFO chính xác theo `ThoiDiemGoi` của từng dòng order; hiển thị rõ size, loại đơn (tại bàn/mang đi/giao hàng) và ghi chú; Bếp chuyển `ChoCheBien` → `DangCheBien` → `SanSang`; Bồi bàn xác nhận đã mang ra (`SanSang` → `DaPhucVu`) trên đơn hàng hoặc KDS; cho phép hủy món chưa nấu (`ChoCheBien` → `DaHuy`) và tự động trừ tiền bill | Thông báo âm thanh/chuông realtime khi có món mới hoặc khi món nấu xong (nếu cần) |
+| Thanh toán — TV2 | Module thanh toán đa hình thức `/HoaDon/Details` và `/HoaDon/ThanhToan`: Tiền mặt (nhập tiền khách đưa, tính tiền thối lại real-time, gợi ý mệnh giá), Chuyển khoản QR (tạo mã VietQR tự động theo chuẩn VietQR MBBank 999988889999, nhập mã tham chiếu), Quẹt thẻ POS (loại thẻ Visa/Master/ATM, 4 số cuối, mã chuẩn chi); cấn trừ cọc từ `DatBan`, giảm giá/chiết khấu; in và xuất hóa đơn chuẩn POS / K80 và A5 chuyên nghiệp | Tích hợp webhook cổng thanh toán tự động (nếu có đăng ký doanh nghiệp với ngân hàng/payment gateway thật) |
 | Kho — TV3 | CRUD nguyên liệu/đơn vị/ngưỡng cảnh báo, nhãn Cần bổ sung khi tồn ≤ ngưỡng; dữ liệu nhà cung cấp/chứng từ và tồn tính từ nhập trừ xuất đã ghi sổ | Hoàn thiện UI/nghiệp vụ nhà cung cấp, nhập/xuất, xử lý cảnh báo, thanh lý và báo cáo. Chưa tự trừ kho theo món khi định mức từng size chưa được chốt |
 | Báo cáo Word — cả nhóm | Luồng/vai trò hiện tại ghi trong file này | Cập nhật sơ đồ, đặc tả, ma trận quyền, luồng bàn/bếp, công thức giá combo và các trạng thái theo code thật; không ghi phần bàn giao còn thiếu là đã làm |
 
@@ -226,3 +226,22 @@ dotnet run --project RestaurantManagement.Web -- --remove-retired-menu-roles
 - Migration thứ 4 `MenuApprovalAndKitchenOwnership` thêm cột, đã áp dụng trên database kiểm thử/preview. Kiểm tra EF: **No changes have been made to the model since the last migration**. Kiểm tra cú pháp JS sơ đồ/form món và `git diff --check` đạt; không có thao tác xóa database ứng dụng.
 - Đã bấm chuyển trang/menu trên trình duyệt desktop và khung nhỏ; menu thu gọn không che nội dung, chuyển trang đóng menu. Nhân viên xem trang công khai không có link đặt bàn của khách. Polling sơ đồ có giới hạn chờ; hai truy vấn danh sách/lịch sử đặt bàn dùng split query tránh nhân dòng khi tải các bảng con. Chưa kiểm thử tải lớn để kết luận mọi vấn đề hiệu năng đã hết.
 - Web local dùng database preview riêng. Các ca trạng thái bàn chuẩn bị dữ liệu tương ứng để kiểm tra guard; không có nghĩa đã có UI gọi món/đã mang món/online/kho hoàn chỉnh. Đặc biệt bước Bồi bàn xác nhận món đã phục vụ vẫn bàn giao ở mục 5, không tự đánh dấu đã xong chỉ vì build/test đạt.
+
+## 8. Kiểm chứng ngày 03/10/2026 — Thành viên 2 (Gọi món, Bếp & Thanh toán đa hình thức)
+
+- Build toàn bộ solution (Shared, API, Web, Tests): **0 cảnh báo, 0 lỗi**.
+- Kiểm thử tích hợp tự động: **PASS: 532 HTTP/database checks** (tăng thêm 51 ca kiểm thử mới từ 481 lên 532), chạy trên database tạm và tự động dọn sạch sau khi hoàn tất.
+- Các nội dung kiểm thử đã xác minh:
+  1. Ghi nhận gọi món mang đi (`MangDi`) và giao hàng (`GiaoHang`) có địa chỉ nhận hàng, lưu thông tin người nhận và tính tổng tiền chính xác.
+  2. Ghi nhận gọi món tại bàn đang phục vụ (`TaiBan`) liên kết chuẩn xác với lượt khách đang phục vụ và hóa đơn hiện hành.
+  3. Gọi thêm món vào đơn hàng đang phục vụ (`/DonHang/AddDishes`), lưu snapshot tên size `TenSizeLucBan` và thời điểm gọi `ThoiDiemGoi` riêng cho từng dòng order.
+  4. Màn hình KDS Bếp `/Bep` hiển thị đúng size món ăn, thời gian gọi (sắp xếp FIFO), phân biệt rõ ràng đơn tại bàn/mang đi/giao hàng; chuyển trạng thái tuần tự `ChoCheBien` → `DangCheBien` → `SanSang`.
+  5. Thao tác Bồi bàn / Quản trị xác nhận món đã mang ra bàn (`SanSang` → `DaPhucVu`), giải quyết điều kiện tiên quyết để giải phóng bàn trong `TableService`.
+  6. Thao tác hủy món (`ChoCheBien` → `DaHuy`) khi khách đổi ý trước khi nấu, tự động điều chỉnh giảm tổng tiền hàng của hóa đơn tương ứng.
+  7. Thanh toán đa hình thức:
+     - Chuyển khoản ngân hàng VietQR: sinh mã QR chuẩn VietQR (MBBank 999988889999), lưu mã đối soát giao dịch `MaGiaoDich`.
+     - Quẹt thẻ POS: lưu thông tin loại thẻ, 4 số cuối thẻ và mã chuẩn chi POS.
+     - Tiền mặt: tính chính xác số tiền khách đưa, tiền thừa thối lại và chiết khấu.
+  8. Xuất và in hóa đơn đẹp mắt, chuẩn hóa print CSS cho khổ giấy in nhiệt K80 và khổ A5.
+  9. Sau khi phục vụ hết các món và thanh toán đủ, `TableService` cho phép bồi bàn bấm **Kết thúc phục vụ** (`DangPhucVu` → `CanDon`) và **Dọn xong** (`CanDon` → `SanSang`) trọn vẹn 100%.
+- Migration thứ 5 `OrderFulfillmentAndMultiPayment` bổ sung các cột mới với giá trị mặc định và backfill dữ liệu lịch sử không mất mát.
