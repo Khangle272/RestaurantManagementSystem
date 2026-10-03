@@ -15,6 +15,7 @@ public class MonAnIndexViewModel
     public int TotalPages { get; set; }
     public int TotalItems { get; set; }
     public int TotalCount { get; set; }
+    public int ChoDuyetCount { get; set; }
     public int DangPhucVuCount { get; set; }
     public int TamHetCount { get; set; }
     public int NgungKinhDoanhCount { get; set; }
@@ -28,6 +29,7 @@ public class MonAnCardViewModel
     public string? HinhAnh { get; set; }
     public string TenDanhMuc { get; set; } = "";
     public TrangThaiMon TrangThai { get; set; }
+    public bool DaDuyet { get; set; }
     public decimal? GiaBan { get; set; }
     public int SoSize { get; set; }
 }
@@ -44,6 +46,8 @@ public class MonAnFormViewModel : EditRecordViewModel
     public bool XoaHinhAnh { get; set; }
     [EnumDataType(typeof(LoaiMon))] public LoaiMon Loai { get; set; }
     [EnumDataType(typeof(TrangThaiMon))] public TrangThaiMon TrangThai { get; set; }
+    public bool DaDuyet { get; set; } = true;
+    [StringLength(500)] public string? LyDoNgung { get; set; }
     public bool LaMonMoi { get; set; }
     public bool LaMonNoiBat { get; set; }
     public List<MonAnSizeFormViewModel> Sizes { get; set; } = new();

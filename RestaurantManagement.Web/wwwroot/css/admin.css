@@ -84,6 +84,13 @@ body {
   font-size: 20px;
 }
 
+.management-menu-group summary { padding: .8rem 1.5rem; cursor: pointer; font-weight: 600; color: rgba(255,255,255,.9); }
+.management-menu-group summary:hover, .management-menu-group[open] summary { background: rgba(255,255,255,.08); }
+.management-menu-children .nav-link { padding: .65rem 1.5rem .65rem 2.1rem; font-size: .9rem; }
+.management-sidebar-actions { padding: .5rem 1rem; border-top: 1px solid rgba(255,255,255,.1); }
+.management-sidebar-content { min-height: 0; }
+.management-menu-group summary:focus-visible { outline: 2px solid white; outline-offset: -4px; }
+
 .admin-sidebar-footer {
   padding: 1rem 1.5rem;
   font-size: 0.875rem;
@@ -217,10 +224,15 @@ body {
 }
 
 @media (max-width: 767.98px) {
-  .admin-sidebar { position: static; width: 100%; height: auto; }
+  .admin-sidebar { position: sticky; top: 0; width: 100%; height: auto; }
   .admin-sidebar-header { padding: 1rem; }
-  .admin-sidebar-nav { display: flex; flex-wrap: wrap; padding: 0.5rem; }
+  .admin-sidebar-header h4 { font-size: 1.1rem; }
+  .management-sidebar-content { max-height: min(70vh, 28rem); overflow-y: auto; }
+  .admin-sidebar-nav { padding: 0.5rem; overflow: visible; }
   .admin-sidebar-nav .nav-link { padding: 0.65rem 0.85rem; }
+  .management-navigation { width: 100%; }
+  .management-menu-group summary { padding: .65rem .85rem; }
+  .management-menu-children .nav-link { padding-left: 1.2rem; }
   .admin-sidebar-footer { display: none; }
   .admin-topbar { position: static; height: auto; padding: 1rem; }
   .admin-main { margin: 0; padding: 0.5rem; min-height: auto; }

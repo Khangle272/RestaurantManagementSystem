@@ -6,6 +6,7 @@
 }
 
 <!-- THẺ TÓM TẮT NHANH (SUMMARY CARDS) -->
+<div class="d-flex gap-2 mb-4"><a asp-action="Create" class="btn btn-success">Đặt bàn cho khách</a><a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-success">Sơ đồ bàn</a></div>
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
         <a asp-action="Index" asp-route-tab="ChoXacNhan" class="text-decoration-none">
@@ -186,14 +187,9 @@
                                         <!-- Nút Xếp bàn (Cho Chờ xác nhận hoặc muốn đổi bàn) -->
                                         @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Đã xác nhận")
                                         {
-                                            <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                    data-bs-toggle="modal" data-bs-target="#modalXepBan" 
-                                                    data-id="@item.MaDatBan" data-code="@item.BookingCode" 
-                                                    data-guest="@item.HoTen" data-time="@item.ThoiGianDen.ToLocalTime().ToString("HH:mm dd/MM")"
-                                                    data-curban="@(item.BanAnId ?? 0)"
-                                                    title="Duyệt & Xếp bàn ăn">
+                                            <a asp-controller="SoDoBan" asp-action="Index" asp-route-datBanId="@item.MaDatBan" class="btn btn-sm btn-outline-primary" title="Duyệt và xếp bàn">
                                                 <i class="bi bi-table me-1"></i>Xếp bàn
-                                            </button>
+                                            </a>
                                         }
 
                                         <!-- Nút Check-in Nhận bàn (Khi đã xác nhận và có bàn) -->
@@ -203,6 +199,7 @@
                                                   onsubmit="return confirm('Xác nhận khách @item.HoTen (@item.BookingCode) đã đến và nhận bàn? Bàn sẽ chuyển sang Đang phục vụ.')">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="datBanId" value="@item.MaDatBan" />
+                                                <input type="hidden" name="rowVersion" value="@item.RowVersion" />
                                                 <button type="submit" class="btn btn-sm btn-success fw-semibold">
                                                     <i class="bi bi-box-arrow-in-right me-1"></i>Nhận bàn
                                                 </button>
@@ -210,7 +207,7 @@
                                         }
 
                                         <!-- Xem hóa đơn nếu đang phục vụ / hoàn tất -->
-                                        @if (item.HoaDonId.HasValue)
+                                        @if (item.HoaDonId.HasValue && User.IsInRole("Admin"))
                                         {
                                             <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@item.HoaDonId.Value" 
                                                class="btn btn-sm btn-outline-info" title="Xem chi tiết hóa đơn">
@@ -219,12 +216,12 @@
                                         }
 
                                         <!-- Nút Hủy đơn -->
-                                        @if (item.TrangThai != "Đã hủy" && item.TrangThai != "Hoàn tất")
+                                        @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Đã xác nhận")
                                         {
                                             <button type="button" class="btn btn-sm btn-outline-danger" 
                                                     data-bs-toggle="modal" data-bs-target="#modalHuyBan" 
                                                     data-id="@item.MaDatBan" data-code="@item.BookingCode"
-                                                    title="Hủy đơn đặt bàn">
+                                                    data-version="@item.RowVersion" title="Hủy đơn đặt bàn">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         }
@@ -248,50 +245,6 @@
     </div>
 </div>
 
-<!-- MODAL XẾP BÀN ĂN -->
-<div class="modal fade" id="modalXepBan" tabindex="-1" aria-labelledby="modalXepBanTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <form asp-action="XacNhan" method="post">
-                @Html.AntiForgeryToken()
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="modalXepBanTitle">
-                        <i class="bi bi-table text-primary me-2"></i>Duyệt & Xếp Bàn Ăn
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <input type="hidden" name="DatBanId" id="xepBanDatBanId" />
-                    <div class="p-3 bg-light rounded-3 mb-3 small">
-                        <div>Đơn đặt bàn: <strong class="text-danger font-monospace" id="xepBanCode"></strong></div>
-                        <div>Khách hàng: <strong id="xepBanGuest"></strong></div>
-                        <div>Thời gian đến: <strong id="xepBanTime" class="text-primary"></strong></div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Chọn bàn ăn còn trống <span class="text-danger">*</span></label>
-                        <select name="BanAnId" id="xepBanSelect" class="form-select form-select-lg" required>
-                            <option value="">-- Chọn bàn ăn phù hợp --</option>
-                            @foreach (var opt in Model.DanhSachBanTrong)
-                            {
-                                <option value="@opt.Value">@opt.Text</option>
-                            }
-                        </select>
-                        <div class="form-text small text-muted">
-                            <i class="bi bi-shield-check me-1"></i>Hệ thống tự động kiểm tra chống xung đột lịch đặt bàn trong khoảng ±2 giờ.
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" class="btn btn-primary fw-semibold px-4">
-                        <i class="bi bi-check2-circle me-1"></i>Xác nhận gán bàn
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- MODAL HỦY ĐẶT BÀN -->
 <div class="modal fade" id="modalHuyBan" tabindex="-1" aria-labelledby="modalHuyBanTitle" aria-hidden="true">
@@ -307,6 +260,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <input type="hidden" name="DatBanId" id="huyBanDatBanId" />
+                    <input type="hidden" name="rowVersion" id="huyBanRowVersion" />
                     <p class="text-secondary mb-3">
                         Bạn có chắc chắn muốn hủy đơn đặt bàn <strong class="text-danger font-monospace" id="huyBanCode"></strong>?
                     </p>
@@ -331,28 +285,13 @@
 @section Scripts {
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Modal Xếp bàn
-            const modalXepBan = document.getElementById("modalXepBan");
-            if (modalXepBan) {
-                modalXepBan.addEventListener("show.bs.modal", function (event) {
-                    const button = event.relatedTarget;
-                    document.getElementById("xepBanDatBanId").value = button.getAttribute("data-id");
-                    document.getElementById("xepBanCode").innerText = button.getAttribute("data-code");
-                    document.getElementById("xepBanGuest").innerText = button.getAttribute("data-guest");
-                    document.getElementById("xepBanTime").innerText = button.getAttribute("data-time");
-                    const curBan = button.getAttribute("data-curban");
-                    if (curBan && curBan !== "0") {
-                        document.getElementById("xepBanSelect").value = curBan;
-                    }
-                });
-            }
-
             // Modal Hủy bàn
             const modalHuyBan = document.getElementById("modalHuyBan");
             if (modalHuyBan) {
                 modalHuyBan.addEventListener("show.bs.modal", function (event) {
                     const button = event.relatedTarget;
                     document.getElementById("huyBanDatBanId").value = button.getAttribute("data-id");
+                    document.getElementById("huyBanRowVersion").value = button.getAttribute("data-version");
                     document.getElementById("huyBanCode").innerText = button.getAttribute("data-code");
                 });
             }

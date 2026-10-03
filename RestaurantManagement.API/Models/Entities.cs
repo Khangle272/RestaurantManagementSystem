@@ -67,6 +67,8 @@ public class MonAn
     [MaxLength(500)] public string? HinhAnh { get; set; }
     public LoaiMon Loai { get; set; }
     public TrangThaiMon TrangThai { get; set; }
+    public bool DaDuyet { get; set; } = true;
+    [MaxLength(500)] public string? LyDoNgung { get; set; }
     public bool LaMonMoi { get; set; }
     public bool LaMonNoiBat { get; set; }
     public ICollection<MonAnSize> Sizes { get; set; } = new List<MonAnSize>();
@@ -96,6 +98,7 @@ public class KhuVuc
 {
     public int Id { get; set; }
     [MaxLength(100)] public string TenKhuVuc { get; set; } = "";
+    public int Tang { get; set; } = 1;
     public bool LaPhongVip { get; set; }
     public bool DangSuDung { get; set; } = true;
 }
@@ -127,6 +130,8 @@ public class DatBan
     [MaxLength(1000)] public string? YeuCau { get; set; }
     public bool YeuCauTrangTri { get; set; }
     public bool YeuCauVip { get; set; }
+    public int? KhuVucUuTienId { get; set; }
+    public KhuVuc? KhuVucUuTien { get; set; }
     public decimal TienCocYeuCau { get; set; }
     [MaxLength(1000)] public string? DieuKienCocDaThoaThuan { get; set; }
     // Tiền cọc gốc lưu tại DatBan (không dùng bảng giao dịch riêng).
@@ -135,6 +140,7 @@ public class DatBan
     public TrangThaiCoc TrangThaiCoc { get; set; } = TrangThaiCoc.ChuaCoc;
     public TrangThaiDatBan TrangThai { get; set; }
     public DateTimeOffset? ThoiDiemNhanBan { get; set; }
+    public DateTimeOffset? ThoiDiemKetThuc { get; set; }
     public DateTimeOffset? ThoiDiemHuy { get; set; }
     [MaxLength(500)] public string? LyDoHuy { get; set; }
     public int? NhanVienTiepNhanId { get; set; }

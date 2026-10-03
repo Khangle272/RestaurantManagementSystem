@@ -39,17 +39,22 @@ public class CreateStaffAccountViewModel
     [Range(1, int.MaxValue)] public int NhanVienId { get; set; }
     [Required, EmailAddress, StringLength(256)] public string Email { get; set; } = "";
     [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
-    [Required] public string Role { get; set; } = "";
 }
 
-public class StaffAccountRow
+public class EditAccountViewModel
 {
-    public int NhanVienId { get; set; }
-    public string MaNhanVien { get; set; } = "";
-    public string HoTen { get; set; } = "";
-    public bool DangLamViec { get; set; }
-    public int? TaiKhoanId { get; set; }
-    public string? Email { get; set; }
-    public string? Role { get; set; }
-    public bool IsLocked { get; set; }
+    public int Id { get; set; }
+    public string ConcurrencyStamp { get; set; } = "";
+    [StringLength(120)] public string? HoTen { get; set; }
+    [Required, EmailAddress, StringLength(256)] public string Email { get; set; } = "";
+    [Required, Phone, StringLength(20)] public string SoDienThoai { get; set; } = "";
+    [Required, DataType(DataType.Password)] public string ConfirmPassword { get; set; } = "";
+}
+
+public class ResetAccountPasswordViewModel
+{
+    public int Id { get; set; }
+    [Required, DataType(DataType.Password)] public string AdminPassword { get; set; } = "";
+    [Required, DataType(DataType.Password)] public string NewPassword { get; set; } = "";
+    [Compare(nameof(NewPassword)), DataType(DataType.Password)] public string ConfirmPassword { get; set; } = "";
 }

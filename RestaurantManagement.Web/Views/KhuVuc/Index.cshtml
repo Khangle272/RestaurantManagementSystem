@@ -1,0 +1,6 @@
+@model List<RestaurantManagement.API.Models.KhuVuc>
+@{ ViewData["Title"] = "Khu vực / tầng"; }
+<div class="d-flex justify-content-between mb-4"><h1 class="h3">Khu vực / tầng</h1><a asp-action="Edit" class="btn btn-success">Thêm khu vực</a></div>
+<div class="table-responsive"><table class="table bg-white"><thead><tr><th>Khu vực</th><th>Tầng</th><th>Loại</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+@foreach (var item in Model) { <tr><td>@item.TenKhuVuc</td><td>@item.Tang</td><td>@(item.LaPhongVip ? "VIP" : "Thường")</td><td>@(item.DangSuDung ? "Đang sử dụng" : "Ngừng sử dụng")</td><td><a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-success">Sửa</a></td></tr> }
+</tbody></table></div><a asp-controller="SoDoBan" asp-action="Index">Quay lại sơ đồ bàn</a>

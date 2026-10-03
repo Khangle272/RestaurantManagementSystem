@@ -1,0 +1,51 @@
+@model bool
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var admin = User.IsInRole("Admin");
+    var reception = admin || User.IsInRole("TiepTan");
+    var entries = new (string Group, string Controller, string Action, string Label, bool Allowed)[] {
+        ("Tài khoản", "Account", "Index", "Thông tin cá nhân", true),
+        ("Tài khoản", "NhanVien", "Index", "Quản lý nhân viên", admin),
+        ("Tài khoản", "TaiKhoanKhachHang", "Index", "Quản lý khách hàng", admin),
+        ("Bàn & Đặt bàn", "SoDoBan", "Index", "Sơ đồ bàn", reception || User.IsInRole("BoiBan")),
+        ("Bàn & Đặt bàn", "QuanLyDatBan", "Index", "Yêu cầu đặt bàn", reception),
+        ("Thực đơn", "MonAn", "Index", admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức", admin || User.IsInRole("Bep")),
+        ("Thực đơn", "DanhMuc", "Index", "Quản lý danh mục món", admin),
+        ("Vận hành", "Bep", "Index", "Bếp chế biến", admin || User.IsInRole("Bep")),
+        ("Vận hành", "NguyenLieu", "Index", "Kho nguyên liệu", admin || User.IsInRole("Kho")),
+        ("Vận hành", "HoaDon", "Index", "Hóa đơn & Thanh toán", admin || User.IsInRole("ThuNgan")),
+        ("Đánh giá khách hàng", "QuanLyDatBan", "DanhGia", "Đánh giá khách hàng", reception)
+    };
+    bool IsActive(string targetController, string targetAction) =>
+        (controller == targetController || (targetController == "NhanVien" && controller == "TaiKhoanNhanVien"))
+        && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"));
+}
+<div class="@(Model ? "row g-3" : "management-navigation")">
+@foreach (var group in entries.Where(x => x.Allowed).GroupBy(x => x.Group))
+{
+    if (Model)
+    {
+        <div class="col-12 col-md-6 col-xl-4"><section class="card border-0 shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-success mb-3">@group.Key</h2>
+            @foreach (var item in group) { <a asp-controller="@item.Controller" asp-action="@item.Action" class="d-block py-2 text-decoration-none text-body">@item.Label <span class="float-end text-muted" aria-hidden="true">→</span></a> }
+        </div></section></div>
+    }
+    else if (group.Count() == 1)
+    {
+        var item = group.Single();
+        <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link @(IsActive(item.Controller, item.Action) ? "active" : "")" aria-current="@(IsActive(item.Controller, item.Action) ? "page" : null)">@item.Label</a>
+    }
+    else
+    {
+        <details class="management-menu-group" open="@(group.Any(x => IsActive(x.Controller, x.Action)))">
+            <summary>@group.Key</summary>
+            <div class="management-menu-children">
+            @foreach (var item in group) {
+                <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link @(IsActive(item.Controller, item.Action) ? "active" : "")" aria-current="@(IsActive(item.Controller, item.Action) ? "page" : null)">@item.Label</a>
+            }
+            </div>
+        </details>
+    }
+}
+</div>

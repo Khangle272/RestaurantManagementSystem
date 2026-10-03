@@ -7,11 +7,12 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Controllers;
 
-[Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan)]
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan + "," + RestaurantManagement.Web.Security.AppRoles.TiepTan)]
 public class BanAnController(RestaurantDbContext context) : ManagementControllerBase(context)
 {
     public async Task<IActionResult> Index(string? search, int? khuVucId, string? trangThai, int page = 1)
     {
+        if (!User.IsInRole("Admin")) return RedirectToAction("Index", "SoDoBan");
         search = search?.Trim();
         var query = Db.BanAn.Include(x => x.KhuVuc).AsNoTracking();
         if (!string.IsNullOrEmpty(search)) query = query.Where(x => x.MaBan.Contains(search));
@@ -22,13 +23,13 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View(await PageAsync(query.OrderByDescending(x => x.Id), page, search, trangThai, khuVucId));
     }
 
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan), HttpGet]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Create() => View("Form", new BanAnFormViewModel
     {
         KhuVucOptions = await AreaOptionsAsync(activeOnly: true)
     });
 
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan), HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(BanAnFormViewModel model)
     {
         await ValidateAsync(model, 0, null);
@@ -47,7 +48,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View("Form", model);
     }
 
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan), HttpGet]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Edit(int id)
     {
         var entity = await Db.BanAn.FindAsync(id);
@@ -60,7 +61,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         });
     }
 
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan), HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, BanAnFormViewModel model)
     {
         if (id != model.Id) return NotFound();
@@ -68,6 +69,12 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         if (entity == null) return NotFound();
         var originalArea = entity.KhuVucId;
         await ValidateAsync(model, id, originalArea);
+        if (entity.TrangThai is TrangThaiBan.DangPhucVu or TrangThaiBan.CanDon)
+            ModelState.AddModelError("", "Bàn đang phục vụ hoặc cần dọn. Hoàn tất trên sơ đồ bàn trước khi sửa cấu hình.");
+        if (await Db.ChiTietDatBan.AnyAsync(x => x.BanAnId == id && (x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan || x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc)
+            && x.DatBan.GioKetThucDuKien > DateTimeOffset.UtcNow)
+            && (model.KhuVucId != entity.KhuVucId || model.SoChoNgoi != entity.SoChoNgoi || model.TrangThai != entity.TrangThai))
+            ModelState.AddModelError("", "Bàn còn lịch đã xác nhận. Xếp lại lịch trước khi thay đổi khu vực, chỗ ngồi hoặc ngừng sử dụng.");
         if (ModelState.IsValid && ApplyVersion(entity, model.RowVersion))
         {
             Map(model, entity);
@@ -81,7 +88,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View("Form", model);
     }
 
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan), HttpGet]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpGet]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await Db.BanAn.FindAsync(id);
@@ -89,7 +96,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         return View(DeleteModel(entity, id, entity.MaBan, "bàn ăn"));
     }
 
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin + "," + RestaurantManagement.Web.Security.AppRoles.BoiBan), HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = RestaurantManagement.Web.Security.AppRoles.Admin), HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id, DeleteRecordViewModel model)
     {
         if (id != model.Id) return NotFound();
@@ -102,6 +109,8 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
     private async Task ValidateAsync(BanAnFormViewModel model, int id, int? currentArea)
     {
         model.MaBan = model.MaBan?.Trim() ?? "";
+        if (model.TrangThai is not (TrangThaiBan.SanSang or TrangThaiBan.NgungSuDung))
+            ModelState.AddModelError(nameof(model.TrangThai), "Cấu hình chỉ chọn sẵn sàng hoặc ngừng sử dụng. Trạng thái phục vụ được cập nhật trên sơ đồ bàn.");
         if (await Db.BanAn.AnyAsync(x => x.Id != id && x.MaBan == model.MaBan))
             ModelState.AddModelError(nameof(model.MaBan), "Mã bàn đã tồn tại.");
         if (!await Db.KhuVuc.AnyAsync(x => x.Id == model.KhuVucId && (x.DangSuDung || x.Id == currentArea)))

@@ -49,12 +49,15 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<KhachHang>().HasIndex(x => x.SoDienThoai).IsUnique();
         b.Entity<KhachHang>().HasOne(x => x.TaiKhoan).WithOne().HasForeignKey<KhachHang>(x => x.TaiKhoanId);
         b.Entity<DanhMuc>().HasIndex(x => x.TenDanhMuc).IsUnique();
+        b.Entity<MonAn>().Property(x => x.DaDuyet).HasDefaultValue(true);
         b.Entity<MonAnSize>().HasIndex(x => new { x.MonAnId, x.TenSize }).IsUnique();
         b.Entity<MonAnSize>().HasOne(x => x.MonAn).WithMany(x => x.Sizes).HasForeignKey(x => x.MonAnId);
         b.Entity<ChiTietCombo>().HasKey(x => new { x.ComboId, x.MonAnId });
         b.Entity<ChiTietCombo>().HasOne(x => x.Combo).WithMany(x => x.ThanhPhanCombo).HasForeignKey(x => x.ComboId);
         b.Entity<ChiTietCombo>().HasOne(x => x.MonAn).WithMany().HasForeignKey(x => x.MonAnId);
         b.Entity<BanAn>().HasIndex(x => x.MaBan).IsUnique();
+        b.Entity<KhuVuc>().Property(x => x.Tang).HasDefaultValue(1);
+        b.Entity<DatBan>().HasOne(x => x.KhuVucUuTien).WithMany().HasForeignKey(x => x.KhuVucUuTienId);
         b.Entity<DatBan>().HasIndex(x => x.MaDatBan).IsUnique();
         b.Entity<DatBan>().HasIndex(x => new { x.TrangThai, x.GioDen, x.GioKetThucDuKien });
         b.Entity<ChiTietDatBan>().HasKey(x => new { x.DatBanId, x.BanAnId });

@@ -1,0 +1,8 @@
+@using RestaurantManagement.Web.Security
+@foreach (var role in AppRoles.All)
+{
+    if (User.IsInRole(role))
+    {
+        <span class="role-label">@AppRoles.Label(role)</span>
+    }
+}

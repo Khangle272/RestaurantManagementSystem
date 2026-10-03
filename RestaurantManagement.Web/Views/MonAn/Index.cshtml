@@ -2,17 +2,18 @@
 @model MonAnIndexViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Thực đơn món ăn";
+    var admin = User.IsInRole("Admin");
+    ViewData["Title"] = admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức";
 }
 <div class="container-fluid py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div><h2 class="h3 mb-1">Thực đơn món ăn</h2><p class="text-muted mb-0">Quản lý thông tin món, giá theo size và công thức nguyên liệu.</p></div>
+        <div><h2 class="h3 mb-1">@ViewData["Title"]</h2><p class="text-muted mb-0">@(admin ? "Kiểm tra món, duyệt giá theo size và quản lý trạng thái phục vụ." : "Chuẩn bị thông tin kỹ thuật của món; Quản lý duyệt trước khi mở bán.")</p></div>
         <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm món ăn</a>
     </div>
     <partial name="_ManagementMessages" />
     <div class="row g-3 mb-4">
-        @foreach (var stat in new[] { ("Tổng số món", Model.TotalCount), ("Đang phục vụ", Model.DangPhucVuCount), ("Tạm hết", Model.TamHetCount), ("Ngừng kinh doanh", Model.NgungKinhDoanhCount) })
-        { <div class="col-md-3 col-6"><div class="card border-0 shadow-sm"><div class="card-body">@stat.Item1<strong class="d-block fs-3">@stat.Item2</strong></div></div></div> }
+        @foreach (var stat in new[] { ("Tổng số món", Model.TotalCount), ("Chờ duyệt", Model.ChoDuyetCount), ("Đang phục vụ", Model.DangPhucVuCount), ("Tạm hết", Model.TamHetCount), ("Ngừng kinh doanh", Model.NgungKinhDoanhCount) })
+        { <div class="col-md col-6"><div class="card border-0 shadow-sm"><div class="card-body">@stat.Item1<strong class="d-block fs-3">@stat.Item2</strong></div></div></div> }
     </div>
     <form asp-action="Index" method="get" class="card border-0 shadow-sm mb-4">
         <div class="card-body row g-3 align-items-end">
@@ -23,6 +24,7 @@
             </select></div>
             <div class="col-md-3"><label for="trangThai" class="form-label">Trạng thái</label><select id="trangThai" name="trangThai" class="form-select">
                 <option value="">Tất cả trạng thái</option>
+                <option value="ChoDuyet" selected="@(Model.TrangThai == "ChoDuyet")">Chờ duyệt</option>
                 <option value="DangPhucVu" selected="@(Model.TrangThai == "DangPhucVu")">Đang phục vụ</option>
                 <option value="TamHet" selected="@(Model.TrangThai == "TamHet")">Tạm hết</option>
                 <option value="NgungKinhDoanh" selected="@(Model.TrangThai == "NgungKinhDoanh")">Ngừng kinh doanh</option>
@@ -40,16 +42,16 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between gap-2 mb-3">
                         <span class="text-muted small">@item.TenDanhMuc</span>
-                        <span class="badge @(item.TrangThai == TrangThaiMon.DangPhucVu ? "bg-success" : item.TrangThai == TrangThaiMon.TamHet ? "bg-warning text-dark" : "bg-secondary")">@(item.TrangThai == TrangThaiMon.DangPhucVu ? "Đang phục vụ" : item.TrangThai == TrangThaiMon.TamHet ? "Tạm hết" : "Ngừng kinh doanh")</span>
+                        <span class="badge @(!item.DaDuyet ? "bg-warning text-dark" : item.TrangThai == TrangThaiMon.DangPhucVu ? "bg-success" : "bg-secondary")">@(!item.DaDuyet ? "Chờ duyệt" : item.TrangThai == TrangThaiMon.DangPhucVu ? "Đang phục vụ" : item.TrangThai == TrangThaiMon.TamHet ? "Tạm hết" : "Ngừng kinh doanh")</span>
                     </div>
                     <h3 class="h5">@item.TenMon</h3>
                     <p class="text-muted">@item.MoTa</p>
-                    <strong class="text-primary">@(item.GiaBan.HasValue ? (item.SoSize > 1 ? "Từ " : "") + item.GiaBan.Value.ToString("N0") + " đ" : "Chưa có giá đang sử dụng")</strong>
+                    @if (admin) { <strong class="text-primary">@(item.GiaBan.HasValue ? (item.SoSize > 1 ? "Từ " : "") + item.GiaBan.Value.ToString("N0") + " đ" : "Chưa có giá đang sử dụng")</strong> }
                     @if (item.SoSize > 1) { <small class="text-muted d-block">@item.SoSize lựa chọn size</small> }
                 </div>
                 <div class="card-footer bg-white d-flex gap-2">
                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Sửa / Định mức</a>
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Xóa</a>
+                    @if (admin) { <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Xóa</a> }
                 </div>
             </article></div>
         }

@@ -25,9 +25,7 @@ public static class AuthSetup
             ("boiban.demo@example.test", AppRoles.BoiBan, "DEMO-BB", "Bồi bàn thử", "0999000002"),
             ("thungan.demo@example.test", AppRoles.ThuNgan, "DEMO-TN", "Thu ngân thử", "0999000003"),
             ("bep.demo@example.test", AppRoles.Bep, "DEMO-BEP", "Bếp thử", "0999000004"),
-            ("kho.demo@example.test", AppRoles.Kho, "DEMO-KHO", "Kho thử", "0999000005"),
-            ("thucdon.demo@example.test", AppRoles.ThucDon, "DEMO-MON", "Thực đơn thử", "0999000006"),
-            ("danhmuc.demo@example.test", AppRoles.DanhMucMon, "DEMO-DM", "Danh mục thử", "0999000007")
+            ("kho.demo@example.test", AppRoles.Kho, "DEMO-KHO", "Kho thử", "0999000005")
         };
 
         await using var transaction = await db.Database.BeginTransactionAsync();

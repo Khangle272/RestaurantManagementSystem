@@ -14,7 +14,8 @@ public class BepController(RestaurantDbContext db) : Controller
     {
         var rows = await db.ChiTietHoaDon.AsNoTracking()
             .Include(x => x.HoaDon).ThenInclude(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn)
-            .Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien || x.TrangThai == TrangThaiCheBien.DangCheBien)
+            .Where(x => x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
+                && (x.TrangThai == TrangThaiCheBien.ChoCheBien || x.TrangThai == TrangThaiCheBien.DangCheBien))
             .OrderBy(x => x.HoaDon.ThoiDiemLap).ThenBy(x => x.Id).Take(100)
             .ToListAsync();
         var items = rows.Select(x => new BepRow
@@ -30,8 +31,9 @@ public class BepController(RestaurantDbContext db) : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> CapNhat(int id, TrangThaiCheBien trangThai)
     {
-        var item = await db.ChiTietHoaDon.SingleOrDefaultAsync(x => x.Id == id);
+        var item = await db.ChiTietHoaDon.Include(x => x.HoaDon).SingleOrDefaultAsync(x => x.Id == id);
         if (item is null) return NotFound();
+        if (item.HoaDon.TrangThai == TrangThaiHoaDon.DaHuy) return BadRequest();
         var valid = item.TrangThai == TrangThaiCheBien.ChoCheBien && trangThai == TrangThaiCheBien.DangCheBien
             || item.TrangThai == TrangThaiCheBien.DangCheBien && trangThai == TrangThaiCheBien.SanSang;
         if (!valid) return BadRequest();

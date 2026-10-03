@@ -30,7 +30,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     {
         var path = context.Request.Path.Value ?? "";
         var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien",
-            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/HoaDon", "/Bep" };
+            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/HoaDon", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword" };
         var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
             || path.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)) ? "/admin" : "/Account/Login";
         context.Response.Redirect(login + "?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
@@ -43,6 +43,7 @@ builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
 
 var app = builder.Build();
 
@@ -66,6 +67,15 @@ if (args.Contains("--import-sql-data", StringComparer.OrdinalIgnoreCase))
         throw new InvalidOperationException("Chỉ được nạp dữ liệu mẫu trong môi trường Development.");
     await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
     await SampleDataImport.RunAsync(app.Services);
+    return;
+}
+
+if (args.Contains("--remove-retired-menu-roles", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment())
+        throw new InvalidOperationException("Chỉ được dọn vai trò mẫu cũ trong môi trường Development.");
+    await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
+    await RetiredRoleCleanup.RunAsync(app.Services);
     return;
 }
 

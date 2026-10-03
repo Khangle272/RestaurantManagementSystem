@@ -36,7 +36,7 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
 
     [Authorize(Roles = AppRoles.ThuNgan)]
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmCash(int id, string rowVersion)
+    public async Task<IActionResult> ConfirmCash(int id, string? rowVersion)
     {
         if (!int.TryParse(users.GetUserId(User), out var accountId)) return Challenge();
         var cashierId = await db.NhanVien.AsNoTracking()
@@ -44,9 +44,9 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
             .Select(x => x.Id).SingleOrDefaultAsync();
         if (cashierId == 0) return Forbid();
 
-        byte[] expectedVersion;
-        try { expectedVersion = Convert.FromBase64String(rowVersion); }
-        catch (FormatException) { return BadRequest(); }
+        var expectedVersion = new byte[8];
+        if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, expectedVersion, out var length) || length != 8)
+            return BadRequest();
 
         var invoice = await db.HoaDon.Include(x => x.ChiTiet).SingleOrDefaultAsync(x => x.Id == id);
         if (invoice is null) return NotFound();

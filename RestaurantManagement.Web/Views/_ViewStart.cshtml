@@ -1,3 +1,4 @@
 @{
-    Layout = "_AdminLayout";
+    Layout = User.Identity?.IsAuthenticated == true && !User.IsInRole("KhachHang")
+        ? "_AdminLayout" : "_Layout";
 }
