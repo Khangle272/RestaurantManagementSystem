@@ -237,6 +237,9 @@ public class NguyenLieu
     [MaxLength(120)] public string TenNguyenLieu { get; set; } = "";
     // Đơn vị tính lưu trực tiếp (g/kg/ml/lít/cái...); không làm quy đổi phức tạp.
     [MaxLength(30)] public string DonViTinh { get; set; } = "";
+    [MaxLength(50)] public string? DanhMuc { get; set; }
+    public decimal SoLuongTon { get; set; }
+    public decimal DonGia { get; set; }
     public decimal NguongCanhBao { get; set; }
     public bool DangSuDung { get; set; } = true;
 }
@@ -255,8 +258,11 @@ public class NhaCungCap
     public int Id { get; set; }
     [MaxLength(150)] public string TenNhaCungCap { get; set; } = "";
     [MaxLength(20)] public string? SoDienThoai { get; set; }
+    [MaxLength(100)] public string? Email { get; set; }
     [MaxLength(300)] public string? DiaChi { get; set; }
     [MaxLength(30)] public string? MaSoThue { get; set; }
+    [MaxLength(100)] public string? NguoiLienHe { get; set; }
+    [MaxLength(500)] public string? GhiChu { get; set; }
     public bool DangSuDung { get; set; } = true;
 }
 
@@ -271,6 +277,8 @@ public class PhieuNhap
     public DateTimeOffset ThoiDiem { get; set; }
     public TrangThaiPhieu TrangThai { get; set; }
     public LyDoNhap LyDo { get; set; }
+    [MaxLength(50)] public string? SoHoaDon { get; set; }
+    public decimal TongTien { get; set; }
     [MaxLength(500)] public string? GhiChu { get; set; }
     public ICollection<ChiTietPhieuNhap> ChiTiet { get; set; } = new List<ChiTietPhieuNhap>();
 }
@@ -284,6 +292,7 @@ public class ChiTietPhieuNhap
     public NguyenLieu NguyenLieu { get; set; } = null!;
     public decimal SoLuong { get; set; }
     public decimal DonGia { get; set; }
+    public decimal ThanhTien { get; set; }
     public DateOnly? HanSuDung { get; set; }
     [MaxLength(50)] public string? MaLo { get; set; }
 }
@@ -299,6 +308,9 @@ public class PhieuXuat
     public DateTimeOffset ThoiDiem { get; set; }
     public TrangThaiPhieu TrangThai { get; set; }
     public LyDoXuat LyDo { get; set; }
+    [MaxLength(50)] public string? BoPhanNhan { get; set; }
+    [MaxLength(100)] public string? NguoiNhan { get; set; }
+    public decimal TongTien { get; set; }
     [MaxLength(500)] public string? GhiChu { get; set; }
     public ICollection<ChiTietPhieuXuat> ChiTiet { get; set; } = new List<ChiTietPhieuXuat>();
 }
@@ -311,9 +323,38 @@ public class ChiTietPhieuXuat
     public int NguyenLieuId { get; set; }
     public NguyenLieu NguyenLieu { get; set; } = null!;
     public decimal SoLuong { get; set; }
+    public decimal DonGiaXuat { get; set; }
+    public decimal ThanhTien { get; set; }
     // Liên kết lô nhập (cùng nguyên liệu); NULL khi xuất không theo lô cụ thể.
     public int? ChiTietPhieuNhapId { get; set; }
     public ChiTietPhieuNhap? LoNhap { get; set; }
+}
+
+public class PhieuThanhLy
+{
+    public int Id { get; set; }
+    [MaxLength(30)] public string MaPhieu { get; set; } = "";
+    public int NhanVienId { get; set; }
+    public NhanVien NhanVien { get; set; } = null!;
+    public DateTimeOffset ThoiDiem { get; set; }
+    [MaxLength(150)] public string LyDoThanhLy { get; set; } = "";
+    public decimal TongTienThietHai { get; set; }
+    [MaxLength(500)] public string? GhiChu { get; set; }
+    [MaxLength(30)] public string TrangThai { get; set; } = "DaThanhLy";
+    public ICollection<ChiTietPhieuThanhLy> ChiTiet { get; set; } = new List<ChiTietPhieuThanhLy>();
+}
+
+public class ChiTietPhieuThanhLy
+{
+    public int Id { get; set; }
+    public int PhieuThanhLyId { get; set; }
+    public PhieuThanhLy PhieuThanhLy { get; set; } = null!;
+    public int NguyenLieuId { get; set; }
+    public NguyenLieu NguyenLieu { get; set; } = null!;
+    public decimal SoLuong { get; set; }
+    public decimal DonGiaVon { get; set; }
+    public decimal ThanhTien { get; set; }
+    [MaxLength(250)] public string? GhiChu { get; set; }
 }
 
 public class KhuyenMai

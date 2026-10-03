@@ -1,0 +1,284 @@
+@model PhieuNhapCreateVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Lập Phiếu Nhập Kho";
+    var nccList = ViewBag.NhaCungCapList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var nguyenLieuList = ViewBag.NguyenLieuList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-cart-plus me-2 text-danger"></i>Lập Phiếu Nhập Kho</h1>
+            <p class="text-muted mb-0">Tạo phiếu nhập Master-Detail, cập nhật số lượng tồn kho và điều chỉnh đơn giá vốn tức thời.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-brand-outline">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <form asp-action="Create" method="post" id="formNhapKho">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <!-- Master Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-subtle">
+                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin chung chứng từ nhập hàng</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-12 col-md-5">
+                        <label asp-for="MaNhaCungCap" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
+                        <select asp-for="MaNhaCungCap" class="form-select" required>
+                            <option value="">-- Chọn Nhà cung cấp --</option>
+                            @foreach (var ncc in nccList)
+                            {
+                                <option value="@ncc.Id">@ncc.TenNhaCungCap (@ncc.SoDienThoai)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="MaNhaCungCap" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <label asp-for="NgayNhap" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
+                        <input asp-for="NgayNhap" type="datetime-local" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" required />
+                        <span asp-validation-for="NgayNhap" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="SoHoaDon" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted"><i class="bi bi-receipt"></i></span>
+                            <input asp-for="SoHoaDon" class="form-control" placeholder="HD-00123 / Số phiếu giao hàng" />
+                        </div>
+                        <span asp-validation-for="SoHoaDon" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="GhiChu" class="form-label fw-semibold"></label>
+                        <input asp-for="GhiChu" class="form-control" placeholder="Ghi chú về đợt nhập hàng, điều kiện bảo quản, người giao hàng..." />
+                        <span asp-validation-for="GhiChu" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-subtle d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-list-check me-2 text-success"></i>Chi tiết các mặt hàng nhập kho</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnThemDong">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm dòng hàng
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-admin align-middle mb-0" id="bangChiTiet">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th style="min-width: 250px;">Nguyên Liệu <span class="text-danger">*</span></th>
+                                <th style="width: 90px;">ĐVT</th>
+                                <th style="width: 140px;">Số Lượng <span class="text-danger">*</span></th>
+                                <th style="width: 160px;">Đơn Giá Nhập <span class="text-danger">*</span></th>
+                                <th style="width: 170px;" class="text-end">Thành Tiền (VNĐ)</th>
+                                <th style="width: 150px;">Hạn Sử Dụng</th>
+                                <th style="width: 120px;">Số Lô</th>
+                                <th style="width: 60px;" class="text-center">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chiTietRows">
+                            <!-- Rows added dynamically via JS -->
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="fw-bold py-3 text-secondary">
+                                    Tổng cộng: <span id="lblTongSoMatHang" class="badge bg-secondary">0 mặt hàng</span>
+                                </td>
+                                <td colspan="2" class="text-end fw-bold text-dark fs-5 py-3">
+                                    Tổng giá trị nhập:
+                                </td>
+                                <td class="text-end fw-bold text-danger fs-4 py-3" id="lblTongTien">
+                                    0 VNĐ
+                                </td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white py-3 text-muted small border-subtle">
+                <i class="bi bi-info-circle me-1 text-primary"></i> Đơn giá nhập của từng nguyên liệu sẽ được tự động cập nhật làm giá vốn mới nhất sau khi phiếu được duyệt ghi sổ.
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="d-flex justify-content-end gap-2 mb-5">
+            <a asp-action="Index" class="btn btn-brand-outline">Hủy bỏ</a>
+            <button type="submit" class="btn btn-brand-primary btn-lg shadow-sm" id="btnSubmit">
+                <i class="bi bi-check2-circle me-1"></i> Xác Nhận Nhập Kho & Tăng Tồn
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Raw data for JS ingredients lookup -->
+<script type="application/json" id="rawIngredients">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(nguyenLieuList))
+</script>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const rawData = JSON.parse(document.getElementById("rawIngredients").textContent);
+        const rowsContainer = document.getElementById("chiTietRows");
+        const btnThemDong = document.getElementById("btnThemDong");
+        const lblTongSoMatHang = document.getElementById("lblTongSoMatHang");
+        const lblTongTien = document.getElementById("lblTongTien");
+        let rowIndex = 0;
+
+        function addRow(preselectedId = null, preQty = 1, prePrice = null) {
+            const tr = document.createElement("tr");
+            tr.className = "item-row";
+            tr.dataset.index = rowIndex;
+
+            let optionsHtml = '<option value="">-- Chọn nguyên liệu --</option>';
+            rawData.forEach(item => {
+                const selected = preselectedId && item.Id === preselectedId ? "selected" : "";
+                optionsHtml += `<option value="${item.Id}" data-dvt="${item.DonViTinh}" data-price="${item.DonGia}" ${selected}>${item.TenNguyenLieu}</option>`;
+            });
+
+            tr.innerHTML = `
+                <td class="stt-cell text-muted fw-semibold">${rowIndex + 1}</td>
+                <td>
+                    <select name="ChiTiets[${rowIndex}].MaNguyenLieu" class="form-select select-nguyenlieu" required>
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <span class="badge bg-light text-dark border text-unit">—</span>
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0.01" name="ChiTiets[${rowIndex}].SoLuong" class="form-control input-soluong" value="${preQty}" required />
+                </td>
+                <td>
+                    <div class="input-group">
+                        <input type="number" step="100" min="0" name="ChiTiets[${rowIndex}].DonGiaNhap" class="form-control input-dongia" value="${prePrice !== null ? prePrice : 0}" required />
+                    </div>
+                </td>
+                <td class="text-end fw-bold text-dark text-thanhtien">
+                    0 VNĐ
+                </td>
+                <td>
+                    <input type="date" name="ChiTiets[${rowIndex}].HanSuDung" class="form-control form-control-sm" />
+                </td>
+                <td>
+                    <input type="text" name="ChiTiets[${rowIndex}].SoLo" class="form-control form-control-sm" placeholder="Lô 01" />
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-xoadong" title="Xóa dòng này">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            rowsContainer.appendChild(tr);
+
+            const selectEl = tr.querySelector(".select-nguyenlieu");
+            const dvtEl = tr.querySelector(".text-unit");
+            const donGiaInput = tr.querySelector(".input-dongia");
+
+            function updateFromSelection() {
+                const sel = selectEl.options[selectEl.selectedIndex];
+                if (sel && sel.value) {
+                    dvtEl.textContent = sel.dataset.dvt || "—";
+                    if (prePrice === null) {
+                        donGiaInput.value = sel.dataset.price || 0;
+                    }
+                } else {
+                    dvtEl.textContent = "—";
+                }
+                updateRow(tr);
+            }
+
+            selectEl.addEventListener("change", function () {
+                const sel = selectEl.options[selectEl.selectedIndex];
+                if (sel && sel.value) {
+                    dvtEl.textContent = sel.dataset.dvt || "—";
+                    donGiaInput.value = sel.dataset.price || 0;
+                } else {
+                    dvtEl.textContent = "—";
+                }
+                updateRow(tr);
+            });
+
+            tr.querySelector(".input-soluong").addEventListener("input", () => updateRow(tr));
+            donGiaInput.addEventListener("input", () => updateRow(tr));
+
+            tr.querySelector(".btn-xoadong").addEventListener("click", function () {
+                tr.remove();
+                reindexRows();
+                updateTotals();
+            });
+
+            updateFromSelection();
+            rowIndex++;
+            reindexRows();
+            updateTotals();
+        }
+
+        function updateRow(tr) {
+            const qty = parseFloat(tr.querySelector(".input-soluong").value) || 0;
+            const price = parseFloat(tr.querySelector(".input-dongia").value) || 0;
+            const total = qty * price;
+            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " VNĐ";
+            updateTotals();
+        }
+
+        function reindexRows() {
+            const rows = rowsContainer.querySelectorAll(".item-row");
+            rows.forEach((r, idx) => {
+                r.querySelector(".stt-cell").textContent = idx + 1;
+                r.querySelector(".select-nguyenlieu").name = `ChiTiets[${idx}].MaNguyenLieu`;
+                r.querySelector(".input-soluong").name = `ChiTiets[${idx}].SoLuong`;
+                r.querySelector(".input-dongia").name = `ChiTiets[${idx}].DonGiaNhap`;
+                const hsd = r.querySelector("input[type=date]");
+                if (hsd) hsd.name = `ChiTiets[${idx}].HanSuDung`;
+                const solo = r.querySelector("input[placeholder='Lô 01']");
+                if (solo) solo.name = `ChiTiets[${idx}].SoLo`;
+            });
+            lblTongSoMatHang.textContent = `${rows.length} mặt hàng`;
+        }
+
+        function updateTotals() {
+            let sum = 0;
+            rowsContainer.querySelectorAll(".item-row").forEach(tr => {
+                const qty = parseFloat(tr.querySelector(".input-soluong").value) || 0;
+                const price = parseFloat(tr.querySelector(".input-dongia").value) || 0;
+                sum += qty * price;
+            });
+            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " VNĐ";
+        }
+
+        btnThemDong.addEventListener("click", () => addRow());
+
+        // Add 2 default initial rows for quick entry
+        if (rawData.length > 0) {
+            addRow(rawData[0].Id, 10, rawData[0].DonGia);
+            if (rawData.length > 1) {
+                addRow(rawData[1].Id, 5, rawData[1].DonGia);
+            }
+        } else {
+            addRow();
+        }
+
+        document.getElementById("formNhapKho").addEventListener("submit", function (e) {
+            const rows = rowsContainer.querySelectorAll(".item-row");
+            if (rows.length === 0) {
+                e.preventDefault();
+                alert("Vui lòng thêm ít nhất một nguyên liệu nhập kho.");
+            }
+        });
+    });
+</script>
+}

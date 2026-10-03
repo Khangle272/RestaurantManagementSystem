@@ -1,0 +1,130 @@
+@model PhieuXuatDetailsVM
+@{
+    Layout = "_AdminLayout";
+    var p = Model.PhieuXuat;
+    ViewData["Title"] = $"Phiếu xuất kho {p.MaPhieu}";
+}
+
+<div class="container-fluid py-4" style="max-width: 1000px;">
+    <!-- Action buttons (Hidden during print) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <a asp-action="Index" class="btn btn-brand-outline">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+        </a>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-brand-primary">
+                <i class="bi bi-printer me-1"></i> In Phiếu Xuất Kho
+            </button>
+            <a asp-action="Create" class="btn btn-outline-secondary">
+                <i class="bi bi-plus-lg me-1"></i> Lập phiếu mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Printable Export Card -->
+    <div class="card border-0 shadow-sm invoice-printable p-4 p-md-5">
+        <!-- Receipt Header -->
+        <div class="row align-items-center pb-4 mb-4 border-bottom">
+            <div class="col-8">
+                <h3 class="fw-bold text-dark mb-1"><i class="bi bi-shop me-2 text-danger"></i>RESTAURANT MANAGEMENT SYSTEM</h3>
+                <div class="text-muted small">Bộ phận Quản lý Kho & Bếp Chế Biến</div>
+                <div class="text-muted small">Địa chỉ: 123 Đường Ẩm Thực, Quận 1, TP. Hồ Chí Minh · Hotline: 1900 6868</div>
+            </div>
+            <div class="col-4 text-end">
+                <h4 class="fw-bold text-danger mb-1">PHIẾU XUẤT KHO</h4>
+                <div class="fw-bold text-dark">Số: @p.MaPhieu</div>
+                <div class="text-muted small">Ngày lập: @p.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </div>
+
+        <!-- Department & Handover Information -->
+        <div class="row g-3 mb-4">
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3 h-100">
+                    <div class="fw-bold text-secondary text-uppercase small mb-2"><i class="bi bi-geo-alt me-1"></i>Bộ phận tiếp nhận</div>
+                    <div class="fw-bold fs-5 text-dark">@(p.BoPhanNhan ?? "Bếp")</div>
+                    <div class="small text-muted mt-2"><strong>Người nhận bàn giao:</strong> @(p.NguoiNhan ?? "Bếp trưởng / Nhân viên tiếp nhận")</div>
+                    <div class="small text-muted"><strong>Mục đích:</strong> Phục vụ chế biến món ăn tại nhà hàng</div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="p-3 bg-light rounded-3 h-100">
+                    <div class="fw-bold text-secondary text-uppercase small mb-2"><i class="bi bi-person-badge me-1"></i>Thông tin chứng từ</div>
+                    <div class="small mb-1"><strong>Thủ kho thực hiện:</strong> @(p.NhanVien?.HoTen ?? "Thủ kho")</div>
+                    <div class="small mb-1"><strong>Hình thức xuất:</strong> Chế biến món ăn</div>
+                    <div class="small"><strong>Trạng thái:</strong> <span class="badge bg-success">Đã xuất kho & Trừ tồn</span></div>
+                    @if (!string.IsNullOrEmpty(p.GhiChu))
+                    {
+                        <div class="small mt-2 pt-2 border-top text-muted"><strong>Ghi chú:</strong> @p.GhiChu</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr class="text-center">
+                        <th style="width: 50px;">STT</th>
+                        <th>Tên Nguyên Liệu</th>
+                        <th style="width: 90px;">ĐVT</th>
+                        <th style="width: 120px;">Số Lượng Xuất</th>
+                        <th style="width: 140px;" class="text-end">Đơn Giá Vốn</th>
+                        <th style="width: 170px;" class="text-end">Thành Tiền (VNĐ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var idx = 1; }
+                    @foreach (var item in p.ChiTiet)
+                    {
+                        <tr>
+                            <td class="text-center text-muted">@(idx++)</td>
+                            <td class="fw-bold text-dark">
+                                @(item.NguyenLieu?.TenNguyenLieu ?? $"#NL{item.NguyenLieuId:D3}")
+                            </td>
+                            <td class="text-center">@(item.NguyenLieu?.DonViTinh ?? "—")</td>
+                            <td class="text-center fw-semibold fs-6">@item.SoLuong.ToString("0.##")</td>
+                            <td class="text-end">@item.DonGiaXuat.ToString("N0")</td>
+                            <td class="text-end fw-bold text-dark">@item.ThanhTien.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold text-uppercase py-3">
+                            Tổng giá trị vốn nguyên liệu xuất:
+                        </td>
+                        <td colspan="2" class="text-end fw-bold text-danger fs-5 py-3">
+                            @p.TongTien.ToString("N0") VNĐ
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="row text-center mt-5 pt-3">
+            <div class="col-6">
+                <div class="fw-bold text-dark">Bên Nhận (Bếp Trưởng / Nhân Viên)</div>
+                <div class="small text-muted mb-5">(Ký, ghi rõ họ tên)</div>
+                <div class="fw-semibold text-dark">@(p.NguoiNhan ?? "")</div>
+            </div>
+            <div class="col-6">
+                <div class="fw-bold text-dark">Bên Giao (Thủ Kho)</div>
+                <div class="small text-muted mb-5">(Ký, ghi rõ họ tên)</div>
+                <div class="fw-semibold text-dark">@(p.NhanVien?.HoTen ?? "")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        body { background-color: #fff !important; }
+        .admin-sidebar, .admin-topbar, .admin-sidebar-footer { display: none !important; }
+        .admin-main { margin: 0 !important; padding: 0 !important; }
+        .invoice-printable { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+</style>
