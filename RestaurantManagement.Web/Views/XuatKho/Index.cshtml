@@ -1,0 +1,186 @@
+@model PhieuXuatIndexVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Xuất kho chế biến";
+    var p = Model.Pagination;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Quản lý Xuất kho chế biến</h1>
+            <p class="text-muted mb-0">Xuất nguyên vật liệu cho Bếp nóng, Bếp lạnh và Quầy Bar phục vụ hoạt động nhà hàng.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-plus-circle"></i> Lập Phiếu Xuất Kho
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng Số Phiếu Xuất</div>
+                        <div class="fs-2 fw-bold text-dark mt-1">@Model.TongSoPhieu</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-primary fs-3">
+                        <i class="bi bi-card-checklist"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng Giá Trị Xuất Kho</div>
+                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongGiaTriXuat.ToString("N0") <small class="fs-6 text-muted">VNĐ</small></div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-danger fs-3">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-12 col-xl-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Kiểm Soát Tồn Kho</div>
+                        <div class="fs-6 text-muted mt-1">Hệ thống tự động kiểm tra tồn kho tức thời & chặn xuất âm</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-success fs-3">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label for="fromDate" class="form-label small fw-semibold text-secondary">Từ ngày</label>
+                    <input type="date" id="fromDate" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="toDate" class="form-label small fw-semibold text-secondary">Đến ngày</label>
+                    <input type="date" id="toDate" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="boPhan" class="form-label small fw-semibold text-secondary">Bộ phận nhận</label>
+                    <select id="boPhan" name="boPhan" class="form-select">
+                        <option value="">Tất cả bộ phận</option>
+                        <option value="Bếp nóng" selected="@(Model.BoPhan == "Bếp nóng")">Bếp nóng</option>
+                        <option value="Bếp lạnh" selected="@(Model.BoPhan == "Bếp lạnh")">Bếp lạnh</option>
+                        <option value="Bar" selected="@(Model.BoPhan == "Bar")">Quầy Bar / Pha chế</option>
+                        <option value="Bếp" selected="@(Model.BoPhan == "Bếp")">Bếp chung</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button class="btn btn-brand-primary w-100" type="submit">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-admin align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">Số Phiếu</th>
+                        <th>Ngày Xuất</th>
+                        <th>Bộ Phận Nhận</th>
+                        <th>Người Nhận</th>
+                        <th>Lý Do Xuất</th>
+                        <th>Người Lập Phiếu</th>
+                        <th class="text-center">Số Mặt Hàng</th>
+                        <th class="text-end">Tổng Giá Trị</th>
+                        <th>Trạng Thái</th>
+                        <th class="text-end" style="width: 100px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                Không tìm thấy phiếu xuất kho nào phù hợp.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="fw-bold">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-danger fw-semibold">
+                                    @item.MaPhieu
+                                </a>
+                            </td>
+                            <td>@item.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge bg-light text-dark border fw-medium px-2 py-1">
+                                    <i class="bi bi-geo-alt me-1 text-primary"></i>@(item.BoPhanNhan ?? "Bếp")
+                                </span>
+                            </td>
+                            <td>@(item.NguoiNhan ?? "—")</td>
+                            <td>@(item.GhiChu ?? "Phục vụ chế biến")</td>
+                            <td>@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">@item.ChiTiet.Count món</span>
+                            </td>
+                            <td class="text-end fw-bold text-dark">
+                                @item.TongTien.ToString("N0") VNĐ
+                            </td>
+                            <td>
+                                <span class="badge-status-success d-inline-flex align-items-center gap-1">
+                                    <span class="badge-dot bg-success"></span> Đã xuất kho
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info" title="Xem chi tiết & In phiếu">
+                                    <i class="bi bi-eye me-1"></i> Xem
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center py-3">
+            <span class="text-muted small">
+                Hiển thị @Model.Items.Count trên tổng số <strong>@p.TotalItems</strong> phiếu xuất · Trang @p.CurrentPage / @p.TotalPages
+            </span>
+            <div class="btn-group btn-group-sm">
+                @if (p.CurrentPage > 1)
+                {
+                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-page="@(p.CurrentPage - 1)" asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))" asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))" asp-route-boPhan="@Model.BoPhan">
+                        <i class="bi bi-chevron-left me-1"></i> Trang trước
+                    </a>
+                }
+                @if (p.CurrentPage < p.TotalPages)
+                {
+                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-page="@(p.CurrentPage + 1)" asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))" asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))" asp-route-boPhan="@Model.BoPhan">
+                        Trang sau <i class="bi bi-chevron-right ms-1"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

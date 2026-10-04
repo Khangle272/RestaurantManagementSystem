@@ -75,9 +75,6 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         if (id != model.Id) return NotFound();
         var entity = await Db.NguyenLieu.FindAsync(id);
         if (entity == null) return NotFound();
-        await ValidateAsync(model, id);
-        if (entity.DonViTinh != model.DonViTinh && await InUseAsync(id))
-            ModelState.AddModelError(nameof(model.DonViTinh), "Không thể đổi đơn vị khi đã có định mức hoặc phiếu nhập/xuất. Hãy tạo nguyên liệu riêng cho đơn vị mới.");
         if (ModelState.IsValid && ApplyVersion(entity, model.RowVersion))
         {
             Map(model, entity);

@@ -1,0 +1,172 @@
+@model PhieuThanhLyIndexVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Thanh lý Nguyên liệu";
+    var p = Model.Pagination;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>Quản lý Thanh lý & Tiêu hủy</h1>
+            <p class="text-muted mb-0">Hạch toán hao hụt, thanh lý các nguyên vật liệu hết hạn sử dụng, ẩm mốc hoặc hư hỏng sơ chế.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-plus-circle"></i> Lập Phiếu Thanh Lý
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Số Đợt Thanh Lý</div>
+                        <div class="fs-2 fw-bold text-dark mt-1">@Model.TongSoPhieu</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-primary fs-3">
+                        <i class="bi bi-clipboard-x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng Thiệt Hại Hao Hụt</div>
+                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongThietHai.ToString("N0") <small class="fs-6 text-muted">VNĐ</small></div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-danger fs-3">
+                        <i class="bi bi-exclamation-octagon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-12 col-xl-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Mục Tiêu Thất Thoát</div>
+                        <div class="fs-6 text-muted mt-1">Ghi nhận minh bạch nguyên nhân và giảm trừ tồn kho đúng thực tế</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-warning fs-3">
+                        <i class="bi bi-graph-down-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="fromDate" class="form-label small fw-semibold text-secondary">Từ ngày</label>
+                    <input type="date" id="fromDate" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="toDate" class="form-label small fw-semibold text-secondary">Đến ngày</label>
+                    <input type="date" id="toDate" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2">
+                    <button class="btn btn-brand-primary w-100" type="submit">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-admin align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">Số Phiếu</th>
+                        <th>Ngày Lập</th>
+                        <th>Lý Do Thanh Lý</th>
+                        <th>Người Lập Biên Bản</th>
+                        <th class="text-center">Số Mặt Hàng</th>
+                        <th class="text-end">Thiệt Hại (VNĐ)</th>
+                        <th>Trạng Thái</th>
+                        <th class="text-end" style="width: 100px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                Không tìm thấy biên bản thanh lý nào trong khoảng thời gian đã chọn.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="fw-bold">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-danger fw-semibold">
+                                    @item.MaPhieu
+                                </a>
+                            </td>
+                            <td>@item.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge bg-light text-danger border fw-medium px-2 py-1">
+                                    <i class="bi bi-exclamation-circle me-1"></i>@item.LyDoThanhLy
+                                </span>
+                            </td>
+                            <td>@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">@item.ChiTiet.Count món</span>
+                            </td>
+                            <td class="text-end fw-bold text-danger">
+                                @item.TongTienThietHai.ToString("N0")
+                            </td>
+                            <td>
+                                <span class="badge-status-danger d-inline-flex align-items-center gap-1">
+                                    <span class="badge-dot bg-danger"></span> Đã thanh lý
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info" title="Xem chi tiết & In biên bản">
+                                    <i class="bi bi-eye me-1"></i> Xem
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center py-3">
+            <span class="text-muted small">
+                Hiển thị @Model.Items.Count trên tổng số <strong>@p.TotalItems</strong> phiếu thanh lý · Trang @p.CurrentPage / @p.TotalPages
+            </span>
+            <div class="btn-group btn-group-sm">
+                @if (p.CurrentPage > 1)
+                {
+                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-page="@(p.CurrentPage - 1)" asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))" asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))">
+                        <i class="bi bi-chevron-left me-1"></i> Trang trước
+                    </a>
+                }
+                @if (p.CurrentPage < p.TotalPages)
+                {
+                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-page="@(p.CurrentPage + 1)" asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))" asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))">
+                        Trang sau <i class="bi bi-chevron-right ms-1"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

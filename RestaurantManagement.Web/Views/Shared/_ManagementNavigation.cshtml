@@ -5,6 +5,7 @@
     var admin = User.IsInRole("Admin");
     var reception = admin || User.IsInRole("TiepTan");
     var staffOrder = admin || User.IsInRole("BoiBan") || User.IsInRole("ThuNgan") || User.IsInRole("TiepTan");
+    var warehouse = admin || User.IsInRole("Kho");
     var entries = new (string Group, string Controller, string Action, string Label, bool Allowed)[] {
         ("Tài khoản", "Account", "Index", "Thông tin cá nhân", true),
         ("Tài khoản", "NhanVien", "Index", "Quản lý nhân viên", admin),
@@ -16,14 +17,21 @@
         ("Vận hành", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
         ("Vận hành", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
         ("Vận hành", "Bep", "Index", "Bếp chế biến", admin || User.IsInRole("Bep")),
-        ("Vận hành", "NguyenLieu", "Index", "Kho nguyên liệu", admin || User.IsInRole("Kho")),
         ("Vận hành", "HoaDon", "Index", "Hóa đơn & Thanh toán", admin || User.IsInRole("ThuNgan")),
+        ("Quản lý Kho", "Kho", "TonKho", "Theo dõi tồn kho", warehouse),
+        ("Quản lý Kho", "NhapKho", "Index", "Phiếu nhập kho", warehouse),
+        ("Quản lý Kho", "XuatKho", "Index", "Xuất kho chế biến", warehouse),
+        ("Quản lý Kho", "ThanhLy", "Index", "Thanh lý nguyên liệu", warehouse),
+        ("Quản lý Kho", "Kho", "BaoCao", "Báo cáo Nhập-Xuất-Tồn", warehouse),
+        ("Quản lý Kho", "NhaCungCap", "Index", "Nhà cung cấp", warehouse),
+        ("Quản lý Kho", "NguyenLieu", "Index", "Danh mục nguyên liệu", warehouse),
         ("Đánh giá khách hàng", "QuanLyDatBan", "DanhGia", "Đánh giá khách hàng", reception)
     };
     bool IsActive(string targetController, string targetAction) =>
         (controller == targetController || (targetController == "NhanVien" && controller == "TaiKhoanNhanVien"))
         && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"))
-        && (targetController != "DonHang" || action == targetAction);
+        && (targetController != "DonHang" || action == targetAction)
+        && (targetController != "Kho" || action == targetAction);
 }
 <div class="@(Model ? "row g-3" : "management-navigation")">
 @foreach (var group in entries.Where(x => x.Allowed).GroupBy(x => x.Group))

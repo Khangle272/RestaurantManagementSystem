@@ -1,0 +1,220 @@
+@model NhaCungCapIndexVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Nhà cung cấp";
+    var p = Model.Pagination;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-truck me-2 text-danger"></i>Quản lý Nhà cung cấp</h1>
+            <p class="text-muted mb-0">Quản lý danh sách đối tác cung ứng thực phẩm, đồ uống và gia vị cho nhà hàng.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-plus-circle"></i> Thêm Nhà Cung Cấp
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng Nhà Cung Cấp</div>
+                        <div class="fs-2 fw-bold text-dark mt-1">@Model.TotalCount</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-primary fs-3">
+                        <i class="bi bi-buildings"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Đang Hợp Tác</div>
+                        <div class="fs-2 fw-bold text-success mt-1">@Model.ActiveCount</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-success fs-3">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card card-stat border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tạm Ngưng Hợp Tác</div>
+                        <div class="fs-2 fw-bold text-secondary mt-1">@Model.InactiveCount</div>
+                    </div>
+                    <div class="rounded-circle p-3 bg-light text-secondary fs-3">
+                        <i class="bi bi-pause-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label for="search" class="form-label small fw-semibold text-secondary">Tìm kiếm đối tác</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-subtle text-muted"><i class="bi bi-search"></i></span>
+                        <input id="search" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="Tên đơn vị, SĐT, mã số thuế hoặc người liên hệ..." />
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="active" class="form-label small fw-semibold text-secondary">Trạng thái hợp tác</label>
+                    <select id="active" name="active" class="form-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="true" selected="@(Model.Active == true)">Đang hợp tác</option>
+                        <option value="false" selected="@(Model.Active == false)">Ngừng hợp tác</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button class="btn btn-brand-primary w-100" type="submit">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-admin align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Mã NCC</th>
+                        <th>Tên Nhà Cung Cấp</th>
+                        <th>Người Liên Hệ</th>
+                        <th>Điện Thoại</th>
+                        <th>Email</th>
+                        <th>Địa Chỉ Kho</th>
+                        <th>Trạng Thái</th>
+                        <th class="text-end" style="width: 180px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                Không tìm thấy nhà cung cấp nào phù hợp với điều kiện tìm kiếm.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="fw-bold text-secondary">#NCC@item.Id.ToString("D3")</td>
+                            <td>
+                                <div class="fw-bold text-dark">@item.TenNhaCungCap</div>
+                                @if (!string.IsNullOrEmpty(item.MaSoThue))
+                                {
+                                    <small class="text-muted"><i class="bi bi-hash"></i> MST: @item.MaSoThue</small>
+                                }
+                            </td>
+                            <td>@(item.NguoiLienHe ?? "—")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.SoDienThoai))
+                                {
+                                    <a href="tel:@item.SoDienThoai" class="text-decoration-none text-body">
+                                        <i class="bi bi-telephone me-1 text-primary"></i>@item.SoDienThoai
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.Email))
+                                {
+                                    <a href="mailto:@item.Email" class="text-decoration-none text-body">
+                                        <i class="bi bi-envelope me-1 text-muted"></i>@item.Email
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="d-inline-block text-truncate" style="max-width: 220px;" title="@item.DiaChi">
+                                    @(item.DiaChi ?? "—")
+                                </span>
+                            </td>
+                            <td>
+                                @if (item.DangSuDung)
+                                {
+                                    <span class="badge-status-success d-inline-flex align-items-center gap-1">
+                                        <span class="badge-dot bg-success"></span> Đang hợp tác
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge-status-danger d-inline-flex align-items-center gap-1">
+                                        <span class="badge-dot bg-secondary"></span> Ngừng hợp tác
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Chỉnh sửa thông tin">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái hợp tác của nhà cung cấp này?');">
+                                        <button type="submit" class="btn @(item.DangSuDung ? "btn-outline-secondary" : "btn-outline-success")" title="@(item.DangSuDung ? "Tạm ngưng hợp tác" : "Kích hoạt hợp tác")">
+                                            <i class="bi @(item.DangSuDung ? "bi-pause-fill" : "bi-play-fill")"></i>
+                                        </button>
+                                    </form>
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa nhà cung cấp này? Chỉ xóa được khi chưa có lịch sử nhập hàng.');">
+                                        <button type="submit" class="btn btn-outline-danger" title="Xóa nhà cung cấp">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center py-3">
+            <span class="text-muted small">
+                Hiển thị @Model.Items.Count trên tổng số <strong>@p.TotalItems</strong> nhà cung cấp · Trang @p.CurrentPage / @p.TotalPages
+            </span>
+            <div class="btn-group btn-group-sm">
+                @if (p.CurrentPage > 1)
+                {
+                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-page="@(p.CurrentPage - 1)" asp-route-search="@Model.Search" asp-route-active="@Model.Active">
+                        <i class="bi bi-chevron-left me-1"></i> Trang trước
+                    </a>
+                }
+                @if (p.CurrentPage < p.TotalPages)
+                {
+                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-page="@(p.CurrentPage + 1)" asp-route-search="@Model.Search" asp-route-active="@Model.Active">
+                        Trang sau <i class="bi bi-chevron-right ms-1"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
