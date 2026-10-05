@@ -174,7 +174,7 @@
                         var isZero = item.SoLuongTon <= 0;
                         var isWarning = item.SoLuongTon > 0 && item.SoLuongTon <= item.DinhMucToiThieu;
                         <tr>
-                            <td class="fw-bold text-secondary">#NL@item.MaNguyenLieu.ToString("D3")</td>
+                            <td class="fw-bold text-secondary">@($"#NL{item.MaNguyenLieu:D3}")</td>
                             <td>
                                 <div class="fw-bold text-dark">@item.TenNguyenLieu</div>
                             </td>

@@ -122,7 +122,7 @@
                     @foreach (var item in Model.Items)
                     {
                         <tr>
-                            <td class="fw-bold text-secondary">#NCC@item.Id.ToString("D3")</td>
+                            <td class="fw-bold text-secondary">@($"#NCC{item.Id:D3}")</td>
                             <td>
                                 <div class="fw-bold text-dark">@item.TenNhaCungCap</div>
                                 @if (!string.IsNullOrEmpty(item.MaSoThue))

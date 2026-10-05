@@ -65,7 +65,7 @@
                                              onclick="selectTable(@table.Id, '@table.MaBan', this)">
                                             <div class="card-body p-2 text-center">
                                                 <div class="fw-bold">@table.MaBan</div>
-                                                <div class="small text-muted">@table.TenKhuVuc (T@table.Tang)</div>
+                                                <div class="small text-muted">@table.TenKhuVuc (T@(table.Tang))</div>
                                                 @if (!string.IsNullOrEmpty(table.KhachHang))
                                                 {
                                                     <div class="small text-truncate" title="@table.KhachHang">@table.KhachHang</div>
