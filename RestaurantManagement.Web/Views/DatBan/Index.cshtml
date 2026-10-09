@@ -22,9 +22,21 @@
             </div>
         </div>
 
-        <form asp-action="Index" method="post" id="formDatBan">
+        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true">
             @Html.AntiForgeryToken()
+            <input type="hidden" name="RequestId" value="@Model.RequestId" />
+            <div data-cart-inputs></div>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
+
+            <section class="cart-booking-summary" aria-labelledby="booking-menu-title">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 id="booking-menu-title" class="h5 mb-0">Món đã chọn</h2><a asp-controller="Home" asp-action="Index" asp-route-cart="new" asp-fragment="thuc-don" class="btn btn-sm btn-outline-restaurant">Chọn / bổ sung món</a></div>
+                <ul id="booking-cart-summary" class="mb-2"></ul>
+                <p class="mb-2">Tiền món tham khảo: <strong id="booking-cart-total">0 ₫</strong></p>
+                <p class="mb-2">Cọc dự kiến: <strong id="booking-deposit-preview">299.000đ</strong></p>
+                <div class="form-check mb-2"><input asp-for="ChuanBiTruoc" class="form-check-input" id="booking-prepare" /><label class="form-check-label" for="booking-prepare">Muốn chuẩn bị trước</label></div>
+                <p class="small text-muted mb-0">Tiếp theo: kiểm tra còn bàn và thanh toán cọc. Có món đặt trước: cọc 50% tổng tiền món; chưa chọn món: 299.000đ/lịch. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
+                <button type="button" class="btn btn-link p-0 mt-2" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer">Sửa số lượng / ghi chú món</button>
+            </section>
 
             <div class="row g-4">
                 <!-- CỘT 1: THỜI GIAN & KHÔNG GIAN -->
@@ -51,7 +63,7 @@
                                        min="@DateTime.Now.AddMinutes(30).ToString("yyyy-MM-ddTHH:mm")" id="inputThoiGianDen" />
                                 <span asp-validation-for="ThoiGianDen" class="text-danger small"></span>
                                 <div class="form-text small text-muted">
-                                    <i class="bi bi-info-circle me-1"></i>Vui lòng đặt trước thời điểm đến ít nhất 30 phút.
+                                    <i class="bi bi-info-circle me-1"></i>Vui lòng đặt trước thời điểm đến ít nhất 30 phút. Khung dùng bàn dự kiến 3 tiếng.
                                 </div>
                             </div>
 
@@ -91,6 +103,7 @@
                                 <select asp-for="MaKhuVuc" asp-items="Model.KhuVucOptions" class="form-select form-select-lg border-2">
                                     <option value="">-- Tùy chọn khu vực phù hợp --</option>
                                 </select>
+                                <label class="d-block mt-3"><input asp-for="YeuCauTrangTri" class="form-check-input me-2" /> Tôi muốn trao đổi thêm về trang trí bàn</label>
                             </div>
                         </div>
                     </div>
@@ -172,7 +185,7 @@
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-lg py-3 fw-bold text-white shadow" 
                                         style="background-color: #E11D48; border-color: #E11D48;">
-                                    <i class="bi bi-check-circle-fill me-2"></i>HOÀN TẤT ĐẶT BÀN NGAY
+                                    <i class="bi bi-check-circle-fill me-2"></i>Gửi yêu cầu
                                 </button>
                             </div>
                         </div>

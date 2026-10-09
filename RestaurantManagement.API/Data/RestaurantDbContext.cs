@@ -19,6 +19,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
     public DbSet<DatBan> DatBan => Set<DatBan>();
     public DbSet<ChiTietDatBan> ChiTietDatBan => Set<ChiTietDatBan>();
     public DbSet<MonDatTruoc> MonDatTruoc => Set<MonDatTruoc>();
+    public DbSet<GiaoDichCoc> GiaoDichCoc => Set<GiaoDichCoc>();
     public DbSet<HoaDon> HoaDon => Set<HoaDon>();
     public DbSet<ChiTietHoaDon> ChiTietHoaDon => Set<ChiTietHoaDon>();
     public DbSet<NguyenLieu> NguyenLieu => Set<NguyenLieu>();
@@ -61,6 +62,11 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<KhuVuc>().Property(x => x.Tang).HasDefaultValue(1);
         b.Entity<DatBan>().HasOne(x => x.KhuVucUuTien).WithMany().HasForeignKey(x => x.KhuVucUuTienId);
         b.Entity<DatBan>().HasIndex(x => x.MaDatBan).IsUnique();
+        b.Entity<DatBan>().HasIndex(x => new { x.KhachHangId, x.YeuCauTaoId }).IsUnique()
+            .HasFilter("[YeuCauTaoId] IS NOT NULL AND [KhachHangId] IS NOT NULL");
+        b.Entity<GiaoDichCoc>().HasIndex(x => x.YeuCauId).IsUnique();
+        b.Entity<GiaoDichCoc>().HasOne(x => x.DatBan).WithMany().HasForeignKey(x => x.DatBanId);
+        b.Entity<GiaoDichCoc>().HasOne(x => x.TaiKhoanXuLy).WithMany().HasForeignKey(x => x.TaiKhoanXuLyId);
         b.Entity<DatBan>().HasIndex(x => new { x.TrangThai, x.GioDen, x.GioKetThucDuKien });
         b.Entity<ChiTietDatBan>().HasKey(x => new { x.DatBanId, x.BanAnId });
         b.Entity<ChiTietDatBan>().HasOne(x => x.DatBan).WithMany(x => x.Ban).HasForeignKey(x => x.DatBanId);
@@ -100,6 +106,8 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<DatBan>(b, "ThoiGian", "[GioKetThucDuKien]>[GioDen]");
         Check<DatBan>(b, "SoKhach", "[SoNguoiLon]>=0 AND [SoTreEm]>=0 AND [SoNguoiLon]+[SoTreEm]>0");
         Check<DatBan>(b, "Coc", "[TienCocYeuCau]>=0 AND [TienCocDaNop]>=0");
+        Check<DatBan>(b, "XuLyCoc", "[TienCocDaHoan]>=0 AND [TienCocDaGiu]>=0 AND [TienCocDaHoan]+[TienCocDaGiu]<=[TienCocDaNop]");
+        Check<GiaoDichCoc>(b, "SoTien", "[SoTien]>0");
         Check<DatBan>(b, "LienHe", "[LaKhachTrucTiep]=1 OR ([SoDienThoaiLienHe] IS NOT NULL AND LEN([SoDienThoaiLienHe])>0)");
         Check<DatBan>(b, "NhanHuy", "([TrangThai]<>'DaNhanBan' OR [ThoiDiemNhanBan] IS NOT NULL) AND ([TrangThai]<>'DaHuy' OR [ThoiDiemHuy] IS NOT NULL)");
         Check<MonDatTruoc>(b, "LuongGia", "[SoLuong]>0 AND [DonGiaThoaThuan]>=0");

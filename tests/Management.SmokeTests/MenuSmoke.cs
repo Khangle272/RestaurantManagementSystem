@@ -19,7 +19,7 @@ internal static class MenuSmoke
         using var guest = newClient();
         using var kitchen = newClient();
         var publicHome = await guest.GetStringAsync("/");
-        check(publicHome.Contains("href=\"/DatBan\""), "Anonymous customer still sees booking actions");
+        check(publicHome.Contains("href=\"/DatBan\"") || publicHome.Contains("href=\"/DatBan?cart=new\""), "Anonymous customer still sees booking actions");
         check(!(await admin.GetStringAsync("/")).Contains("href=\"/DatBan"), "Admin has no customer booking actions");
         var login = await kitchen.GetStringAsync("/admin");
         using (var response = await Submit(kitchen, "/admin", login, new()
@@ -56,7 +56,7 @@ internal static class MenuSmoke
         await db.Entry(draft).ReloadAsync(); await db.Entry(draft.Sizes.Single()).ReloadAsync();
         check(draft.DaDuyet && draft.Sizes.Single().GiaBan == 120000, "Approval and price saved together");
         var detail = await guest.GetStringAsync("/Home/MonAn/" + draft.Id);
-        check(detail.Contains("TEST-KITCHEN-DRAFT") && detail.Contains("href=\"/DatBan\""), "Approved dish becomes public with customer booking action");
+        check(detail.Contains("TEST-KITCHEN-DRAFT") && (detail.Contains("href=\"/DatBan\"") || detail.Contains("href=\"/DatBan?cart=new\"")), "Approved dish becomes public with customer booking action");
         check(!(await kitchen.GetStringAsync("/Home/MonAn/" + draft.Id)).Contains("href=\"/DatBan"), "Staff dish detail has no customer booking action");
         var kitchenEdit = await kitchen.GetStringAsync(editPath);
         fields["RowVersion"] = hidden(kitchenEdit, "RowVersion"); fields["Sizes[0].GiaBan"] = "777777"; fields["MoTa"] = "Cập nhật kỹ thuật";

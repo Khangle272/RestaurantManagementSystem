@@ -84,6 +84,13 @@
 
                                 <!-- Thao tác & Đánh giá -->
                                 <div class="col-md-4 text-md-end">
+                                    <div class="d-flex flex-wrap gap-2 justify-content-md-end mb-2">
+                                        <a asp-action="ChiTiet" asp-route-id="@item.MaDatBan" class="btn btn-sm btn-outline-restaurant">Xem món đặt / tiền cọc</a>
+                                        @if (item.CanEditPreorder)
+                                        {
+                                            <a asp-controller="Home" asp-action="Index" asp-route-datBanId="@item.MaDatBan" asp-fragment="thuc-don" class="btn btn-sm btn-outline-restaurant">Bổ sung món</a>
+                                        }
+                                    </div>
                                     @if (item.TrangThai == "Hoàn tất")
                                     {
                                         if (!item.DaDanhGia)

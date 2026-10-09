@@ -1,0 +1,18 @@
+@model List<RestaurantManagement.API.Models.DatBan>
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Đối chiếu cọc đặt bàn"; }
+<section class="container-fluid py-3">
+    <h1 class="h3">Đối chiếu cọc đặt bàn</h1>
+    <p class="text-muted">Khách đã báo chuyển tiền. Kiểm tra số tiền thực nhận và nội dung mã đặt bàn trên ngân hàng trước khi xác nhận.</p>
+    <form method="get" class="d-flex gap-2 mb-3"><input name="keyword" value="@ViewData["Keyword"]" class="form-control" placeholder="Tìm mã đặt bàn hoặc số điện thoại" aria-label="Tìm mã đặt bàn hoặc số điện thoại" /><button class="btn btn-outline-success">Tìm</button></form>
+    <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th>Mã đặt bàn</th><th>Khách / lịch đến</th><th>Khách báo đã chuyển</th><th>Thời điểm báo</th><th></th></tr></thead>
+        <tbody>@foreach (var booking in Model) {
+            <tr><td class="fw-bold">@booking.MaDatBan</td><td>@booking.HoTenLienHe · @booking.SoDienThoaiLienHe<br />@booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</td>
+            <td>@booking.SoTienKhachBao.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))đ<br /><small>@booking.MaGiaoDichKhachBao</small></td>
+            <td>@booking.ThoiDiemBaoChuyenKhoan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</td>
+            <td><a asp-action="ChiTiet" asp-route-id="@booking.Id" class="btn btn-outline-success">Đối chiếu</a></td></tr>
+        }</tbody>
+    </table></div>
+    @if (!Model.Any()) { <p>Không có khoản chuyển nào đang chờ đối chiếu.</p> }
+    @if (Model.Count == 100) { <p class="text-muted small">Đang hiển thị 100 khoản chờ đầu tiên; tìm theo mã để xem khoản cụ thể.</p> }
+</section>

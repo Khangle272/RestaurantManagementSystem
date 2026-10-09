@@ -8,10 +8,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/management-ui.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <aside class="admin-sidebar">
+    <aside class="admin-sidebar" id="admin-sidebar">
         <div class="admin-sidebar-header d-flex align-items-center justify-content-between gap-3">
             <h4 class="mb-0 fw-bold"><i class="bi bi-shop me-2"></i>Quản lý nhà hàng</h4>
             <button class="btn btn-outline-light btn-sm d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#management-menu" aria-controls="management-menu" aria-expanded="false" aria-label="Mở hoặc đóng menu chức năng">Menu</button>
@@ -25,7 +26,7 @@
             <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
         </div>
     </aside>
-    <header class="admin-topbar"><h5 class="mb-0 fw-semibold">@ViewData["Title"]</h5><div class="ms-auto"><partial name="_RoleLabel" /></div></header>
+    <header class="admin-topbar"><button type="button" class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex me-3" id="sidebar-toggle" aria-controls="admin-sidebar" aria-expanded="true" aria-label="Ẩn menu chức năng">☰ Menu</button><h5 class="mb-0 fw-semibold">@ViewData["Title"]</h5><div class="ms-auto"><partial name="_RoleLabel" /></div></header>
     <main class="admin-main">
         <div class="container-fluid p-0">
             <partial name="_ManagementMessages" />
@@ -34,6 +35,8 @@
     </main>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/ajax-forms.js" asp-append-version="true"></script>
+    <script src="~/js/management-ui.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

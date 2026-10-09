@@ -479,6 +479,10 @@ try
     await MenuSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
     await TableSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.OrderSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.PreorderSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.ReservationDepositSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.Week8DemoSmoke.Run(db, client, Check);
+    await Management.SmokeTests.TableExpirySmoke.Run(db, client, Check);
     await InventorySmoke.Run(db, client, NewClient, Hidden, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
@@ -567,9 +571,12 @@ async Task InitAuth()
     initializer.StartInfo.Environment["AuthBootstrap__AdminEmail"] = adminEmail;
     initializer.StartInfo.Environment["AuthBootstrap__AdminPassword"] = adminPassword;
     initializer.Start();
-    var initOutput = await initializer.StandardOutput.ReadToEndAsync();
-    var initError = await initializer.StandardError.ReadToEndAsync();
-    await initializer.WaitForExitAsync();
+    var initOutputTask = initializer.StandardOutput.ReadToEndAsync();
+    var initErrorTask = initializer.StandardError.ReadToEndAsync();
+    try { await initializer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(120)); }
+    catch (TimeoutException) { initializer.Kill(entireProcessTree: true); throw new InvalidOperationException("Auth initializer timed out; check SQL connectivity."); }
+    var initOutput = await initOutputTask;
+    var initError = await initErrorTask;
     Check(initializer.ExitCode == 0, "Initialize roles and Admin: " + initOutput + initError);
 }
 
@@ -587,9 +594,12 @@ async Task InitDemoAccounts()
     initializer.StartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
     initializer.StartInfo.Environment["AuthBootstrap__DemoPassword"] = demoPassword;
     initializer.Start();
-    var initOutput = await initializer.StandardOutput.ReadToEndAsync();
-    var initError = await initializer.StandardError.ReadToEndAsync();
-    await initializer.WaitForExitAsync();
+    var initOutputTask = initializer.StandardOutput.ReadToEndAsync();
+    var initErrorTask = initializer.StandardError.ReadToEndAsync();
+    try { await initializer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(120)); }
+    catch (TimeoutException) { initializer.Kill(entireProcessTree: true); throw new InvalidOperationException("Demo initializer timed out; check SQL connectivity."); }
+    var initOutput = await initOutputTask;
+    var initError = await initErrorTask;
     Check(initializer.ExitCode == 0, "Initialize demo accounts: " + initOutput + initError);
 }
 

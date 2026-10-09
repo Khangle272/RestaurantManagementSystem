@@ -1,0 +1,86 @@
+@model ReservationPaymentViewModel
+@using RestaurantManagement.Web.Services
+@using RestaurantManagement.API.Models
+@{
+    var booking = Model.Booking;
+    var cancelled = booking.TrangThai is TrangThaiDatBan.DaHuy or TrangThaiDatBan.KhongDen;
+    var expired = ReservationDepositPolicy.Expired(booking);
+    var confirmed = booking.TrangThai is TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.DaNhanBan && Model.Remaining == 0;
+    var pending = booking.ThoiDiemBaoChuyenKhoan is not null;
+    var canPay = PreorderService.CanEdit(booking) && Model.Remaining > 0 && booking.Ban.Any() && booking.TrangThai != TrangThaiDatBan.DaNhanBan;
+    ViewData["Title"] = cancelled ? "Đặt bàn đã hủy" : confirmed ? "Đặt bàn đã xác nhận" : "Thanh toán cọc đặt bàn";
+    string Money(decimal value) => value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + "đ";
+}
+<section class="container py-4" style="max-width: 980px">
+    <h1 class="h3">@(cancelled ? "Yêu cầu đặt bàn đã hủy" : confirmed ? "Đặt bàn đã được xác nhận" : "Thanh toán cọc để hoàn tất đặt bàn")</h1>
+    <p class="text-muted">Lịch @booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") · @(booking.SoNguoiLon + booking.SoTreEm) khách</p>
+    <div class="card mb-4"><div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div><div class="small text-muted">Mã đặt bàn / nội dung chuyển khoản</div><strong class="fs-3" id="payment-reference">@booking.MaDatBan</strong></div>
+            <button type="button" class="btn btn-outline-success" id="copy-payment-code">Sao chép mã</button>
+        </div>
+        <p class="small mb-0 mt-2">Dùng đúng mã này để nhà hàng đối chiếu khoản tiền với lịch của bạn.</p>
+    </div></div>
+    @if (booking.YeuCauHuy is not null) { <div class="alert alert-warning">Đang chờ nhà hàng xử lý yêu cầu hủy. Khoản đã chuyển sẽ được đối chiếu và giải quyết; không chuyển thêm tiền.</div> }
+    @if (cancelled) {
+        <div class="alert alert-warning" role="status">@booking.LyDoHuy Không chuyển tiền cho lịch này. Bạn có thể tạo yêu cầu đặt bàn mới.</div>
+    } else if (confirmed) {
+        <div class="alert alert-success" role="status">Nhà hàng đã xác nhận nhận cọc. Lịch của bạn đã được chốt; cọc được trừ vào hóa đơn khi dùng bữa.</div>
+    } else if (expired) {
+        <div class="alert alert-warning">Đã hết hạn giữ chỗ chờ thanh toán. Yêu cầu chưa có thông báo/tiền cọc sẽ tự hủy trong vòng một phút. Không chuyển thêm tiền. Nếu đã chuyển, liên hệ nhà hàng để đối chiếu trước khi tạo lịch mới.</div>
+    } else if (pending) {
+        <div class="alert alert-info" role="status" id="payment-waiting" data-status-url="@Url.Action("CartContext", new { id = booking.Id })">
+            Bạn đã báo chuyển @Money(booking.SoTienKhachBao). Thu ngân đang đối chiếu ngân hàng và mã <strong>@booking.MaDatBan</strong>.
+            <div class="mt-2">Lịch chưa được chốt khi chưa xác nhận tiền. Đừng chuyển lại trong lúc chờ.</div>
+        </div>
+    }
+    <div class="row g-4 mb-4">
+        @if (!string.IsNullOrWhiteSpace(booking.LyDoTuChoiChuyenKhoan)) {
+            <div class="col-12"><div class="alert alert-warning">Nhà hàng chưa xác nhận khoản chuyển: @booking.LyDoTuChoiChuyenKhoan. Kiểm tra lại giao dịch; không chuyển thêm tiền nếu ngân hàng đã trừ tiền.</div></div>
+        }
+        <div class="col-md-6"><div class="card h-100"><div class="card-body">
+            <h2 class="h5">Thông tin tiền cọc</h2>
+            <dl class="row mb-3">
+                <dt class="col-7">Tiền món đặt trước</dt><dd class="col-5 text-end">@Money(Model.FoodTotal)</dd>
+                <dt class="col-7">Cọc theo chính sách</dt><dd class="col-5 text-end">@Money(booking.TienCocYeuCau)</dd>
+                <dt class="col-7">Nhà hàng đã nhận</dt><dd class="col-5 text-end">@Money(ReservationDepositPolicy.Received(booking))</dd>
+                <dt class="col-7">Cần thanh toán thêm</dt><dd class="col-5 text-end fw-bold text-success">@Money(Model.Remaining)</dd>
+            </dl>
+            <p class="small">@(booking.CocTuDong ? Model.FoodTotal > 0 ? "Cọc 50% tổng giá món/size/combo đã chọn." : "Cọc giữ bàn 299.000đ cho cả lịch, không tính theo số bàn hoặc số khách." : "Áp dụng điều kiện cọc đã được nhà hàng thống nhất cho lịch này.")</p>
+            @if (!cancelled && booking.HanThanhToanCoc is DateTimeOffset deadline && ReservationDepositPolicy.Received(booking) == 0) {
+                <p class="small">Hạn báo thanh toán: <strong>@deadline.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</strong>.</p>
+                <p class="small">@(pending ? "Bạn đã báo chuyển khoản trong hạn. Chỗ được giữ trong lúc thu ngân đối chiếu; không chuyển lại." : "Lịch mới giữ chỗ 1 tiếng. Hết hạn chưa báo chuyển/nhận cọc thì tự hủy; không chuyển tiền sau hạn.")</p>
+            }
+            <details><summary>Điều kiện đặt bàn và xử lý cọc</summary><p class="small mt-2">@booking.DieuKienCocDaThoaThuan</p></details>
+        </div></div></div>
+        <div class="col-md-6"><div class="card h-100"><div class="card-body text-center">
+            <h2 class="h5">Chuyển khoản tiền cọc</h2>
+            @if (canPay && !pending && Model.IsDemo) {
+                <img src="~/images/payment-qr-demo.svg" alt="QR tượng trưng cho bản demo, không dùng chuyển tiền" width="210" height="210" class="my-3" />
+                <p class="small text-muted">QR tượng trưng để thử quy trình — không chuyển tiền thật bằng mã này.</p>
+                <p>Khoản cần đối chiếu: <strong>@Money(Model.Remaining)</strong><br />Nội dung: <strong>@booking.MaDatBan</strong></p>
+                <form asp-action="BaoChuyenKhoan" asp-route-id="@booking.Id" method="post" data-ajax-form="true" class="text-start">
+                    <input type="hidden" name="RowVersion" value="@Model.Version" />
+                    <input type="hidden" name="SoTien" value="@Model.Remaining.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" />
+                    <button type="submit" class="btn btn-restaurant w-100">Tôi đã chuyển khoản</button>
+                </form>
+            } else if (pending && !cancelled && !expired && !confirmed) {
+                <p class="text-muted mt-4">Đã gửi thông báo chuyển tiền. Bạn có thể xem món đã đặt trong lúc đợi nhà hàng xác nhận.</p>
+                <button type="button" class="btn btn-outline-success" id="payment-check">Kiểm tra trạng thái</button>
+                <p class="small mt-3 mb-0" id="payment-check-feedback" aria-live="polite" aria-atomic="true"></p>
+            } else if (canPay && !Model.IsDemo) {
+                <p class="text-muted">Nhà hàng chưa cấu hình tài khoản nhận chuyển khoản trên website. Liên hệ nhà hàng để nhận thông tin thanh toán chính thức.</p>
+            } else {
+                <p class="text-muted mt-4">@(confirmed ? "Đã hoàn tất khoản cọc của lịch này." : !booking.Ban.Any() ? "Cần kiểm tra và xếp bàn trước khi thanh toán. Mở chi tiết lịch để tiếp tục hoặc liên hệ nhà hàng." : "Lịch này không nhận thanh toán cọc lúc này.")</p>
+            }
+        </div></div></div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="ChiTiet" asp-route-id="@booking.Id" class="btn btn-outline-restaurant">Xem lịch và món đã đặt</a>
+        @if (canPay && !pending) { <a asp-controller="Home" asp-action="Index" asp-route-datBanId="@booking.Id" asp-fragment="thuc-don" class="btn btn-outline-secondary">Sửa / bổ sung món</a> }
+        <a asp-action="LichSu" class="btn btn-link">Lịch sử đặt bàn</a>
+    </div>
+</section>
+@section Scripts {
+    <script src="~/js/reservation-payment.js" asp-append-version="true"></script>
+}

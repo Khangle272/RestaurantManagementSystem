@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 210">
+  <rect width="210" height="210" fill="white"/>
+  <g fill="#173f2c">
+    <path d="M15 15h55v55H15zm5 5v45h45V20zm10 10h25v25H30zM140 15h55v55h-55zm5 5v45h45V20zm10 10h25v25h-25zM15 140h55v55H15zm5 5v45h45v-45zm10 10h25v25H30z" fill-rule="evenodd"/>
+    <path d="M85 15h10v20H85zm20 10h15v15h-15zm-25 25h15v10H80zm30 5h15v20h-15zM15 85h20v10H15zm30-5h20v20H45zm-20 25h20v15H25zm30 10h20v10H55zM140 85h20v15h-20zm35 5h20v10h-20zm-30 25h15v20h-15zm30 5h20v15h-20zM85 145h10v25H85zm20 5h20v10h-20zm-15 35h15v10H90zm25-15h10v25h-10zM145 145h15v15h-15zm25 10h20v10h-20zm-30 20h20v20h-20zm35 5h20v15h-20z"/>
+  </g>
+  <rect x="77" y="83" width="57" height="47" rx="5" fill="#e4edd8"/>
+  <text x="105" y="111" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="bold" fill="#173f2c">DEMO</text>
+</svg>

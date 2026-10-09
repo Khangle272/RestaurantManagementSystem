@@ -22,6 +22,8 @@ public static class OrderSmoke
         async Task Post(HttpClient client, string path, string form, Dictionary<string, string> fields)
         {
             fields["__RequestVerificationToken"] = hidden(form, "__RequestVerificationToken");
+            if (path == "/HoaDon/ThanhToan" && !fields.ContainsKey("BookingRowVersion"))
+                fields["BookingRowVersion"] = hidden(form, "BookingRowVersion");
             using var response = await client.PostAsync(path, new FormUrlEncodedContent(fields));
             check(response.StatusCode == HttpStatusCode.Redirect, "Order POST " + path);
         }
@@ -59,6 +61,7 @@ public static class OrderSmoke
 
         var sizeS = dish.Sizes.First(x => x.TenSize == "Nhỏ (S)");
         var sizeL = dish.Sizes.First(x => x.TenSize == "Lớn (L)");
+        var orders = new OrderService(db);
 
         // 2. Test Takeaway Order Creation
         var createForm = await Get(admin, "/DonHang/Create");
@@ -172,6 +175,40 @@ public static class OrderSmoke
         check(tableDetails.Count == 2 && tableBill.TongTienHang == 65000m + (2 * 85000m),
             "AddDishes appends new items and recalculates bill total correctly (235.000đ)");
 
+        sizeL.DangSuDung = false;
+        await db.SaveChangesAsync();
+        var rejectedSize = await orders.AddDishesAsync(tableBill.Id,
+            [new() { MonAnId = dish.Id, MonAnSizeId = sizeL.Id, SoLuong = 1 }]);
+        check(rejectedSize.Error is not null, "AddDishes rejects inactive sizes");
+        sizeL.DangSuDung = true;
+        category.DangSuDung = false;
+        await db.SaveChangesAsync();
+        var rejectedCategory = await orders.AddDishesAsync(tableBill.Id,
+            [new() { MonAnId = dish.Id, MonAnSizeId = sizeS.Id, SoLuong = 1 }]);
+        check(rejectedCategory.Error is not null, "AddDishes rejects an inactive category");
+        category.DangSuDung = true;
+        var unavailableComponent = new MonAn
+        {
+            TenMon = "COMBO-COMPONENT-ORDER", DanhMucId = category.Id, DaDuyet = true,
+            TrangThai = TrangThaiMon.TamHet, Loai = LoaiMon.MonLe,
+            Sizes = { new() { TenSize = "S", GiaBan = 10000, DangSuDung = true } }
+        };
+        db.MonAn.Add(unavailableComponent);
+        await db.SaveChangesAsync();
+        var combo = new MonAn
+        {
+            TenMon = "COMBO-ORDER", DanhMucId = category.Id, DaDuyet = true,
+            TrangThai = TrangThaiMon.DangPhucVu, Loai = LoaiMon.Set,
+            Sizes = { new() { TenSize = "Combo", GiaBan = 20000, DangSuDung = true } },
+            ThanhPhanCombo = { new() { MonAnId = unavailableComponent.Id, SoLuong = 1 } }
+        };
+        db.MonAn.Add(combo);
+        await db.SaveChangesAsync();
+        check(!await MenuRules.Available(db).AnyAsync(x => x.Id == combo.Id), "Menu excludes combo with temporarily unavailable component");
+        var rejectedCombo = await orders.AddDishesAsync(tableBill.Id,
+            [new() { MonAnId = combo.Id, MonAnSizeId = combo.Sizes.Single().Id, SoLuong = 1 }]);
+        check(rejectedCombo.Error is not null, "AddDishes rejects unavailable combo components");
+
         // 6. Test Kitchen KDS FIFO & Status Transitions
         using var cook = newClient();
         await Post(cook, "/admin", await Get(cook, "/admin"), new()
@@ -216,6 +253,21 @@ public static class OrderSmoke
         var orderDetailText = WebUtility.HtmlDecode(orderDetailView);
         check(orderDetailText.Contains("Đã xong (Sẵn sàng)"), "Waiter sees ready dish on order details");
 
+        using (var deniedServe = await cook.PostAsync("/Bep/CapNhat", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = hidden(kdsView, "__RequestVerificationToken"),
+            ["id"] = firstDetail.Id.ToString(), ["trangThai"] = "DaPhucVu"
+        }))) check(deniedServe.StatusCode == HttpStatusCode.Forbidden
+            || (deniedServe.StatusCode == HttpStatusCode.Redirect && deniedServe.Headers.Location?.OriginalString.Contains("/Account/Denied") == true),
+            "Kitchen cannot mark a dish served");
+        using (var deniedCook = await waiter.PostAsync("/Bep/CapNhat", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = hidden(orderDetailView, "__RequestVerificationToken"),
+            ["id"] = tableDetails.First(x => x.MonAnSizeId == sizeL.Id).Id.ToString(), ["trangThai"] = "DangCheBien"
+        }))) check(deniedCook.StatusCode == HttpStatusCode.Forbidden
+            || (deniedCook.StatusCode == HttpStatusCode.Redirect && deniedCook.Headers.Location?.OriginalString.Contains("/Account/Denied") == true),
+            "Waiter cannot begin kitchen preparation");
+
         await Post(waiter, "/DonHang/CapNhatMon", orderDetailView, new()
         {
             ["id"] = firstDetail.Id.ToString(),
@@ -246,10 +298,17 @@ public static class OrderSmoke
             ["Password"] = "Demo@2026!"
         });
 
-        var deliveryPaymentPage = await Get(cashier, $"/HoaDon/Details/{deliveryBill!.Id}");
+        deliveryBill!.TienGiam = 5000;
+        await db.SaveChangesAsync();
+        var invalidPayment = new PaymentFormModel { Id = deliveryBill.Id, PhuongThuc = PhuongThucThanhToan.ChuyenKhoan };
+        check(await orders.ProcessPaymentAsync(invalidPayment, deliveryBill.NhanVienId) is not null, "Payment rejects a missing invoice token");
+        invalidPayment.RowVersion = "malformed";
+        check(await orders.ProcessPaymentAsync(invalidPayment, deliveryBill.NhanVienId) is not null, "Payment rejects a malformed invoice token");
+        var deliveryPaymentPage = await Get(cashier, $"/HoaDon/Details/{deliveryBill.Id}");
         var deliveryPaymentText = WebUtility.HtmlDecode(deliveryPaymentPage);
         check(deliveryPaymentText.Contains("Chuyển khoản QR") && deliveryPaymentText.Contains("VietQR"),
             "Cashier views VietQR payment option on invoice page");
+        check(deliveryPaymentText.Contains("amount=250000"), "QR preview preserves existing discount and matches collection amount");
 
         await Post(cashier, "/HoaDon/ThanhToan", deliveryPaymentPage, new()
         {
@@ -260,10 +319,13 @@ public static class OrderSmoke
         });
         await db.Entry(deliveryBill).ReloadAsync();
         check(deliveryBill.TrangThai == TrangThaiHoaDon.DaThanhToan && deliveryBill.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan
-            && deliveryBill.MaGiaoDich == "MB-TRANS-987654", "Delivery order paid via bank transfer with transaction ref");
+            && deliveryBill.MaGiaoDich == "MB-TRANS-987654" && deliveryBill.TienGiam == 5000 && deliveryBill.TienKhachDua == 250000,
+            "Delivery order preserves discount and records the QR collection amount");
 
         // 10. Test Multi-Payment: POS Card on Takeaway Order
-        var takeawayPaymentPage = await Get(cashier, $"/HoaDon/Details/{takeawayBill!.Id}");
+        takeawayBill!.TienGiam = 4000;
+        await db.SaveChangesAsync();
+        var takeawayPaymentPage = await Get(cashier, $"/HoaDon/Details/{takeawayBill.Id}");
         var takeawayPaymentText = WebUtility.HtmlDecode(takeawayPaymentPage);
         check(takeawayPaymentText.Contains("Thẻ ngân hàng / POS"), "Cashier views POS card payment option");
 
@@ -280,9 +342,27 @@ public static class OrderSmoke
         check(takeawayBill.TrangThai == TrangThaiHoaDon.DaThanhToan && takeawayBill.PhuongThucThanhToan == PhuongThucThanhToan.The
             && takeawayBill.MaGiaoDich != null && takeawayBill.MaGiaoDich.Contains("Visa") && takeawayBill.MaGiaoDich.Contains("1234"),
             "Takeaway order paid via POS card with card details and approval code");
+        check(takeawayBill.TienGiam == 4000 && takeawayBill.TienKhachDua == 126000, "Card payment preserves existing discount");
 
         // 11. Test Multi-Payment: Cash on Table Order with Change Calculation
+        booking.TienCocDaNop = 50000;
+        booking.TienCocDaHoan = 10000;
+        booking.TienCocDaGiu = 5000;
+        booking.TrangThaiCoc = TrangThaiCoc.DaCoc;
+        await db.SaveChangesAsync();
         var tablePaymentPage = await Get(cashier, $"/HoaDon/Details/{tableBill.Id}");
+        check(WebUtility.HtmlDecode(tablePaymentPage).Contains("amount=30000"), "QR deducts only unrefunded and unretained deposit");
+        var staleBookingVersion = await Version(booking);
+        booking.YeuCau = "Booking version advanced for deposit regression";
+        await db.SaveChangesAsync();
+        var staleBookingPayment = new PaymentFormModel
+        {
+            Id = tableBill.Id, RowVersion = await Version(tableBill), BookingRowVersion = staleBookingVersion,
+            PhuongThuc = PhuongThucThanhToan.TienMat, TienKhachDua = 100000
+        };
+        check(await orders.ProcessPaymentAsync(staleBookingPayment, tableBill.NhanVienId) is not null,
+            "Payment rejects a booking token from before a deposit change");
+        tablePaymentPage = await Get(cashier, $"/HoaDon/Details/{tableBill.Id}");
         await Post(cashier, "/HoaDon/ThanhToan", tablePaymentPage, new()
         {
             ["Id"] = tableBill.Id.ToString(),
@@ -293,12 +373,44 @@ public static class OrderSmoke
         });
         await db.Entry(tableBill).ReloadAsync();
         check(tableBill.TrangThai == TrangThaiHoaDon.DaThanhToan && tableBill.PhuongThucThanhToan == PhuongThucThanhToan.TienMat
-            && tableBill.TienKhachDua == 100000m && tableBill.TienThoiLai == 40000m,
-            "Table order paid via Cash with change computed correctly (100.000đ - 60.000đ = 40.000đ)");
+            && tableBill.TienCocDaTru == 35000 && tableBill.TienKhachDua == 100000m && tableBill.TienThoiLai == 75000m,
+            "Cash change uses discount and the remaining deposit exactly once");
+
+        var paidCancellation = await orders.UpdateDishStatusAsync(takeawayItem.Id, TrangThaiCheBien.DaHuy, true);
+        check(paidCancellation is not null, "Paid unprepared dish cannot be canceled");
+        check(await orders.UpdateDishStatusAsync(takeawayItem.Id, TrangThaiCheBien.DangCheBien, false) is null
+            && await orders.UpdateDishStatusAsync(takeawayItem.Id, TrangThaiCheBien.SanSang, false) is null
+            && await orders.UpdateDishStatusAsync(takeawayItem.Id, TrangThaiCheBien.DaPhucVu, true) is null,
+            "Prepaid dish can still be cooked and served");
+
+        var followupOrder = await orders.CreateOrderAsync(new()
+        {
+            LoaiDonHang = LoaiDonHang.TaiBan, BanAnId = table.Id,
+            Items = [new() { MonAnId = dish.Id, MonAnSizeId = sizeS.Id, SoLuong = 1 }]
+        }, tableBill.NhanVienId);
+        check(followupOrder.Error is null, "A paid booking can create a follow-up bill");
+        var followupBill = await db.HoaDon.Include(x => x.ChiTiet).SingleAsync(x => x.Id == followupOrder.HoaDonId);
+        check(await orders.AvailableDepositAsync(booking.Id, followupBill.Id) == 0, "Consumed deposit cannot be reused by a later bill");
+        var followupPage = await Get(cashier, $"/HoaDon/Details/{followupBill.Id}");
+        check(WebUtility.HtmlDecode(followupPage).Contains("amount=65000"), "Second bill QR has no already consumed deposit");
+        check(await orders.UpdateDishStatusAsync(followupBill.ChiTiet.Single().Id, TrangThaiCheBien.DaHuy, true) is null,
+            "Unpaid final dish may be canceled");
+        await db.Entry(followupBill).ReloadAsync();
+        var zeroPage = await Get(cashier, $"/HoaDon/Details/{followupBill.Id}");
+        check(WebUtility.HtmlDecode(zeroPage).Contains("Hoàn tất hóa đơn 0 đ"), "All-canceled bill exposes zero-value completion");
+        await Post(cashier, "/HoaDon/ThanhToan", zeroPage, new()
+        {
+            ["Id"] = followupBill.Id.ToString(), ["RowVersion"] = await Version(followupBill),
+            ["PhuongThuc"] = "TienMat", ["TienKhachDua"] = "0"
+        });
+        await db.Entry(followupBill).ReloadAsync();
+        check(followupBill.TrangThai == TrangThaiHoaDon.DaThanhToan && followupBill.TongThanhToan == 0,
+            "All-canceled zero bill closes without collecting money");
+        await db.Entry(booking).ReloadAsync();
 
         // 12. Test Table Session Can Now Cleanly End via TableService
         // Table has all dishes served or cancelled, and bill is paid!
-        var tableService = new TableService(db);
+        var tableService = new TableService(db, new PreorderService(db, new OrderService(db)));
         var endError = await tableService.ChangeTable(table.Id, await Version(table), clean: false);
         check(endError == null, "Table service allows ending session now that dishes are served and bill is paid");
         await db.Entry(table).ReloadAsync();

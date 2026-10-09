@@ -1,5 +1,6 @@
 @model TableBoardViewModel
 @using RestaurantManagement.API.Models
+@using RestaurantManagement.Web.Services
 @foreach (var group in Model.Tables.GroupBy(x => x.Table.KhuVucId)) {
     var area = group.First().Table.KhuVuc;
     <section class="mb-4"><div class="d-flex justify-content-between mb-3"><h2 class="h5 mb-0">@area.TenKhuVuc <span class="small text-muted">· @(area.Tang == 0 ? "Tầng trệt" : $"Tầng {area.Tang}") @(area.LaPhongVip ? "· VIP" : "")</span></h2><span class="small text-muted">@group.Count() bàn</span></div>
@@ -13,9 +14,16 @@
             @if (Model.Booking is null && reception && area.DangSuDung && table.TrangThai != TrangThaiBan.NgungSuDung) { <a asp-controller="QuanLyDatBan" asp-action="Create" asp-route-banAnId="@table.Id" class="text-body text-decoration-none">@table.MaBan</a> } else { @table.MaBan }
         </h3><span class="table-status">@label</span></div>
             <p class="small text-muted mt-2 mb-2">@table.SoChoNgoi chỗ ngồi @(!area.DangSuDung ? "· Khu vực đã ngừng" : "")</p>
-            @if (card.Occupant is { } guest) { <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span></p> }
-            @if (card.Conflicts.Count > 0) { <div class="table-bookings small"><strong>Có lịch @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</strong>
-                @foreach (var scheduled in card.Conflicts) { <div>@scheduled.MaDatBan · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</div> }
+            @if (card.Occupant is { } guest) {
+                var deadline = TableService.ServingDeadline(guest);
+                <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") · Mốc 3 tiếng: @deadline.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span></p>
+                @if (deadline <= DateTimeOffset.UtcNow) { <p class="small text-danger fw-semibold">Đã quá 3 tiếng. Kiểm tra thanh toán, tiền cọc và món còn chờ để kết thúc bàn.</p> }
+            }
+            @if (card.ScheduledBookings.Count > 0) { <div class="table-bookings small"><strong>Lịch ngày @Model.ScheduleDay.ToString("dd/MM/yyyy")</strong>
+                @foreach (var scheduled in card.ScheduledBookings) {
+                    var overlaps = scheduled.GioDen < Model.Until && scheduled.GioKetThucDuKien > Model.From;
+                    <div class="@(overlaps ? "fw-semibold text-danger" : "text-muted")">@scheduled.MaDatBan · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") – @scheduled.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") @(overlaps ? "· Trong khung kiểm tra" : "")</div>
+                }
             </div> }
             @if (card.IsSuggested) { <span class="small text-success fw-semibold mb-2">Gợi ý · đủ chỗ, không trùng lịch</span> }
             @if (Model.CanAssign && reception) {

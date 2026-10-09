@@ -86,6 +86,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
                 string trangThaiStr = x.TrangThai switch
                 {
                     TrangThaiDatBan.ChoXacNhan => "Chờ xác nhận",
+                    TrangThaiDatBan.ChoCoc => "Chờ cọc",
                     TrangThaiDatBan.DaXacNhan => "Đã xác nhận",
                     TrangThaiDatBan.DaNhanBan when !isCompleted => "Đang phục vụ",
                     TrangThaiDatBan.DaHuy => "Đã hủy",
@@ -123,7 +124,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     {
         if (banAnIds.Length == 0 && banAnId > 0) banAnIds = [banAnId];
         var error = await tables.Assign(datBanId, banAnIds, rowVersion, await StaffId());
-        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã xác nhận và xếp bàn cho khách.";
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã xếp bàn. Lịch cần cọc chỉ được xác nhận sau khi đủ cọc đã thỏa thuận.";
         return RedirectToAction("Index", "SoDoBan", error is null ? null : new { datBanId });
     }
 
@@ -188,14 +189,18 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         if (!ModelState.IsValid) return View(model);
         var customerId = await Db.KhachHang.Where(x => x.SoDienThoai == model.SoDienThoai).Select(x => (int?)x.Id).SingleOrDefaultAsync();
         var booking = new DatBan {
-            MaDatBan = TableService.NewCode("BK"), HoTenLienHe = model.HoTen.Trim(), SoDienThoaiLienHe = model.SoDienThoai,
+            MaDatBan = await TableService.NewBookingCode(Db), HoTenLienHe = model.HoTen.Trim(), SoDienThoaiLienHe = model.SoDienThoai,
             KhachHangId = customerId, LaKhachTrucTiep = true, ThoiDiemTao = DateTimeOffset.UtcNow,
             GioDen = arrival, GioKetThucDuKien = arrival.AddMinutes(model.SoPhut), SoNguoiLon = model.SoNguoi,
             KhuVucUuTienId = model.KhuVucId, YeuCau = model.GhiChu?.Trim(), TrangThai = TrangThaiDatBan.ChoXacNhan,
+            YeuCauVip = model.Areas.Any(x => x.Id == model.KhuVucId && x.LaPhongVip),
+            YeuCauCoc = model.SoNguoi >= 8 || model.Areas.Any(x => x.Id == model.KhuVucId && x.LaPhongVip),
             NhanVienTiepNhanId = await StaffId()
         };
         Db.DatBan.Add(booking);
         if (!await SaveAsync("", "Không tạo được yêu cầu. Vui lòng thử lại.")) return View(model);
+        if (Request.Headers.XRequestedWith == "XMLHttpRequest")
+            return Json(new { ok = true, redirectUrl = Url.Action("Index", "SoDoBan", new { datBanId = booking.Id, khuVucId = model.KhuVucId, preferredTableId = model.BanAnId }) });
         TempData["SuccessMessage"] = "Đã ghi nhận khách. Chọn bàn phù hợp để xác nhận.";
         return RedirectToAction("Index", "SoDoBan", new { datBanId = booking.Id, khuVucId = model.KhuVucId, preferredTableId = model.BanAnId });
     }
