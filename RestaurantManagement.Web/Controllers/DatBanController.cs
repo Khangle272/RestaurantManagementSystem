@@ -14,7 +14,7 @@ using System.Security.Claims;
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.KhachHang)]
-public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, PreorderService preorders, OrderService orders) : Controller
+public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, PreorderService preorders, OrderService orders, PaymentQrStore qrStore) : Controller
 {
     private int AccountId => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     private IQueryable<DatBan> OwnedBookings() => db.DatBan.Where(x => x.KhachHang != null && x.KhachHang.TaiKhoanId == AccountId);
@@ -199,7 +199,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         if (booking is null) return NotFound();
         return View(new ReservationPaymentViewModel { Booking = booking, Version = preorders.Version(booking),
             Remaining = ReservationDepositPolicy.Remaining(booking),
-            FoodTotal = booking.MonDatTruoc.Sum(x => x.DonGiaThoaThuan * x.SoLuong), IsDemo = env.IsDevelopment() });
+            FoodTotal = booking.MonDatTruoc.Sum(x => x.DonGiaThoaThuan * x.SoLuong), IsDemo = env.IsDevelopment(),
+            QrVersion = qrStore.CurrentVersion });
     }
 
     [HttpPost, ValidateAntiForgeryToken]

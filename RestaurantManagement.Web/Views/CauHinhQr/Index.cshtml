@@ -1,0 +1,21 @@
+@model PaymentQrViewModel
+@{ ViewData["Title"] = "Ảnh QR nhận cọc"; }
+<section style="max-width: 740px">
+    <h1 class="h3">Ảnh QR nhận cọc</h1>
+    <p class="text-muted">Tải ảnh QR của nhà hàng để thay ảnh trên trang thanh toán cọc. Chỉ Admin được thay ảnh; không cần sửa code.</p>
+    @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+    <div class="card"><div class="card-body">
+        @if (!string.IsNullOrEmpty(Model.Version)) {
+            <div class="text-center mb-4"><img src="@Url.Action("Anh", new { v = Model.Version })" alt="Ảnh QR đang dùng để nhận cọc" style="max-width: 100%; max-height: 320px" /><p class="small text-muted mt-2">Ảnh QR đang dùng</p></div>
+        } else { <div class="alert alert-info">Chưa tải ảnh QR. Bản Development đang dùng QR tượng trưng, không chuyển tiền thật.</div> }
+        <form method="post" enctype="multipart/form-data" data-ajax-form="true">
+            <input asp-for="Version" type="hidden" />
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            <label asp-for="AnhQr" class="form-label">Chọn ảnh QR mới</label>
+            <input asp-for="AnhQr" type="file" accept="image/png,image/jpeg" class="form-control" required />
+            <span asp-validation-for="AnhQr" class="text-danger"></span>
+            <p class="small text-muted mt-2">PNG hoặc JPG, tối đa 2 MB. Kiểm tra QR đúng tài khoản nhận tiền trước khi lưu. Khách vẫn nhập số tiền và mã đặt bàn; ảnh QR không tự xác nhận tiền vào ngân hàng.</p>
+            <button class="btn btn-success mt-2">Lưu ảnh QR</button>
+        </form>
+    </div></div>
+</section>

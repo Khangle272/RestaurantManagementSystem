@@ -66,6 +66,7 @@ public class PaymentNoticeModel
 
 public class ReservationPaymentViewModel
 {
+    public string QrVersion { get; set; } = "";
     public DatBan Booking { get; set; } = null!;
     public string Version { get; set; } = "";
     public decimal Remaining { get; set; }

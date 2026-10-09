@@ -29,7 +29,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Events.OnRedirectToLogin = context =>
     {
         var path = context.Request.Path.Value ?? "";
-        var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien",
+        var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien", "/CauHinhQr",
             "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/DatTruoc", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword",
             "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap" };
         var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
@@ -45,6 +45,7 @@ builder.Services.AddAuthorizationBuilder()
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
+builder.Services.AddSingleton<RestaurantManagement.Web.Services.PaymentQrStore>();
 builder.Services.AddHostedService<RestaurantManagement.Web.Services.TableExpiryWorker>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.PreorderService>();

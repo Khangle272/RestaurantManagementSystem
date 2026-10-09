@@ -55,9 +55,14 @@
         </div></div></div>
         <div class="col-md-6"><div class="card h-100"><div class="card-body text-center">
             <h2 class="h5">Chuyển khoản tiền cọc</h2>
-            @if (canPay && !pending && Model.IsDemo) {
-                <img src="~/images/payment-qr-demo.svg" alt="QR tượng trưng cho bản demo, không dùng chuyển tiền" width="210" height="210" class="my-3" />
-                <p class="small text-muted">QR tượng trưng để thử quy trình — không chuyển tiền thật bằng mã này.</p>
+            @if (canPay && !pending && (Model.IsDemo || !string.IsNullOrEmpty(Model.QrVersion))) {
+                @if (!string.IsNullOrEmpty(Model.QrVersion)) {
+                    <img src="@Url.Action("Anh", "CauHinhQr", new { v = Model.QrVersion })" alt="QR nhận chuyển khoản tiền cọc của nhà hàng" width="210" class="my-3" />
+                    <p class="small text-muted">Nhập đúng số cọc và mã đặt bàn hiển thị trên trang. Thu ngân sẽ đối chiếu tiền thực nhận; ảnh QR không tự xác nhận thanh toán.</p>
+                } else {
+                    <img src="~/images/payment-qr-demo.svg" alt="QR tượng trưng cho bản demo, không dùng chuyển tiền" width="210" height="210" class="my-3" />
+                    <p class="small text-muted">QR tượng trưng để thử quy trình — không chuyển tiền thật bằng mã này.</p>
+                }
                 <p>Khoản cần đối chiếu: <strong>@Money(Model.Remaining)</strong><br />Nội dung: <strong>@booking.MaDatBan</strong></p>
                 <form asp-action="BaoChuyenKhoan" asp-route-id="@booking.Id" method="post" data-ajax-form="true" class="text-start">
                     <input type="hidden" name="RowVersion" value="@Model.Version" />

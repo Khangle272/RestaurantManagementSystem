@@ -12,6 +12,7 @@ var root = Directory.GetCurrentDirectory();
 var webDll = Environment.GetEnvironmentVariable("CRUD_TEST_WEB_DLL")
     ?? Path.Combine(root, "RestaurantManagement.Web", "bin", "Debug", "net10.0", "RestaurantManagement.Web.dll");
 var database = "RestaurantCrudTests_" + Guid.NewGuid().ToString("N");
+var qrTestDirectory = Path.Combine(Path.GetTempPath(), "RestaurantQrTests_" + Guid.NewGuid().ToString("N"));
 var connection = new SqlConnectionStringBuilder
 {
     DataSource = Environment.GetEnvironmentVariable("CRUD_TEST_SQL_SERVER") ?? @".\SQLEXPRESS",
@@ -34,6 +35,8 @@ start.ArgumentList.Add(webDll);
 start.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
 start.Environment["ASPNETCORE_URLS"] = $"http://127.0.0.1:{port}";
 start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+start.Environment["Logging__LogLevel__Default"] = "Warning";
+start.Environment["PaymentQr__Directory"] = qrTestDirectory;
 using var process = new Process { StartInfo = start };
 using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CookieContainer = new CookieContainer() })
 {
@@ -66,6 +69,15 @@ try
     {
         ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
+
+    if (args.Contains("--qr-only"))
+    {
+        await InitDemoAccounts();
+        await using var qrDb = new RestaurantDbContext(options);
+        await Management.SmokeTests.PaymentQrSmoke.Run(qrDb, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} QR HTTP/database checks.");
+        return;
+    }
 
     foreach (var controller in new[] { "NhanVien", "BanAn", "DanhMuc", "MonAn", "NguyenLieu" })
     {
@@ -484,6 +496,7 @@ try
     await Management.SmokeTests.Week8DemoSmoke.Run(db, client, Check);
     await Management.SmokeTests.TableExpirySmoke.Run(db, client, Check);
     await InventorySmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.PaymentQrSmoke.Run(db, client, NewClient, Hidden, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch
@@ -496,6 +509,15 @@ catch
 finally
 {
     if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); }
+    var qrFullPath = Path.GetFullPath(qrTestDirectory);
+    var tempRoot = Path.GetFullPath(Path.GetTempPath());
+    if (!qrFullPath.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase)
+        || !Regex.IsMatch(Path.GetFileName(qrFullPath), "^RestaurantQrTests_[a-f0-9]{32}$")) throw new InvalidOperationException("Unsafe QR test directory");
+    if (Directory.Exists(qrFullPath))
+    {
+        foreach (var file in Directory.EnumerateFiles(qrFullPath)) File.Delete(file);
+        Directory.Delete(qrFullPath);
+    }
     SqlConnection.ClearAllPools();
     connection.InitialCatalog = "master";
     await using var sql = new SqlConnection(connection.ConnectionString);
