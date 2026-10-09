@@ -1,31 +1,5 @@
 # RestaurantManagementSystem
 
-## Bổ sung tuần 8 — nhánh member1-week8-update
-
-Khách chọn món từ thực đơn có ảnh, chọn size/số lượng/ghi chú vào giỏ rồi đặt bàn; hoặc mở lịch đã đặt để bổ sung món. Món chọn trước chỉ gửi bếp khi nhận khách hoặc nhân viên xác nhận chuẩn bị sớm sau khi đủ cọc thỏa thuận. Chi tiết lịch hiển thị món, trạng thái và lịch sử cọc; khách yêu cầu hủy để nhà hàng đối chiếu.
-
-Tiếp tân chọn ngày/giờ trên sơ đồ và xem khoảng bắt đầu–kết thúc từng bàn. POS chọn bàn rồi mở rộng vùng chọn món ngay tại trang; sidebar desktop có thể ẩn/hiện. Form dùng AJAX giữ dữ liệu khi lỗi.
-
-Lịch online mới tự tính cọc: **50% tiền món đặt trước**, hoặc **299.000đ/lịch nếu chưa chọn món**, học cách tính từ chính sách công khai của CoCo Saigon/Nhà Bè Khánh Hào (nguồn trong nhật ký). Kiểm tra còn bàn rồi giữ tạm **1 tiếng** để báo thanh toán. Quá hạn chưa báo chuyển/nhận cọc thì worker tự chuyển **Đã hủy**, giữ lịch sử và nhường chỗ, không để tồn trong danh sách chờ. Lịch đã báo chuyển đúng hạn được giữ tạm chờ thu ngân đối chiếu, không tự hủy nhầm tiền; chưa chốt cho tới khi xác nhận nhận cọc. Mốc đã lưu của lịch cũ không tự reset. Mã lịch mới `DB-XXXXXX`, có kiểm tra trùng; mã/lịch/giao dịch cũ không đổi.
-
-Ở Development, QR chỉ tượng trưng và ghi rõ không chuyển tiền thật. Khách bấm **Tôi đã chuyển khoản** chỉ báo chờ đối chiếu. Thu ngân đăng nhập `/admin`, vào **Vận hành → Đối chiếu cọc đặt bàn**, kiểm tra tiền thực nhận/nội dung mã lịch, tích Đã đối chiếu rồi xác nhận; không phải nhập mã giao dịch ngân hàng. Vẫn lưu người xử lý, số tiền, thời điểm và chống gửi lặp. Đủ cọc mới chốt lịch; có thể từ chối thông báo không khớp để khách kiểm tra lại. Cọc bổ sung trước nhận bàn chỉ tính phần thiếu; sau nhận bàn không thu cọc mới. Chưa kết nối ngân hàng thật/callback tự xác nhận.
-
-Lịch mới dự kiến tối đa 3 tiếng. Bồi bàn vẫn kết thúc ngay khi khách xong; nếu quên, worker mỗi phút tự kết thúc lượt quá 3 tiếng từ lúc nhận bàn, chỉ khi đã thanh toán và xử lý xong món/cọc. Bàn chuyển **Cần dọn**, chỉ bấm **Dọn xong** mới **Sẵn sàng**; lượt còn nợ/món/cọc phải xử lý thì cảnh báo, không tự thanh toán hoặc bỏ qua.
-
-Kiểm chứng cập nhật 09/10: build 0 lỗi/cảnh báo, **787 kiểm tra HTTP/SQL đạt** trên database tạm đã dọn; giỏ/POS/AJAX/trạng thái cọc đạt. Có ca tự hủy sau hạn, bảo vệ lịch đang đối chiếu, không nhân đôi tiền và không hủy cọc thủ công. Worker thật đã kết thúc ba lượt demo cũ đủ điều kiện, không xóa lịch sử. Hai migrations `AutomaticReservationDeposits` và `PaymentNoticeReconciliation` thêm trường, giữ dữ liệu/thỏa thuận cũ; thay đổi thời hạn/tự hủy/bỏ ô mã ngân hàng không thêm migration.
-
-Tạo demo ba bàn phục vụ đồng thời (chỉ Development; dùng database thử và đúng instance máy mình):
-
-```powershell
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
-$env:ConnectionStrings__DefaultConnection = 'Server=(localdb)\MSSQLLocalDB;Database=RestaurantWeek8Demo;Trusted_Connection=True;TrustServerCertificate=True;'
-$env:AuthBootstrap__DemoPassword = 'Demo@2026!'
-dotnet run --project RestaurantManagement.Web -- --init-week8-demo
-dotnet run --project RestaurantManagement.Web --launch-profile http
-```
-
-Lệnh tạo tài khoản demo rõ ràng; chạy web thường không tạo lại mật khẩu. Đăng nhập khách `khach.demo@example.test` tại `/Account/Login`, nội bộ `/admin` với các tài khoản ở nhật ký. Migration bổ sung schema khi khởi động; sao lưu database nhóm trước khi nâng. Định mức mỗi size, size của món trong combo và tự xuất nguyên liệu là phần Người 2 cần nối tiếp; khuyến mãi/báo cáo chuyên sâu thuộc Người 3. Đọc nhật ký cùng nhánh trước khi sửa.
-
 Đọc [nhật ký ý tưởng và tiến độ](NHAT_KY_Y_TUONG_VA_TIEN_DO.md) để biết cách chạy tài khoản thử, quyền hiện có, quyết định đã làm và phần còn dự kiến. Sau mỗi lượt hoàn thành, cập nhật cùng file này để nhóm chỉ cần theo dõi một nơi.
 
 Giao diện quản trị Web có CRUD nhân viên (`/NhanVien`), bàn ăn (`/BanAn`) và
@@ -130,7 +104,7 @@ Thanh toán đa hình thức tại `/HoaDon/Details/{id}`:
 - **Tiền mặt**: Nhập số tiền khách đưa, tự động tính tiền thối lại và kiểm tra đủ tiền thanh toán.
 - **Chuyển khoản ngân hàng (VietQR)**: Sinh mã QR động chuẩn Napas/VietQR (MBBank 999988889999) kèm nội dung chuyển khoản tự động và lưu mã giao dịch ngân hàng.
 - **Quẹt thẻ POS**: Lưu thông tin loại thẻ (Visa, MasterCard, JCB, Napas), 4 số cuối và mã chuẩn chi giao dịch.
-- Đối trừ cọc còn khả dụng và giảm giá được thu ngân xác nhận; không dùng lại cọc đã đối trừ/hoàn/giữ. Voucher tự áp dụng theo chương trình là phần Người 3 cần hoàn thiện. Chuyển khoản/thẻ cần người thu ngân đối chiếu thực tế; giao diện in hiện có không thay thế xác nhận của ngân hàng.
+- Tự động khấu trừ tiền cọc đặt bàn và áp dụng mã giảm giá voucher; in hóa đơn tức thì chuẩn định dạng in nhiệt K80 và khổ A5.
 
 Xem **NHAT_KY_Y_TUONG_VA_TIEN_DO.md** để biết ma trận 7 vai trò (6 nội bộ + Khách), bộ demo đủ vai trò, các phần đã bổ sung và bàn giao chi tiết. Không còn hai role `ThucDon`/`DanhMucMon`: Admin quản lý danh mục/giá/combo/duyệt mở bán, Quản lý bếp chuẩn bị nội dung kỹ thuật trên màn hình riêng, không có quyền sửa giá. Món Bếp tạo/sửa phải được Admin duyệt lại trước khi public.
 Nhân viên xem trang nhà hàng được nhưng không thấy nút đặt bàn của khách. Dọn role/tài khoản mẫu cũ trên database Development bằng `--remove-retired-menu-roles` theo hướng dẫn và điều kiện bảo toàn lịch sử trong nhật ký; không tự xóa lúc khởi động.
