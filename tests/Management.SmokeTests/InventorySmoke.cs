@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
@@ -216,6 +218,77 @@ public static class InventorySmoke
         var csvText = System.Text.Encoding.UTF8.GetString(csvBytes);
         check(csvText.Contains("BÁO CÁO") || csvText.Contains("NHẬP - XUẤT - TỒN"), "CSV header matches title");
         check(csvText.Contains("TỔNG") || csvText.Contains("CỘNG") || csvText.Contains("NL001"), "CSV footer contains summary row");
+
+        // 8. Test AJAX Quick-Add Endpoints
+        // 8.1. QuickAdd Category
+        var qCategoryName = "Danh mục QuickAdd " + Guid.NewGuid().ToString("N")[..6];
+        var qCategoryResp = await admin.PostAsJsonAsync("/DanhMuc/QuickCreate", new { tenDanhMuc = qCategoryName, moTa = "Mô tả test" });
+        check(qCategoryResp.StatusCode == HttpStatusCode.OK, "QuickCreate Category returns 200 OK");
+        var qCategoryJson = await qCategoryResp.Content.ReadFromJsonAsync<JsonElement>();
+        check(qCategoryJson.GetProperty("success").GetBoolean(), "QuickCreate Category success is true");
+        var qCatId = qCategoryJson.GetProperty("id").GetInt32();
+        check(await db.DanhMuc.AnyAsync(x => x.Id == qCatId && x.TenDanhMuc == qCategoryName), "QuickCreate Category saved to db");
+
+        // 8.2. QuickAdd Ingredient
+        var qIngredientName = "Nguyên liệu QuickAdd " + Guid.NewGuid().ToString("N")[..6];
+        var qIngredientResp = await admin.PostAsJsonAsync("/NguyenLieu/QuickCreate", new { tenNguyenLieu = qIngredientName, donViTinh = "kg", donGia = 65000m, dinhMucToiThieu = 2m });
+        check(qIngredientResp.StatusCode == HttpStatusCode.OK, "QuickCreate Ingredient returns 200 OK");
+        var qIngJson = await qIngredientResp.Content.ReadFromJsonAsync<JsonElement>();
+        check(qIngJson.GetProperty("success").GetBoolean(), "QuickCreate Ingredient success is true");
+        var qIngId = qIngJson.GetProperty("id").GetInt32();
+        check(await db.NguyenLieu.AnyAsync(x => x.Id == qIngId && x.TenNguyenLieu == qIngredientName), "QuickCreate Ingredient saved to db");
+
+        // 8.3. QuickAdd Supplier
+        var qSupplierName = "NCC QuickAdd " + Guid.NewGuid().ToString("N")[..6];
+        var qSupplierPhone = "097" + Random.Shared.Next(1000000, 9999999);
+        var qSupplierResp = await admin.PostAsJsonAsync("/NhaCungCap/QuickCreate", new { tenNhaCungCap = qSupplierName, soDienThoai = qSupplierPhone });
+        check(qSupplierResp.StatusCode == HttpStatusCode.OK, "QuickCreate Supplier returns 200 OK");
+        var qSuppJson = await qSupplierResp.Content.ReadFromJsonAsync<JsonElement>();
+        check(qSuppJson.GetProperty("success").GetBoolean(), "QuickCreate Supplier success is true");
+        var qSuppId = qSuppJson.GetProperty("id").GetInt32();
+        check(await db.NhaCungCap.AnyAsync(x => x.Id == qSuppId && x.TenNhaCungCap == qSupplierName), "QuickCreate Supplier saved to db");
+
+        // 9. Test Supplier-Ingredient Many-to-Many Linking
+        var linkResp = await admin.PostAsJsonAsync($"/NguyenLieu/LinkSuppliersToIngredient?ingredientId={qIngId}", new[]
+        {
+            new { maNhaCungCap = qSuppId, donGiaCungUng = 62000m, maHangNCC = "MH-01", ghiChu = "Thỏa thuận test" }
+        });
+        check(linkResp.StatusCode == HttpStatusCode.OK, "LinkSuppliersToIngredient returns 200 OK");
+        check(await db.NhaCungCapNguyenLieus.AnyAsync(x => x.MaNguyenLieu == qIngId && x.MaNhaCungCap == qSuppId && x.DonGiaCungUng == 62000m), "NhaCungCapNguyenLieu composite relation saved in db");
+
+        // Verify GetSuppliersByIngredient
+        var getSuppResp = await admin.GetAsync($"/NguyenLieu/GetSuppliersByIngredient?ingredientId={qIngId}");
+        check(getSuppResp.StatusCode == HttpStatusCode.OK, "GetSuppliersByIngredient returns 200 OK");
+        var getSuppJson = await getSuppResp.Content.ReadFromJsonAsync<JsonElement>();
+        check(getSuppJson.GetProperty("suppliers").GetArrayLength() == 1, "GetSuppliersByIngredient returns linked supplier");
+
+        // 10. Test Multi-size BOM Configuration (DinhMucTheoSize)
+        var testDish = await db.MonAn.Include(x => x.Sizes).FirstAsync(x => x.Sizes.Count >= 2);
+        var dinhmucHtml = await Get(admin, $"/MonAn/DinhMuc/{testDish.Id}");
+        check(dinhmucHtml.Contains("Định Mức Đa Kích Cỡ (BOM)") && dinhmucHtml.Contains("Size"), "DinhMuc page rendered successfully");
+
+        var size1 = testDish.Sizes.First();
+        var size2 = testDish.Sizes.Skip(1).First();
+        var bomForm = dinhmucHtml;
+        await Post(admin, "/MonAn/SaveDinhMucTheoSize", bomForm, new()
+        {
+            ["MonAnId"] = testDish.Id.ToString(),
+            ["Sizes[0].MonAnSizeId"] = size1.Id.ToString(),
+            ["Sizes[0].TenSize"] = size1.TenSize,
+            ["Sizes[0].GiaBan"] = size1.GiaBan.ToString(),
+            ["Sizes[0].DangSuDung"] = "true",
+            ["Sizes[0].Items[0].NguyenLieuId"] = qIngId.ToString(),
+            ["Sizes[0].Items[0].SoLuong"] = "0.25",
+            ["Sizes[1].MonAnSizeId"] = size2.Id.ToString(),
+            ["Sizes[1].TenSize"] = size2.TenSize,
+            ["Sizes[1].GiaBan"] = size2.GiaBan.ToString(),
+            ["Sizes[1].DangSuDung"] = "true",
+            ["Sizes[1].Items[0].NguyenLieuId"] = qIngId.ToString(),
+            ["Sizes[1].Items[0].SoLuong"] = "0.50"
+        });
+
+        check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == testDish.Id && x.MaKichCo == size1.Id && x.NguyenLieuId == qIngId && x.SoLuong == 0.25m), "BOM Size 1 saved with composite key");
+        check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == testDish.Id && x.MaKichCo == size2.Id && x.NguyenLieuId == qIngId && x.SoLuong == 0.50m), "BOM Size 2 saved with composite key");
 
         Console.WriteLine("-> InventorySmoke passed all validations!");
     }

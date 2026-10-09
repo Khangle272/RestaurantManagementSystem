@@ -49,9 +49,10 @@
                     @if (admin) { <strong class="text-primary">@(item.GiaBan.HasValue ? (item.SoSize > 1 ? "Từ " : "") + item.GiaBan.Value.ToString("N0") + " đ" : "Chưa có giá đang sử dụng")</strong> }
                     @if (item.SoSize > 1) { <small class="text-muted d-block">@item.SoSize lựa chọn size</small> }
                 </div>
-                <div class="card-footer bg-white d-flex gap-2">
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Sửa / Định mức</a>
-                    @if (admin) { <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Xóa</a> }
+                <div class="card-footer bg-white d-flex flex-wrap gap-2">
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1"></i>Sửa</a>
+                    <a asp-action="DinhMuc" asp-route-id="@item.Id" class="btn btn-sm btn-outline-success"><i class="bi bi-diagram-3 me-1"></i>Định mức (BOM)</a>
+                    @if (admin) { <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa</a> }
                 </div>
             </article></div>
         }

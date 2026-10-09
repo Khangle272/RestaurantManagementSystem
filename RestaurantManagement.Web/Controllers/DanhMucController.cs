@@ -95,6 +95,29 @@ public class DanhMucController(RestaurantDbContext context) : ManagementControll
             ModelState.AddModelError(nameof(model.TenDanhMuc), "Tên danh mục đã tồn tại.");
     }
 
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate([FromBody] QuickCreateDanhMucVM model)
+    {
+        if (string.IsNullOrWhiteSpace(model?.TenDanhMuc))
+            return Json(new { success = false, message = "Vui lòng nhập tên danh mục." });
+
+        var name = model.TenDanhMuc.Trim();
+        if (await Db.DanhMuc.AnyAsync(x => x.TenDanhMuc == name))
+            return Json(new { success = false, message = "Tên danh mục đã tồn tại trong hệ thống." });
+
+        var entity = new DanhMuc
+        {
+            TenDanhMuc = name,
+            MoTa = model.MoTa?.Trim(),
+            DangSuDung = true
+        };
+
+        Db.DanhMuc.Add(entity);
+        await Db.SaveChangesAsync();
+
+        return Json(new { success = true, id = entity.Id, name = entity.TenDanhMuc });
+    }
+
     private static void Map(DanhMucFormViewModel model, DanhMuc entity)
     {
         entity.TenDanhMuc = model.TenDanhMuc;

@@ -7,7 +7,7 @@ using RestaurantManagement.API.Models;
 namespace RestaurantManagement.Web.Services;
 
 // Shared by the reservation queue and floor board so both enforce the same lifecycle.
-public class TableService(RestaurantDbContext db)
+public class TableService(RestaurantDbContext db, IKhoService? khoService = null)
 {
     public static DateTimeOffset VietnamTime(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.FromHours(7));
     public static DateTime VietnamNow => DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).DateTime;
@@ -87,10 +87,66 @@ public class TableService(RestaurantDbContext db)
         booking.ThoiDiemNhanBan = DateTimeOffset.UtcNow;
         booking.NhanVienTiepNhanId = staffId;
         foreach (var table in tables) table.TrangThai = TrangThaiBan.DangPhucVu;
-        // Admin can receive guests without a staff profile. An order-taking employee creates the bill later.
-        if (staffId is int employeeId && !await db.HoaDon.AnyAsync(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy))
-            db.HoaDon.Add(new HoaDon { MaHoaDon = NewCode("HD"), DatBanId = id, KhachHangId = booking.KhachHangId,
-                NhanVienId = employeeId, ThoiDiemLap = DateTimeOffset.UtcNow, TrangThai = TrangThaiHoaDon.ChuaThanhToan });
+
+        // Ensure bill exists
+        var bill = await db.HoaDon.FirstOrDefaultAsync(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy);
+        if (bill == null)
+        {
+            var empId = staffId ?? await db.NhanVien.Where(x => x.DangLamViec).Select(x => (int?)x.Id).FirstOrDefaultAsync() ?? 1;
+            bill = new HoaDon
+            {
+                MaHoaDon = NewCode("HD"),
+                DatBanId = id,
+                KhachHangId = booking.KhachHangId,
+                NhanVienId = empId,
+                ThoiDiemLap = DateTimeOffset.UtcNow,
+                TrangThai = TrangThaiHoaDon.ChuaThanhToan
+            };
+            db.HoaDon.Add(bill);
+            await db.SaveChangesAsync();
+        }
+
+        // Transfer pre-ordered dishes to bill and deduct inventory
+        var preOrders = await db.MonDatTruoc.Where(x => x.DatBanId == id).ToListAsync();
+        if (preOrders.Count > 0)
+        {
+            foreach (var po in preOrders)
+            {
+                if (await db.ChiTietHoaDon.AnyAsync(c => c.HoaDonId == bill.Id && c.MonDatTruocId == po.Id))
+                    continue;
+
+                string sizeName = "Mặc định";
+                if (po.MonAnSizeId.HasValue)
+                {
+                    sizeName = await db.MonAnSize.Where(s => s.Id == po.MonAnSizeId.Value).Select(s => s.TenSize).FirstOrDefaultAsync() ?? "Mặc định";
+                }
+
+                db.ChiTietHoaDon.Add(new ChiTietHoaDon
+                {
+                    HoaDonId = bill.Id,
+                    MonAnId = po.MonAnId,
+                    MonAnSizeId = po.MonAnSizeId,
+                    TenMonLucBan = po.TenMonLucDat,
+                    TenSizeLucBan = sizeName,
+                    DonGia = po.DonGiaThoaThuan,
+                    SoLuong = po.SoLuong,
+                    YeuCauCheBien = po.YeuCauCheBien,
+                    TrangThai = TrangThaiCheBien.ChoCheBien,
+                    ThoiDiemGoi = DateTimeOffset.UtcNow,
+                    MonDatTruocId = po.Id
+                });
+            }
+            await db.SaveChangesAsync();
+
+            var activeItems = await db.ChiTietHoaDon.Where(c => c.HoaDonId == bill.Id && c.TrangThai != TrangThaiCheBien.DaHuy).ToListAsync();
+            bill.TongTienHang = activeItems.Sum(c => c.SoLuong * c.DonGia);
+            await db.SaveChangesAsync();
+
+            if (khoService != null)
+            {
+                await khoService.DeductInventoryForBookingPreOrdersAsync(id, bill.Id, staffId);
+            }
+        }
         return null;
     });
 

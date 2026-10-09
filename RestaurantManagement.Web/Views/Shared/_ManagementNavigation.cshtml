@@ -32,6 +32,30 @@
         && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"))
         && (targetController != "DonHang" || action == targetAction)
         && (targetController != "Kho" || action == targetAction);
+
+    string GetIcon(string ctrl, string act) => (ctrl, act) switch
+    {
+        ("Account", _) => "bi-person-badge",
+        ("NhanVien", _) or ("TaiKhoanNhanVien", _) => "bi-people",
+        ("TaiKhoanKhachHang", _) => "bi-person-heart",
+        ("SoDoBan", _) => "bi-grid-3x3-gap",
+        ("QuanLyDatBan", "Index") => "bi-calendar-check",
+        ("QuanLyDatBan", "DanhGia") => "bi-star-half",
+        ("MonAn", _) => "bi-egg-fried",
+        ("DanhMuc", _) => "bi-card-list",
+        ("DonHang", "Create") => "bi-cart-plus",
+        ("DonHang", "Index") => "bi-receipt",
+        ("Bep", _) => "bi-fire",
+        ("HoaDon", _) => "bi-cash-coin",
+        ("Kho", "TonKho") => "bi-boxes",
+        ("NhapKho", _) => "bi-box-arrow-in-down",
+        ("XuatKho", _) => "bi-box-arrow-up-right",
+        ("ThanhLy", _) => "bi-trash3",
+        ("Kho", "BaoCao") => "bi-file-earmark-bar-graph",
+        ("NhaCungCap", _) => "bi-truck",
+        ("NguyenLieu", _) => "bi-basket2",
+        _ => "bi-circle"
+    };
 }
 <div class="@(Model ? "row g-3" : "management-navigation")">
 @foreach (var group in entries.Where(x => x.Allowed).GroupBy(x => x.Group))
@@ -40,13 +64,13 @@
     {
         <div class="col-12 col-md-6 col-xl-4"><section class="card border-0 shadow-sm h-100"><div class="card-body">
             <h2 class="h6 text-success mb-3">@group.Key</h2>
-            @foreach (var item in group) { <a asp-controller="@item.Controller" asp-action="@item.Action" class="d-block py-2 text-decoration-none text-body">@item.Label <span class="float-end text-muted" aria-hidden="true">→</span></a> }
+            @foreach (var item in group) { <a asp-controller="@item.Controller" asp-action="@item.Action" class="d-block py-2 text-decoration-none text-body"><i class="bi @GetIcon(item.Controller, item.Action) me-2"></i>@item.Label <span class="float-end text-muted" aria-hidden="true">→</span></a> }
         </div></section></div>
     }
     else if (group.Count() == 1)
     {
         var item = group.Single();
-        <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link @(IsActive(item.Controller, item.Action) ? "active" : "")" aria-current="@(IsActive(item.Controller, item.Action) ? "page" : null)">@item.Label</a>
+        <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link @(IsActive(item.Controller, item.Action) ? "active" : "")" aria-current="@(IsActive(item.Controller, item.Action) ? "page" : null)" title="@item.Label"><i class="bi @GetIcon(item.Controller, item.Action) me-2"></i><span class="nav-link-text">@item.Label</span></a>
     }
     else
     {
@@ -54,7 +78,7 @@
             <summary>@group.Key</summary>
             <div class="management-menu-children">
             @foreach (var item in group) {
-                <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link @(IsActive(item.Controller, item.Action) ? "active" : "")" aria-current="@(IsActive(item.Controller, item.Action) ? "page" : null)">@item.Label</a>
+                <a asp-controller="@item.Controller" asp-action="@item.Action" class="nav-link @(IsActive(item.Controller, item.Action) ? "active" : "")" aria-current="@(IsActive(item.Controller, item.Action) ? "page" : null)" title="@item.Label"><i class="bi @GetIcon(item.Controller, item.Action) me-2"></i><span class="nav-link-text">@item.Label</span></a>
             }
             </div>
         </details>

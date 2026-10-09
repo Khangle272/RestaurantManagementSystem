@@ -46,6 +46,7 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.IKhoService, RestaurantManagement.Web.Services.InventoryService>();
 
 var app = builder.Build();
 
@@ -109,3 +110,4 @@ app.MapControllerRoute(
 
 
 app.Run();
+ 

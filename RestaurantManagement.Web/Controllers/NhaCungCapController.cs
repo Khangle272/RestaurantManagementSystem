@@ -170,6 +170,42 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate([FromBody] QuickCreateNhaCungCapVM model)
+    {
+        if (string.IsNullOrWhiteSpace(model?.TenNhaCungCap))
+            return Json(new { success = false, message = "Vui lòng nhập tên nhà cung cấp." });
+
+        if (string.IsNullOrWhiteSpace(model.SoDienThoai))
+            return Json(new { success = false, message = "Vui lòng nhập số điện thoại." });
+
+        var ten = model.TenNhaCungCap.Trim();
+        var sdt = model.SoDienThoai.Trim();
+
+        if (await Db.NhaCungCap.AnyAsync(x => x.TenNhaCungCap == ten))
+            return Json(new { success = false, message = "Tên nhà cung cấp này đã tồn tại trong hệ thống." });
+
+        if (await Db.NhaCungCap.AnyAsync(x => x.SoDienThoai == sdt))
+            return Json(new { success = false, message = "Số điện thoại này đã được đăng ký bởi nhà cung cấp khác." });
+
+        var entity = new NhaCungCap
+        {
+            TenNhaCungCap = ten,
+            SoDienThoai = sdt,
+            Email = model.Email?.Trim(),
+            DiaChi = model.DiaChi?.Trim(),
+            MaSoThue = model.MaSoThue?.Trim(),
+            NguoiLienHe = model.NguoiLienHe?.Trim(),
+            GhiChu = model.GhiChu?.Trim(),
+            DangSuDung = true
+        };
+
+        Db.NhaCungCap.Add(entity);
+        await Db.SaveChangesAsync();
+
+        return Json(new { success = true, id = entity.Id, name = entity.TenNhaCungCap, phone = entity.SoDienThoai });
+    }
+
     private async Task ValidateAsync(NhaCungCapVM model, int id)
     {
         var ten = model.TenNhaCungCap?.Trim() ?? "";

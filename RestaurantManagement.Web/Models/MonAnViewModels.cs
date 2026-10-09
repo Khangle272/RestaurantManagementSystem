@@ -70,6 +70,7 @@ public class MonAnSizeFormViewModel
 
 public class DinhMucItemViewModel
 {
+    public int MaKichCo { get; set; }
     [Range(1, int.MaxValue)] public int NguyenLieuId { get; set; }
     [Range(typeof(decimal), "0.000001", "999999999999.999999", ErrorMessage = "Định mức phải lớn hơn 0.")]
     public decimal SoLuong { get; set; }

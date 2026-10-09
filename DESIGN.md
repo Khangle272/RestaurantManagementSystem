@@ -460,3 +460,60 @@ Tuân thủ toàn bộ Design Tokens tại Mục 1: Primary Rose (#E11D48), Dark
 - **Bảng tổng hợp Nhập - Xuất - Tồn chi tiết:**
   + Cột: Mã NL | Tên nguyên liệu | ĐVT | [Tồn đầu kỳ (SL & Tiền)] | [Nhập trong kỳ (SL & Tiền)] | [Xuất chế biến (SL & Tiền)] | [Thanh lý/Hủy (SL & Tiền)] | [Tồn cuối kỳ (SL & Tiền)].
 
+---
+
+### 9. ĐẶC TẢ GIAO DIỆN & UX CẢI TIẾN PHÂN HỆ MÓN ĂN - ĐỊNH MỨC - KHO (WEEK 8 REVISION)
+Tuân thủ toàn bộ Design Tokens tại Mục 1 và Layout Shell tại Mục 2. Phiên bản cải tiến tập trung giải quyết triệt để trải nghiệm nhập liệu không gián đoạn thông qua kỹ thuật **In-Place AJAX Creation**, phân tách định mức đa kích cỡ (Multi-Size BOM), và khả năng thu gọn không gian làm việc (Collapsible Workspace).
+
+#### 9.1. Thanh điều hướng thu gọn linh hoạt (Collapsible Admin Sidebar)
+- **Cơ chế hoạt động:**
+  + Trên thanh Topbar bên cạnh Logo, bổ sung nút chuyển đổi (Toggle button) dạng icon `bi-list` hoặc `bi-layout-sidebar-inset`.
+  + Trạng thái bình thường: Sidebar rộng `260px`, hiển thị đầy đủ icon và nhãn chức năng.
+  + Trạng thái thu gọn (`sidebar-collapsed`): Sidebar thu hẹp còn `72px`, chỉ hiển thị icon căn giữa kèm tooltip chú giải khi hover; Main Content Canvas tự động mở rộng 100% diện tích màn hình.
+  + Trạng thái được lưu trong `localStorage.getItem('sidebar_collapsed')` để duy trì trải nghiệm khi chuyển qua lại các trang.
+
+#### 9.2. Form Thêm/Sửa Món ăn tối ưu (Inline Group & Quick-Add Buttons)
+- **Tối ưu kích thước trường Danh mục & Nguyên liệu:**
+  + Thay vì sử dụng `<select>` chiếm toàn bộ chiều ngang dòng, bố trí dạng `input-group` gọn gàng:
+    ```html
+    <div class="input-group">
+      <select class="form-select form-select-sm" id="cboDanhMuc">...</select>
+      <button class="btn btn-outline-rose btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modalQuickDanhMuc" title="Thêm danh mục mới">
+        <i class="bi bi-plus-lg"></i>
+      </button>
+    </div>
+    ```
+  + Kích thước dropdown được giới hạn cân đối (`max-width: 320px`), nhường không gian hiển thị cho các trường giá bán, hình ảnh và định mức.
+- **Quy chuẩn Modal AJAX Thêm nhanh (Quick Create Modal):**
+  + **Tiêu đề modal:** Badge nhỏ Rose `#E11D48` kèm icon, ví dụ: `+ Thêm Nhanh Danh Mục Món`.
+  + **Form nhập liệu tối giản:** Chỉ chứa 1 - 2 trường bắt buộc (Tên, Ghi chú), không có trường rườm rà.
+  + **Hành vi người dùng:**
+    - Người dùng bấm nút `+` -> Modal mở đè lên form chính mà không làm mất bất kỳ ký tự nào đang gõ ở form thêm món ăn.
+    - Điền tên -> Bấm "Lưu nhanh" (Nút Rose) -> Gửi AJAX POST -> Hiển thị spinner loading 0.3s.
+    - Khi nhận phản hồi `200 OK`: Đóng modal, reset form trong modal, tự động thêm một `<option value="{id}" selected>{name}</option>` vào dropdown ở form chính và kích hoạt hiệu ứng highlight xanh nhẹ (Green pulse) trong 1 giây để người dùng nhận diện.
+
+#### 9.3. Giao diện Định mức phân tách theo Size Món ăn (Multi-Size Recipe Builder)
+- **Bố cục Tab Kích cỡ (Size Nav-Tabs):**
+  + Phía trên bảng định mức nguyên liệu hiển thị danh sách các kích cỡ của món ăn:
+    `[ Size Tiêu chuẩn / S ]` | `[ Size Vừa / M ]` | `[ Size Lớn / L ]` (Active tab có viền dưới Rose #E11D48, nền trắng).
+  + Bên cạnh các tab có nút hành động phụ: `Sao chép định mức từ Size khác` (hỗ trợ nhân hệ số nhanh, ví dụ Size L = 1.5 x Size M).
+- **Bảng định mức chi tiết cho từng Size:**
+  + Cột: Tên nguyên liệu | ĐVT trong kho | Số lượng định mức cho 1 phần | Chi phí giá vốn ước tính | Nút xóa dòng (`bi-trash`).
+  + Hàng chân bảng (Footer):
+    - Tổng chi phí nguyên vật liệu của riêng size đó (Food Cost Size).
+    - Tỷ suất lợi nhuận gộp tạm tính so với giá bán của size tương ứng.
+
+#### 9.4. Form Quản lý Nguyên liệu & Nhà Cung Cấp Cung Ứng (Supplier-Supply View)
+- **Khối Nhà cung cấp cũ đã từng cung ứng:**
+  + Hiển thị danh sách các nhà cung cấp liên kết với nguyên liệu dạng danh sách thẻ nhỏ (Badges/Tags):
+    - Mỗi badge hiển thị: `[Tên NCC - Đơn giá thỏa thuận]` kèm nút `x` gỡ liên kết nếu cần.
+  + Dropdown chọn thêm NCC từ danh sách đã có trong hệ thống.
+  + Nút `+ Thêm Nhà Cung Cấp Mới` mở Modal AJAX Quick-Add Nhà cung cấp (Tên NCC, Số điện thoại, Người liên hệ) để thêm tức thời và gán vào nguyên liệu đang chỉnh sửa.
+
+#### 9.5. Hiển thị trực quan trạng thái Trừ tồn kho sau khi Nhận bàn
+- **Tại màn hình Chi tiết Đơn hàng / Bàn ăn (`DonHang/Details` & `Bep/Index`):**
+  + Khi khách vừa nhận bàn và xác nhận gọi món: Hiển thị thông báo Toast góc phải:
+    `"Đã tự động xuất kho nguyên liệu cho X món theo định mức kích cỡ bàn [Bàn 5]."`
+  + Nếu có nguyên liệu bị cạn kho hoặc không đủ định mức:
+    - Hiển thị Banner cảnh báo màu vàng viền cam: *"Cảnh báo: Nguyên liệu [Thịt bò Wagyu] tồn kho chỉ còn 0.2kg, thiếu định mức phục vụ cho đơn hàng!"* kèm nút tắt hoặc lập phiếu nhập khẩn cấp.
+

@@ -37,7 +37,11 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
     }
 
     [HttpGet]
-    public IActionResult Create() => View("Form", new NguyenLieuFormViewModel());
+    public async Task<IActionResult> Create()
+    {
+        await PopulateSuppliersAsync();
+        return View("Form", new NguyenLieuFormViewModel());
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(NguyenLieuFormViewModel model)
@@ -54,6 +58,7 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
                 return RedirectToAction(nameof(Index));
             }
         }
+        await PopulateSuppliersAsync();
         return View("Form", model);
     }
 
@@ -62,6 +67,7 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
     {
         var entity = await Db.NguyenLieu.FindAsync(id);
         if (entity == null) return NotFound();
+        await PopulateSuppliersAsync(id);
         return View("Form", new NguyenLieuFormViewModel
         {
             Id = id, RowVersion = VersionOf(entity), TenNguyenLieu = entity.TenNguyenLieu,
@@ -75,6 +81,7 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         if (id != model.Id) return NotFound();
         var entity = await Db.NguyenLieu.FindAsync(id);
         if (entity == null) return NotFound();
+        
         if (ModelState.IsValid && ApplyVersion(entity, model.RowVersion))
         {
             Map(model, entity);
@@ -84,7 +91,24 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
                 return RedirectToAction(nameof(Index));
             }
         }
+        await PopulateSuppliersAsync(id);
         return View("Form", model);
+    }
+
+    private async Task PopulateSuppliersAsync(int? ingredientId = null)
+    {
+        ViewBag.AllSuppliers = await Db.NhaCungCap.Where(x => x.DangSuDung).OrderBy(x => x.TenNhaCungCap).ToListAsync();
+        if (ingredientId.HasValue && ingredientId.Value > 0)
+        {
+            ViewBag.LinkedSuppliers = await Db.NhaCungCapNguyenLieus
+                .Include(x => x.NhaCungCap)
+                .Where(x => x.MaNguyenLieu == ingredientId.Value && x.TrangThai)
+                .ToListAsync();
+        }
+        else
+        {
+            ViewBag.LinkedSuppliers = new List<NhaCungCapNguyenLieu>();
+        }
     }
 
     [HttpGet]
@@ -113,6 +137,100 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         model.DonViTinh = model.DonViTinh?.Trim() ?? "";
         if (await Db.NguyenLieu.AnyAsync(x => x.Id != id && x.TenNguyenLieu == model.TenNguyenLieu))
             ModelState.AddModelError(nameof(model.TenNguyenLieu), "Tên nguyên liệu đã tồn tại.");
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate([FromBody] QuickCreateNguyenLieuVM model)
+    {
+        if (string.IsNullOrWhiteSpace(model?.TenNguyenLieu))
+            return Json(new { success = false, message = "Vui lòng nhập tên nguyên liệu." });
+
+        if (string.IsNullOrWhiteSpace(model.DonViTinh))
+            return Json(new { success = false, message = "Vui lòng nhập đơn vị tính." });
+
+        var name = model.TenNguyenLieu.Trim();
+        if (await Db.NguyenLieu.AnyAsync(x => x.TenNguyenLieu == name))
+            return Json(new { success = false, message = "Tên nguyên liệu đã tồn tại trong hệ thống." });
+
+        var entity = new NguyenLieu
+        {
+            TenNguyenLieu = name,
+            DonViTinh = model.DonViTinh.Trim(),
+            DanhMuc = model.DanhMuc?.Trim(),
+            DonGia = model.DonGia,
+            NguongCanhBao = model.DinhMucToiThieu,
+            SoLuongTon = model.SoLuongTon,
+            DangSuDung = true
+        };
+
+        Db.NguyenLieu.Add(entity);
+        await Db.SaveChangesAsync();
+
+        return Json(new { success = true, id = entity.Id, name = entity.TenNguyenLieu, unit = entity.DonViTinh, price = entity.DonGia });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetSuppliersByIngredient(int ingredientId)
+    {
+        var links = await Db.NhaCungCapNguyenLieus
+            .Include(x => x.NhaCungCap)
+            .Where(x => x.MaNguyenLieu == ingredientId && x.TrangThai)
+            .Select(x => new
+            {
+                id = x.MaNhaCungCap,
+                name = x.NhaCungCap.TenNhaCungCap,
+                phone = x.NhaCungCap.SoDienThoai,
+                price = x.DonGiaCungUng,
+                productCode = x.MaHangNCC
+            })
+            .ToListAsync();
+
+        return Json(new { success = true, suppliers = links });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> LinkSuppliersToIngredient(int ingredientId, [FromBody] List<SupplierLinkDto> suppliers)
+    {
+        var ingredient = await Db.NguyenLieu.FindAsync(ingredientId);
+        if (ingredient == null) return NotFound();
+
+        suppliers ??= [];
+        var existing = await Db.NhaCungCapNguyenLieus.Where(x => x.MaNguyenLieu == ingredientId).ToListAsync();
+        var newSupplierIds = suppliers.Select(s => s.MaNhaCungCap).ToHashSet();
+
+        foreach (var ex in existing)
+        {
+            if (!newSupplierIds.Contains(ex.MaNhaCungCap))
+                ex.TrangThai = false;
+        }
+
+        foreach (var s in suppliers)
+        {
+            var target = existing.FirstOrDefault(x => x.MaNhaCungCap == s.MaNhaCungCap);
+            if (target != null)
+            {
+                target.DonGiaCungUng = s.DonGiaCungUng;
+                target.MaHangNCC = s.MaHangNCC?.Trim();
+                target.GhiChu = s.GhiChu?.Trim();
+                target.TrangThai = true;
+            }
+            else
+            {
+                Db.NhaCungCapNguyenLieus.Add(new NhaCungCapNguyenLieu
+                {
+                    MaNguyenLieu = ingredientId,
+                    MaNhaCungCap = s.MaNhaCungCap,
+                    DonGiaCungUng = s.DonGiaCungUng,
+                    MaHangNCC = s.MaHangNCC?.Trim(),
+                    GhiChu = s.GhiChu?.Trim(),
+                    NgayLienKet = DateTime.Now,
+                    TrangThai = true
+                });
+            }
+        }
+
+        await Db.SaveChangesAsync();
+        return Json(new { success = true, message = "Cập nhật nhà cung cấp liên kết thành công." });
     }
 
     private static void Map(NguyenLieuFormViewModel model, NguyenLieu entity)
