@@ -18,6 +18,7 @@ public static class TableSmoke
         async Task Post(HttpClient client, string path, string form, Dictionary<string, string> fields)
         {
             fields["__RequestVerificationToken"] = hidden(form, "__RequestVerificationToken");
+            if (path == "/DatBan") fields["RequestId"] = hidden(form[form.IndexOf("id=\"formDatBan\"", StringComparison.Ordinal)..], "RequestId");
             using var response = await client.PostAsync(path, new FormUrlEncodedContent(fields));
             check(response.StatusCode == HttpStatusCode.Redirect, "Table POST " + path);
         }
@@ -58,14 +59,16 @@ public static class TableSmoke
             ["id"] = table.Id.ToString(), ["clean"] = "true", ["rowVersion"] = await Version(table),
             ["__RequestVerificationToken"] = hidden(receptionBoard, "__RequestVerificationToken") })))
             check(denied.StatusCode == HttpStatusCode.Redirect, "Reception cannot perform waiter-only finish or cleaning operations");
-        var arrival = TableService.VietnamNow.AddHours(2).ToString("yyyy-MM-ddTHH:mm");
+        // The ownership fixture now holds a table; keep it outside the dedicated overlap/race scenarios.
+        var arrival = TableService.VietnamNow.AddDays(4).ToString("yyyy-MM-ddTHH:mm");
         await Post(customer, "/DatBan", await Get(customer, "/DatBan"), new()
         { ["HoTen"] = "Khách sở hữu", ["SoDienThoai"] = "0903333444", ["ThoiGianDen"] = arrival,
           ["SoNguoi"] = "2", ["MaKhuVuc"] = area.Id.ToString() });
         var customerId = await db.KhachHang.Where(x => x.Email == "khach.demo@example.test").Select(x => x.Id).SingleAsync();
         var own = await db.DatBan.SingleAsync(x => x.HoTenLienHe == "Khách sở hữu");
-        check(own.KhachHangId == customerId && own.KhuVucUuTienId == area.Id && own.TrangThai == TrangThaiDatBan.ChoXacNhan,
-            "Customer booking belongs to authenticated account, stores preference and pending state");
+        check(own.KhachHangId == customerId && own.KhuVucUuTienId == area.Id && own.TrangThai == TrangThaiDatBan.ChoCoc
+            && own.TienCocYeuCau == 299000m,
+            "Customer booking belongs to authenticated account, stores preference and waits for the automatically calculated deposit");
         check((await Get(customer, "/DatBan/LichSu")).Contains(own.MaDatBan), "Customer sees own reservation without phone lookup");
         using (var anonymous = newClient())
         {

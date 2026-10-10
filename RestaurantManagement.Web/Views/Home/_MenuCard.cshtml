@@ -7,5 +7,11 @@
         @if (Model.Status == TrangThaiMon.TamHet) { <span class="menu-status">Tạm hết</span> }
         else if (Model.IsNew) { <span class="menu-status menu-status-new">Món mới</span> }
     </a>
-    <div class="menu-card-body"><span class="menu-category">@Model.Category · @(Model.Type == LoaiMon.Set ? "Set / Combo" : Model.Type == LoaiMon.ThucUong ? "Thức uống" : "Món lẻ")</span><h3><a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id">@Model.Name</a></h3><p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Khám phá hương vị của món ăn này." : Model.Description)</p><div class="menu-card-footer"><strong>@(Model.FromPrice.HasValue ? $"Từ {Model.FromPrice.Value:N0} ₫" : "Liên hệ nhà hàng")</strong><a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id" aria-label="Chi tiết @Model.Name"><i class="bi bi-arrow-up-right"></i></a></div></div>
+    <div class="menu-card-body"><span class="menu-category">@Model.Category · @(Model.Type == LoaiMon.Set ? "Set / Combo" : Model.Type == LoaiMon.ThucUong ? "Thức uống" : "Món lẻ")</span><h3><a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id">@Model.Name</a></h3><p>@(string.IsNullOrWhiteSpace(Model.Description) ? "Khám phá hương vị của món ăn này." : Model.Description)</p><div class="menu-card-footer"><strong>@(Model.FromPrice.HasValue ? $"Từ {Model.FromPrice.Value:N0} ₫" : "Liên hệ nhà hàng")</strong>
+        @if (User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang"))
+        {
+            <button type="button" class="btn btn-sm btn-outline-restaurant" data-cart-dish="@Model.Id" disabled="@(!Model.CanOrder)" aria-label="Chọn @Model.Name">@(Model.CanOrder ? "Chọn món" : "Tạm hết")</button>
+        }
+        else { <a asp-controller="Home" asp-action="MonAn" asp-route-id="@Model.Id" aria-label="Chi tiết @Model.Name"><i class="bi bi-arrow-up-right"></i></a> }
+    </div></div>
 </article>

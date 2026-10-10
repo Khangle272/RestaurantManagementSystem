@@ -29,8 +29,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Events.OnRedirectToLogin = context =>
     {
         var path = context.Request.Path.Value ?? "";
-        var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien",
-            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword",
+        var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien", "/CauHinhQr",
+            "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/DatTruoc", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword",
             "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap" };
         var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
             || path.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)) ? "/admin" : "/Account/Login";
@@ -45,7 +45,10 @@ builder.Services.AddAuthorizationBuilder()
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
+builder.Services.AddSingleton<RestaurantManagement.Web.Services.PaymentQrStore>();
+builder.Services.AddHostedService<RestaurantManagement.Web.Services.TableExpiryWorker>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.PreorderService>();
 
 var app = builder.Build();
 
@@ -69,6 +72,16 @@ if (args.Contains("--import-sql-data", StringComparer.OrdinalIgnoreCase))
         throw new InvalidOperationException("Chỉ được nạp dữ liệu mẫu trong môi trường Development.");
     await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
     await SampleDataImport.RunAsync(app.Services);
+    return;
+}
+
+if (args.Contains("--init-week8-demo", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment())
+        throw new InvalidOperationException("Chỉ được tạo dữ liệu tuần 8 trong môi trường Development.");
+    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
+    using var scope = app.Services.CreateScope();
+    await RestaurantManagement.Web.Services.Week8DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>());
     return;
 }
 

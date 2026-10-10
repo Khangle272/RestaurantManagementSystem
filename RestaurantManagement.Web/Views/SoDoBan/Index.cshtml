@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Sơ đồ bàn"; var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan"); }
 @section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
 <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-    <div><p class="small text-success fw-semibold mb-1">KHU VỰC PHỤC VỤ</p><h1 class="h3 mb-1">Sơ đồ bàn</h1><p class="text-muted mb-0">Theo dõi bàn hiện tại và xếp lịch theo khu vực, tầng.</p></div>
+    <div><p class="small text-success fw-semibold mb-1">KHU VỰC PHỤC VỤ</p><h1 class="h3 mb-1">Sơ đồ bàn</h1><p class="text-muted mb-0">Theo dõi bàn hiện tại và xếp lịch theo khu vực, tầng.</p><p class="small text-muted mb-0">Sau 3 tiếng từ lúc nhận bàn, lượt đã thanh toán, xử lý xong cọc và món sẽ tự chuyển Cần dọn. Chỉ Dọn xong mới trở lại Sẵn sàng.</p></div>
     <div class="d-flex gap-2 flex-wrap">
         @if (User.IsInRole("Admin") || User.IsInRole("TiepTan")) {
             <a asp-controller="QuanLyDatBan" asp-action="Create" class="btn btn-success">Đặt bàn cho khách</a>
@@ -17,6 +17,8 @@
 <form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-end">
     <input type="hidden" name="datBanId" value="@Model.Booking?.Id" />
     <input type="hidden" name="preferredTableId" value="@Model.PreferredTableId" />
+    <div><label for="schedule-day" class="form-label small">Ngày xem lịch</label><input id="schedule-day" name="ngay" type="date" value="@Model.ScheduleDay.ToString("yyyy-MM-dd")" class="form-control" disabled="@(Model.Booking is not null)" /></div>
+    <div><label for="schedule-time" class="form-label small">Giờ bắt đầu kiểm tra</label><input id="schedule-time" name="gio" type="time" value="@Model.ScheduleTime.ToString("HH:mm")" class="form-control" disabled="@(Model.Booking is not null)" /></div>
     <div><label for="floor" class="form-label small">Tầng</label><select id="floor" name="tang" class="form-select"><option value="">Tất cả tầng</option>
         @foreach (var floor in Model.Areas.Select(x => x.Tang).Distinct()) { <option value="@floor" selected="@(floor == Model.Floor)">@(floor == 0 ? "Tầng trệt" : $"Tầng {floor}")</option> }
     </select></div>
@@ -69,7 +71,7 @@
     </aside>
 }
 <section class="booking-board-panel" aria-label="Sơ đồ bàn và lịch đặt">
-    <p class="small text-muted mb-3">@(Model.Booking is null ? "Trạng thái bàn hiện tại và lịch sắp tới" : "Kiểm tra lịch cho yêu cầu đang chọn") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm"). Bàn đang trống không đồng nghĩa trống vào giờ đặt.</p>
+    <p class="small text-muted mb-3">Trạng thái bàn hiện tại · Lịch ngày @Model.ScheduleDay.ToString("dd/MM/yyyy"). Khung kiểm tra: @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy"). Bàn đang trống không đồng nghĩa trống vào giờ đặt.</p>
     <div id="table-board" data-poll="@(Model.Booking is null ? "true" : "false")"><partial name="_Board" model="Model" /></div>
 </section>
 </div>

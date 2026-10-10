@@ -5,465 +5,109 @@
     ViewData["Title"] = "Ghi nhận gọi món";
 }
 
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h3 mb-1">Ghi nhận gọi món</h1>
-            <p class="text-muted mb-0">Tạo đơn tại bàn đang phục vụ hoặc đơn mang đi, giao hàng.</p>
-        </div>
-        <a asp-action="Index" class="btn btn-outline-secondary">Quay lại danh sách</a>
+<div class="container-fluid py-2 pos-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div><h1 class="h4 mb-1">Ghi nhận gọi món</h1><p class="text-muted small mb-0">Chọn bàn hoặc loại đơn, chọn món rồi gửi bếp.</p></div>
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Danh sách đơn</a>
     </div>
-
-    @if (TempData["Error"] is string error)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @error
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-
-    <form asp-action="Create" method="post" id="order-form">
+    <form asp-action="Create" method="post" id="order-form" data-ajax-form="true" data-pos-form="create" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value">
         @Html.AntiForgeryToken()
-
-        <div class="row g-3">
-            <!-- Cột trái: Cấu hình loại đơn & Thực đơn món ăn -->
-            <div class="col-12 col-lg-8">
-                <!-- Chọn loại đơn hàng -->
-                <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-body">
-                        <h2 class="h6 text-uppercase text-muted fw-bold mb-3">1. Loại đơn & Thông tin khách</h2>
-                        <div class="btn-group w-100 mb-3" role="group">
-                            <input type="radio" class="btn-check" name="LoaiDonHang" id="type-dinein" value="TaiBan" checked="@(Model.LoaiDonHang == LoaiDonHang.TaiBan)" autocomplete="off">
-                            <label class="btn btn-outline-primary py-2" for="type-dinein">🍽️ Tại bàn</label>
-
-                            <input type="radio" class="btn-check" name="LoaiDonHang" id="type-takeaway" value="MangDi" checked="@(Model.LoaiDonHang == LoaiDonHang.MangDi)" autocomplete="off">
-                            <label class="btn btn-outline-primary py-2" for="type-takeaway">🥡 Mang đi</label>
-
-                            <input type="radio" class="btn-check" name="LoaiDonHang" id="type-delivery" value="GiaoHang" checked="@(Model.LoaiDonHang == LoaiDonHang.GiaoHang)" autocomplete="off">
-                            <label class="btn btn-outline-primary py-2" for="type-delivery">🛵 Giao hàng</label>
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        <input type="hidden" asp-for="BanAnId" id="selected-table-id" />
+        <input type="hidden" asp-for="DatBanId" id="selected-booking-id" />
+        <div class="row g-2 pos-columns">
+            <div class="col-12 col-md-7 col-xl-8 pos-menu-column">
+                <div class="card border-0 shadow-sm mb-2" id="pos-target-card">
+                    <div class="card-body p-3">
+                        <div id="pos-current-target" class="d-flex justify-content-between align-items-center gap-2" hidden>
+                            <strong id="pos-current-table" class="text-primary"></strong>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="pos-change-target" aria-controls="pos-order-config" aria-expanded="false">Đổi bàn</button>
                         </div>
-
-                        <!-- Khung chọn bàn cho đơn tại bàn -->
-                        <div id="section-dinein" class="border rounded p-3 bg-light mb-2 @(Model.LoaiDonHang == LoaiDonHang.TaiBan ? "" : "d-none")">
-                            <label class="form-label fw-bold">Chọn bàn đang phục vụ (*):</label>
-                            @if (Model.OccupiedTables.Count == 0)
-                            {
-                                <div class="alert alert-warning mb-0 py-2">
-                                    Hiện chưa có bàn nào ở trạng thái "Đang phục vụ".
-                                    Vui lòng nhận khách từ <a asp-controller="SoDoBan" asp-action="Index" class="alert-link">Sơ đồ bàn</a> trước khi gọi món tại bàn, hoặc chọn loại đơn <strong>Mang đi</strong>.
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="row g-2">
-                                @foreach (var table in Model.OccupiedTables)
+                        <div id="pos-order-config">
+                            <div class="btn-group w-100 mb-2" role="group" aria-label="Loại đơn hàng">
+                                <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-dinein" value="TaiBan" autocomplete="off" />
+                                <label class="btn btn-outline-primary" for="type-dinein">🍽️ Tại bàn</label>
+                                <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-takeaway" value="MangDi" autocomplete="off" />
+                                <label class="btn btn-outline-primary" for="type-takeaway">🥡 Mang đi</label>
+                                <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-delivery" value="GiaoHang" autocomplete="off" />
+                                <label class="btn btn-outline-primary" for="type-delivery">🛵 Giao hàng</label>
+                            </div>
+                            <div id="section-dinein" class="@(Model.LoaiDonHang == LoaiDonHang.TaiBan ? "" : "d-none")">
+                                <p class="small fw-semibold mb-2">Chọn bàn đang phục vụ</p>
+                                @if (Model.OccupiedTables.Count == 0)
                                 {
-                                    var isSelected = Model.BanAnId == table.Id;
-                                    <div class="col-6 col-sm-4 col-md-3">
-                                        <div class="card h-100 table-select-card @(isSelected ? "border-primary bg-primary-subtle text-primary" : "border")"
-                                             style="cursor: pointer;"
-                                             onclick="selectTable(@table.Id, '@table.MaBan', this)">
-                                            <div class="card-body p-2 text-center">
-                                                <div class="fw-bold">@table.MaBan</div>
-                                                <div class="small text-muted">@table.TenKhuVuc (T@(table.Tang))</div>
-                                                @if (!string.IsNullOrEmpty(table.KhachHang))
-                                                {
-                                                    <div class="small text-truncate" title="@table.KhachHang">@table.KhachHang</div>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <div class="alert alert-warning small mb-0">Chưa có bàn đang phục vụ. <a asp-controller="SoDoBan" asp-action="Index" class="alert-link">Nhận khách ở sơ đồ bàn</a>, hoặc chọn đơn mang đi.</div>
                                 }
+                                <div class="row g-2 pos-table-picker">
+                                    @foreach (var table in Model.OccupiedTables)
+                                    {
+                                        <div class="col-6 col-lg-4 col-xl-3">
+                                            <button type="button" class="card w-100 h-100 table-select-card text-start p-2 @(Model.BanAnId == table.Id ? "border-primary bg-primary-subtle text-primary" : "border")" data-table-id="@table.Id" data-booking-id="@table.DatBanId" data-table-code="@table.MaBan" aria-pressed="@(Model.BanAnId == table.Id ? "true" : "false")">
+                                                <span class="fw-bold">@table.MaBan</span><span class="small text-muted">@table.TenKhuVuc · T@(table.Tang)</span>
+                                                @if (!string.IsNullOrWhiteSpace(table.KhachHang)) { <span class="small text-truncate w-100" title="@table.KhachHang">@table.KhachHang</span> }
+                                            </button>
+                                        </div>
+                                    }
                                 </div>
-                                <input type="hidden" name="BanAnId" id="selected-table-id" value="@Model.BanAnId" />
                                 <div id="table-validation-error" class="text-danger small mt-2 d-none">Vui lòng chọn một bàn đang phục vụ.</div>
-                            }
-                        </div>
-
-                        <!-- Khung thông tin cho Mang đi / Giao hàng -->
-                        <div id="section-external" class="border rounded p-3 bg-light @(Model.LoaiDonHang != LoaiDonHang.TaiBan ? "" : "d-none")">
-                            <div class="row g-2">
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label small fw-semibold">Tên người nhận (*)</label>
-                                    <input type="text" name="TenNguoiNhan" id="TenNguoiNhan" value="@Model.TenNguoiNhan" class="form-control form-control-sm" placeholder="Ví dụ: Anh Tuấn, Chị Lan..." />
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label small fw-semibold">Số điện thoại (*)</label>
-                                    <input type="tel" name="SoDienThoaiNhan" id="SoDienThoaiNhan" value="@Model.SoDienThoaiNhan" class="form-control form-control-sm" placeholder="Ví dụ: 0901234567" />
-                                </div>
-                                <div class="col-12" id="delivery-address-group" style="@(Model.LoaiDonHang == LoaiDonHang.GiaoHang ? "" : "display:none;")">
-                                    <label class="form-label small fw-semibold">Địa chỉ giao hàng (*)</label>
-                                    <input type="text" name="DiaChiGiaoHang" id="DiaChiGiaoHang" value="@Model.DiaChiGiaoHang" class="form-control form-control-sm" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." />
+                            </div>
+                            <div id="section-external" class="@(Model.LoaiDonHang != LoaiDonHang.TaiBan ? "" : "d-none")">
+                                <div class="row g-2">
+                                    <div class="col-12 col-lg-6"><label asp-for="TenNguoiNhan" class="form-label small">Tên người nhận (*)</label><input asp-for="TenNguoiNhan" class="form-control form-control-sm" maxlength="120" /><span asp-validation-for="TenNguoiNhan" class="text-danger small"></span></div>
+                                    <div class="col-12 col-lg-6"><label asp-for="SoDienThoaiNhan" class="form-label small">Số điện thoại (*)</label><input asp-for="SoDienThoaiNhan" type="tel" class="form-control form-control-sm" maxlength="20" /><span asp-validation-for="SoDienThoaiNhan" class="text-danger small"></span></div>
+                                    <div class="col-12 @(Model.LoaiDonHang == LoaiDonHang.GiaoHang ? "" : "d-none")" id="delivery-address-group"><label asp-for="DiaChiGiaoHang" class="form-label small">Địa chỉ giao hàng (*)</label><input asp-for="DiaChiGiaoHang" class="form-control form-control-sm" maxlength="300" /><span asp-validation-for="DiaChiGiaoHang" class="text-danger small"></span></div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="mt-2">
-                            <label class="form-label small text-muted">Ghi chú chung cho toàn bộ đơn hàng</label>
-                            <input type="text" name="GhiChuDonHang" value="@Model.GhiChuDonHang" class="form-control form-control-sm" placeholder="Ví dụ: Khách vội, lấy nhiều khăn lạnh, giao trước 12h..." />
                         </div>
                     </div>
                 </div>
-
-                <!-- Chọn món từ thực đơn -->
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                            <h2 class="h6 text-uppercase text-muted fw-bold mb-0">2. Chọn món từ thực đơn</h2>
-                            <div style="max-width: 250px;">
-                                <input type="text" id="dish-search" class="form-control form-control-sm" placeholder="Tìm tên món ăn..." onkeyup="filterDishes()" />
-                            </div>
+                <div class="card border-0 shadow-sm pos-menu-card">
+                    <div class="card-body p-3">
+                        <div class="pos-menu-filters mb-2">
+                            <label class="visually-hidden" for="dish-category">Danh mục món</label>
+                            <select id="dish-category" class="form-select form-select-sm"><option value="all">Tất cả danh mục</option>@foreach (var category in Model.Categories) { <option value="@category.Id">@category.TenDanhMuc</option> }</select>
+                            <label class="visually-hidden" for="dish-search">Tìm món ăn</label><input type="search" id="dish-search" class="form-control form-control-sm" placeholder="Tìm món ăn..." />
                         </div>
-
-                        <!-- Danh mục tabs -->
-                        <div class="d-flex flex-wrap gap-1 mb-3" id="category-pills">
-                            <button type="button" class="btn btn-sm btn-dark category-btn active" data-category="all" onclick="filterCategory('all', this)">Tất cả</button>
-                            @foreach (var cat in Model.Categories)
-                            {
-                                <button type="button" class="btn btn-sm btn-outline-secondary category-btn" data-category="@cat.Id" onclick="filterCategory('@cat.Id', this)">@cat.TenDanhMuc</button>
-                            }
-                        </div>
-
-                        <!-- Lưới món ăn -->
-                        <div class="row g-2" id="dish-grid">
+                        @if (Model.MenuDishes.Count == 0)
+                        {
+                            <div class="alert alert-warning" role="alert">Thực đơn chưa có món sẵn sàng phục vụ. Kiểm tra món đã duyệt và size đang mở bán trước khi gửi đơn.</div>
+                        }
+                        <div class="row g-2 pos-dish-grid" id="dish-grid">
                             @foreach (var dish in Model.MenuDishes)
                             {
-                                <div class="col-12 col-sm-6 col-md-4 dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
-                                    <div class="card h-100 border shadow-none hover-shadow">
-                                        <div class="card-body p-2 d-flex flex-column justify-content-between">
-                                            <div>
-                                                <div class="fw-bold text-dark text-truncate" title="@dish.TenMon">@dish.TenMon</div>
-                                                <div class="small text-muted text-truncate mb-2" style="font-size: 0.8rem;">@(dish.MoTa ?? "Món đặc sản nhà hàng")</div>
-                                            </div>
-
-                                            <div class="mt-auto">
-                                                <div class="d-flex flex-column gap-1">
-                                                    @foreach (var size in dish.Sizes)
-                                                    {
-                                                        <button type="button"
-                                                                class="btn btn-sm btn-outline-primary d-flex justify-content-between align-items-center py-1 px-2 btn-add-dish"
-                                                                data-dish-id="@dish.Id"
-                                                                data-dish-name="@dish.TenMon"
-                                                                data-size-id="@size.Id"
-                                                                data-size-name="@size.TenSize"
-                                                                data-price="@size.GiaBan"
-                                                                onclick="addBtnToCart(this)">
-                                                            <span class="small">@size.TenSize</span>
-                                                            <span class="fw-bold small">@size.GiaBan.ToString("N0") đ +</span>
-                                                        </button>
-                                                    }
-                                                </div>
-                                            </div>
+                                <div class="col-6 col-xl-4 dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
+                                    <div class="card h-100 border shadow-none"><div class="card-body p-2 d-flex flex-column">
+                                        <strong class="small text-dark">@dish.TenMon</strong><span class="small text-muted mb-2">@(dish.MoTa ?? "Món đặc sản nhà hàng")</span>
+                                        <div class="d-flex flex-column gap-1 mt-auto">
+                                            @foreach (var size in dish.Sizes)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary d-flex justify-content-between gap-1 btn-add-dish" data-dish-id="@dish.Id" data-dish-name="@dish.TenMon" data-size-id="@size.Id" data-size-name="@size.TenSize" data-price="@size.GiaBan.ToString(System.Globalization.CultureInfo.InvariantCulture)"><span>@size.TenSize</span><strong>@size.GiaBan.ToString("N0") đ +</strong></button>
+                                            }
                                         </div>
-                                    </div>
-                                </div>
-                            }
-                            @if (Model.MenuDishes.Count == 0)
-                            {
-                                <div class="col-12 text-center py-4 text-muted">
-                                    Chưa có món ăn nào sẵn sàng mở bán. Vui lòng kiểm tra thực đơn đã được duyệt mở bán.
+                                    </div></div>
                                 </div>
                             }
                         </div>
+                        <p id="pos-no-results" class="small text-muted mt-3" hidden>Không tìm thấy món phù hợp.</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Cột phải: Giỏ hàng / Đơn gọi món (Sticky) -->
-            <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm sticky-top" style="top: 1rem;">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="h6 mb-0 fw-bold">🛒 Món đã chọn (<span id="cart-item-count">0</span>)</h2>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="clearCart()">Xóa tất cả</button>
-                        </div>
-                        <div class="small text-muted mt-1" id="order-target-display">
-                            Đang chọn: <span class="fw-semibold text-primary">Chưa chọn bàn/khách</span>
-                        </div>
+            <div class="col-12 col-md-5 col-xl-4">
+                <div class="card border-0 shadow-sm pos-cart">
+                    <div class="card-header bg-white p-3">
+                        <div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">🛒 Món đã chọn (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div>
+                        <div class="small text-muted mt-1" id="order-target-display">Đang chọn: <span class="fw-semibold text-primary">Chưa chọn bàn</span></div>
                     </div>
-
-                    <div class="card-body p-2" style="max-height: 480px; overflow-y: auto;" id="cart-container">
-                        <div id="empty-cart-message" class="text-center py-5 text-muted">
-                            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="mb-2 text-muted"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                            <p class="small mb-0">Chưa có món nào trong đơn.</p>
-                            <p class="small text-muted">Bấm vào size món ở thực đơn để thêm.</p>
-                        </div>
-                        <div id="cart-items-list" class="d-flex flex-column gap-2"></div>
-                    </div>
-
-                    <div class="card-footer bg-light p-3 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted small">Tổng số lượng:</span>
-                            <span class="fw-semibold" id="cart-total-qty">0 phần</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="fs-6 fw-bold">Tổng tạm tính:</span>
-                            <span class="fs-5 fw-bold text-danger" id="cart-total-amount">0 đ</span>
-                        </div>
-
-                        <button type="submit" id="btn-submit-order" class="btn btn-success w-100 py-2 fw-bold shadow-sm" disabled>
-                            ✓ Gửi Bếp & Tạo đơn hàng
-                        </button>
+                    <div class="card-body p-2" id="cart-container"><div id="empty-cart-message" class="text-center py-4 text-muted small">Chưa có món. Chọn size ở thực đơn để thêm.</div><div id="cart-items-list" class="d-flex flex-column gap-2"></div></div>
+                    <div class="card-footer bg-light p-3">
+                        <label asp-for="GhiChuDonHang" class="form-label small">Ghi chú đơn hàng</label><input asp-for="GhiChuDonHang" class="form-control form-control-sm mb-2" maxlength="500" />
+                        <div class="d-flex justify-content-between small mb-1"><span>Số lượng</span><strong id="cart-total-qty">0 phần</strong></div>
+                        <div class="d-flex justify-content-between mb-2"><strong>Tạm tính</strong><strong class="text-danger" id="cart-total-amount">0 đ</strong></div>
+                        <button type="submit" id="btn-submit-order" class="btn btn-success w-100 fw-bold" disabled>✓ Gửi bếp & tạo đơn</button>
                     </div>
                 </div>
             </div>
         </div>
+        <script type="application/json" id="pos-initial-items">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items))</script>
     </form>
 </div>
-
-@section Scripts {
-<script>
-    let cart = [];
-
-    // Chọn loại đơn
-    document.querySelectorAll('input[name="LoaiDonHang"]').forEach(radio => {
-        radio.addEventListener('change', function () {
-            const val = this.value;
-            const dineinSec = document.getElementById('section-dinein');
-            const extSec = document.getElementById('section-external');
-            const addrGrp = document.getElementById('delivery-address-group');
-
-            if (val === 'TaiBan') {
-                dineinSec.classList.remove('d-none');
-                extSec.classList.add('d-none');
-                updateTargetDisplay();
-            } else {
-                dineinSec.classList.add('d-none');
-                extSec.classList.remove('d-none');
-                if (val === 'GiaoHang') {
-                    addrGrp.style.display = 'block';
-                } else {
-                    addrGrp.style.display = 'none';
-                }
-                updateTargetDisplay();
-            }
-        });
-    });
-
-    function selectTable(id, code, el) {
-        document.querySelectorAll('.table-select-card').forEach(c => {
-            c.classList.remove('border-primary', 'bg-primary-subtle', 'text-primary');
-            c.classList.add('border');
-        });
-        el.classList.remove('border');
-        el.classList.add('border-primary', 'bg-primary-subtle', 'text-primary');
-        document.getElementById('selected-table-id').value = id;
-        document.getElementById('table-validation-error').classList.add('d-none');
-        updateTargetDisplay();
-    }
-
-    function updateTargetDisplay() {
-        const type = document.querySelector('input[name="LoaiDonHang"]:checked').value;
-        const disp = document.querySelector('#order-target-display span');
-        if (type === 'TaiBan') {
-            const selectedCard = document.querySelector('.table-select-card.border-primary');
-            if (selectedCard) {
-                const code = selectedCard.querySelector('.fw-bold').innerText;
-                disp.innerText = 'Tại bàn ' + code;
-            } else {
-                disp.innerText = 'Chưa chọn bàn';
-            }
-        } else if (type === 'MangDi') {
-            const name = document.getElementById('TenNguoiNhan').value.trim() || 'Mang đi';
-            disp.innerText = 'Mang đi · ' + name;
-        } else {
-            const name = document.getElementById('TenNguoiNhan').value.trim() || 'Giao hàng';
-            disp.innerText = 'Giao hàng · ' + name;
-        }
-    }
-
-    document.getElementById('TenNguoiNhan')?.addEventListener('input', updateTargetDisplay);
-
-    function filterCategory(catId, btn) {
-        document.querySelectorAll('#category-pills .category-btn').forEach(b => {
-            b.classList.remove('btn-dark', 'active');
-            b.classList.add('btn-outline-secondary');
-        });
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-dark', 'active');
-
-        const search = document.getElementById('dish-search').value.toLowerCase().trim();
-        applyFilters(catId, search);
-    }
-
-    function filterDishes() {
-        const search = document.getElementById('dish-search').value.toLowerCase().trim();
-        const activeCat = document.querySelector('#category-pills .category-btn.active').getAttribute('data-category');
-        applyFilters(activeCat, search);
-    }
-
-    function applyFilters(catId, search) {
-        document.querySelectorAll('.dish-card-item').forEach(item => {
-            const itemCat = item.getAttribute('data-category');
-            const itemName = item.getAttribute('data-name');
-            const matchCat = (catId === 'all' || itemCat === catId);
-            const matchSearch = (!search || itemName.includes(search));
-
-            if (matchCat && matchSearch) {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    }
-
-    function addBtnToCart(btn) {
-        const dishId = parseInt(btn.dataset.dishId);
-        const dishName = btn.dataset.dishName;
-        const sizeId = parseInt(btn.dataset.sizeId);
-        const sizeName = btn.dataset.sizeName;
-        const price = parseFloat(btn.dataset.price);
-        addToCart(dishId, dishName, sizeId, sizeName, price);
-    }
-
-    function addToCart(dishId, dishName, sizeId, sizeName, price) {
-        const existing = cart.find(x => x.sizeId === sizeId);
-        if (existing) {
-            existing.qty += 1;
-        } else {
-            cart.push({
-                dishId: dishId,
-                dishName: dishName,
-                sizeId: sizeId,
-                sizeName: sizeName,
-                price: price,
-                qty: 1,
-                note: ''
-            });
-        }
-        renderCart();
-    }
-
-    function updateQty(sizeId, delta) {
-        const item = cart.find(x => x.sizeId === sizeId);
-        if (!item) return;
-        item.qty += delta;
-        if (item.qty <= 0) {
-            cart = cart.filter(x => x.sizeId !== sizeId);
-        }
-        renderCart();
-    }
-
-    function updateNote(sizeId, note) {
-        const item = cart.find(x => x.sizeId === sizeId);
-        if (item) item.note = note;
-    }
-
-    function removeItem(sizeId) {
-        cart = cart.filter(x => x.sizeId !== sizeId);
-        renderCart();
-    }
-
-    function clearCart() {
-        cart = [];
-        renderCart();
-    }
-
-    function renderCart() {
-        const container = document.getElementById('cart-items-list');
-        const emptyMsg = document.getElementById('empty-cart-message');
-        const submitBtn = document.getElementById('btn-submit-order');
-
-        if (cart.length === 0) {
-            emptyMsg.style.display = 'block';
-            container.innerHTML = '';
-            document.getElementById('cart-item-count').innerText = '0';
-            document.getElementById('cart-total-qty').innerText = '0 phần';
-            document.getElementById('cart-total-amount').innerText = '0 đ';
-            submitBtn.disabled = true;
-            return;
-        }
-
-        emptyMsg.style.display = 'none';
-        let html = '';
-        let totalQty = 0;
-        let totalAmount = 0;
-
-        cart.forEach((item, idx) => {
-            const itemTotal = item.qty * item.price;
-            totalQty += item.qty;
-            totalAmount += itemTotal;
-
-            html += `
-                <div class="card border p-2 bg-white shadow-none">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div>
-                            <div class="fw-bold text-dark small">${item.dishName}</div>
-                            <span class="badge bg-secondary-subtle text-secondary py-0 px-1" style="font-size: 0.75rem;">${item.sizeName}</span>
-                            <span class="text-muted small">${item.price.toLocaleString('vi-VN')} đ</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="removeItem(${item.sizeId})">✕</button>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="updateQty(${item.sizeId}, -1)">-</button>
-                            <span class="btn btn-outline-secondary disabled text-dark fw-bold py-0 px-2">${item.qty}</span>
-                            <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="updateQty(${item.sizeId}, 1)">+</button>
-                        </div>
-                        <span class="fw-bold small text-dark">${itemTotal.toLocaleString('vi-VN')} đ</span>
-                    </div>
-
-                    <div class="mt-2">
-                        <input type="text" class="form-control form-control-sm py-0 px-2" style="font-size: 0.8rem;"
-                               placeholder="Ghi chú chế biến (vd: ít cay, không hành...)"
-                               value="${item.note || ''}"
-                               oninput="updateNote(${item.sizeId}, this.value)" />
-                    </div>
-
-                    <!-- Hidden inputs for model binding -->
-                    <input type="hidden" name="Items[${idx}].MonAnId" value="${item.dishId}" />
-                    <input type="hidden" name="Items[${idx}].MonAnSizeId" value="${item.sizeId}" />
-                    <input type="hidden" name="Items[${idx}].SoLuong" value="${item.qty}" />
-                    <input type="hidden" name="Items[${idx}].YeuCauCheBien" value="${item.note || ''}" />
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
-        document.getElementById('cart-item-count').innerText = cart.length;
-        document.getElementById('cart-total-qty').innerText = totalQty + ' phần';
-        document.getElementById('cart-total-amount').innerText = totalAmount.toLocaleString('vi-VN') + ' đ';
-        submitBtn.disabled = false;
-    }
-
-    // Form submit validation
-    document.getElementById('order-form').addEventListener('submit', function (e) {
-        const type = document.querySelector('input[name="LoaiDonHang"]:checked').value;
-        if (type === 'TaiBan') {
-            const tableId = document.getElementById('selected-table-id').value;
-            if (!tableId) {
-                e.preventDefault();
-                document.getElementById('table-validation-error').classList.remove('d-none');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                return;
-            }
-        } else {
-            const name = document.getElementById('TenNguoiNhan').value.trim();
-            const phone = document.getElementById('SoDienThoaiNhan').value.trim();
-            if (!name || !phone) {
-                e.preventDefault();
-                alert('Vui lòng nhập tên và số điện thoại người nhận.');
-                return;
-            }
-            if (type === 'GiaoHang') {
-                const addr = document.getElementById('DiaChiGiaoHang').value.trim();
-                if (!addr) {
-                    e.preventDefault();
-                    alert('Vui lòng nhập địa chỉ giao hàng.');
-                    return;
-                }
-            }
-        }
-
-        if (cart.length === 0) {
-            e.preventDefault();
-            alert('Vui lòng chọn ít nhất một món ăn vào đơn hàng.');
-            return;
-        }
-    });
-
-    // Initialize display on load
-    updateTargetDisplay();
-</script>
-}
