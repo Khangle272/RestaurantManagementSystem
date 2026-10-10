@@ -85,6 +85,7 @@ public class MonAnSize
     [MaxLength(50)] public string TenSize { get; set; } = "Mặc định";
     public decimal GiaBan { get; set; }
     public bool DangSuDung { get; set; } = true;
+    public ICollection<DinhMucMon> DinhMuc { get; set; } = new List<DinhMucMon>();
 }
 
 public class ChiTietCombo
@@ -273,12 +274,15 @@ public class NguyenLieu
     public decimal DonGia { get; set; }
     public decimal NguongCanhBao { get; set; }
     public bool DangSuDung { get; set; } = true;
+    public ICollection<NhaCungCapNguyenLieu> NhaCungCapCungUng { get; set; } = new List<NhaCungCapNguyenLieu>();
 }
 
 public class DinhMucMon
 {
     public int MonAnId { get; set; }
     public MonAn MonAn { get; set; } = null!;
+    public int MaKichCo { get; set; }
+    public MonAnSize MonAnSize { get; set; } = null!;
     public int NguyenLieuId { get; set; }
     public NguyenLieu NguyenLieu { get; set; } = null!;
     public decimal SoLuong { get; set; }
@@ -295,6 +299,22 @@ public class NhaCungCap
     [MaxLength(100)] public string? NguoiLienHe { get; set; }
     [MaxLength(500)] public string? GhiChu { get; set; }
     public bool DangSuDung { get; set; } = true;
+    public ICollection<NhaCungCapNguyenLieu> NguyenLieuCungUng { get; set; } = new List<NhaCungCapNguyenLieu>();
+}
+
+public class NhaCungCapNguyenLieu
+{
+    public int MaNhaCungCap { get; set; }
+    public NhaCungCap NhaCungCap { get; set; } = null!;
+
+    public int MaNguyenLieu { get; set; }
+    public NguyenLieu NguyenLieu { get; set; } = null!;
+
+    public decimal DonGiaCungUng { get; set; }
+    [MaxLength(50)] public string? MaHangNCC { get; set; }
+    [MaxLength(500)] public string? GhiChu { get; set; }
+    public DateTime NgayLienKet { get; set; } = DateTime.Now;
+    public bool TrangThai { get; set; } = true;
 }
 
 public class PhieuNhap

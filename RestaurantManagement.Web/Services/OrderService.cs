@@ -7,7 +7,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
 
-public class OrderService(RestaurantDbContext db)
+public class OrderService(RestaurantDbContext db, IKhoService? khoService = null)
 {
     public async Task<List<BanAnCardItem>> GetOccupiedTablesAsync()
     {
@@ -229,6 +229,11 @@ public class OrderService(RestaurantDbContext db)
             await db.SaveChangesAsync();
             await tx.CommitAsync();
 
+            if (khoService != null)
+            {
+                await khoService.DeductInventoryForOrderDishesAsync(hoaDon.Id, model.Items, staffId);
+            }
+
             return (null, hoaDon.Id);
         }
         catch (DbUpdateConcurrencyException)
@@ -299,6 +304,11 @@ public class OrderService(RestaurantDbContext db)
             bill.TongTienHang = activeItems.Sum(x => x.SoLuong * x.DonGia);
             await db.SaveChangesAsync();
             await tx.CommitAsync();
+
+            if (khoService != null)
+            {
+                await khoService.DeductInventoryForOrderDishesAsync(bill.Id, items);
+            }
 
             return (null, bill.Id);
         }

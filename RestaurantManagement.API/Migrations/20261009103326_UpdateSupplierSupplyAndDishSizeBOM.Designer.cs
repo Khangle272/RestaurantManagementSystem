@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RestaurantManagement.API.Data;
 
@@ -11,9 +12,11 @@ using RestaurantManagement.API.Data;
 namespace RestaurantManagement.API.Migrations
 {
     [DbContext(typeof(RestaurantDbContext))]
-    partial class RestaurantDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261009103326_UpdateSupplierSupplyAndDishSizeBOM")]
+    partial class UpdateSupplierSupplyAndDishSizeBOM
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -557,12 +560,6 @@ namespace RestaurantManagement.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("ChuanBiTruoc")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("CocTuDong")
-                        .HasColumnType("bit");
-
                     b.Property<string>("DieuKienCocDaThoaThuan")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -571,9 +568,6 @@ namespace RestaurantManagement.API.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("GioKetThucDuKien")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("HanThanhToanCoc")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("HoTenLienHe")
@@ -590,29 +584,14 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<bool>("LaKhachTrucTiep")
                         .HasColumnType("bit");
 
-                    b.Property<string>("LanLuuMonHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<Guid?>("LanLuuMonId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("LyDoHuy")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("LyDoTuChoiChuyenKhoan")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("MaDatBan")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("MaGiaoDichKhachBao")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("NhanVienHuyId")
                         .HasColumnType("int");
@@ -632,15 +611,8 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<int>("SoNguoiLon")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("SoTienKhachBao")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("SoTreEm")
                         .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("ThoiDiemBaoChuyenKhoan")
-                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset?>("ThoiDiemCoc")
                         .HasColumnType("datetimeoffset");
@@ -656,14 +628,6 @@ namespace RestaurantManagement.API.Migrations
 
                     b.Property<DateTimeOffset>("ThoiDiemTao")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<decimal>("TienCocDaGiu")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TienCocDaHoan")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TienCocDaNop")
                         .HasPrecision(18, 2)
@@ -687,16 +651,6 @@ namespace RestaurantManagement.API.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<bool>("YeuCauCoc")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("YeuCauHuy")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<Guid?>("YeuCauTaoId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool>("YeuCauTrangTri")
                         .HasColumnType("bit");
 
@@ -704,6 +658,8 @@ namespace RestaurantManagement.API.Migrations
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("KhachHangId");
 
                     b.HasIndex("KhuVucUuTienId");
 
@@ -713,10 +669,6 @@ namespace RestaurantManagement.API.Migrations
                     b.HasIndex("NhanVienHuyId");
 
                     b.HasIndex("NhanVienTiepNhanId");
-
-                    b.HasIndex("KhachHangId", "YeuCauTaoId")
-                        .IsUnique()
-                        .HasFilter("[YeuCauTaoId] IS NOT NULL AND [KhachHangId] IS NOT NULL");
 
                     b.HasIndex("TrangThai", "GioDen", "GioKetThucDuKien");
 
@@ -735,8 +687,6 @@ namespace RestaurantManagement.API.Migrations
                             t.HasCheckConstraint("CK_DatBan_TrangThaiCoc_Enum", "[TrangThaiCoc] IN ('ChuaCoc','DaCoc','DaHoan','DaDoiTru')");
 
                             t.HasCheckConstraint("CK_DatBan_TrangThai_Enum", "[TrangThai] IN ('ChoXacNhan','ChoCoc','DaXacNhan','DaNhanBan','DaHuy','KhongDen')");
-
-                            t.HasCheckConstraint("CK_DatBan_XuLyCoc", "[TienCocDaHoan]>=0 AND [TienCocDaGiu]>=0 AND [TienCocDaHoan]+[TienCocDaGiu]<=[TienCocDaNop]");
                         });
                 });
 
@@ -769,66 +719,6 @@ namespace RestaurantManagement.API.Migrations
                     b.ToTable("DinhMucMon", null, t =>
                         {
                             t.HasCheckConstraint("CK_DinhMucMon_SoLuong", "[SoLuong]>0");
-                        });
-                });
-
-            modelBuilder.Entity("RestaurantManagement.API.Models.GiaoDichCoc", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("DatBanId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Loai")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<string>("LyDo")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("MaThamChieu")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<decimal>("SoTien")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TaiKhoanXuLyId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("ThoiDiem")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("YeuCauId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DatBanId");
-
-                    b.HasIndex("TaiKhoanXuLyId");
-
-                    b.HasIndex("YeuCauId")
-                        .IsUnique();
-
-                    b.ToTable("GiaoDichCoc", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_GiaoDichCoc_Loai_Enum", "[Loai] IN ('Thu','Hoan','Giu')");
-
-                            t.HasCheckConstraint("CK_GiaoDichCoc_SoTien", "[SoTien]>0");
                         });
                 });
 
@@ -1276,11 +1166,6 @@ namespace RestaurantManagement.API.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("TenSizeLucDat")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("YeuCauCheBien")
                         .HasMaxLength(500)
@@ -2088,25 +1973,6 @@ namespace RestaurantManagement.API.Migrations
                     b.Navigation("MonAnSize");
 
                     b.Navigation("NguyenLieu");
-                });
-
-            modelBuilder.Entity("RestaurantManagement.API.Models.GiaoDichCoc", b =>
-                {
-                    b.HasOne("RestaurantManagement.API.Models.DatBan", "DatBan")
-                        .WithMany()
-                        .HasForeignKey("DatBanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("RestaurantManagement.API.Models.TaiKhoan", "TaiKhoanXuLy")
-                        .WithMany()
-                        .HasForeignKey("TaiKhoanXuLyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("DatBan");
-
-                    b.Navigation("TaiKhoanXuLy");
                 });
 
             modelBuilder.Entity("RestaurantManagement.API.Models.HoaDon", b =>

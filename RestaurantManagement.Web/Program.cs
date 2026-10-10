@@ -48,6 +48,7 @@ builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
 builder.Services.AddSingleton<RestaurantManagement.Web.Services.PaymentQrStore>();
 builder.Services.AddHostedService<RestaurantManagement.Web.Services.TableExpiryWorker>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.IKhoService, RestaurantManagement.Web.Services.InventoryService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.PreorderService>();
 
 var app = builder.Build();
@@ -122,3 +123,4 @@ app.MapControllerRoute(
 
 
 app.Run();
+ 

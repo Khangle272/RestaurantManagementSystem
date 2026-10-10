@@ -7,7 +7,7 @@ using RestaurantManagement.API.Models;
 namespace RestaurantManagement.Web.Services;
 
 // Shared by the reservation queue and floor board so both enforce the same lifecycle.
-public class TableService(RestaurantDbContext db, PreorderService preorders)
+public class TableService(RestaurantDbContext db, PreorderService preorders, IKhoService? khoService = null)
 {
     public const int MaxDiningHours = 3;
     public static DateTimeOffset ServingDeadline(DatBan booking) => (booking.ThoiDiemNhanBan ?? booking.GioDen).AddHours(MaxDiningHours);
@@ -159,6 +159,14 @@ public class TableService(RestaurantDbContext db, PreorderService preorders)
                 && !await db.HoaDon.AnyAsync(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy))
                 db.HoaDon.Add(new HoaDon { MaHoaDon = NewCode("HD"), DatBanId = id, KhachHangId = booking.KhachHangId,
                     NhanVienId = employeeId, ThoiDiemLap = DateTimeOffset.UtcNow, TrangThai = TrangThaiHoaDon.ChuaThanhToan });
+
+            await db.SaveChangesAsync();
+
+            var bill = db.HoaDon.Local.FirstOrDefault(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy)
+                ?? await db.HoaDon.Where(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy)
+                    .OrderByDescending(x => x.Id).FirstOrDefaultAsync();
+            if (bill is not null && khoService is not null)
+                await khoService.DeductInventoryForBookingPreOrdersAsync(id, bill.Id, employeeId);
         }
         return null;
     });

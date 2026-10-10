@@ -1,39 +1,370 @@
+@using RestaurantManagement.API.Models
 @model NguyenLieuFormViewModel
 @{
     Layout = "_AdminLayout";
     var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
     ViewData["Title"] = editing ? "Cập nhật nguyên liệu" : "Thêm nguyên liệu";
+    var allSuppliers = ViewBag.AllSuppliers as List<NhaCungCap> ?? [];
+    var linkedSuppliers = ViewBag.LinkedSuppliers as List<NhaCungCapNguyenLieu> ?? [];
 }
 <div class="container-fluid py-4">
-    <a asp-action="Index" class="text-muted text-decoration-none">← Quay lại danh sách</a>
-    <h2 class="h3 my-4">@ViewData["Title"]</h2>
-    <div class="card border-0 shadow-sm"><div class="card-body p-4">
-        <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post">
-            <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
-            @if (editing) { <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /> }
-            <div class="mb-3">
-                <label asp-for="TenNguyenLieu" class="form-label">Tên nguyên liệu</label>
-                <input asp-for="TenNguyenLieu" class="form-control" />
-            </div>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label asp-for="DonViTinh" class="form-label">Đơn vị tính</label>
-                    <input asp-for="DonViTinh" class="form-control" list="units" />
-                    <datalist id="units">@foreach (var unit in new[] { "g", "kg", "ml", "lít", "cái", "chai", "lon", "gói", "quả" }) { <option value="@unit"></option> }</datalist>
-                    <div class="form-text">Dùng cùng đơn vị trong công thức và phiếu nhập/xuất.</div>
+    <div class="mb-3">
+        <a asp-action="Index" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách nguyên liệu
+        </a>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-egg me-2 text-danger"></i>@ViewData["Title"]</h1>
+            <p class="text-muted mb-0">Quản lý thông tin định mức kho và danh mục các nhà cung cấp đối tác cung ứng.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-subtle">
+                    <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin nguyên liệu</h5>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="NguongCanhBao" class="form-label">Ngưỡng cảnh báo tồn kho</label>
-                    <input asp-for="NguongCanhBao" class="form-control" type="number" min="0" step="0.000001" />
+                <div class="card-body p-4">
+                    <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post" id="formNguyenLieu">
+                        <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+                        @if (editing) { <input asp-for="Id" id="IngredientId" type="hidden" /><input asp-for="RowVersion" type="hidden" /> }
+                        <div class="mb-3">
+                            <label asp-for="TenNguyenLieu" class="form-label fw-semibold">Tên nguyên liệu <span class="text-danger">*</span></label>
+                            <input asp-for="TenNguyenLieu" class="form-control" placeholder="Ví dụ: Thịt bò Wagyu, Gạo thơm..." />
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="DonViTinh" class="form-label fw-semibold">Đơn vị tính <span class="text-danger">*</span></label>
+                                <input asp-for="DonViTinh" class="form-control" list="units" placeholder="kg, lít, cái..." />
+                                <datalist id="units">@foreach (var unit in new[] { "g", "kg", "ml", "lít", "cái", "chai", "lon", "gói", "quả" }) { <option value="@unit"></option> }</datalist>
+                                <div class="form-text">Dùng cùng đơn vị trong công thức và phiếu kho.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="NguongCanhBao" class="form-label fw-semibold">Ngưỡng cảnh báo tồn tối thiểu</label>
+                                <input asp-for="NguongCanhBao" class="form-control" type="number" min="0" step="0.000001" />
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-4">
+                            <input asp-for="DangSuDung" class="form-check-input" />
+                            <label asp-for="DangSuDung" class="form-check-label fw-semibold">Đang sử dụng trong thực đơn & kho</label>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-brand-primary" type="submit">
+                                <i class="bi bi-check2-circle me-1"></i> Lưu nguyên liệu
+                            </button>
+                            <a asp-action="Index" class="btn btn-brand-outline">Hủy bỏ</a>
+                        </div>
+                    </form>
                 </div>
             </div>
-            <div class="form-check form-switch mb-4">
-                <input asp-for="DangSuDung" class="form-check-input" />
-                <label asp-for="DangSuDung" class="form-check-label">Đang sử dụng</label>
+        </div>
+
+        <!-- Supplier Linking Card -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-subtle d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-truck me-2 text-success"></i>Nhà cung ứng đối tác
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-rose" data-bs-toggle="modal" data-bs-target="#modalQuickAddSupplier">
+                        <i class="bi bi-plus-lg me-1"></i> Thêm mới NCC
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-3">
+                        Danh sách các nhà cung cấp từng cung cấp hoặc có thỏa thuận cung ứng nguyên liệu này.
+                    </p>
+
+                    <!-- Badges / List of linked suppliers -->
+                    <div id="supplierBadgeContainer" class="d-flex flex-column gap-2 mb-3">
+                        @if (linkedSuppliers.Any())
+                        {
+                            @foreach (var ls in linkedSuppliers)
+                            {
+                                <div class="p-2 rounded border bg-light d-flex justify-content-between align-items-center supplier-item-badge" data-supplier-id="@ls.MaNhaCungCap">
+                                    <div>
+                                        <div class="fw-semibold text-dark"><i class="bi bi-building me-1 text-primary"></i>@ls.NhaCungCap?.TenNhaCungCap</div>
+                                        <div class="small text-muted">
+                                            Giá: <strong class="text-danger">@ls.DonGiaCungUng.ToString("N0") VNĐ</strong>
+                                            @if (!string.IsNullOrEmpty(ls.MaHangNCC))
+                                            {
+                                                <span> · Mã: @ls.MaHangNCC</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (editing)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-supplier" title="Xóa liên kết">
+                                            <i class="bi bi-x-circle fs-5"></i>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-muted small fst-italic no-supplier-notice">Chưa có nhà cung cấp nào được liên kết.</div>
+                        }
+                    </div>
+
+                    @if (editing)
+                    {
+                        <!-- Quick Add Link Section -->
+                        <div class="border-top pt-3 mt-3">
+                            <label class="form-label small fw-semibold text-dark">Liên kết thêm nhà cung cấp có sẵn:</label>
+                            <div class="input-group mb-2">
+                                <select id="cboAddSupplier" class="form-select form-select-sm">
+                                    <option value="">-- Chọn nhà cung cấp --</option>
+                                    @foreach (var s in allSuppliers)
+                                    {
+                                        <option value="@s.Id">@s.TenNhaCungCap (@s.SoDienThoai)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-7">
+                                    <input type="number" id="txtSupplierPrice" class="form-control form-control-sm" placeholder="Đơn giá cung ứng (VNĐ)" min="0" step="100" />
+                                </div>
+                                <div class="col-5">
+                                    <input type="text" id="txtSupplierCode" class="form-control form-control-sm" placeholder="Mã hàng NCC" />
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100" id="btnAddSupplierLink">
+                                <i class="bi bi-link-45deg me-1"></i> Gán nhà cung cấp vào nguyên liệu
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-light border small text-muted">
+                            <i class="bi bi-info-circle me-1 text-primary"></i> Vui lòng lưu thông tin nguyên liệu trước để kích hoạt liên kết nhà cung cấp.
+                        </div>
+                    }
+                </div>
             </div>
-            <button class="btn btn-primary btn-brand-primary" type="submit">Lưu nguyên liệu</button>
-            <a asp-action="Index" class="btn btn-outline-secondary">Hủy bỏ</a>
-        </form>
-    </div></div>
+        </div>
+    </div>
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+
+<!-- Modal Quick Add Supplier -->
+<div class="modal fade" id="modalQuickAddSupplier" tabindex="-1" aria-labelledby="modalQuickAddSupplierLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-subtle">
+                <h5 class="modal-title fw-bold" id="modalQuickAddSupplierLabel">
+                    <i class="bi bi-truck text-danger me-2"></i>Thêm Nhanh Nhà Cung Cấp
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form id="formQuickAddSupplier">
+                <div class="modal-body p-4">
+                    <div id="quickSupplierAlert" class="alert alert-danger d-none py-2" role="alert"></div>
+                    <div class="mb-3">
+                        <label for="quickTenNCC" class="form-label fw-semibold">Tên nhà cung cấp <span class="text-danger">*</span></label>
+                        <input type="text" id="quickTenNCC" class="form-control" placeholder="Công ty TNHH Thực Phẩm Xanh..." required maxlength="200" />
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="quickPhoneNCC" class="form-label fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="tel" id="quickPhoneNCC" class="form-control" placeholder="0901234567" required maxlength="20" />
+                        </div>
+                        <div class="col-6">
+                            <label for="quickContactNCC" class="form-label fw-semibold">Người liên hệ</label>
+                            <input type="text" id="quickContactNCC" class="form-control" placeholder="Anh Bình..." maxlength="100" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickEmailNCC" class="form-label fw-semibold">Email</label>
+                        <input type="email" id="quickEmailNCC" class="form-control" placeholder="ncc@example.com" maxlength="100" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickDiaChiNCC" class="form-label fw-semibold">Địa chỉ</label>
+                        <input type="text" id="quickDiaChiNCC" class="form-control" placeholder="123 Nguyễn Huệ, Q.1..." maxlength="300" />
+                    </div>
+                </div>
+                <div class="modal-footer border-subtle">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-brand-primary" id="btnSaveQuickSupplier">
+                        <i class="bi bi-check2-circle me-1"></i> Lưu Nhà Cung Cấp
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div id="quickToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="quickToastMessage">
+                Thao tác thành công.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const ingredientId = parseInt(document.getElementById("IngredientId")?.value, 10);
+            const formQuickSupplier = document.getElementById("formQuickAddSupplier");
+            const modalSupplierEl = document.getElementById("modalQuickAddSupplier");
+            const supplierAlert = document.getElementById("quickSupplierAlert");
+            const btnSaveSupplier = document.getElementById("btnSaveQuickSupplier");
+            const cboAddSupplier = document.getElementById("cboAddSupplier");
+            const supplierBadgeContainer = document.getElementById("supplierBadgeContainer");
+
+            function showToast(message, isSuccess = true) {
+                const toastEl = document.getElementById("quickToast");
+                const toastMsg = document.getElementById("quickToastMessage");
+                if (!toastEl || !toastMsg) return;
+                toastMsg.textContent = message;
+                toastEl.className = `toast align-items-center text-white border-0 shadow ${isSuccess ? 'bg-success' : 'bg-danger'}`;
+                if (window.bootstrap && bootstrap.Toast) {
+                    new bootstrap.Toast(toastEl, { delay: 3500 }).show();
+                } else {
+                    alert(message);
+                }
+            }
+
+            // Quick Create Supplier via AJAX
+            if (formQuickSupplier) {
+                formQuickSupplier.addEventListener("submit", async function (e) {
+                    e.preventDefault();
+                    const tenNhaCungCap = document.getElementById("quickTenNCC")?.value?.trim();
+                    const soDienThoai = document.getElementById("quickPhoneNCC")?.value?.trim();
+                    const nguoiLienHe = document.getElementById("quickContactNCC")?.value?.trim();
+                    const email = document.getElementById("quickEmailNCC")?.value?.trim();
+                    const diaChi = document.getElementById("quickDiaChiNCC")?.value?.trim();
+
+                    if (!tenNhaCungCap || !soDienThoai) {
+                        if (supplierAlert) {
+                            supplierAlert.textContent = "Vui lòng nhập tên nhà cung cấp và số điện thoại.";
+                            supplierAlert.classList.remove("d-none");
+                        }
+                        return;
+                    }
+
+                    if (supplierAlert) supplierAlert.classList.add("d-none");
+                    const origHtml = btnSaveSupplier.innerHTML;
+                    btnSaveSupplier.disabled = true;
+                    btnSaveSupplier.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+                    try {
+                        const res = await fetch("/NhaCungCap/QuickCreate", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ tenNhaCungCap, soDienThoai, nguoiLienHe, email, diaChi })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            if (cboAddSupplier) {
+                                const opt = new Option(`${data.name} (${data.phone})`, data.id, true, true);
+                                cboAddSupplier.add(opt);
+                                cboAddSupplier.value = data.id;
+                            }
+
+                            if (window.bootstrap && bootstrap.Modal) {
+                                (bootstrap.Modal.getInstance(modalSupplierEl) || new bootstrap.Modal(modalSupplierEl)).hide();
+                            }
+                            formQuickSupplier.reset();
+                            showToast(`Đã thêm nhà cung cấp "${data.name}" thành công!`);
+                        } else {
+                            if (supplierAlert) {
+                                supplierAlert.textContent = data.message || "Lỗi khi lưu nhà cung cấp.";
+                                supplierAlert.classList.remove("d-none");
+                            }
+                        }
+                    } catch (err) {
+                        if (supplierAlert) {
+                            supplierAlert.textContent = "Không thể kết nối máy chủ: " + err.message;
+                            supplierAlert.classList.remove("d-none");
+                        }
+                    } finally {
+                        btnSaveSupplier.disabled = false;
+                        btnSaveSupplier.innerHTML = origHtml;
+                    }
+                });
+            }
+
+            // Link existing supplier to current ingredient
+            const btnAddSupplierLink = document.getElementById("btnAddSupplierLink");
+            if (btnAddSupplierLink && ingredientId) {
+                btnAddSupplierLink.addEventListener("click", async function () {
+                    const suppId = parseInt(cboAddSupplier?.value, 10);
+                    const price = parseFloat(document.getElementById("txtSupplierPrice")?.value) || 0;
+                    const code = document.getElementById("txtSupplierCode")?.value?.trim() || "";
+
+                    if (!suppId) {
+                        alert("Vui lòng chọn một nhà cung cấp.");
+                        return;
+                    }
+
+                    // Gather all current links + new link
+                    const currentLinks = [];
+                    supplierBadgeContainer.querySelectorAll(".supplier-item-badge").forEach(el => {
+                        const sId = parseInt(el.dataset.supplierId, 10);
+                        if (sId && sId !== suppId) {
+                            currentLinks.push({ maNhaCungCap: sId, donGiaCungUng: 0 });
+                        }
+                    });
+                    currentLinks.push({ maNhaCungCap: suppId, donGiaCungUng: price, maHangNCC: code });
+
+                    try {
+                        const res = await fetch(`/NguyenLieu/LinkSuppliersToIngredient?ingredientId=${ingredientId}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(currentLinks)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast("Đã liên kết nhà cung cấp thành công!");
+                            setTimeout(() => window.location.reload(), 800);
+                        } else {
+                            alert(data.message || "Lỗi khi liên kết nhà cung cấp.");
+                        }
+                    } catch (err) {
+                        alert("Lỗi kết nối máy chủ: " + err.message);
+                    }
+                });
+
+                // Remove link
+                supplierBadgeContainer.addEventListener("click", async function (e) {
+                    const btn = e.target.closest(".btn-remove-supplier");
+                    if (!btn) return;
+                    const badge = btn.closest(".supplier-item-badge");
+                    const removeId = parseInt(badge.dataset.supplierId, 10);
+
+                    const currentLinks = [];
+                    supplierBadgeContainer.querySelectorAll(".supplier-item-badge").forEach(el => {
+                        const sId = parseInt(el.dataset.supplierId, 10);
+                        if (sId && sId !== removeId) {
+                            currentLinks.push({ maNhaCungCap: sId, donGiaCungUng: 0 });
+                        }
+                    });
+
+                    try {
+                        const res = await fetch(`/NguyenLieu/LinkSuppliersToIngredient?ingredientId=${ingredientId}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(currentLinks)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            badge.remove();
+                            showToast("Đã xóa liên kết nhà cung cấp.");
+                        }
+                    } catch (err) {
+                        alert("Lỗi: " + err.message);
+                    }
+                });
+            }
+        });
+    </script>
+}

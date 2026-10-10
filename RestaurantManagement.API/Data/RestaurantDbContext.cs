@@ -25,6 +25,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
     public DbSet<NguyenLieu> NguyenLieu => Set<NguyenLieu>();
     public DbSet<DinhMucMon> DinhMucMon => Set<DinhMucMon>();
     public DbSet<NhaCungCap> NhaCungCap => Set<NhaCungCap>();
+    public DbSet<NhaCungCapNguyenLieu> NhaCungCapNguyenLieus => Set<NhaCungCapNguyenLieu>();
     public DbSet<PhieuNhap> PhieuNhap => Set<PhieuNhap>();
     public DbSet<ChiTietPhieuNhap> ChiTietPhieuNhap => Set<ChiTietPhieuNhap>();
     public DbSet<PhieuXuat> PhieuXuat => Set<PhieuXuat>();
@@ -85,7 +86,13 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<ChiTietHoaDon>().HasOne(x => x.MonDatTruoc).WithOne().HasForeignKey<ChiTietHoaDon>(x => x.MonDatTruocId);
         b.Entity<ChiTietHoaDon>().HasAlternateKey(x => new { x.Id, x.HoaDonId });
         b.Entity<NguyenLieu>().HasIndex(x => x.TenNguyenLieu).IsUnique();
-        b.Entity<DinhMucMon>().HasKey(x => new { x.MonAnId, x.NguyenLieuId });
+        b.Entity<DinhMucMon>().HasKey(x => new { x.MonAnId, x.MaKichCo, x.NguyenLieuId });
+        b.Entity<DinhMucMon>().HasOne(x => x.MonAn).WithMany().HasForeignKey(x => x.MonAnId);
+        b.Entity<DinhMucMon>().HasOne(x => x.MonAnSize).WithMany(x => x.DinhMuc).HasForeignKey(x => x.MaKichCo);
+        b.Entity<DinhMucMon>().HasOne(x => x.NguyenLieu).WithMany().HasForeignKey(x => x.NguyenLieuId);
+        b.Entity<NhaCungCapNguyenLieu>().HasKey(x => new { x.MaNhaCungCap, x.MaNguyenLieu });
+        b.Entity<NhaCungCapNguyenLieu>().HasOne(x => x.NhaCungCap).WithMany(x => x.NguyenLieuCungUng).HasForeignKey(x => x.MaNhaCungCap);
+        b.Entity<NhaCungCapNguyenLieu>().HasOne(x => x.NguyenLieu).WithMany(x => x.NhaCungCapCungUng).HasForeignKey(x => x.MaNguyenLieu);
         b.Entity<PhieuNhap>().HasIndex(x => x.MaPhieu).IsUnique();
         b.Entity<PhieuXuat>().HasIndex(x => x.MaPhieu).IsUnique();
         b.Entity<PhieuThanhLy>().HasIndex(x => x.MaPhieu).IsUnique();
@@ -115,6 +122,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<ChiTietHoaDon>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
         Check<NguyenLieu>(b, "Nguong", "[NguongCanhBao]>=0");
         Check<DinhMucMon>(b, "SoLuong", "[SoLuong]>0");
+        Check<NhaCungCapNguyenLieu>(b, "DonGia", "[DonGiaCungUng]>=0");
         Check<PhieuNhap>(b, "NhaCungCap", "[LyDo]<>'MuaHang' OR [NhaCungCapId] IS NOT NULL");
         Check<ChiTietPhieuNhap>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
         Check<ChiTietPhieuXuat>(b, "SoLuong", "[SoLuong]>0");

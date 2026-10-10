@@ -1,0 +1,521 @@
+@model DinhMucTheoSizeVM
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Định mức (BOM): {Model.TenMon}";
+}
+
+<div class="container-fluid py-4">
+    <!-- Breadcrumb & Header -->
+    <div class="mb-3">
+        <a asp-action="Edit" asp-route-id="@Model.MonAnId" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại thông tin món ăn
+        </a>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-heading mb-1">
+                <i class="bi bi-diagram-3 text-danger me-2"></i>Định Mức Đa Kích Cỡ (BOM): @Model.TenMon
+            </h1>
+            <p class="text-muted mb-0">
+                Cấu hình định lượng nguyên vật liệu tiêu hao riêng biệt cho từng size món. Tự động tính Food Cost và trừ kho khi phục vụ.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCopyBOM">
+                <i class="bi bi-copy me-1"></i> Nhân bản định mức giữa các size
+            </button>
+            <a asp-action="Edit" asp-route-id="@Model.MonAnId" class="btn btn-brand-outline">
+                <i class="bi bi-pencil me-1"></i> Sửa thông tin món
+            </a>
+        </div>
+    </div>
+
+    <partial name="_ManagementMessages" />
+
+    <!-- Info Banner -->
+    <div class="card border-0 shadow-sm mb-4 bg-light-subtle">
+        <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-primary px-3 py-2 fs-6">Danh mục: @Model.TenDanhMuc</span>
+                <span class="badge bg-secondary px-3 py-2 fs-6">Loại món: @Model.Loai</span>
+                <span class="badge bg-info text-dark px-3 py-2 fs-6">@Model.Sizes.Count kích cỡ khả dụng</span>
+            </div>
+            <div class="small text-muted">
+                <i class="bi bi-info-circle me-1 text-primary"></i>
+                Khi khách nhận bàn có món đặt trước hoặc gọi món mới, kho sẽ tự động trừ theo đúng size được cấu hình tại đây.
+            </div>
+        </div>
+    </div>
+
+    <!-- Main BOM Form -->
+    <form asp-action="SaveDinhMucTheoSize" method="post" id="formDinhMuc">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="MonAnId" />
+        <input type="hidden" asp-for="TenMon" />
+        <input type="hidden" asp-for="TenDanhMuc" />
+        <input type="hidden" asp-for="Loai" />
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white pt-3 pb-0 border-subtle">
+                <!-- Size Navigation Tabs -->
+                <ul class="nav nav-tabs card-header-tabs" id="bomTabs" role="tablist">
+                    @for (var sIdx = 0; sIdx < Model.Sizes.Count; sIdx++)
+                    {
+                        var size = Model.Sizes[sIdx];
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(sIdx == 0 ? "active fw-bold text-danger border-bottom-0" : "text-secondary")"
+                                    id="tab-btn-@sIdx"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#tab-pane-@sIdx"
+                                    type="button"
+                                    role="tab"
+                                    aria-controls="tab-pane-@sIdx"
+                                    aria-selected="@(sIdx == 0 ? "true" : "false")">
+                                <i class="bi bi-tag-fill me-1"></i> Size @size.TenSize
+                                <span class="badge bg-light text-dark ms-1 border">@size.GiaBan.ToString("N0") đ</span>
+                                @if (!size.DangSuDung)
+                                {
+                                    <span class="badge bg-secondary ms-1">Ngừng dùng</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="tab-content" id="bomTabContent">
+                    @for (var sIdx = 0; sIdx < Model.Sizes.Count; sIdx++)
+                    {
+                        var size = Model.Sizes[sIdx];
+                        <div class="tab-pane fade @(sIdx == 0 ? "show active" : "") size-pane"
+                             id="tab-pane-@sIdx"
+                             role="tabpanel"
+                             aria-labelledby="tab-btn-@sIdx"
+                             data-size-index="@sIdx"
+                             data-size-id="@size.MonAnSizeId"
+                             data-size-name="@size.TenSize"
+                             data-gia-ban="@size.GiaBan">
+
+                            <input type="hidden" name="Sizes[@sIdx].MonAnSizeId" value="@size.MonAnSizeId" />
+                            <input type="hidden" name="Sizes[@sIdx].TenSize" value="@size.TenSize" />
+                            <input type="hidden" name="Sizes[@sIdx].GiaBan" value="@size.GiaBan" />
+                            <input type="hidden" name="Sizes[@sIdx].DangSuDung" value="@size.DangSuDung.ToString().ToLower()" />
+
+                            <!-- Header toolbar for size -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 p-3 bg-light rounded-3 border">
+                                <div>
+                                    <div class="fw-bold fs-5 text-dark mb-1">
+                                        Định mức nguyên liệu cho: <span class="text-danger">Size @size.TenSize</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        Giá bán niêm yết: <strong class="text-dark">@size.GiaBan.ToString("N0") VNĐ</strong>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="text-end">
+                                        <div class="small text-muted">Giá vốn (Food Cost):</div>
+                                        <div class="fw-bold fs-5 text-dark food-cost-display">0 VNĐ</div>
+                                    </div>
+                                    <div class="border-start ps-3 text-end">
+                                        <div class="small text-muted">Tỷ suất LN gộp:</div>
+                                        <span class="badge fs-6 margin-badge bg-success">0%</span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-rose ms-2 btn-add-ingredient" data-size-index="@sIdx">
+                                        <i class="bi bi-plus-lg me-1"></i> Thêm nguyên liệu
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Ingredients Table -->
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 50px;">STT</th>
+                                            <th style="min-width: 260px;">Nguyên Liệu <span class="text-danger">*</span></th>
+                                            <th style="width: 100px;">ĐVT</th>
+                                            <th style="width: 170px;">Định lượng tiêu hao <span class="text-danger">*</span></th>
+                                            <th style="width: 160px;">Đơn giá vốn</th>
+                                            <th style="width: 170px;" class="text-end">Thành tiền</th>
+                                            <th style="width: 60px;" class="text-center">Xóa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="ingredients-tbody" data-size-index="@sIdx">
+                                        @for (var itemIdx = 0; itemIdx < size.Items.Count; itemIdx++)
+                                        {
+                                            var item = size.Items[itemIdx];
+                                            <tr class="recipe-row">
+                                                <td class="stt-cell text-muted fw-semibold">@(itemIdx + 1)</td>
+                                                <td>
+                                                    <select name="Sizes[@sIdx].Items[@itemIdx].NguyenLieuId"
+                                                            class="form-select select-nguyenlieu-item"
+                                                            required>
+                                                        <option value="">-- Chọn nguyên liệu --</option>
+                                                        @foreach (var ing in Model.AllIngredients)
+                                                        {
+                                                            <option value="@ing.Id"
+                                                                    data-dvt="@ing.DonViTinh"
+                                                                    data-dongia="@ing.DonGia"
+                                                                    selected="@(ing.Id == item.NguyenLieuId)">
+                                                                @ing.TenNguyenLieu (@ing.DonViTinh)
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border badge-dvt">@item.DonViTinh</span>
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                           step="0.000001"
+                                                           min="0.000001"
+                                                           name="Sizes[@sIdx].Items[@itemIdx].SoLuong"
+                                                           class="form-control input-soluong"
+                                                           value="@item.SoLuong"
+                                                           required />
+                                                </td>
+                                                <td>
+                                                    <span class="text-muted text-dongia">@item.DonGia.ToString("N0") đ</span>
+                                                </td>
+                                                <td class="text-end fw-bold text-dark text-thanhtien">
+                                                    @item.ThanhTien.ToString("N0") VNĐ
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row" title="Xóa nguyên liệu này">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <td colspan="3" class="fw-semibold text-secondary py-3">
+                                                Tổng số nguyên liệu: <span class="badge bg-secondary row-count-badge">@size.Items.Count</span>
+                                            </td>
+                                            <td colspan="2" class="text-end fw-bold text-dark fs-6 py-3">
+                                                Tổng Food Cost (Size @size.TenSize):
+                                            </td>
+                                            <td class="text-end fw-bold text-danger fs-5 py-3 food-cost-footer">
+                                                0 VNĐ
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="d-flex justify-content-end gap-2 mb-5">
+            <a asp-action="Edit" asp-route-id="@Model.MonAnId" class="btn btn-brand-outline">Hủy bỏ</a>
+            <button type="submit" class="btn btn-brand-primary btn-lg shadow-sm" id="btnSaveBOM">
+                <i class="bi bi-check2-circle me-1"></i> Lưu Toàn Bộ Định Mức
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Modal Copy / Scale Recipe -->
+<div class="modal fade" id="modalCopyBOM" tabindex="-1" aria-labelledby="modalCopyBOMLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-subtle">
+                <h5 class="modal-title fw-bold" id="modalCopyBOMLabel">
+                    <i class="bi bi-copy text-danger me-2"></i>Nhân Bản / Quy Đổi Định Mức Giữa Các Size
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 small mb-3">
+                    <i class="bi bi-info-circle me-1"></i> Tính năng giúp sao chép công thức từ một size gốc sang size khác kèm hệ số tỷ lệ tiêu hao (ví dụ Size L = 1.5 x Size M).
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Size nguồn (Size đã có định mức):</label>
+                    <select id="copySourceSize" class="form-select">
+                        @for (var i = 0; i < Model.Sizes.Count; i++)
+                        {
+                            <option value="@i">Size @Model.Sizes[i].TenSize (@Model.Sizes[i].Items.Count nguyên liệu)</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Size đích (Size nhận định mức):</label>
+                    <select id="copyTargetSize" class="form-select">
+                        @for (var i = 0; i < Model.Sizes.Count; i++)
+                        {
+                            <option value="@i" selected="@(i == 1)">Size @Model.Sizes[i].TenSize</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Hệ số nhân (Scale Multiplier):</label>
+                    <div class="d-flex gap-2 mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-scale" data-scale="1.0">1.0x (Giữ nguyên)</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-scale" data-scale="1.2">1.2x</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-scale active" data-scale="1.3">1.3x</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-scale" data-scale="1.5">1.5x</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-scale" data-scale="2.0">2.0x</button>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">Hệ số:</span>
+                        <input type="number" id="copyScaleFactor" class="form-control" step="0.05" min="0.1" max="10" value="1.3" />
+                    </div>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkOverwrite" checked>
+                    <label class="form-check-label small" for="chkOverwrite">
+                        Ghi đè định mức hiện tại của size đích (nếu bỏ chọn, sẽ thêm tiếp vào cuối danh sách)
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-subtle">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-brand-primary" id="btnExecuteCopy">
+                    <i class="bi bi-check2-circle me-1"></i> Áp Dụng Sao Chép
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Raw ingredients JSON for fast dynamic lookup in JS -->
+<script type="application/json" id="rawAllIngredients">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllIngredients))
+</script>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const ingredientsData = JSON.parse(document.getElementById("rawAllIngredients").textContent);
+        const mapIngredients = new Map(ingredientsData.map(i => [i.Id, i]));
+
+        // Calculate single row
+        function updateRow(tr) {
+            const selectEl = tr.querySelector(".select-nguyenlieu-item");
+            const dvtBadge = tr.querySelector(".badge-dvt");
+            const donGiaSpan = tr.querySelector(".text-dongia");
+            const qtyInput = tr.querySelector(".input-soluong");
+            const thanhtienCell = tr.querySelector(".text-thanhtien");
+
+            const ingId = parseInt(selectEl.value, 10);
+            const ing = mapIngredients.get(ingId);
+
+            let donGia = 0;
+            let dvt = "—";
+            if (ing) {
+                donGia = ing.DonGia;
+                dvt = ing.DonViTinh;
+            }
+
+            dvtBadge.textContent = dvt;
+            donGiaSpan.textContent = donGia.toLocaleString("vi-VN") + " đ";
+
+            const qty = parseFloat(qtyInput.value) || 0;
+            const total = qty * donGia;
+            thanhtienCell.textContent = Math.round(total).toLocaleString("vi-VN") + " VNĐ";
+
+            return total;
+        }
+
+        // Calculate whole pane
+        function updatePane(pane) {
+            let totalFoodCost = 0;
+            const rows = pane.querySelectorAll(".recipe-row");
+            rows.forEach(tr => {
+                totalFoodCost += updateRow(tr);
+            });
+
+            // Update footer and header
+            pane.querySelector(".food-cost-display").textContent = Math.round(totalFoodCost).toLocaleString("vi-VN") + " VNĐ";
+            pane.querySelector(".food-cost-footer").textContent = Math.round(totalFoodCost).toLocaleString("vi-VN") + " VNĐ";
+            pane.querySelector(".row-count-badge").textContent = rows.length;
+
+            const giaBan = parseFloat(pane.dataset.giaBan) || 0;
+            const marginBadge = pane.querySelector(".margin-badge");
+            if (giaBan > 0) {
+                const margin = ((giaBan - totalFoodCost) / giaBan) * 100;
+                marginBadge.textContent = margin.toFixed(1) + "%";
+                if (margin >= 65) {
+                    marginBadge.className = "badge fs-6 margin-badge bg-success";
+                } else if (margin >= 45) {
+                    marginBadge.className = "badge fs-6 margin-badge bg-warning text-dark";
+                } else {
+                    marginBadge.className = "badge fs-6 margin-badge bg-danger";
+                }
+            } else {
+                marginBadge.textContent = "—";
+                marginBadge.className = "badge fs-6 margin-badge bg-secondary";
+            }
+        }
+
+        // Reindex rows for a pane
+        function reindexPane(pane) {
+            const sizeIdx = pane.dataset.sizeIndex;
+            const rows = pane.querySelectorAll(".recipe-row");
+            rows.forEach((tr, rIdx) => {
+                tr.querySelector(".stt-cell").textContent = rIdx + 1;
+                tr.querySelector(".select-nguyenlieu-item").name = `Sizes[${sizeIdx}].Items[${rIdx}].NguyenLieuId`;
+                tr.querySelector(".input-soluong").name = `Sizes[${sizeIdx}].Items[${rIdx}].SoLuong`;
+            });
+            updatePane(pane);
+        }
+
+        // Create new row
+        function createRowNode(sizeIdx, itemIdx, defaultIngId = null, defaultQty = 1) {
+            const tr = document.createElement("tr");
+            tr.className = "recipe-row";
+
+            let optionsHtml = '<option value="">-- Chọn nguyên liệu --</option>';
+            ingredientsData.forEach(ing => {
+                const sel = defaultIngId && ing.Id === defaultIngId ? "selected" : "";
+                optionsHtml += `<option value="${ing.Id}" data-dvt="${ing.DonViTinh}" data-dongia="${ing.DonGia}" ${sel}>${ing.TenNguyenLieu} (${ing.DonViTinh})</option>`;
+            });
+
+            tr.innerHTML = `
+                <td class="stt-cell text-muted fw-semibold">${itemIdx + 1}</td>
+                <td>
+                    <select name="Sizes[${sizeIdx}].Items[${itemIdx}].NguyenLieuId" class="form-select select-nguyenlieu-item" required>
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <span class="badge bg-light text-dark border badge-dvt">—</span>
+                </td>
+                <td>
+                    <input type="number" step="0.000001" min="0.000001" name="Sizes[${sizeIdx}].Items[${itemIdx}].SoLuong" class="form-control input-soluong" value="${defaultQty}" required />
+                </td>
+                <td>
+                    <span class="text-muted text-dongia">0 đ</span>
+                </td>
+                <td class="text-end fw-bold text-dark text-thanhtien">
+                    0 VNĐ
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row" title="Xóa nguyên liệu này">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            attachRowListeners(tr);
+            return tr;
+        }
+
+        function attachRowListeners(tr) {
+            const pane = tr.closest(".size-pane");
+            tr.querySelector(".select-nguyenlieu-item").addEventListener("change", () => {
+                updateRow(tr);
+                if (pane) updatePane(pane);
+            });
+            tr.querySelector(".input-soluong").addEventListener("input", () => {
+                updateRow(tr);
+                if (pane) updatePane(pane);
+            });
+            tr.querySelector(".btn-remove-row").addEventListener("click", () => {
+                const p = tr.closest(".size-pane");
+                tr.remove();
+                if (p) reindexPane(p);
+            });
+        }
+
+        // Attach listeners to initial rows
+        document.querySelectorAll(".recipe-row").forEach(tr => attachRowListeners(tr));
+
+        // Add ingredient button handler
+        document.querySelectorAll(".btn-add-ingredient").forEach(btn => {
+            btn.addEventListener("click", function () {
+                const sizeIdx = this.dataset.sizeIndex;
+                const pane = document.getElementById(`tab-pane-${sizeIdx}`);
+                const tbody = pane.querySelector(".ingredients-tbody");
+                const currentCount = tbody.querySelectorAll(".recipe-row").length;
+
+                const firstIngId = ingredientsData.length > 0 ? ingredientsData[0].Id : null;
+                const newRow = createRowNode(sizeIdx, currentCount, firstIngId, 0.1);
+                tbody.appendChild(newRow);
+                updateRow(newRow);
+                reindexPane(pane);
+            });
+        });
+
+        // Initialize all panes totals
+        document.querySelectorAll(".size-pane").forEach(pane => updatePane(pane));
+
+        // Copy BOM Scale buttons
+        document.querySelectorAll(".btn-scale").forEach(btn => {
+            btn.addEventListener("click", function () {
+                document.querySelectorAll(".btn-scale").forEach(b => b.classList.remove("active"));
+                this.classList.add("active");
+                document.getElementById("copyScaleFactor").value = this.dataset.scale;
+            });
+        });
+
+        // Execute Copy BOM between sizes
+        document.getElementById("btnExecuteCopy").addEventListener("click", function () {
+            const srcIdx = parseInt(document.getElementById("copySourceSize").value, 10);
+            const tgtIdx = parseInt(document.getElementById("copyTargetSize").value, 10);
+            const factor = parseFloat(document.getElementById("copyScaleFactor").value) || 1.0;
+            const overwrite = document.getElementById("chkOverwrite").checked;
+
+            if (srcIdx === tgtIdx) {
+                alert("Size nguồn và Size đích không được trùng nhau.");
+                return;
+            }
+
+            const srcPane = document.getElementById(`tab-pane-${srcIdx}`);
+            const tgtPane = document.getElementById(`tab-pane-${tgtIdx}`);
+            const srcRows = srcPane.querySelectorAll(".recipe-row");
+
+            if (srcRows.length === 0) {
+                alert("Size nguồn chưa có nguyên liệu nào để sao chép.");
+                return;
+            }
+
+            const tgtTbody = tgtPane.querySelector(".ingredients-tbody");
+            if (overwrite) {
+                tgtTbody.innerHTML = "";
+            }
+
+            let startIdx = tgtTbody.querySelectorAll(".recipe-row").length;
+            srcRows.forEach(sr => {
+                const ingId = parseInt(sr.querySelector(".select-nguyenlieu-item").value, 10);
+                const srcQty = parseFloat(sr.querySelector(".input-soluong").value) || 0;
+                const newQty = Math.round(srcQty * factor * 1000000) / 1000000;
+
+                if (ingId > 0 && newQty > 0) {
+                    const rowNode = createRowNode(tgtIdx, startIdx, ingId, newQty);
+                    tgtTbody.appendChild(rowNode);
+                    updateRow(rowNode);
+                    startIdx++;
+                }
+            });
+
+            reindexPane(tgtPane);
+
+            // Switch to target tab
+            const tabBtn = document.getElementById(`tab-btn-${tgtIdx}`);
+            if (tabBtn && window.bootstrap && bootstrap.Tab) {
+                new bootstrap.Tab(tabBtn).show();
+            }
+
+            // Close modal
+            const modalEl = document.getElementById("modalCopyBOM");
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getInstance(modalEl).hide();
+            }
+        });
+
+        // Ensure clean submit
+        document.getElementById("formDinhMuc").addEventListener("submit", function () {
+            document.querySelectorAll(".size-pane").forEach(pane => reindexPane(pane));
+        });
+    });
+</script>
+}
