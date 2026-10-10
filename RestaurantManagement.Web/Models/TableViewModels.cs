@@ -14,9 +14,11 @@ public class TableBoardViewModel
     public int? PreferredTableId { get; set; }
     public DateTimeOffset From { get; set; }
     public DateTimeOffset Until { get; set; }
+    public DateOnly ScheduleDay { get; set; }
+    public TimeOnly ScheduleTime { get; set; }
     public List<DatBan> Requests { get; set; } = [];
     public bool CanAssign => Booking is not null && Booking.GioKetThucDuKien > DateTimeOffset.UtcNow
-        && Booking.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.DaXacNhan;
+        && Booking.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan;
 }
 public class TableCard
 {
@@ -25,6 +27,7 @@ public class TableCard
     public DatBan? Occupant { get; set; }
     public string OccupantVersion { get; set; } = "";
     public List<DatBan> Conflicts { get; set; } = [];
+    public List<DatBan> ScheduledBookings { get; set; } = [];
     public bool CanChoose { get; set; }
     public bool IsSuggested { get; set; }
     public bool IsSelected { get; set; }
@@ -36,7 +39,8 @@ public class ReceptionBookingViewModel
     public string SoDienThoai { get; set; } = "";
     public DateTime GioDen { get; set; } = Services.TableService.VietnamNow.AddMinutes(5);
     [Range(1, 50)] public int SoNguoi { get; set; } = 2;
-    [Range(30, 360)] public int SoPhut { get; set; } = 120;
+    [Range(30, Services.TableService.MaxDiningHours * 60, ErrorMessage = "Thời lượng từ 30 đến 180 phút (tối đa 3 tiếng).")]
+    public int SoPhut { get; set; } = Services.TableService.MaxDiningHours * 60;
     public int? KhuVucId { get; set; }
     [StringLength(1000)] public string? GhiChu { get; set; }
     public List<KhuVuc> Areas { get; set; } = [];

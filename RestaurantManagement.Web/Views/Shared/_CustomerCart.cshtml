@@ -1,0 +1,46 @@
+@{
+    var owner = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "guest";
+}
+<div id="customer-cart" data-owner="@owner" data-dish-url="@Url.Action("CartDish", "Home")" data-context-url="@Url.Action("CartContext", "DatBan")" data-booking-url="@Url.Action("Index", "DatBan")" data-save-url="@Url.Action("SavePreorder", "DatBan")" data-detail-url="@Url.Action("ChiTiet", "DatBan")">
+    <div id="cart-context" class="cart-context" hidden aria-live="polite"></div>
+    <button type="button" class="cart-launcher" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer"><i class="bi bi-bag" aria-hidden="true"></i> Giỏ món <span id="cart-count">0</span></button>
+    <div id="cart-feedback" class="cart-feedback" role="status" aria-live="polite"></div>
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cart-title">
+        <div class="offcanvas-header"><h2 class="offcanvas-title fs-5" id="cart-title">Món đã chọn</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng giỏ"></button></div>
+        <div class="offcanvas-body">
+            <p id="cart-description" class="text-muted small">Chọn món trước, sau đó điền lịch và thông tin liên hệ để gửi yêu cầu.</p>
+            <div id="cart-errors" class="alert alert-danger" role="alert" hidden></div>
+            <button type="button" id="cart-reload" class="btn btn-sm btn-outline-secondary mb-3" hidden>Tải lại món chưa gửi bếp theo lịch hiện tại</button>
+            <div id="cart-items"></div>
+            <div class="cart-total"><span>Tiền món tham khảo</span><strong id="cart-total">0 ₫</strong></div>
+            <p class="small text-muted">Cọc 50% tiền món đã chọn; nếu chưa chọn món, cọc giữ bàn 299.000đ/lịch. Số tiền được tính lại ở server trước thanh toán và trừ vào hóa đơn cuối.</p>
+            <a id="cart-new-checkout" class="btn btn-restaurant w-100" asp-controller="DatBan" asp-action="Index" asp-route-cart="new">Tiếp tục đặt bàn</a>
+            <form id="cart-save-form" method="post" data-ajax-form="true" hidden>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="RowVersion" id="cart-version" />
+                <input type="hidden" name="RequestId" id="cart-request-id" />
+                <div data-cart-inputs></div>
+                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="ChuanBiTruoc" value="true" id="cart-prepare" /><label class="form-check-label" for="cart-prepare">Muốn chuẩn bị trước</label></div>
+                <button type="submit" class="btn btn-restaurant w-100" id="cart-save-button">Gửi yêu cầu</button>
+                <a id="cart-details" class="btn btn-outline-restaurant w-100 mt-2">Xem lịch, món đặt và tiền cọc</a>
+            </form>
+            <button type="button" id="cart-switch-new" class="btn btn-link text-secondary w-100 mt-2" hidden>Chọn món cho lịch đặt bàn mới</button>
+        </div>
+    </div>
+    <div class="modal fade" tabindex="-1" id="dishModal" aria-labelledby="dish-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="dish-title">Chọn món</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+            <form id="cart-dish-form">
+                <div class="modal-body">
+                    <img id="dish-image" class="cart-dish-image" alt="" hidden />
+                    <p id="dish-description" class="text-muted"></p><div id="dish-extras" class="small text-muted mb-3"></div>
+                    <div id="dish-error" class="alert alert-warning" role="alert" hidden></div>
+                    <label for="dish-size" class="form-label">Size / phần ăn</label><select id="dish-size" class="form-select mb-3" required></select>
+                    <label for="dish-quantity" class="form-label">Số lượng</label><input id="dish-quantity" class="form-control mb-3" type="number" min="1" max="99" value="1" required />
+                    <label for="dish-note" class="form-label">Ghi chú chế biến</label><textarea id="dish-note" class="form-control" maxlength="500" rows="2" placeholder="Ví dụ: ít cay, không hành"></textarea>
+                </div>
+                <div class="modal-footer"><button type="submit" id="dish-add" class="btn btn-restaurant">Thêm vào giỏ</button></div>
+            </form>
+        </div></div>
+    </div>
+</div>

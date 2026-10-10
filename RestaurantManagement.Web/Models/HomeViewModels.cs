@@ -24,6 +24,7 @@ public class MenuItemViewModel
     public TrangThaiMon Status { get; set; }
     public bool IsNew { get; set; }
     public bool IsFeatured { get; set; }
+    public bool CanOrder => Status == TrangThaiMon.DangPhucVu;
     public decimal? FromPrice { get; set; }
     public List<MenuSizeViewModel> Sizes { get; set; } = [];
     public List<string> ComboItems { get; set; } = [];
@@ -32,6 +33,7 @@ public class MenuItemViewModel
 
 public class MenuSizeViewModel
 {
+    public int Id { get; set; }
     public string Name { get; set; } = "";
     public decimal Price { get; set; }
 }

@@ -1,6 +1,6 @@
 @model RestaurantManagement.API.Models.DatBan
 @{
-    ViewData["Title"] = "Đặt bàn thành công";
+    ViewData["Title"] = "Đã gửi yêu cầu đặt bàn";
 }
 
 <div class="row justify-content-center py-4">
@@ -12,7 +12,7 @@
                 <div class="d-inline-flex p-3 rounded-circle bg-white text-success shadow mb-3">
                     <i class="bi bi-check2-circle display-4"></i>
                 </div>
-                <h2 class="fw-bold mb-1">Đặt Bàn Thành Công!</h2>
+                <h2 class="fw-bold mb-1">Đã gửi yêu cầu đặt bàn</h2>
                 <p class="mb-0 opacity-90">Nhà hàng đã tiếp nhận yêu cầu đặt chỗ của quý khách.</p>
             </div>
 
@@ -74,6 +74,14 @@
                 </div>
 
                 <!-- Hướng dẫn khách đến -->
+                @if (Model.TrangThai == RestaurantManagement.API.Models.TrangThaiDatBan.ChoCoc)
+                {
+                    <div class="alert alert-info border-0 rounded-3 p-3 mb-4" role="status">
+                        Lịch chưa được chốt. Cần thanh toán cọc và chờ thu ngân đối chiếu tiền thực nhận.
+                        @if (Model.TienCocYeuCau > 0) { <a asp-action="ThanhToanCoc" asp-route-id="@Model.Id" class="btn btn-success d-block mt-2">Thanh toán cọc @Model.TienCocYeuCau.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))đ</a> }
+                        else { <a asp-action="ChiTiet" asp-route-id="@Model.Id" class="btn btn-success d-block mt-2">Tính cọc và tiếp tục thanh toán</a> }
+                    </div>
+                }
                 <div class="alert alert-warning border-0 d-flex rounded-3 p-3 mb-4" role="alert">
                     <i class="bi bi-bell-fill fs-4 me-3 text-warning"></i>
                     <div class="small">
@@ -84,10 +92,14 @@
 
                 <!-- Cụm nút hành động -->
                 <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-2">
-                    <a asp-action="LichSu" asp-route-bookingCode="@Model.MaDatBan" class="btn btn-outline-danger px-4 py-2 rounded-pill fw-semibold">
-                        <i class="bi bi-search me-1"></i>Theo dõi lịch sử đơn này
+                    <a asp-action="ChiTiet" asp-route-id="@Model.Id" class="btn btn-outline-danger px-4 py-2 rounded-pill fw-semibold">
+                        <i class="bi bi-receipt me-1"></i>Xem món đặt, trạng thái và tiền cọc
                     </a>
-                    <a asp-action="Index" class="btn btn-danger px-4 py-2 rounded-pill fw-semibold" style="background-color: #E11D48; border-color: #E11D48;">
+                    @if (Model.TrangThai is RestaurantManagement.API.Models.TrangThaiDatBan.ChoXacNhan or RestaurantManagement.API.Models.TrangThaiDatBan.ChoCoc or RestaurantManagement.API.Models.TrangThaiDatBan.DaXacNhan or RestaurantManagement.API.Models.TrangThaiDatBan.DaNhanBan)
+                    {
+                        <a asp-controller="Home" asp-action="Index" asp-route-datBanId="@Model.Id" asp-fragment="thuc-don" class="btn btn-outline-restaurant px-4 py-2 rounded-pill">Bổ sung món</a>
+                    }
+                    <a asp-action="Index" asp-route-cart="new" class="btn btn-danger px-4 py-2 rounded-pill fw-semibold" style="background-color: #E11D48; border-color: #E11D48;">
                         <i class="bi bi-calendar-plus me-1"></i>Đặt thêm bàn khác
                     </a>
                     <a asp-controller="Home" asp-action="Index" class="btn btn-light border px-4 py-2 rounded-pill">

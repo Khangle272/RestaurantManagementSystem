@@ -1,0 +1,33 @@
+/* Keep the existing management colors; only adjust space and scrolling. */
+[hidden] { display: none !important; }
+.pos-page, .pos-menu-column, .pos-cart { min-width: 0; }
+.pos-menu-column { display: flex; flex-direction: column; }
+.pos-menu-card { flex: 1; min-height: 0; }
+.pos-menu-filters { display: flex; gap: .5rem; }
+.pos-menu-filters .form-select { width: 43%; }
+.pos-menu-filters .form-control { min-width: 0; flex: 1; }
+.pos-dish-grid { max-height: 65dvh; overflow-y: auto; align-content: flex-start; }
+.pos-table-picker { max-height: 36dvh; overflow-y: auto; }
+.pos-cart { position: sticky; top: 4.75rem; max-height: calc(100dvh - 5.5rem); }
+.pos-cart #cart-container { overflow-y: auto; min-height: 4rem; flex: 1; }
+.pos-cart .card-header, .pos-cart .card-footer { flex-shrink: 0; }
+.pos-cart .pos-item-title { overflow-wrap: anywhere; }
+.pos-cart .btn-group .btn { min-width: 2rem; }
+.table-select-card:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+.pos-config-collapsed .pos-dish-grid { max-height: calc(100dvh - 14rem); }
+@media (min-width: 768px) {
+    .sidebar-collapsed .admin-sidebar { display: none; }
+    .sidebar-collapsed .admin-topbar { left: 0; }
+    .sidebar-collapsed .admin-main { margin-left: 0; }
+    .pos-page { padding-left: 0; padding-right: 0; }
+    .admin-main:has(.pos-page) { padding: 1rem; }
+}
+@media (max-width: 767.98px) {
+    .pos-page { padding-bottom: 14rem !important; }
+    .pos-cart { position: static; max-height: none; }
+    .pos-cart #cart-container { max-height: 35dvh; }
+    .pos-cart .card-footer { position: fixed; bottom: 0; left: .5rem; right: .5rem; z-index: 999; max-height: 42dvh; overflow-y: auto; border: 1px solid var(--border-subtle); box-shadow: 0 -2px 8px #0001; }
+    .pos-dish-grid, .pos-config-collapsed .pos-dish-grid { max-height: 48dvh; }
+    .pos-menu-filters { flex-wrap: wrap; }
+    .pos-menu-filters .form-select { width: 100%; }
+}

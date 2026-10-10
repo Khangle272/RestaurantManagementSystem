@@ -36,6 +36,11 @@ public class DatBanCreateVM : IValidatableObject
     public int? MaKhuVuc { get; set; }
 
     public List<SelectListItem> KhuVucOptions { get; set; } = [];
+    public Guid? RequestId { get; set; }
+    public bool ChuanBiTruoc { get; set; }
+    public bool YeuCauTrangTri { get; set; }
+    [Range(0, 49)] public int SoTreEm { get; set; }
+    public List<OrderItemInputModel> Items { get; set; } = [];
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -61,6 +66,7 @@ public class DatBanLookupVM
 
 public class DatBanItemVM
 {
+    public bool CanEditPreorder { get; set; }
     public string RowVersion { get; set; } = "";
     public int MaDatBan { get; set; }
     public string BookingCode { get; set; } = "";

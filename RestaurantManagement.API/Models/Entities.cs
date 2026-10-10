@@ -17,6 +17,7 @@ public enum LyDoXuat { CheBien, ThanhLy, HuyHong, TraNhaCungCap, DieuChinhGiam }
 public enum PhamViUuDai { MonAn, HoaDon }
 public enum KieuGiam { PhanTram, SoTien }
 public enum LoaiDonHang { TaiBan, MangDi, GiaoHang }
+public enum LoaiGiaoDichCoc { Thu, Hoan, Giu }
 
 public class TaiKhoan : IdentityUser<int> { }
 
@@ -136,8 +137,22 @@ public class DatBan
     public KhuVuc? KhuVucUuTien { get; set; }
     public decimal TienCocYeuCau { get; set; }
     [MaxLength(1000)] public string? DieuKienCocDaThoaThuan { get; set; }
-    // Tiền cọc gốc lưu tại DatBan (không dùng bảng giao dịch riêng).
+    // Tổng tiền đã thu; các lần thu/hoàn/giữ được ghi tại GiaoDichCoc.
     public decimal TienCocDaNop { get; set; }
+    public decimal TienCocDaHoan { get; set; }
+    public decimal TienCocDaGiu { get; set; }
+    public bool YeuCauCoc { get; set; }
+    public bool CocTuDong { get; set; }
+    public DateTimeOffset? HanThanhToanCoc { get; set; }
+    public DateTimeOffset? ThoiDiemBaoChuyenKhoan { get; set; }
+    [MaxLength(100)] public string? MaGiaoDichKhachBao { get; set; }
+    public decimal SoTienKhachBao { get; set; }
+    [MaxLength(300)] public string? LyDoTuChoiChuyenKhoan { get; set; }
+    public bool ChuanBiTruoc { get; set; }
+    public Guid? YeuCauTaoId { get; set; }
+    public Guid? LanLuuMonId { get; set; }
+    [MaxLength(64)] public string? LanLuuMonHash { get; set; }
+    [MaxLength(500)] public string? YeuCauHuy { get; set; }
     public DateTimeOffset? ThoiDiemCoc { get; set; }
     public TrangThaiCoc TrangThaiCoc { get; set; } = TrangThaiCoc.ChuaCoc;
     public TrangThaiDatBan TrangThai { get; set; }
@@ -172,11 +187,27 @@ public class MonDatTruoc
     public int? MonAnSizeId { get; set; }
     public MonAnSize? MonAnSize { get; set; }
     [MaxLength(150)] public string TenMonLucDat { get; set; } = "";
+    [MaxLength(50)] public string TenSizeLucDat { get; set; } = "Mặc định";
     public int SoLuong { get; set; }
     public decimal DonGiaThoaThuan { get; set; }
     [MaxLength(500)] public string? YeuCauCheBien { get; set; }
     // Snapshot combo tại thời điểm đặt trước; không phải danh mục thứ hai.
     [MaxLength(4000)] public string? ChiTietComboSnapshot { get; set; }
+}
+
+public class GiaoDichCoc
+{
+    public int Id { get; set; }
+    public int DatBanId { get; set; }
+    public DatBan DatBan { get; set; } = null!;
+    public LoaiGiaoDichCoc Loai { get; set; }
+    public decimal SoTien { get; set; }
+    public DateTimeOffset ThoiDiem { get; set; }
+    public int TaiKhoanXuLyId { get; set; }
+    public TaiKhoan TaiKhoanXuLy { get; set; } = null!;
+    [MaxLength(100)] public string? MaThamChieu { get; set; }
+    [MaxLength(500)] public string LyDo { get; set; } = "";
+    public Guid YeuCauId { get; set; }
 }
 
 public class HoaDon

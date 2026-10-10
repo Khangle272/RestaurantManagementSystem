@@ -20,8 +20,14 @@
         _ => "—"
     };
 
-    var vietQrAmount = Convert.ToInt64(Math.Max(0, Model.TongThanhToan));
-    var qrUrl = $"https://img.vietqr.io/image/MB-999988889999-compact2.png?amount={vietQrAmount}&addInfo={Model.MaHoaDon}&accountName=NHA%20HANG%20AM%20THUC%20SEN";
+    var unpaid = Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan;
+    var activeTotal = unpaid && ViewBag.ActiveTotal is decimal total ? total : Model.TongTienHang;
+    var depositDeduction = unpaid && ViewBag.DepositDeduction is decimal deposit ? deposit : Model.TienCocDaTru;
+    var paymentAmount = unpaid && ViewBag.PaymentAmount is decimal due ? due : Model.TongThanhToan;
+    var availableDeposit = ViewBag.AvailableDeposit is decimal available ? available : 0;
+    var invariant = System.Globalization.CultureInfo.InvariantCulture;
+    var vietQrAmount = paymentAmount.ToString("0.##", invariant);
+    var qrUrl = $"https://img.vietqr.io/image/MB-999988889999-compact2.png?amount={vietQrAmount}&addInfo={Uri.EscapeDataString(Model.MaHoaDon)}&accountName=NHA%20HANG%20AM%20THUC%20SEN";
 }
 <style media="print">
     .admin-sidebar, .admin-topbar, .no-print, nav, header, footer { display: none !important; }
@@ -140,16 +146,16 @@
         <!-- Tổng tiền -->
         <dl class="row justify-content-end mb-2">
             <dt class="col-7 col-sm-4 text-muted">Tiền món:</dt>
-            <dd class="col-5 col-sm-4 text-end">@Model.TongTienHang.ToString("N0") đ</dd>
+            <dd class="col-5 col-sm-4 text-end">@activeTotal.ToString("N0") đ</dd>
 
             <dt class="col-7 col-sm-4 text-muted">Giảm giá / Voucher:</dt>
             <dd class="col-5 col-sm-4 text-end text-success">- @Model.TienGiam.ToString("N0") đ</dd>
 
-            <dt class="col-7 col-sm-4 text-muted">Tiền cọc đã trừ:</dt>
-            <dd class="col-5 col-sm-4 text-end text-primary">- @Model.TienCocDaTru.ToString("N0") đ</dd>
+            <dt class="col-7 col-sm-4 text-muted">@(unpaid ? "Tiền cọc sẽ đối trừ:" : "Tiền cọc đã trừ:")</dt>
+            <dd class="col-5 col-sm-4 text-end text-primary">- @depositDeduction.ToString("N0") đ</dd>
 
             <dt class="col-7 col-sm-4 fs-5 fw-bold border-top pt-2">Tổng thanh toán:</dt>
-            <dd class="col-5 col-sm-4 text-end fs-5 fw-bold text-danger border-top pt-2">@Model.TongThanhToan.ToString("N0") đ</dd>
+            <dd class="col-5 col-sm-4 text-end fs-5 fw-bold text-danger border-top pt-2">@paymentAmount.ToString("N0") đ</dd>
 
             @if (Model.TrangThai == TrangThaiHoaDon.DaThanhToan)
             {
@@ -186,12 +192,25 @@
     </div>
 
     <!-- MODULE THANH TOÁN ĐA HÌNH THỨC (NO-PRINT) -->
-    @if ((User.IsInRole("Admin") || User.IsInRole("ThuNgan")) && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && Model.TongThanhToan > 0)
+    @if ((User.IsInRole("Admin") || User.IsInRole("ThuNgan")) && unpaid && paymentAmount == 0)
+    {
+        <form asp-action="ThanhToan" method="post" class="card p-4 no-print mb-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" value="@Model.Id" />
+            <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+            <input type="hidden" name="BookingRowVersion" value="@ViewBag.BookingRowVersion" />
+            <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.TienMat" />
+            <input type="hidden" name="TienKhachDua" value="0" />
+            <p>Hóa đơn không còn tiền phải thu. Xác nhận để hoàn tất hóa đơn và kết thúc lượt bàn khi đủ điều kiện.</p>
+            <button type="submit" class="btn btn-success">Hoàn tất hóa đơn 0 đ</button>
+        </form>
+    }
+    @if ((User.IsInRole("Admin") || User.IsInRole("ThuNgan")) && unpaid && paymentAmount > 0)
     {
         <div class="card border-0 shadow-sm no-print mb-4">
             <div class="card-header bg-primary text-white py-3">
                 <h2 class="h5 mb-0 fw-bold">💳 Xử lý thanh toán đa hình thức</h2>
-                <div class="small opacity-75">Hỗ trợ tiền mặt, chuyển khoản VietQR tự động, quẹt thẻ POS</div>
+                <div class="small opacity-75">Ghi nhận tiền mặt, chuyển khoản qua mã QR và thanh toán tại POS sau khi thu ngân đối chiếu</div>
             </div>
             <div class="card-body p-4">
                 <!-- Nav tabs -->
@@ -220,17 +239,18 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="Id" value="@Model.Id" />
                             <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+                            <input type="hidden" name="BookingRowVersion" value="@ViewBag.BookingRowVersion" />
                             <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.TienMat" />
 
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Tổng tiền phải thu:</label>
-                                    <div class="fs-4 fw-bold text-danger mb-2">@Model.TongThanhToan.ToString("N0") đ</div>
+                                    <div class="fs-4 fw-bold text-danger mb-2" id="cash-due">@paymentAmount.ToString("N0") đ</div>
 
                                     <div class="mb-3">
-                                        <label class="form-label small fw-semibold">Chiết khấu / Giảm giá thêm (nếu có):</label>
+                                        <label class="form-label small fw-semibold">Tổng chiết khấu / Giảm giá (nếu có):</label>
                                         <div class="input-group">
-                                            <input type="number" name="TienGiam" id="cash-discount" value="0" min="0" max="@Model.TongTienHang" class="form-control" oninput="calculateCash()" />
+                                            <input type="number" name="TienGiam" id="cash-discount" value="@Model.TienGiam.ToString(invariant)" min="0" max="@activeTotal.ToString(invariant)" step="0.01" class="form-control" oninput="calculateCash()" />
                                             <span class="input-group-text">đ</span>
                                         </div>
                                     </div>
@@ -238,13 +258,13 @@
                                     <div class="mb-3">
                                         <label class="form-label small fw-semibold">Số tiền khách đưa (*):</label>
                                         <div class="input-group">
-                                            <input type="number" name="TienKhachDua" id="cash-tendered" value="@Convert.ToInt64(Model.TongThanhToan)" min="0" class="form-control fs-5 fw-bold text-primary" oninput="calculateCash()" required />
+                                            <input type="number" name="TienKhachDua" id="cash-tendered" value="@paymentAmount.ToString(invariant)" min="0" step="0.01" class="form-control fs-5 fw-bold text-primary" oninput="calculateCash()" required />
                                             <span class="input-group-text">đ</span>
                                         </div>
                                     </div>
 
                                     <div class="d-flex flex-wrap gap-1 mb-3">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(@Convert.ToInt64(Model.TongThanhToan))">Đúng số tiền</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered()">Đúng số tiền</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(100000)">100.000 đ</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(200000)">200.000 đ</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setCashTendered(500000)">500.000 đ</button>
@@ -274,6 +294,8 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="Id" value="@Model.Id" />
                             <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+                            <input type="hidden" name="BookingRowVersion" value="@ViewBag.BookingRowVersion" />
+                            <input type="hidden" name="TienGiam" value="@Model.TienGiam.ToString(invariant)" />
                             <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.ChuyenKhoan" />
 
                             <div class="row g-3 align-items-center">
@@ -281,7 +303,7 @@
                                     <div class="p-2 border rounded bg-white shadow-sm d-inline-block">
                                         <img src="@qrUrl" alt="VietQR Mã thanh toán" class="img-fluid rounded" style="max-height: 250px;" />
                                     </div>
-                                    <div class="small text-muted mt-2">Quét mã bằng App ngân hàng bất kỳ để thanh toán tự động</div>
+                                    <div class="small text-muted mt-2">Quét mã bằng ứng dụng ngân hàng; thu ngân kiểm tra tiền đã nhận trước khi xác nhận.</div>
                                 </div>
 
                                 <div class="col-12 col-md-7">
@@ -297,7 +319,7 @@
                                             <div class="col-7 fw-bold">NHA HANG AM THUC SEN</div>
 
                                             <div class="col-5 text-muted">Số tiền cần thanh toán:</div>
-                                            <div class="col-7 fw-bold fs-5 text-danger">@Model.TongThanhToan.ToString("N0") đ</div>
+                                            <div class="col-7 fw-bold fs-5 text-danger">@paymentAmount.ToString("N0") đ</div>
 
                                             <div class="col-5 text-muted">Nội dung chuyển khoản:</div>
                                             <div class="col-7 fw-bold text-dark bg-warning-subtle px-2 py-1 rounded">@Model.MaHoaDon</div>
@@ -323,13 +345,15 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="Id" value="@Model.Id" />
                             <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
+                            <input type="hidden" name="BookingRowVersion" value="@ViewBag.BookingRowVersion" />
+                            <input type="hidden" name="TienGiam" value="@Model.TienGiam.ToString(invariant)" />
                             <input type="hidden" name="PhuongThuc" value="@PhuongThucThanhToan.The" />
 
                             <div class="row g-3">
                                 <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">Tổng thanh toán:</label>
-                                        <div class="fs-4 fw-bold text-danger">@Model.TongThanhToan.ToString("N0") đ</div>
+                                        <div class="fs-4 fw-bold text-danger">@paymentAmount.ToString("N0") đ</div>
                                     </div>
 
                                     <div class="mb-3">
@@ -371,6 +395,7 @@
         <form asp-action="ConfirmCash" method="post" id="legacy-confirm-cash" class="no-print mt-2 d-none">
             <input type="hidden" name="id" value="@Model.Id" />
             <input type="hidden" name="rowVersion" value="@ViewBag.RowVersion" />
+            <input type="hidden" name="bookingRowVersion" value="@ViewBag.BookingRowVersion" />
             <button type="submit" class="btn btn-success">Xác nhận đã nhận đủ tiền mặt</button>
         </form>
     }
@@ -378,7 +403,8 @@
 
 @section Scripts {
 <script>
-    const baseTotal = @Convert.ToInt64(Model.TongThanhToan);
+    const dishTotal = @activeTotal.ToString(invariant);
+    const availableDeposit = @availableDeposit.ToString(invariant);
 
     function calculateCash() {
         const discountInput = document.getElementById('cash-discount');
@@ -387,11 +413,12 @@
         const warningDisplay = document.getElementById('cash-warning');
         const submitBtn = document.getElementById('btn-cash-submit');
 
-        const discount = parseFloat(discountInput.value) || 0;
-        const netDue = Math.max(0, baseTotal - discount);
+        const discount = Number(discountInput.value);
+        const netDue = Math.max(0, dishTotal - discount - availableDeposit);
         const tendered = parseFloat(tenderedInput.value) || 0;
+        document.getElementById('cash-due').innerText = netDue.toLocaleString('vi-VN') + ' đ';
 
-        if (tendered >= netDue) {
+        if (Number.isFinite(discount) && discount >= 0 && discount <= dishTotal && tendered >= netDue) {
             const change = tendered - netDue;
             changeDisplay.innerText = change.toLocaleString('vi-VN') + ' đ';
             warningDisplay.classList.add('d-none');
@@ -404,7 +431,7 @@
     }
 
     function setCashTendered(amount) {
-        document.getElementById('cash-tendered').value = amount;
+        document.getElementById('cash-tendered').value = amount ?? Math.max(0, dishTotal - Number(document.getElementById('cash-discount').value) - availableDeposit);
         calculateCash();
     }
 

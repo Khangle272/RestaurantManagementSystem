@@ -31,12 +31,24 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
             .SingleOrDefaultAsync(x => x.Id == id);
         if (invoice is null) return NotFound();
         ViewBag.RowVersion = Convert.ToBase64String(db.Entry(invoice).Property<byte[]>("RowVersion").CurrentValue ?? []);
+        ViewBag.BookingRowVersion = invoice.DatBan is null ? ""
+            : Convert.ToBase64String(db.Entry(invoice.DatBan).Property<byte[]>("RowVersion").CurrentValue ?? []);
+        var total = invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).Sum(x => x.SoLuong * x.DonGia);
+        var available = invoice.DatBanId is int bookingId && invoice.TrangThai == TrangThaiHoaDon.ChuaThanhToan
+            ? await orderService.AvailableDepositAsync(bookingId, invoice.Id) : 0;
+        var deposit = invoice.TrangThai == TrangThaiHoaDon.ChuaThanhToan
+            ? Math.Min(available, Math.Max(0, total - invoice.TienGiam))
+            : invoice.TienCocDaTru;
+        ViewBag.AvailableDeposit = available;
+        ViewBag.ActiveTotal = total;
+        ViewBag.DepositDeduction = deposit;
+        ViewBag.PaymentAmount = Math.Max(0, total - invoice.TienGiam - deposit);
         return View(invoice);
     }
 
     [Authorize(Roles = AppRoles.ThuNgan)]
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmCash(int id, string? rowVersion)
+    public async Task<IActionResult> ConfirmCash(int id, string? rowVersion, string? bookingRowVersion)
     {
         if (!int.TryParse(users.GetUserId(User), out var accountId)) return Challenge();
         var cashierId = await db.NhanVien.AsNoTracking()
@@ -47,35 +59,18 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         var expectedVersion = new byte[8];
         if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, expectedVersion, out var length) || length != 8)
             return BadRequest();
-
-        var invoice = await db.HoaDon.Include(x => x.ChiTiet).SingleOrDefaultAsync(x => x.Id == id);
+        var invoice = await db.HoaDon.AsNoTracking().Include(x => x.ChiTiet).SingleOrDefaultAsync(x => x.Id == id);
         if (invoice is null) return NotFound();
-        var currentVersion = db.Entry(invoice).Property<byte[]>("RowVersion").CurrentValue;
-        if (currentVersion is null || !currentVersion.SequenceEqual(expectedVersion))
+        var total = invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).Sum(x => x.SoLuong * x.DonGia);
+        var deposit = invoice.DatBanId is int bookingId ? await orderService.AvailableDepositAsync(bookingId, id) : 0;
+        var error = await orderService.ProcessPaymentAsync(new RestaurantManagement.Web.Models.PaymentFormModel
         {
-            TempData["Error"] = "Hóa đơn đã thay đổi. Vui lòng kiểm tra lại trước khi thu tiền.";
-            return RedirectToAction(nameof(Details), new { id });
-        }
-        if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan || invoice.TongThanhToan <= 0
-            || invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy)
-                .Sum(x => x.SoLuong * x.DonGia) != invoice.TongTienHang)
-        {
-            TempData["Error"] = "Hóa đơn chưa đủ điều kiện xác nhận tiền mặt; hãy đối chiếu trạng thái và chi tiết món.";
-            return RedirectToAction(nameof(Details), new { id });
-        }
-
-        db.Entry(invoice).Property<byte[]>("RowVersion").OriginalValue = expectedVersion;
-        invoice.NhanVienId = cashierId;
-        invoice.PhuongThucThanhToan = PhuongThucThanhToan.TienMat;
-        invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
-        invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
-        try { await db.SaveChangesAsync(); }
-        catch (DbUpdateConcurrencyException)
-        {
-            TempData["Error"] = "Hóa đơn đã thay đổi. Vui lòng kiểm tra lại trước khi thu tiền.";
-            return RedirectToAction(nameof(Details), new { id });
-        }
-        TempData["Success"] = "Đã xác nhận thu tiền mặt.";
+            Id = id, RowVersion = rowVersion, BookingRowVersion = bookingRowVersion,
+            PhuongThuc = PhuongThucThanhToan.TienMat,
+            TienKhachDua = Math.Max(0, total - invoice.TienGiam - deposit)
+        }, cashierId);
+        if (error is not null) TempData["Error"] = error;
+        else TempData["Success"] = "Đã xác nhận thu tiền mặt.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -83,6 +78,11 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ThanhToan(RestaurantManagement.Web.Models.PaymentFormModel form)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = "Thông tin thanh toán không hợp lệ. Vui lòng kiểm tra lại các số tiền.";
+            return RedirectToAction(nameof(Details), new { id = form.Id });
+        }
         if (!int.TryParse(users.GetUserId(User), out var accountId)) return Challenge();
         var cashierId = await db.NhanVien.AsNoTracking()
             .Where(x => x.TaiKhoanId == accountId && x.DangLamViec)

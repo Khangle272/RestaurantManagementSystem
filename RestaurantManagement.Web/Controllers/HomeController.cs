@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
+using RestaurantManagement.Web.Services;
 using System.Diagnostics;
 
 namespace RestaurantManagement.Web.Controllers
@@ -19,7 +20,9 @@ namespace RestaurantManagement.Web.Controllers
                 Id = x.Id, CategoryId = x.DanhMucId, Name = x.TenMon, Description = x.MoTa,
                 Image = x.HinhAnh, Category = x.DanhMuc.TenDanhMuc, Type = x.Loai,
                 Status = x.TrangThai, IsNew = x.LaMonMoi, IsFeatured = x.LaMonNoiBat,
-                FromPrice = x.Sizes.Where(s => s.DangSuDung).Min(s => (decimal?)s.GiaBan)
+                FromPrice = x.Sizes.Where(s => s.DangSuDung && s.GiaBan > 0).Min(s => (decimal?)s.GiaBan),
+                Sizes = x.Sizes.Where(s => s.DangSuDung && s.GiaBan > 0).OrderBy(s => s.GiaBan)
+                    .Select(s => new MenuSizeViewModel { Id = s.Id, Name = s.TenSize, Price = s.GiaBan }).ToList()
             }).ToListAsync();
             var now = DateTimeOffset.UtcNow;
             var currentPromotions = await db.KhuyenMai.AsNoTracking()
@@ -38,9 +41,27 @@ namespace RestaurantManagement.Web.Controllers
 
         public async Task<IActionResult> MonAn(int id)
         {
+            var dish = await LoadDish(id);
+            return dish is null ? NotFound() : View(dish);
+        }
+
+        [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> CartDish(int id)
+        {
+            var dish = await LoadDish(id);
+            return dish is null ? NotFound() : Json(new
+            {
+                dish.Id, dish.Name, dish.Description, dish.Image, dish.CanOrder,
+                dish.Sizes, dish.ComboItems, dish.Promotions
+            });
+        }
+
+        private async Task<MenuItemViewModel?> LoadDish(int id)
+        {
             var dish = await PublicMenu().Include(x => x.DanhMuc)
                 .Include(x => x.Sizes).SingleOrDefaultAsync(x => x.Id == id);
-            if (dish is null) return NotFound();
+            if (dish is null) return null;
             var now = DateTimeOffset.UtcNow;
             var promotions = await db.KhuyenMaiMon.AsNoTracking().Include(x => x.KhuyenMai)
                 .Where(x => x.MonAnId == id && x.KhuyenMai.DangSuDung && !x.KhuyenMai.CanVoucher
@@ -48,25 +69,21 @@ namespace RestaurantManagement.Web.Controllers
             var invoicePromotions = await db.KhuyenMai.AsNoTracking()
                 .Where(x => x.PhamVi == PhamViUuDai.HoaDon && x.DangSuDung && !x.CanVoucher
                     && x.BatDau <= now && x.KetThuc >= now).ToListAsync();
-            return View(new MenuItemViewModel
+            return new MenuItemViewModel
             {
                 Id = dish.Id, Name = dish.TenMon, Description = dish.MoTa, Image = dish.HinhAnh,
                 Category = dish.DanhMuc.TenDanhMuc, Type = dish.Loai, Status = dish.TrangThai,
                 IsNew = dish.LaMonMoi, IsFeatured = dish.LaMonNoiBat,
                 Sizes = dish.Sizes.Where(x => x.DangSuDung && x.GiaBan > 0).OrderBy(x => x.GiaBan)
-                    .Select(x => new MenuSizeViewModel { Name = x.TenSize, Price = x.GiaBan }).ToList(),
+                    .Select(x => new MenuSizeViewModel { Id = x.Id, Name = x.TenSize, Price = x.GiaBan }).ToList(),
                 ComboItems = await db.ChiTietCombo.AsNoTracking().Where(x => x.ComboId == id)
                     .Select(x => x.SoLuong + " × " + x.MonAn.TenMon).ToListAsync(),
                 Promotions = promotions.Select(x => ToPromotion(x.KhuyenMai))
                     .Concat(invoicePromotions.Select(ToPromotion)).ToList()
-            });
+            };
         }
 
-        private IQueryable<MonAn> PublicMenu() => db.MonAn.AsNoTracking().Where(x => x.DaDuyet
-            && x.DanhMuc.DangSuDung && x.TrangThai != TrangThaiMon.NgungKinhDoanh
-            && x.Sizes.Any(s => s.DangSuDung) && !x.Sizes.Any(s => s.DangSuDung && s.GiaBan <= 0)
-            && (x.Loai != LoaiMon.Set || !x.ThanhPhanCombo.Any(c => !c.MonAn.DaDuyet
-                || c.MonAn.TrangThai == TrangThaiMon.NgungKinhDoanh || !c.MonAn.DanhMuc.DangSuDung)));
+        private IQueryable<MonAn> PublicMenu() => MenuRules.Listed(db).AsNoTracking();
 
         private static PromotionViewModel ToPromotion(KhuyenMai item) => new()
         {

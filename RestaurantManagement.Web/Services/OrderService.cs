@@ -57,9 +57,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 .Where(x => x.DangSuDung)
                 .OrderBy(x => x.TenDanhMuc)
                 .ToListAsync(),
-            MenuDishes = await db.MonAn.AsNoTracking()
+            MenuDishes = await MenuRules.Available(db).AsNoTracking()
                 .Include(x => x.Sizes)
-                .Where(x => x.DaDuyet && x.TrangThai == TrangThaiMon.DangPhucVu)
                 .OrderBy(x => x.DanhMucId).ThenBy(x => x.TenMon)
                 .Select(x => new MenuDishItem
                 {
@@ -69,7 +68,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                     HinhAnh = x.HinhAnh,
                     MoTa = x.MoTa,
                     Loai = x.Loai,
-                    Sizes = x.Sizes.Where(s => s.DangSuDung)
+                    Sizes = x.Sizes.Where(s => s.DangSuDung && s.GiaBan > 0)
                         .OrderBy(s => s.GiaBan)
                         .Select(s => new MenuSizeItem
                         {
@@ -183,15 +182,17 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
             // Validate all dishes and sizes
             var sizeIds = model.Items.Select(x => x.MonAnSizeId).Distinct().ToList();
+            var availableMenu = MenuRules.Available(db);
             var sizes = await db.MonAnSize
                 .Include(x => x.MonAn)
-                .Where(x => sizeIds.Contains(x.Id))
+                .Where(x => sizeIds.Contains(x.Id) && x.DangSuDung && x.GiaBan > 0
+                    && availableMenu.Any(d => d.Id == x.MonAnId))
                 .ToDictionaryAsync(x => x.Id);
 
             var now = DateTimeOffset.UtcNow;
             foreach (var item in model.Items)
             {
-                if (!sizes.TryGetValue(item.MonAnSizeId, out var size))
+                if (!sizes.TryGetValue(item.MonAnSizeId, out var size) || size.MonAnId != item.MonAnId)
                     return ($"Không tìm thấy size món ăn hợp lệ cho một số món được chọn.", null);
 
                 var dish = size.MonAn;
@@ -249,6 +250,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
     {
         if (items.Count == 0)
             return ("Vui lòng chọn ít nhất một món ăn.", null);
+        if (items.Any(x => x.SoLuong <= 0))
+            return ("Số lượng từng món phải lớn hơn 0.", null);
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
@@ -259,16 +262,17 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 return ("Hóa đơn đã thanh toán hoặc đã hủy, không thể gọi thêm món.", null);
 
             var sizeIds = items.Select(x => x.MonAnSizeId).Distinct().ToList();
+            var availableMenu = MenuRules.Available(db);
             var sizes = await db.MonAnSize
                 .Include(x => x.MonAn)
-                .Where(x => sizeIds.Contains(x.Id))
+                .Where(x => sizeIds.Contains(x.Id) && x.DangSuDung && x.GiaBan > 0
+                    && availableMenu.Any(d => d.Id == x.MonAnId))
                 .ToDictionaryAsync(x => x.Id);
 
             var now = DateTimeOffset.UtcNow;
             foreach (var item in items)
             {
-                if (item.SoLuong <= 0) continue;
-                if (!sizes.TryGetValue(item.MonAnSizeId, out var size))
+                if (!sizes.TryGetValue(item.MonAnSizeId, out var size) || size.MonAnId != item.MonAnId)
                     return ("Size món ăn không hợp lệ.", null);
 
                 var dish = size.MonAn;
@@ -308,9 +312,13 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
             return (null, bill.Id);
         }
-        catch (Exception ex)
+        catch (DbUpdateConcurrencyException)
         {
-            return (ex.Message, null);
+            return ("Dữ liệu vừa thay đổi từ phiên làm việc khác. Vui lòng thử lại.", null);
+        }
+        catch (SqlException ex) when (ex.Number is 1205 or 1222)
+        {
+            return ("Hệ thống đang bận xử lý dữ liệu đơn hàng. Vui lòng thử lại sau giây lát.", null);
         }
     }
 
@@ -323,6 +331,12 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         if (item == null) return "Không tìm thấy món ăn trong đơn hàng.";
         if (item.HoaDon.TrangThai == TrangThaiHoaDon.DaHuy)
             return "Đơn hàng đã hủy, không thể thay đổi trạng thái món.";
+        if (item.HoaDon.DatBanId is int reservationId
+            && await db.DatBan.AnyAsync(x => x.Id == reservationId && x.TrangThai == TrangThaiDatBan.DaHuy))
+            return "Lịch đặt bàn đã hủy, không thể tiếp tục chế biến/phục vụ món.";
+        if (newStatus == TrangThaiCheBien.DaHuy
+            && item.HoaDon.TrangThai is TrangThaiHoaDon.DaThanhToan or TrangThaiHoaDon.ThanhToanMotPhan)
+            return "Không thể hủy món trên hóa đơn đã thu tiền.";
 
         bool valid = false;
 
@@ -354,6 +368,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 .SumAsync(x => x.SoLuong * x.DonGia);
 
             item.HoaDon.TongTienHang = otherActiveTotal;
+            item.HoaDon.TienGiam = Math.Min(item.HoaDon.TienGiam, otherActiveTotal);
+            item.HoaDon.TienCocDaTru = Math.Min(item.HoaDon.TienCocDaTru, otherActiveTotal - item.HoaDon.TienGiam);
         }
 
         try
@@ -367,107 +383,103 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         }
     }
 
+    public async Task<decimal> AvailableDepositAsync(int bookingId, int? excludeInvoiceId = null)
+    {
+        var booking = await db.DatBan.AsNoTracking().SingleAsync(x => x.Id == bookingId);
+        if (booking.TrangThaiCoc == TrangThaiCoc.DaHoan) return 0;
+        var allocated = await db.HoaDon.Where(x => x.DatBanId == bookingId
+                && x.Id != excludeInvoiceId && x.TrangThai != TrangThaiHoaDon.DaHuy)
+            .SumAsync(x => x.TienCocDaTru);
+        return Math.Max(0, booking.TienCocDaNop - booking.TienCocDaHoan - booking.TienCocDaGiu - allocated);
+    }
+
+    private bool ApplyPaymentVersion<T>(T entity, string? token) where T : class
+    {
+        var expected = new byte[8];
+        if (string.IsNullOrWhiteSpace(token)
+            || !Convert.TryFromBase64String(token, expected, out var length) || length != 8)
+            return false;
+        var version = db.Entry(entity).Property<byte[]>("RowVersion");
+        if (version.CurrentValue is null || !version.CurrentValue.SequenceEqual(expected)) return false;
+        version.OriginalValue = expected;
+        return true;
+    }
+
     public async Task<string?> ProcessPaymentAsync(PaymentFormModel form, int cashierId)
     {
-        var invoice = await db.HoaDon
-            .Include(x => x.ChiTiet)
-            .Include(x => x.DatBan)
-            .SingleOrDefaultAsync(x => x.Id == form.Id);
-
-        if (invoice == null) return "Không tìm thấy hóa đơn cần thanh toán.";
-        if (invoice.TrangThai == TrangThaiHoaDon.DaThanhToan) return "Hóa đơn này đã được thanh toán trước đó.";
-        if (invoice.TrangThai == TrangThaiHoaDon.DaHuy) return "Hóa đơn đã bị hủy, không thể thanh toán.";
-
-        // Concurrency token validation
-        if (!string.IsNullOrEmpty(form.RowVersion))
-        {
-            var expectedVersion = new byte[8];
-            if (Convert.TryFromBase64String(form.RowVersion, expectedVersion, out var len) && len == 8)
-            {
-                var currentVersion = db.Entry(invoice).Property<byte[]>("RowVersion").CurrentValue;
-                if (currentVersion == null || !currentVersion.SequenceEqual(expectedVersion))
-                {
-                    return "Hóa đơn đã thay đổi từ lần xem trước. Vui lòng đối chiếu lại thông tin.";
-                }
-                db.Entry(invoice).Property<byte[]>("RowVersion").OriginalValue = expectedVersion;
-            }
-        }
-
-        // Recalculate bill items
-        var activeItemsTotal = invoice.ChiTiet
-            .Where(x => x.TrangThai != TrangThaiCheBien.DaHuy)
-            .Sum(x => x.SoLuong * x.DonGia);
-
-        invoice.TongTienHang = activeItemsTotal;
-
-        // Apply discount if provided
-        decimal discount = Math.Max(0, form.TienGiam);
-        if (discount > invoice.TongTienHang)
-            discount = invoice.TongTienHang;
-        invoice.TienGiam = discount;
-
-        // Apply deposit deduction from DatBan if applicable
-        decimal depositDeducted = 0;
-        if (invoice.DatBan != null && invoice.DatBan.TienCocDaNop > 0)
-        {
-            var maxDeductible = invoice.TongTienHang - invoice.TienGiam;
-            depositDeducted = Math.Min(invoice.DatBan.TienCocDaNop, maxDeductible);
-            invoice.TienCocDaTru = depositDeducted;
-            if (depositDeducted >= invoice.DatBan.TienCocDaNop)
-            {
-                invoice.DatBan.TrangThaiCoc = TrangThaiCoc.DaDoiTru;
-            }
-        }
-
-        var amountDue = invoice.TongTienHang - invoice.TienGiam - invoice.TienCocDaTru;
-
-        // Check payment methods
-        if (form.PhuongThuc == PhuongThucThanhToan.TienMat)
-        {
-            if (amountDue > 0 && form.TienKhachDua < amountDue)
-                return $"Số tiền khách đưa ({form.TienKhachDua:N0} đ) không đủ để thanh toán ({amountDue:N0} đ).";
-
-            invoice.TienKhachDua = form.TienKhachDua;
-            invoice.TienThoiLai = Math.Max(0, form.TienKhachDua - amountDue);
-            invoice.MaGiaoDich = null;
-        }
-        else if (form.PhuongThuc == PhuongThucThanhToan.ChuyenKhoan)
-        {
-            invoice.TienKhachDua = amountDue;
-            invoice.TienThoiLai = 0;
-            invoice.MaGiaoDich = string.IsNullOrWhiteSpace(form.MaGiaoDich)
-                ? $"QR-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}"
-                : form.MaGiaoDich.Trim();
-        }
-        else if (form.PhuongThuc == PhuongThucThanhToan.The)
-        {
-            invoice.TienKhachDua = amountDue;
-            invoice.TienThoiLai = 0;
-            var cardType = string.IsNullOrWhiteSpace(form.LoaiThe) ? "Thẻ ngân hàng" : form.LoaiThe.Trim();
-            var last4 = string.IsNullOrWhiteSpace(form.SoThe4SoCuoi) ? "XXXX" : form.SoThe4SoCuoi.Trim();
-            var authCode = string.IsNullOrWhiteSpace(form.MaGiaoDich) ? Guid.NewGuid().ToString("N")[..8].ToUpperInvariant() : form.MaGiaoDich.Trim();
-            invoice.MaGiaoDich = $"{cardType} *{last4} (Auth: {authCode})";
-        }
-        else
-        {
-            invoice.TienKhachDua = amountDue;
-            invoice.TienThoiLai = 0;
-            invoice.MaGiaoDich = form.MaGiaoDich?.Trim();
-        }
-
-        invoice.NhanVienId = cashierId;
-        invoice.PhuongThucThanhToan = form.PhuongThuc;
-        invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
-        invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
-
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
+            var invoice = await db.HoaDon.Include(x => x.ChiTiet).Include(x => x.DatBan)
+                .SingleOrDefaultAsync(x => x.Id == form.Id);
+            if (invoice is null) return "Không tìm thấy hóa đơn cần thanh toán.";
+            if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
+                return "Hóa đơn đã thu tiền hoặc đã hủy, không thể thanh toán lại.";
+            if (!ApplyPaymentVersion(invoice, form.RowVersion))
+                return "Phiên bản hóa đơn không hợp lệ hoặc đã thay đổi. Vui lòng tải lại và đối chiếu.";
+            if (invoice.DatBan is not null && !ApplyPaymentVersion(invoice.DatBan, form.BookingRowVersion))
+                return "Phiên bản đặt bàn đã thay đổi hoặc không hợp lệ. Vui lòng tải lại để đối chiếu tiền cọc.";
+            if (form.PhuongThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan or PhuongThucThanhToan.The)
+                || form.TienKhachDua < 0 || cashierId <= 0)
+                return "Thông tin thanh toán không hợp lệ.";
+            if (!await db.NhanVien.AnyAsync(x => x.Id == cashierId && x.DangLamViec))
+                return "Không tìm thấy nhân viên đang làm việc để ghi nhận thanh toán.";
+
+            var total = invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy)
+                .Sum(x => x.SoLuong * x.DonGia);
+            var discount = form.TienGiam ?? invoice.TienGiam;
+            if (discount < 0 || discount > total)
+                return "Giảm giá phải từ 0 đến tổng tiền món.";
+            var availableDeposit = invoice.DatBanId is int bookingId
+                ? await AvailableDepositAsync(bookingId, invoice.Id) : 0;
+            var deposit = Math.Min(availableDeposit, total - discount);
+            var amountDue = total - discount - deposit;
+            if (form.PhuongThuc == PhuongThucThanhToan.TienMat && form.TienKhachDua < amountDue)
+                return $"Số tiền khách đưa ({form.TienKhachDua:N0} đ) không đủ để thanh toán ({amountDue:N0} đ).";
+            if (form.PhuongThuc != PhuongThucThanhToan.TienMat && form.TienGiam is decimal submittedDiscount
+                && submittedDiscount != invoice.TienGiam)
+                return "Vui lòng tải lại hóa đơn sau khi thay đổi giảm giá để đối chiếu số tiền thanh toán.";
+            var last4 = form.SoThe4SoCuoi?.Trim();
+            if (form.PhuongThuc == PhuongThucThanhToan.The && !string.IsNullOrEmpty(last4)
+                && (last4.Length != 4 || last4.Any(c => c < '0' || c > '9')))
+                return "Vui lòng nhập đúng 4 số cuối của thẻ.";
+            var reference = string.IsNullOrWhiteSpace(form.MaGiaoDich) ? null : form.MaGiaoDich.Trim();
+            var transactionReference = form.PhuongThuc == PhuongThucThanhToan.TienMat ? null : reference;
+            if (form.PhuongThuc == PhuongThucThanhToan.The)
+            {
+                var cardType = string.IsNullOrWhiteSpace(form.LoaiThe) ? "Thẻ ngân hàng" : form.LoaiThe.Trim();
+                transactionReference = $"{cardType} *{last4 ?? "XXXX"}" + (reference is null ? "" : $" (Tham chiếu: {reference})");
+            }
+            if (transactionReference?.Length > 100) return "Mã tham chiếu thanh toán quá dài.";
+
+            invoice.TongTienHang = total;
+            invoice.TienGiam = discount;
+            invoice.TienCocDaTru = deposit;
+            if (invoice.DatBan is not null)
+            {
+                if (deposit > 0 && deposit == availableDeposit)
+                    invoice.DatBan.TrangThaiCoc = TrangThaiCoc.DaDoiTru;
+                // Advance the booking token even when a partial allocation keeps its deposit status.
+                db.Entry(invoice.DatBan).Property(x => x.TrangThaiCoc).IsModified = true;
+            }
+            invoice.TienKhachDua = form.PhuongThuc == PhuongThucThanhToan.TienMat ? form.TienKhachDua : amountDue;
+            invoice.TienThoiLai = form.PhuongThuc == PhuongThucThanhToan.TienMat ? form.TienKhachDua - amountDue : 0;
+            invoice.MaGiaoDich = transactionReference;
+            invoice.NhanVienId = cashierId;
+            invoice.PhuongThucThanhToan = form.PhuongThuc;
+            invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
+            invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
             await db.SaveChangesAsync();
+            await tx.CommitAsync();
             return null;
         }
         catch (DbUpdateConcurrencyException)
         {
-            return "Hóa đơn đã bị thay đổi bởi thao tác khác. Vui lòng tải lại và kiểm tra.";
+            return "Hóa đơn hoặc tiền cọc đã thay đổi. Vui lòng tải lại và kiểm tra.";
+        }
+        catch (SqlException ex) when (ex.Number is 1205 or 1222)
+        {
+            return "Hệ thống đang xử lý thanh toán khác. Vui lòng tải lại và thử lại.";
         }
     }
 }

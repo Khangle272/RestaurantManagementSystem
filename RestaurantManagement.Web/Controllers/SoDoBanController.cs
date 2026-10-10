@@ -14,26 +14,37 @@ namespace RestaurantManagement.Web.Controllers;
 public class SoDoBanController(RestaurantDbContext db, TableService tables) : ManagementControllerBase(db)
 {
     [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> Index(int? khuVucId, int? tang, int? datBanId, bool fragment = false, int? preferredTableId = null)
+    public async Task<IActionResult> Index(int? khuVucId, int? tang, int? datBanId, bool fragment = false,
+        int? preferredTableId = null, DateOnly? ngay = null, TimeOnly? gio = null)
     {
         if (datBanId.HasValue && !User.IsInRole(AppRoles.Admin) && !User.IsInRole(AppRoles.TiepTan)) return Forbid();
         var booking = datBanId is int id ? await Db.DatBan.SingleOrDefaultAsync(x => x.Id == id) : null;
         if (datBanId.HasValue && booking is null) return NotFound();
-        var from = booking?.GioDen ?? DateTimeOffset.UtcNow;
-        var until = booking?.GioKetThucDuKien ?? from.AddHours(2);
+        if (!ModelState.IsValid) return BadRequest("Ngày hoặc giờ xem lịch không hợp lệ.");
+        var local = (booking?.GioDen ?? DateTimeOffset.UtcNow).ToOffset(TimeSpan.FromHours(7));
+        var day = booking is null ? ngay ?? DateOnly.FromDateTime(local.DateTime) : DateOnly.FromDateTime(local.DateTime);
+        var time = booking is null ? gio ?? TimeOnly.FromDateTime(local.DateTime) : TimeOnly.FromDateTime(local.DateTime);
+        if (day == DateOnly.MinValue || day == DateOnly.MaxValue) return BadRequest("Ngày xem lịch ngoài phạm vi hỗ trợ.");
+        var dayStart = TableService.VietnamTime(day.ToDateTime(TimeOnly.MinValue));
+        var dayEnd = dayStart.AddDays(1);
+        var from = booking?.GioDen ?? TableService.VietnamTime(day.ToDateTime(time));
+        var until = booking?.GioKetThucDuKien ?? from.AddHours(TableService.MaxDiningHours);
         var areas = await Db.KhuVuc.AsNoTracking().OrderBy(x => x.Tang).ThenBy(x => x.TenKhuVuc).ToListAsync();
         var items = await Db.BanAn.Include(x => x.KhuVuc)
             .Where(x => (!khuVucId.HasValue || x.KhuVucId == khuVucId) && (!tang.HasValue || x.KhuVuc.Tang == tang))
             .OrderBy(x => x.KhuVuc.Tang).ThenBy(x => x.KhuVuc.TenKhuVuc).ThenBy(x => x.MaBan).ToListAsync();
         var tableIds = items.Select(x => x.Id).ToArray();
         var links = await Db.ChiTietDatBan.Include(x => x.DatBan).Where(x => tableIds.Contains(x.BanAnId)
-            && (x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan || x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc
+            && (x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan || (x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc
+                && (!x.DatBan.CocTuDong || x.DatBan.HanThanhToanCoc > DateTimeOffset.UtcNow || x.DatBan.ThoiDiemBaoChuyenKhoan != null
+                    || x.DatBan.TienCocDaNop > x.DatBan.TienCocDaHoan + x.DatBan.TienCocDaGiu))
                 || (x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null)))
             .ToListAsync();
         var model = new TableBoardViewModel
         {
             Areas = areas, AreaId = khuVucId, Floor = tang, Booking = booking, PreferredTableId = preferredTableId,
             BookingVersion = booking is null ? "" : VersionOf(booking), From = from, Until = until,
+            ScheduleDay = day, ScheduleTime = time,
             Tables = items.Select(table =>
             {
                 var occupant = table.TrangThai == TrangThaiBan.DangPhucVu
@@ -41,6 +52,8 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
                         .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan).Select(x => x.DatBan).FirstOrDefault() : null;
                 return new TableCard { Table = table, Version = VersionOf(table), Occupant = occupant,
                     OccupantVersion = occupant is null ? "" : VersionOf(occupant),
+                    ScheduledBookings = links.Where(x => x.BanAnId == table.Id && x.DatBan.GioDen < dayEnd
+                        && x.DatBan.GioKetThucDuKien > dayStart).Select(x => x.DatBan).OrderBy(x => x.GioDen).ToList(),
                     Conflicts = links.Where(x => x.BanAnId == table.Id && x.DatBanId != datBanId && x.DatBan.GioDen < until
                         && x.DatBan.GioKetThucDuKien > from).Select(x => x.DatBan).OrderBy(x => x.GioDen).ToList() };
             }).ToList()

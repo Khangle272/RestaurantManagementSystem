@@ -3,280 +3,56 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Gọi thêm món - " + ViewBag.MaHoaDon;
 }
-
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h3 mb-1">Gọi thêm món</h1>
-            <p class="text-muted mb-0">Thêm món ăn vào đơn hàng <strong class="text-primary">@ViewBag.MaHoaDon</strong></p>
-        </div>
-        <a asp-action="Details" asp-route-id="@ViewBag.HoaDonId" class="btn btn-outline-secondary">Quay lại đơn hàng</a>
+<div class="container-fluid py-2 pos-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div><h1 class="h4 mb-1">Gọi thêm món</h1><p class="small text-muted mb-0">Đơn hàng <strong class="text-primary">@ViewBag.MaHoaDon</strong></p></div>
+        <a asp-action="Details" asp-route-id="@ViewBag.HoaDonId" class="btn btn-sm btn-outline-secondary">Quay lại đơn</a>
     </div>
-
-    @if (TempData["Error"] is string error)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @error
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-
-    <form asp-action="AddDishes" asp-route-id="@ViewBag.HoaDonId" method="post" id="add-dishes-form">
+    <form asp-action="AddDishes" asp-route-id="@ViewBag.HoaDonId" method="post" id="add-dishes-form" data-ajax-form="true" data-pos-form="add" data-invoice-id="@ViewBag.HoaDonId" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value">
         @Html.AntiForgeryToken()
-
-        <div class="row g-3">
-            <!-- Cột trái: Thực đơn món ăn -->
-            <div class="col-12 col-lg-8">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                            <h2 class="h6 text-uppercase text-muted fw-bold mb-0">Chọn món cần gọi thêm</h2>
-                            <div style="max-width: 250px;">
-                                <input type="text" id="dish-search" class="form-control form-control-sm" placeholder="Tìm tên món ăn..." onkeyup="filterDishes()" />
-                            </div>
-                        </div>
-
-                        <!-- Danh mục tabs -->
-                        <div class="d-flex flex-wrap gap-1 mb-3" id="category-pills">
-                            <button type="button" class="btn btn-sm btn-dark category-btn active" data-category="all" onclick="filterCategory('all', this)">Tất cả</button>
-                            @foreach (var cat in Model.Categories)
-                            {
-                                <button type="button" class="btn btn-sm btn-outline-secondary category-btn" data-category="@cat.Id" onclick="filterCategory('@cat.Id', this)">@cat.TenDanhMuc</button>
-                            }
-                        </div>
-
-                        <!-- Lưới món ăn -->
-                        <div class="row g-2" id="dish-grid">
-                            @foreach (var dish in Model.MenuDishes)
-                            {
-                                <div class="col-12 col-sm-6 col-md-4 dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
-                                    <div class="card h-100 border shadow-none hover-shadow">
-                                        <div class="card-body p-2 d-flex flex-column justify-content-between">
-                                            <div>
-                                                <div class="fw-bold text-dark text-truncate" title="@dish.TenMon">@dish.TenMon</div>
-                                                <div class="small text-muted text-truncate mb-2" style="font-size: 0.8rem;">@(dish.MoTa ?? "Món đặc sản nhà hàng")</div>
-                                            </div>
-
-                                            <div class="mt-auto">
-                                                <div class="d-flex flex-column gap-1">
-                                                    @foreach (var size in dish.Sizes)
-                                                    {
-                                                        <button type="button"
-                                                                class="btn btn-sm btn-outline-primary d-flex justify-content-between align-items-center py-1 px-2"
-                                                                data-dish-id="@dish.Id"
-                                                                data-dish-name="@dish.TenMon"
-                                                                data-size-id="@size.Id"
-                                                                data-size-name="@size.TenSize"
-                                                                data-price="@size.GiaBan"
-                                                                onclick="addBtnToCart(this)">
-                                                            <span class="small">@size.TenSize</span>
-                                                            <span class="fw-bold small">@size.GiaBan.ToString("N0") đ +</span>
-                                                        </button>
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        <div class="row g-2 pos-columns">
+            <div class="col-12 col-md-7 col-xl-8 pos-menu-column">
+                <div class="card border-0 shadow-sm pos-menu-card"><div class="card-body p-3">
+                    <div class="pos-menu-filters mb-2">
+                        <label class="visually-hidden" for="dish-category">Danh mục món</label><select id="dish-category" class="form-select form-select-sm"><option value="all">Tất cả danh mục</option>@foreach (var category in Model.Categories) { <option value="@category.Id">@category.TenDanhMuc</option> }</select>
+                        <label class="visually-hidden" for="dish-search">Tìm món ăn</label><input type="search" id="dish-search" class="form-control form-control-sm" placeholder="Tìm món ăn..." />
+                    </div>
+                    @if (Model.MenuDishes.Count == 0)
+                    {
+                        <div class="alert alert-warning" role="alert">Thực đơn chưa có món sẵn sàng phục vụ. Kiểm tra món đã duyệt và size đang mở bán trước khi gửi món thêm.</div>
+                    }
+                    <div class="row g-2 pos-dish-grid" id="dish-grid">
+                        @foreach (var dish in Model.MenuDishes)
+                        {
+                            <div class="col-6 col-xl-4 dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
+                                <div class="card h-100 border shadow-none"><div class="card-body p-2 d-flex flex-column">
+                                    <strong class="small text-dark">@dish.TenMon</strong><span class="small text-muted mb-2">@(dish.MoTa ?? "Món đặc sản nhà hàng")</span>
+                                    <div class="d-flex flex-column gap-1 mt-auto">
+                                        @foreach (var size in dish.Sizes)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-primary d-flex justify-content-between gap-1 btn-add-dish" data-dish-id="@dish.Id" data-dish-name="@dish.TenMon" data-size-id="@size.Id" data-size-name="@size.TenSize" data-price="@size.GiaBan.ToString(System.Globalization.CultureInfo.InvariantCulture)"><span>@size.TenSize</span><strong>@size.GiaBan.ToString("N0") đ +</strong></button>
+                                        }
                                     </div>
-                                </div>
-                            }
-                        </div>
+                                </div></div>
+                            </div>
+                        }
                     </div>
-                </div>
+                    <p id="pos-no-results" class="small text-muted mt-3" hidden>Không tìm thấy món phù hợp.</p>
+                </div></div>
             </div>
-
-            <!-- Cột phải: Món thêm vào đơn -->
-            <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm sticky-top" style="top: 1rem;">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="h6 mb-0 fw-bold">Món gọi thêm (<span id="cart-item-count">0</span>)</h2>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="clearCart()">Xóa</button>
-                        </div>
-                    </div>
-
-                    <div class="card-body p-2" style="max-height: 480px; overflow-y: auto;" id="cart-container">
-                        <div id="empty-cart-message" class="text-center py-5 text-muted">
-                            <p class="small mb-0">Chưa chọn món nào để gọi thêm.</p>
-                            <p class="small text-muted">Bấm vào size món ở bên trái để thêm.</p>
-                        </div>
-                        <div id="cart-items-list" class="d-flex flex-column gap-2"></div>
-                    </div>
-
-                    <div class="card-footer bg-light p-3 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted small">Số lượng thêm:</span>
-                            <span class="fw-semibold" id="cart-total-qty">0 phần</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="fs-6 fw-bold">Tiền thêm:</span>
-                            <span class="fs-5 fw-bold text-danger" id="cart-total-amount">0 đ</span>
-                        </div>
-
-                        <button type="submit" id="btn-submit-order" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" disabled>
-                            ✓ Gửi món thêm vào Bếp
-                        </button>
+            <div class="col-12 col-md-5 col-xl-4">
+                <div class="card border-0 shadow-sm pos-cart">
+                    <div class="card-header bg-white p-3"><div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">Món gọi thêm (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div></div>
+                    <div class="card-body p-2" id="cart-container"><div id="empty-cart-message" class="text-center py-4 text-muted small">Chưa có món. Chọn size ở thực đơn để thêm.</div><div id="cart-items-list" class="d-flex flex-column gap-2"></div></div>
+                    <div class="card-footer bg-light p-3">
+                        <div class="d-flex justify-content-between small mb-1"><span>Số lượng thêm</span><strong id="cart-total-qty">0 phần</strong></div>
+                        <div class="d-flex justify-content-between mb-2"><strong>Tiền thêm</strong><strong class="text-danger" id="cart-total-amount">0 đ</strong></div>
+                        <button type="submit" id="btn-submit-order" class="btn btn-primary w-100 fw-bold" disabled>✓ Gửi món thêm vào bếp</button>
                     </div>
                 </div>
             </div>
         </div>
+        <script type="application/json" id="pos-initial-items">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items))</script>
     </form>
 </div>
-
-@section Scripts {
-<script>
-    let cart = [];
-
-    function filterCategory(catId, btn) {
-        document.querySelectorAll('#category-pills .category-btn').forEach(b => {
-            b.classList.remove('btn-dark', 'active');
-            b.classList.add('btn-outline-secondary');
-        });
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-dark', 'active');
-
-        const search = document.getElementById('dish-search').value.toLowerCase().trim();
-        applyFilters(catId, search);
-    }
-
-    function filterDishes() {
-        const search = document.getElementById('dish-search').value.toLowerCase().trim();
-        const activeCat = document.querySelector('#category-pills .category-btn.active').getAttribute('data-category');
-        applyFilters(activeCat, search);
-    }
-
-    function applyFilters(catId, search) {
-        document.querySelectorAll('.dish-card-item').forEach(item => {
-            const itemCat = item.getAttribute('data-category');
-            const itemName = item.getAttribute('data-name');
-            const matchCat = (catId === 'all' || itemCat === catId);
-            const matchSearch = (!search || itemName.includes(search));
-
-            if (matchCat && matchSearch) {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    }
-
-    function addBtnToCart(btn) {
-        const dishId = parseInt(btn.dataset.dishId);
-        const dishName = btn.dataset.dishName;
-        const sizeId = parseInt(btn.dataset.sizeId);
-        const sizeName = btn.dataset.sizeName;
-        const price = parseFloat(btn.dataset.price);
-        addToCart(dishId, dishName, sizeId, sizeName, price);
-    }
-
-    function addToCart(dishId, dishName, sizeId, sizeName, price) {
-        const existing = cart.find(x => x.sizeId === sizeId);
-        if (existing) {
-            existing.qty += 1;
-        } else {
-            cart.push({
-                dishId: dishId,
-                dishName: dishName,
-                sizeId: sizeId,
-                sizeName: sizeName,
-                price: price,
-                qty: 1,
-                note: ''
-            });
-        }
-        renderCart();
-    }
-
-    function updateQty(sizeId, delta) {
-        const item = cart.find(x => x.sizeId === sizeId);
-        if (!item) return;
-        item.qty += delta;
-        if (item.qty <= 0) {
-            cart = cart.filter(x => x.sizeId !== sizeId);
-        }
-        renderCart();
-    }
-
-    function updateNote(sizeId, note) {
-        const item = cart.find(x => x.sizeId === sizeId);
-        if (item) item.note = note;
-    }
-
-    function removeItem(sizeId) {
-        cart = cart.filter(x => x.sizeId !== sizeId);
-        renderCart();
-    }
-
-    function clearCart() {
-        cart = [];
-        renderCart();
-    }
-
-    function renderCart() {
-        const container = document.getElementById('cart-items-list');
-        const emptyMsg = document.getElementById('empty-cart-message');
-        const submitBtn = document.getElementById('btn-submit-order');
-
-        if (cart.length === 0) {
-            emptyMsg.style.display = 'block';
-            container.innerHTML = '';
-            document.getElementById('cart-item-count').innerText = '0';
-            document.getElementById('cart-total-qty').innerText = '0 phần';
-            document.getElementById('cart-total-amount').innerText = '0 đ';
-            submitBtn.disabled = true;
-            return;
-        }
-
-        emptyMsg.style.display = 'none';
-        let html = '';
-        let totalQty = 0;
-        let totalAmount = 0;
-
-        cart.forEach((item, idx) => {
-            const itemTotal = item.qty * item.price;
-            totalQty += item.qty;
-            totalAmount += itemTotal;
-
-            html += `
-                <div class="card border p-2 bg-white shadow-none">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div>
-                            <div class="fw-bold text-dark small">${item.dishName}</div>
-                            <span class="badge bg-secondary-subtle text-secondary py-0 px-1" style="font-size: 0.75rem;">${item.sizeName}</span>
-                            <span class="text-muted small">${item.price.toLocaleString('vi-VN')} đ</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="removeItem(${item.sizeId})">✕</button>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="updateQty(${item.sizeId}, -1)">-</button>
-                            <span class="btn btn-outline-secondary disabled text-dark fw-bold py-0 px-2">${item.qty}</span>
-                            <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="updateQty(${item.sizeId}, 1)">+</button>
-                        </div>
-                        <span class="fw-bold small text-dark">${itemTotal.toLocaleString('vi-VN')} đ</span>
-                    </div>
-
-                    <div class="mt-2">
-                        <input type="text" class="form-control form-control-sm py-0 px-2" style="font-size: 0.8rem;"
-                               placeholder="Ghi chú chế biến..."
-                               value="${item.note || ''}"
-                               oninput="updateNote(${item.sizeId}, this.value)" />
-                    </div>
-
-                    <!-- Hidden inputs for model binding -->
-                    <input type="hidden" name="items[${idx}].MonAnId" value="${item.dishId}" />
-                    <input type="hidden" name="items[${idx}].MonAnSizeId" value="${item.sizeId}" />
-                    <input type="hidden" name="items[${idx}].SoLuong" value="${item.qty}" />
-                    <input type="hidden" name="items[${idx}].YeuCauCheBien" value="${item.note || ''}" />
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
-        document.getElementById('cart-item-count').innerText = cart.length;
-        document.getElementById('cart-total-qty').innerText = totalQty + ' phần';
-        document.getElementById('cart-total-amount').innerText = totalAmount.toLocaleString('vi-VN') + ' đ';
-        submitBtn.disabled = false;
-    }
-</script>
-}
