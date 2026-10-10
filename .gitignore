@@ -486,7 +486,6 @@ templates_stitch/
 
 # Local Configuration files
 prompt.md
-TODO_RESERVATION_AGENT.md
 TODO.md
 
 # Runtime QR uploads are local configuration, not source code
