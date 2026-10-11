@@ -12,27 +12,12 @@
             <p class="text-muted mb-0">Theo dõi, cập nhật tiến độ phục vụ và xử lý đơn hàng tại bàn, mang đi và giao hàng.</p>
         </div>
         <div>
-            <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm">
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i>
                 Ghi nhận gọi món mới
             </a>
         </div>
     </div>
-
-    @if (TempData["Success"] is string success)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @success
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-    @if (TempData["Error"] is string error)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @error
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
 
     <!-- Bộ lọc tìm kiếm -->
     <div class="card border-0 shadow-sm mb-4">
@@ -41,7 +26,7 @@
                 <div class="col-12 col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0 text-muted">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <i class="bi bi-search"></i>
                         </span>
                         <input type="text" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo mã HĐ, tên bàn, tên khách, SĐT..." />
                     </div>
@@ -80,9 +65,8 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-3">Mã đơn / Thời gian</th>
-                        <th>Loại đơn</th>
                         <th>Bàn / Người nhận</th>
-                        <th>Tiến độ chế biến</th>
+                        <th class="d-none d-lg-table-cell">Tiến độ chế biến</th>
                         <th class="text-end">Tổng tiền</th>
                         <th>Thanh toán</th>
                         <th class="text-end pe-3">Thao tác</th>
@@ -92,7 +76,7 @@
                 @if (Model.Orders.Count == 0)
                 {
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
+                        <td colspan="6" class="text-center py-5 text-muted">
                             <p class="mb-2">Không tìm thấy đơn hàng nào phù hợp với điều kiện tìm kiếm.</p>
                             <a asp-action="Create" class="btn btn-sm btn-outline-primary">Tạo đơn gọi món ngay</a>
                         </td>
@@ -129,10 +113,7 @@
                             <a asp-action="Details" asp-route-id="@order.Id" class="fw-bold text-decoration-none text-dark">
                                 @order.MaHoaDon
                             </a>
-                            <div class="small text-muted">@order.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</div>
-                        </td>
-                        <td>
-                            <span class="badge rounded-pill @typeBadge px-2 py-1">@order.TenLoaiDon</span>
+                            <div class="small text-muted">@order.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") · @order.TenLoaiDon</div>
                         </td>
                         <td>
                             @if (order.LoaiDonHang == LoaiDonHang.TaiBan)
@@ -152,30 +133,30 @@
                                 }
                             }
                         </td>
-                        <td>
+                        <td class="d-none d-lg-table-cell">
                             <div class="d-flex flex-wrap gap-1">
                                 @if (order.MonSanSang > 0)
                                 {
                                     <span class="badge bg-success" title="Món đã nấu xong, sẵn sàng mang ra bàn!">
-                                        ⚡ @order.MonSanSang sẵn sàng
+                                        @order.MonSanSang sẵn sàng
                                     </span>
                                 }
                                 @if (order.MonDangCheBien > 0)
                                 {
                                     <span class="badge bg-warning text-dark" title="Đang nấu trong bếp">
-                                        🔥 @order.MonDangCheBien đang nấu
+                                        @order.MonDangCheBien đang nấu
                                     </span>
                                 }
                                 @if (order.MonChoCheBien > 0)
                                 {
                                     <span class="badge bg-secondary" title="Chờ bếp tiếp nhận">
-                                        ⏳ @order.MonChoCheBien chờ nấu
+                                        @order.MonChoCheBien chờ nấu
                                     </span>
                                 }
                                 @if (order.MonDaPhucVu > 0 && order.MonChoCheBien == 0 && order.MonDangCheBien == 0 && order.MonSanSang == 0)
                                 {
                                     <span class="badge bg-light text-muted border">
-                                        ✓ Đã phục vụ đủ (@order.MonDaPhucVu món)
+                                        Đã phục vụ đủ (@order.MonDaPhucVu món)
                                     </span>
                                 }
                                 else if (order.TongSoMon == 0)

@@ -26,11 +26,11 @@
                         <div id="pos-order-config">
                             <div class="btn-group w-100 mb-2" role="group" aria-label="Loại đơn hàng">
                                 <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-dinein" value="TaiBan" autocomplete="off" />
-                                <label class="btn btn-outline-primary" for="type-dinein">🍽️ Tại bàn</label>
+                                <label class="btn btn-outline-primary" for="type-dinein">Tại bàn</label>
                                 <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-takeaway" value="MangDi" autocomplete="off" />
-                                <label class="btn btn-outline-primary" for="type-takeaway">🥡 Mang đi</label>
+                                <label class="btn btn-outline-primary" for="type-takeaway">Mang đi</label>
                                 <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-delivery" value="GiaoHang" autocomplete="off" />
-                                <label class="btn btn-outline-primary" for="type-delivery">🛵 Giao hàng</label>
+                                <label class="btn btn-outline-primary" for="type-delivery">Giao hàng</label>
                             </div>
                             <div id="section-dinein" class="@(Model.LoaiDonHang == LoaiDonHang.TaiBan ? "" : "d-none")">
                                 <p class="small fw-semibold mb-2">Chọn bàn đang phục vụ</p>
@@ -95,7 +95,7 @@
             <div class="col-12 col-md-5 col-xl-4">
                 <div class="card border-0 shadow-sm pos-cart">
                     <div class="card-header bg-white p-3">
-                        <div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">🛒 Món đã chọn (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div>
+                        <div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">Món đã chọn (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div>
                         <div class="small text-muted mt-1" id="order-target-display">Đang chọn: <span class="fw-semibold text-primary">Chưa chọn bàn</span></div>
                     </div>
                     <div class="card-body p-2" id="cart-container"><div id="empty-cart-message" class="text-center py-4 text-muted small">Chưa có món. Chọn size ở thực đơn để thêm.</div><div id="cart-items-list" class="d-flex flex-column gap-2"></div></div>
@@ -103,7 +103,7 @@
                         <label asp-for="GhiChuDonHang" class="form-label small">Ghi chú đơn hàng</label><input asp-for="GhiChuDonHang" class="form-control form-control-sm mb-2" maxlength="500" />
                         <div class="d-flex justify-content-between small mb-1"><span>Số lượng</span><strong id="cart-total-qty">0 phần</strong></div>
                         <div class="d-flex justify-content-between mb-2"><strong>Tạm tính</strong><strong class="text-danger" id="cart-total-amount">0 đ</strong></div>
-                        <button type="submit" id="btn-submit-order" class="btn btn-success w-100 fw-bold" disabled>✓ Gửi bếp & tạo đơn</button>
+                        <button type="submit" id="btn-submit-order" class="btn btn-success w-100 fw-bold" disabled>Gửi bếp & tạo đơn</button>
                     </div>
                 </div>
             </div>

@@ -6,8 +6,8 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">📈 Báo Cáo Doanh Thu & Đơn Hàng</h1>
-        <p class="text-muted mb-0">Thống kê doanh thu thực tế theo Ngày, Tháng hoặc Năm; phân tích theo phương thức thanh toán và loại đơn hàng.</p>
+        <h1 class="h3 fw-bold mb-1">Báo cáo doanh thu & đơn hàng</h1>
+        <p class="text-muted mb-0">Doanh thu thực tế theo ngày, tháng hoặc năm.</p>
     </div>
     <div class="d-flex gap-2">
         <a asp-action="XuatDoanhThuCsv" asp-route-cheDo="@Model.CheDo" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")" asp-route-nam="@Model.Nam" class="btn btn-outline-success d-inline-flex align-items-center gap-1 shadow-sm">
@@ -26,17 +26,17 @@
         <ul class="nav nav-pills mb-3" id="viewModeTabs">
             <li class="nav-item">
                 <a class="nav-link @(Model.CheDo == "TheoNgay" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoNgay" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")">
-                    📅 Xem theo Ngày
+                    Theo ngày
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link @(Model.CheDo == "TheoThang" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoThang" asp-route-nam="@Model.Nam">
-                    📊 Xem theo Tháng
+                    Theo tháng
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link @(Model.CheDo == "TheoNam" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoNam" asp-route-nam="@Model.Nam">
-                    🏛️ Xem theo Năm
+                    Theo năm
                 </a>
             </li>
         </ul>
@@ -141,15 +141,15 @@
                 <canvas id="orderTypeChart" style="max-height: 200px;"></canvas>
                 <div class="mt-3 small">
                     <div class="d-flex justify-content-between py-1 border-bottom">
-                        <span>🍽️ Tại bàn:</span>
+                        <span>Tại bàn:</span>
                         <strong>@Model.DoanhThuTaiBan.ToString("N0") đ</strong>
                     </div>
                     <div class="d-flex justify-content-between py-1 border-bottom">
-                        <span>🥡 Mang đi:</span>
+                        <span>Mang đi:</span>
                         <strong>@Model.DoanhThuMangDi.ToString("N0") đ</strong>
                     </div>
                     <div class="d-flex justify-content-between py-1">
-                        <span>🛵 Giao hàng:</span>
+                        <span>Giao hàng:</span>
                         <strong>@Model.DoanhThuGiaoHang.ToString("N0") đ</strong>
                     </div>
                 </div>

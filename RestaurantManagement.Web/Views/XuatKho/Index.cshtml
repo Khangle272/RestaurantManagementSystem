@@ -102,16 +102,16 @@
             <table class="table table-admin align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 140px;">Số Phiếu</th>
-                        <th>Ngày Xuất</th>
-                        <th>Bộ Phận Nhận</th>
-                        <th>Người Nhận</th>
-                        <th>Lý Do Xuất</th>
-                        <th>Người Lập Phiếu</th>
-                        <th class="text-center">Số Mặt Hàng</th>
-                        <th class="text-end">Tổng Giá Trị</th>
-                        <th>Trạng Thái</th>
-                        <th class="text-end" style="width: 100px;">Thao Tác</th>
+                        <th style="width: 110px;">Số phiếu</th>
+                        <th>Ngày xuất</th>
+                        <th>Bộ phận nhận</th>
+                        <th class="d-none d-xl-table-cell">Người nhận</th>
+                        <th class="d-none d-md-table-cell">Lý do xuất</th>
+                        <th class="d-none d-lg-table-cell">Người lập</th>
+                        <th class="text-center">Mặt hàng</th>
+                        <th class="text-end">Tổng giá trị</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 90px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -138,9 +138,9 @@
                                     <i class="bi bi-geo-alt me-1 text-primary"></i>@(item.BoPhanNhan ?? "Bếp")
                                 </span>
                             </td>
-                            <td>@(item.NguoiNhan ?? "—")</td>
-                            <td>@(item.GhiChu ?? "Phục vụ chế biến")</td>
-                            <td>@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
+                            <td class="d-none d-xl-table-cell">@(item.NguoiNhan ?? "—")</td>
+                            <td class="d-none d-md-table-cell text-truncate" style="max-width: 180px;">@(item.GhiChu ?? "Phục vụ chế biến")</td>
+                            <td class="d-none d-lg-table-cell">@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border">@item.ChiTiet.Count món</span>
                             </td>

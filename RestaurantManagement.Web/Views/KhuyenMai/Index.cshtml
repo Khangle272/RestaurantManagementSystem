@@ -122,7 +122,7 @@
                             <div class="fw-semibold text-danger">
                                 @if (item.KieuGiam == KieuGiam.PhanTram)
                                 {
-                                    <span>Giảm @item.GiaTri:0.##%</span>
+                                    <span>Giảm @item.GiaTri.ToString("0.##")%</span>
                                     @if (item.MucGiamToiDa.HasValue)
                                     {
                                         <span class="small text-muted fw-normal">(tối đa @item.MucGiamToiDa.Value.ToString("N0") đ)</span>

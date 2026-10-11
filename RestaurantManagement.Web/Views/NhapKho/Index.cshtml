@@ -102,15 +102,15 @@
             <table class="table table-admin align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 140px;">Số Phiếu</th>
-                        <th>Ngày Nhập</th>
-                        <th>Nhà Cung Cấp</th>
-                        <th>Số Hóa Đơn</th>
-                        <th>Người Lập</th>
-                        <th class="text-center">Số Mặt Hàng</th>
-                        <th class="text-end">Tổng Tiền (VNĐ)</th>
-                        <th>Trạng Thái</th>
-                        <th class="text-end" style="width: 100px;">Thao Tác</th>
+                        <th style="width: 110px;">Số phiếu</th>
+                        <th>Ngày nhập</th>
+                        <th>Nhà cung cấp</th>
+                        <th class="d-none d-xl-table-cell">Số hóa đơn</th>
+                        <th class="d-none d-lg-table-cell">Người lập</th>
+                        <th class="text-center">Mặt hàng</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 90px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -135,8 +135,8 @@
                             <td>
                                 <div class="fw-medium">@(item.NhaCungCap?.TenNhaCungCap ?? "Nhập điều chỉnh / Tồn đầu kỳ")</div>
                             </td>
-                            <td>@(item.SoHoaDon ?? "—")</td>
-                            <td>@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
+                            <td class="d-none d-xl-table-cell">@(item.SoHoaDon ?? "—")</td>
+                            <td class="d-none d-lg-table-cell">@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border">@item.ChiTiet.Count món</span>
                             </td>
