@@ -9,11 +9,14 @@
     var entries = new (string Group, string Controller, string Action, string Label, bool Allowed)[] {
         ("Tài khoản", "Account", "Index", "Thông tin cá nhân", true),
         ("Tài khoản", "NhanVien", "Index", "Quản lý nhân viên", admin),
+        ("Tài khoản", "NhanVien", "PhanQuyen", "Ma trận phân quyền", admin),
         ("Tài khoản", "TaiKhoanKhachHang", "Index", "Quản lý khách hàng", admin),
         ("Bàn & Đặt bàn", "SoDoBan", "Index", "Sơ đồ bàn", reception || User.IsInRole("BoiBan")),
         ("Bàn & Đặt bàn", "QuanLyDatBan", "Index", "Yêu cầu đặt bàn", reception),
         ("Thực đơn", "MonAn", "Index", admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức", admin || User.IsInRole("Bep")),
         ("Thực đơn", "DanhMuc", "Index", "Quản lý danh mục món", admin),
+        ("Khuyến mãi & Voucher", "KhuyenMai", "Index", "Chương trình khuyến mãi", admin),
+        ("Khuyến mãi & Voucher", "Voucher", "Index", "Quản lý mã Voucher", admin),
         ("Vận hành", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
         ("Vận hành", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
         ("Vận hành", "Bep", "Index", "Bếp chế biến", admin || User.IsInRole("Bep")),
@@ -27,19 +30,34 @@
         ("Quản lý Kho", "Kho", "BaoCao", "Báo cáo Nhập-Xuất-Tồn", warehouse),
         ("Quản lý Kho", "NhaCungCap", "Index", "Nhà cung cấp", warehouse),
         ("Quản lý Kho", "NguyenLieu", "Index", "Danh mục nguyên liệu", warehouse),
+        ("Báo cáo & Thống kê", "BaoCao", "Index", "Tổng quan kinh doanh", admin),
+        ("Báo cáo & Thống kê", "BaoCao", "DoanhThu", "Báo cáo doanh thu", admin),
+        ("Báo cáo & Thống kê", "BaoCao", "MonBanChay", "Món ăn bán chạy", admin),
+        ("Báo cáo & Thống kê", "BaoCao", "TonKho", "Tồn kho tổng hợp", admin || warehouse),
+        ("Báo cáo & Thống kê", "BaoCao", "HieuQuaKhuyenMai", "Hiệu quả khuyến mãi", admin),
         ("Đánh giá khách hàng", "QuanLyDatBan", "DanhGia", "Đánh giá khách hàng", reception)
     };
     bool IsActive(string targetController, string targetAction) =>
         (controller == targetController || (targetController == "NhanVien" && controller == "TaiKhoanNhanVien"))
         && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"))
         && (targetController != "DonHang" || action == targetAction)
-        && (targetController != "Kho" || action == targetAction);
+        && (targetController != "Kho" || action == targetAction)
+        && (targetController != "NhanVien" || action == targetAction)
+        && (targetController != "BaoCao" || action == targetAction);
 
     string GetIcon(string ctrl, string act) => (ctrl, act) switch
     {
         ("Account", _) => "bi-person-badge",
+        ("NhanVien", "PhanQuyen") => "bi-shield-check",
         ("NhanVien", _) or ("TaiKhoanNhanVien", _) => "bi-people",
         ("TaiKhoanKhachHang", _) => "bi-person-heart",
+        ("KhuyenMai", _) => "bi-tags",
+        ("Voucher", _) => "bi-ticket-perforated",
+        ("BaoCao", "Index") => "bi-graph-up-arrow",
+        ("BaoCao", "DoanhThu") => "bi-cash-stack",
+        ("BaoCao", "MonBanChay") => "bi-trophy",
+        ("BaoCao", "TonKho") => "bi-archive",
+        ("BaoCao", "HieuQuaKhuyenMai") => "bi-pie-chart",
         ("SoDoBan", _) => "bi-grid-3x3-gap",
         ("QuanLyDatBan", "Index") => "bi-calendar-check",
         ("QuanLyDatBan", "DanhGia") => "bi-star-half",

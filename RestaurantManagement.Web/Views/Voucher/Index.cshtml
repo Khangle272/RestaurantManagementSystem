@@ -1,0 +1,230 @@
+@model RestaurantManagement.Web.Models.VoucherListViewModel
+@{
+    ViewData["Title"] = "Quản lý Voucher & Mã giảm giá";
+    ViewData["ActiveMenu"] = "Voucher";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">🎟️ Quản lý Voucher & Mã Giảm Giá</h1>
+        <p class="text-muted mb-0">Tạo mã ưu đãi linh hoạt cho khách hàng, giới hạn lượt dùng và theo dõi tiến độ sử dụng.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="KhuyenMai" asp-action="Index" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-gift"></i> Chương trình khuyến mãi
+        </a>
+        <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-plus-lg"></i> Phát hành Voucher mới
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@msg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@err
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo mã hoặc tên chương trình..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="khuyenMaiId" class="form-select">
+                    <option value="">-- Tất cả chương trình --</option>
+                    @foreach (var opt in Model.PromotionOptions)
+                    {
+                        <option value="@opt.Id" selected="@(Model.KhuyenMaiId == opt.Id)">@opt.TenChuongTrinh</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="statusFilter" class="form-select">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    <option value="ConHieuLuc" selected="@(Model.StatusFilter == "ConHieuLuc")">🟢 Còn hiệu lực</option>
+                    <option value="HetHan" selected="@(Model.StatusFilter == "HetHan")">⚪ Đã hết hạn</option>
+                    <option value="NgungSuDung" selected="@(Model.StatusFilter == "NgungSuDung")">🔴 Ngừng sử dụng</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-secondary w-100">Lọc</button>
+                <a asp-action="Index" class="btn btn-light" title="Đặt lại bộ lọc"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Mã Voucher</th>
+                    <th>Chương trình & Mức ưu đãi</th>
+                    <th>Lượt sử dụng</th>
+                    <th>Đối tượng áp dụng</th>
+                    <th>Thời hạn hiệu lực</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end" style="width: 140px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-ticket-perforated fs-1 d-block mb-2"></i>
+                            Chưa có mã Voucher nào phù hợp với bộ lọc.
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model.Items)
+                {
+                    var percentUsed = item.GioiHanTongLuot > 0 ? (int)((double)item.SoLuotDaDung / item.GioiHanTongLuot * 100) : 0;
+                    var isExpired = item.HetHan;
+                    var isOutOfStock = item.HetLuot;
+
+                    <tr>
+                        <td class="text-muted small">@item.Id</td>
+                        <td>
+                            <div class="d-inline-flex align-items-center gap-1 bg-light px-2 py-1 rounded border">
+                                <span class="fw-bold font-monospace text-primary">@item.Ma</span>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-muted" onclick="navigator.clipboard.writeText('@item.Ma'); alert('Đã sao chép mã @item.Ma!');" title="Sao chép mã">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">@item.TenKhuyenMai</div>
+                            <div class="small text-danger fw-semibold">@item.UuDaiMota</div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="fw-bold small">@item.SoLuotDaDung / @item.GioiHanTongLuot</span>
+                                <span class="text-muted small">(@percentUsed%)</span>
+                            </div>
+                            <div class="progress" style="height: 6px; width: 120px;">
+                                <div class="progress-bar @(percentUsed >= 100 ? "bg-danger" : percentUsed >= 80 ? "bg-warning" : "bg-success")" style="width: @percentUsed%;"></div>
+                            </div>
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.TenKhachHang))
+                            {
+                                <span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i>@item.TenKhachHang</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-muted border">Tất cả khách hàng</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="small">
+                                <div>Từ: @item.BatDau.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy")</div>
+                                <div>Đến: <strong>@item.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy")</strong></div>
+                            </div>
+                        </td>
+                        <td>
+                            @if (!item.DangSuDung)
+                            {
+                                <span class="badge bg-danger rounded-pill">Đã vô hiệu</span>
+                            }
+                            else if (isExpired)
+                            {
+                                <span class="badge bg-secondary rounded-pill">Đã hết hạn</span>
+                            }
+                            else if (isOutOfStock)
+                            {
+                                <span class="badge bg-warning text-dark rounded-pill">Hết lượt</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success rounded-pill">🟢 Khả dụng</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Chỉnh sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-secondary" title="@(item.DangSuDung ? "Khóa Voucher" : "Kích hoạt Voucher")">
+                                        <i class="bi @(item.DangSuDung ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteVoucherModal-@item.Id" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- Delete Modal -->
+                            <div class="modal fade text-start" id="deleteVoucherModal-@item.Id" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Xác nhận xóa Voucher</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Bạn có chắc muốn xóa mã Voucher <strong>@item.Ma</strong>?
+                                            @if (item.SoLuotDaDung > 0)
+                                            {
+                                                <div class="alert alert-warning mt-2 small mb-0">
+                                                    Mã voucher đã có <strong>@item.SoLuotDaDung lượt sử dụng</strong> trong các hóa đơn lịch sử. Hệ thống sẽ chuyển trạng thái sang <strong>Ngừng sử dụng</strong> để đảm bảo tính toàn vẹn dữ liệu.
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                            <form asp-action="Delete" asp-route-id="@item.Id" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-danger">Xác nhận xóa</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phân trang -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <span class="text-muted small">Hiển thị @Model.Items.Count / @Model.TotalItems mã voucher</span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-search="@Model.Search" asp-route-khuyenMaiId="@Model.KhuyenMaiId" asp-route-statusFilter="@Model.StatusFilter">Trước</a>
+                </li>
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@p" asp-route-search="@Model.Search" asp-route-khuyenMaiId="@Model.KhuyenMaiId" asp-route-statusFilter="@Model.StatusFilter">@p</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-search="@Model.Search" asp-route-khuyenMaiId="@Model.KhuyenMaiId" asp-route-statusFilter="@Model.StatusFilter">Sau</a>
+                </li>
+            </ul>
+        </div>
+    }
+</div>

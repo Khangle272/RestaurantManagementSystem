@@ -37,7 +37,7 @@ builder.Services.ConfigureApplicationCookie(options =>
         var path = context.Request.Path.Value ?? "";
         var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien", "/CauHinhQr",
             "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/DatTruoc", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword",
-            "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap" };
+            "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap", "/KhuyenMai", "/Voucher", "/BaoCao" };
         var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
             || path.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)) ? "/admin" : "/Account/Login";
         context.Response.Redirect(login + "?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
@@ -56,6 +56,8 @@ builder.Services.AddHostedService<RestaurantManagement.Web.Services.TableExpiryW
 builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.IKhoService, RestaurantManagement.Web.Services.InventoryService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.PreorderService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.IPromotionService, RestaurantManagement.Web.Services.PromotionService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.IBaoCaoService, RestaurantManagement.Web.Services.BaoCaoService>();
 
 var app = builder.Build();
 

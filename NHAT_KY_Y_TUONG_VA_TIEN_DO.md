@@ -1,6 +1,6 @@
 # Tiến độ, quyết định nghiệp vụ và bàn giao
 
-Cập nhật: **09/10/2026 — Người 1, giữ UI master; hoàn thiện giỏ món, đối chiếu cọc, giữ chỗ 1 tiếng/tự hủy và phục vụ tối đa 3 tiếng; đồng bộ bàn giao theo phân công mới**.
+Cập nhật: **11/10/2026 — Người 3 hoàn thiện Quản lý Nhân sự & Ma trận phân quyền RBAC, Khuyến mãi & Voucher kết hợp nhiều ưu đãi, Báo cáo & Phân tích chuyên sâu (Doanh thu/Bestsellers/Tồn kho/Hiệu quả ưu đãi)**.
 File mô tả trạng thái của nhánh đang đọc; không mặc nhiên có nghĩa đã merge vào `master`.
 Nhánh bàn giao: `member1-week8-update`, dựng từ bản `master` sạch tại `f7695e2`, đã fetch đối chiếu GitHub ngày 09/10 trước khi bàn giao; master chưa có commit mới hơn. Bản sửa dở `member1-week8` và mốc `member1-week8-refresh` được giữ riêng để đối chiếu. Giữ giao diện và các module của nhóm; nhánh này dùng để review, chỉ nhóm trưởng/người được phân công thực hiện merge sau khi kiểm tra. Mã commit/trạng thái xuất bản đối chiếu trực tiếp trên GitHub, không suy từ ghi chú lịch sử.
 
@@ -155,7 +155,7 @@ Lệnh chỉ chạy ở Development, không tự chạy khi mở Web. Chạy l�
 | Bếp & Phục vụ — nền nhóm | KDS `/Bep` FIFO theo từng dòng order; size/loại đơn/ghi chú; Bếp `ChoCheBien` → `DangCheBien` → `SanSang`; Bồi bàn xác nhận mang ra `DaPhucVu`; hủy món chưa nấu điều chỉnh bill | Đã có bước Đã phục vụ, không giao lại như chức năng chưa làm. Người 2 nối kho đúng một lần theo thời điểm gửi món sau nhận bàn, giữ bước xác nhận mang ra thật và không hoàn nguyên liệu món đã nấu |
 | Thanh toán — nền nhóm | `/HoaDon/Details`/`ThanhToan` có tiền mặt, giao diện QR/thẻ, ghi nhận thanh toán/chiết khấu, cấn trừ cọc đã nhận, in bill. Đây là giao diện và ghi nhận do nhân viên, không chứng minh đã kết nối ngân hàng/POS thật | Người 3 nối voucher/điều kiện giảm giá và báo cáo vào hóa đơn hiện có; không làm lại màn thanh toán hay biến khách báo chuyển cọc thành tiền thực nhận. Webhook/ngân hàng thật chỉ làm khi có tài khoản và phạm vi triển khai |
 | Món/định mức/kho — Người 2 | Đã có CRUD, nhà cung cấp, chứng từ nhập/xuất/thanh lý và báo cáo kho của nhóm; công thức món hiện chưa tách từng size | Nối nhà cung cấp–cung ứng nhiều/nhiều; dấu + tạo nhanh danh mục/nguyên liệu/nhà cung cấp giữ form; định lượng mỗi size, size từng thành phần combo; trừ kho đúng một lần khi món sau nhận bàn được gửi thực sự, không trừ khi khách chỉ bỏ vào giỏ hoặc chọn trước. Giữ chặn đổi đơn vị nguyên liệu đã dùng; không hoàn kho món đã nấu khi hủy |
-| Nhân sự/khuyến mãi/thống kê — Người 3 | Ma trận role, quản lý tài khoản/hồ sơ nhân viên và hóa đơn đã có; CSDL có `KhuyenMai`, `KhuyenMaiMon`, `Voucher`, điều kiện/giới hạn/kết hợp; trang khách đọc chương trình hiện hành. Báo cáo nhập–xuất–tồn của nhóm đã có | Không viết lại auth hoặc coi đã có bảng khuyến mãi là đã hoàn tất nghiệp vụ. Nối quản trị chương trình/voucher và áp dụng/giới hạn lượt/kết hợp ở server; quyền theo chức vụ dựa trên ma trận hiện có; báo cáo doanh thu ngày/tháng/năm, đơn, bestseller và hiệu quả ưu đãi. Không cộng cọc chưa đối chiếu/hóa đơn hủy vào doanh thu; không cộng cọc hai lần khi đã trừ trên bill |
+| Nhân sự/khuyến mãi/thống kê — Người 3 | **Đã hoàn thành toàn diện**: Ma trận phân quyền RBAC 6 vai trò x 9 nhóm nghiệp vụ (`/NhanVien/PhanQuyen`), xem trước quyền khi tạo/sửa NV; Quản lý khuyến mãi (`/KhuyenMai`) & voucher (`/Voucher`); Thuật toán kết hợp ưu đãi nhiều tầng và tích hợp POS (`/HoaDon/Details`); Báo cáo chuyên sâu KPI, Doanh thu ngày/tháng/năm, Món ăn bán chạy, Tồn kho tổng hợp và Phân tích ROI khuyến mãi (`/BaoCao/*`) kèm xuất CSV UTF-8. Bảo toàn nguyên tắc không tính cọc chưa đối chiếu/bill hủy vào doanh thu. | Nhóm kiểm tra tổng thể và cập nhật tài liệu báo cáo Word. |
 | Báo cáo Word — cả nhóm | Luồng/vai trò hiện tại ghi trong file này | Cập nhật sơ đồ, đặc tả, ma trận quyền, luồng bàn/bếp, công thức giá combo và các trạng thái theo code thật; không ghi phần bàn giao còn thiếu là đã làm |
 
 ### Hai góp ý thực đơn cần làm tiếp — giải thích bằng ví dụ
@@ -280,3 +280,32 @@ dotnet run --project RestaurantManagement.Web -- --remove-retired-menu-roles
   8. Xuất và in hóa đơn đẹp mắt, chuẩn hóa print CSS cho khổ giấy in nhiệt K80 và khổ A5.
   9. Sau khi phục vụ hết các món và thanh toán đủ, `TableService` cho phép bồi bàn bấm **Kết thúc phục vụ** (`DangPhucVu` → `CanDon`) và **Dọn xong** (`CanDon` → `SanSang`) trọn vẹn 100%.
 - Migration thứ 5 `OrderFulfillmentAndMultiPayment` bổ sung các cột mới với giá trị mặc định và backfill dữ liệu lịch sử không mất mát.
+
+## 9. Kiểm chứng ngày 11/10/2026 — Thành viên 3 (Nhân sự & Phân quyền RBAC, Khuyến mãi & Voucher kết hợp, Báo cáo & Phân tích chuyên sâu)
+
+- **Build solution & Web**: **0 lỗi**, biên dịch hoàn tất.
+- **Nghiệp vụ đã hoàn thiện theo đặc tả phân công Người 3:**
+  1. **Quản lý nhân sự & Phân quyền (RBAC)**:
+     - Xây dựng trang trực quan hóa **Ma trận phân quyền** (`/NhanVien/PhanQuyen`): phân định rạch ròi 6 vai trò nội bộ (`Admin`, `TiepTan`, `BoiBan`, `ThuNgan`, `Bep`, `Kho`) trên 9 nhóm nghiệp vụ hệ thống.
+     - Tích hợp hộp **Xem trước quyền hạn thời gian thực** (Real-time RBAC preview) bằng JavaScript ngay trong form Tạo mới/Chỉnh sửa nhân viên (`/NhanVien/Create`, `/NhanVien/Edit`), giúp Admin nắm bắt ngay phạm vi trách nhiệm khi chọn chức vụ.
+     - Khóa/mở khóa tài khoản an toàn, bảo vệ tài khoản quản trị tối cao, thu hồi phiên đăng nhập khi thay đổi vai trò.
+  2. **Quản lý Khuyến mãi & Voucher với cơ chế kết hợp nhiều ưu đãi**:
+     - Quản trị chương trình ưu đãi (`/KhuyenMai`): CRUD đầy đủ, hỗ trợ giảm theo tỷ lệ `%` hoặc số tiền mặt `VND`, áp dụng theo Món ăn lẻ hoặc Toàn bộ hóa đơn, cấu hình giá trị hóa đơn tối thiểu (`GiaTriToiThieu`), mức giảm tối đa (`MucGiamToiDa`), thứ tự ưu tiên (`ThuTuApDung`), và cờ cho phép kết hợp (`ChoPhepKetHop`).
+     - Quản lý mã Voucher (`/Voucher`): Tự động phát sinh mã dạng `SEN-XXXXXXXX`, giới hạn số lượt sử dụng tối đa, kiểm soát số lần đã dùng, thời hạn hiệu lực và trạng thái kích hoạt.
+     - Thuật toán kết hợp ưu đãi thông minh (`PromotionService`):
+       - Tự động tách và tính toán ưu đãi món trước, ưu đãi hóa đơn sau.
+       - Khi các khuyến mãi cho phép kết hợp (`ChoPhepKetHop = true`), tự động xếp chồng theo thứ tự ưu tiên (`ThuTuApDung`).
+       - Khi có khuyến mãi không cho phép kết hợp, tự so sánh tổng tiền giảm của nhóm kết hợp với khuyến mãi độc lập có mức giảm cao nhất để tự động chọn phương án giảm tối đa có lợi nhất cho khách hàng.
+       - Bảo vệ không cho chiết khấu vượt quá tổng tiền hàng (`TienGiam <= TongTienMon`).
+       - Tích hợp trực tiếp tại quầy thanh toán (`/HoaDon/Details`): nhân viên dễ dàng áp dụng/gỡ bỏ mã voucher, xem danh sách ưu đãi tự động đang kích hoạt, chi tiết giảm giá và thông báo ưu đãi không đủ điều kiện.
+       - Bảo toàn lịch sử dữ liệu: không xóa cứng các khuyến mãi/voucher đã gắn với hóa đơn (chuyển sang vô hiệu hóa `KichHoat = false`).
+  3. **Báo cáo & Phân tích chuyên sâu (Business Analytics)**:
+     - **Dashboard KPI tổng quan** (`/BaoCao/Index`): Doanh thu thực tế, số hóa đơn đã thanh toán, giá trị đơn trung bình (AOV), tổng ngân sách ưu đãi đã tài trợ, tỷ lệ cấn trừ cọc.
+     - **Báo cáo doanh thu đa chiều** (`/BaoCao/DoanhThu`): Xem linh hoạt theo Ngày (30 ngày gần nhất), Tháng (12 tháng), hoặc Năm; tích hợp biểu đồ trực quan hóa cột/đường (Chart.js); đối soát rõ ràng Tiền hàng, Giảm giá, Cọc đã cấn trừ và Thực thu; hỗ trợ in ấn và xuất file CSV định dạng UTF-8 BOM.
+     - **Báo cáo món bán chạy - Bestsellers** (`/BaoCao/MonBanChay`): Thống kê số lượng bán, doanh thu, size bán chạy nhất của từng món, tỷ trọng đóng góp doanh thu và cơ cấu theo danh mục món ăn; hỗ trợ xuất CSV.
+     - **Báo cáo tồn kho tổng hợp** (`/BaoCao/TonKho`): Đối soát Nhập - Xuất - Thanh lý - Tồn hiện tại, hệ thống cảnh báo sớm nguyên liệu dưới ngưỡng an toàn (sắp hết hàng / cạn kiệt), phân loại trạng thái trực quan.
+     - **Đánh giá hiệu quả khuyến mãi & Phân tích ROI** (`/BaoCao/HieuQuaKhuyenMai`): Thống kê số lượt áp dụng, tổng chi phí giảm giá, doanh thu mang lại từ khuyến mãi, tỷ lệ chiết khấu bình quân, xếp hạng hiệu quả (Xuất sắc, Tốt, Cần tối ưu, Kém hiệu quả) và xuất file CSV.
+  4. **Nguyên tắc bảo toàn số liệu & hệ thống**:
+     - Doanh thu chỉ ghi nhận từ hóa đơn ở trạng thái `DaThanhToan`. Tuyệt đối không tính cọc chưa đối chiếu hoặc hóa đơn đã hủy vào doanh thu.
+     - Không cộng cọc hai lần khi đã cấn trừ trên hóa đơn (Doanh thu thực thu = Tiền hàng - Giảm giá).
+     - Menu quản trị (`_ManagementNavigation.cshtml`) và định tuyến đăng nhập (`Program.cs`) đã được tích hợp thông suốt cho toàn bộ các module mới.

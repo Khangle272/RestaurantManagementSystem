@@ -9,7 +9,7 @@ using RestaurantManagement.Web.Security;
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
-public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users, RestaurantManagement.Web.Services.OrderService orderService) : Controller
+public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users, RestaurantManagement.Web.Services.OrderService orderService, RestaurantManagement.Web.Services.IPromotionService promotionService) : Controller
 {
     public async Task<IActionResult> Index(bool daThanhToan = false)
     {
@@ -28,8 +28,14 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         var invoice = await db.HoaDon.AsSplitQuery()
             .Include(x => x.ChiTiet).ThenInclude(x => x.MonAnSize)
             .Include(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn)
+            .Include(x => x.Voucher).ThenInclude(v => v!.KhuyenMai)
             .SingleOrDefaultAsync(x => x.Id == id);
         if (invoice is null) return NotFound();
+
+        // Đánh giá các chương trình ưu đãi và voucher áp dụng
+        var promoEval = await promotionService.EvaluatePromotionsAsync(id, invoice.Voucher?.Ma);
+        ViewBag.PromotionEvaluation = promoEval;
+
         ViewBag.RowVersion = Convert.ToBase64String(db.Entry(invoice).Property<byte[]>("RowVersion").CurrentValue ?? []);
         ViewBag.BookingRowVersion = invoice.DatBan is null ? ""
             : Convert.ToBase64String(db.Entry(invoice.DatBan).Property<byte[]>("RowVersion").CurrentValue ?? []);
@@ -44,6 +50,26 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         ViewBag.DepositDeduction = deposit;
         ViewBag.PaymentAmount = Math.Max(0, total - invoice.TienGiam - deposit);
         return View(invoice);
+    }
+
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApplyVoucher(int id, string voucherCode)
+    {
+        var (success, error, result) = await promotionService.ApplyVoucherToInvoiceAsync(id, voucherCode);
+        if (!success) TempData["Error"] = error;
+        else TempData["Success"] = $"Đã áp dụng mã Voucher '{voucherCode.Trim()}' thành công (Giảm {result?.TongTienGiam:N0} đ).";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveVoucher(int id)
+    {
+        var (success, error) = await promotionService.RemoveVoucherFromInvoiceAsync(id);
+        if (!success) TempData["Error"] = error;
+        else TempData["Success"] = "Đã gỡ bỏ mã Voucher khỏi hóa đơn.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]

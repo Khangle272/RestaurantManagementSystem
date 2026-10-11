@@ -1,0 +1,251 @@
+@model RestaurantManagement.Web.Models.KhuyenMaiListViewModel
+@using RestaurantManagement.API.Models
+@{
+    ViewData["Title"] = "Quản lý Khuyến mãi";
+    ViewData["ActiveMenu"] = "KhuyenMai";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">🎁 Quản lý Chương trình Khuyến mãi</h1>
+        <p class="text-muted mb-0">Thiết lập ưu đãi theo món ăn, thực đơn hoặc hóa đơn với cơ chế kích hoạt kết hợp linh hoạt.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Voucher" asp-action="Index" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-ticket-perforated"></i> Quản lý Voucher
+        </a>
+        <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-plus-lg"></i> Thêm khuyến mãi mới
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string msg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@msg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@err
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo tên chương trình..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="statusFilter" class="form-select">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    <option value="DangDienRa" selected="@(Model.StatusFilter == "DangDienRa")">🟢 Đang diễn ra</option>
+                    <option value="SapDienRa" selected="@(Model.StatusFilter == "SapDienRa")">🟡 Sắp diễn ra</option>
+                    <option value="DaKetThuc" selected="@(Model.StatusFilter == "DaKetThuc")">⚪ Đã kết thúc</option>
+                    <option value="NgungSuDung" selected="@(Model.StatusFilter == "NgungSuDung")">🔴 Ngừng sử dụng</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="phamViFilter" class="form-select">
+                    <option value="">-- Tất cả phạm vi --</option>
+                    <option value="@PhamViUuDai.HoaDon" selected="@(Model.PhamViFilter == PhamViUuDai.HoaDon)">Toàn bộ hóa đơn</option>
+                    <option value="@PhamViUuDai.MonAn" selected="@(Model.PhamViFilter == PhamViUuDai.MonAn)">Theo món ăn / Thực đơn</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-secondary w-100">Lọc</button>
+                <a asp-action="Index" class="btn btn-light" title="Đặt lại bộ lọc"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Tên chương trình</th>
+                    <th>Phạm vi & Mức giảm</th>
+                    <th>Điều kiện & Kết hợp</th>
+                    <th>Thời gian hiệu lực</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end" style="width: 140px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            Không tìm thấy chương trình khuyến mãi nào phù hợp.
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model.Items)
+                {
+                    var statusBadge = item.TrangThaiHienThi switch
+                    {
+                        "Đang diễn ra" => "bg-success text-white",
+                        "Sắp diễn ra" => "bg-warning text-dark",
+                        "Đã kết thúc" => "bg-secondary text-white",
+                        _ => "bg-danger text-white"
+                    };
+
+                    <tr>
+                        <td class="text-muted small">@item.Id</td>
+                        <td>
+                            <div class="fw-bold text-dark">@item.TenChuongTrinh</div>
+                            <div class="small text-muted">
+                                @if (item.CanVoucher)
+                                {
+                                    <span class="badge bg-light text-primary border me-1"><i class="bi bi-ticket-perforated"></i> Yêu cầu mã Voucher</span>
+                                    <span>(@item.SoVoucherDaPhatHanh mã đã tạo)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-success border"><i class="bi bi-lightning-charge"></i> Kích hoạt tự động</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-danger">
+                                @if (item.KieuGiam == KieuGiam.PhanTram)
+                                {
+                                    <span>Giảm @item.GiaTri:0.##%</span>
+                                    @if (item.MucGiamToiDa.HasValue)
+                                    {
+                                        <span class="small text-muted fw-normal">(tối đa @item.MucGiamToiDa.Value.ToString("N0") đ)</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span>Giảm @item.GiaTri.ToString("N0") đ</span>
+                                }
+                            </div>
+                            <div class="small text-muted">
+                                @if (item.PhamVi == PhamViUuDai.MonAn)
+                                {
+                                    <span>Áp dụng cho @item.SoMonApDung món ăn</span>
+                                }
+                                else
+                                {
+                                    <span>Áp dụng toàn bộ hóa đơn</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">
+                                @if (item.GiaTriToiThieu > 0)
+                                {
+                                    <div>Đơn tối thiểu: <strong>@item.GiaTriToiThieu.ToString("N0") đ</strong></div>
+                                }
+                                else
+                                {
+                                    <div class="text-muted">Không giới hạn đơn tối thiểu</div>
+                                }
+                                <div>
+                                    @if (item.ChoPhepKetHop)
+                                    {
+                                        <span class="badge bg-info-subtle text-info border me-1"><i class="bi bi-layers"></i> Cho phép kết hợp</span>
+                                        <span class="text-muted">(Ưu tiên #@item.ThuTuApDung)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-dark border"><i class="bi bi-slash-circle"></i> Độc lập (không kết hợp)</span>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <div>Từ: <strong>@item.BatDau.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</strong></div>
+                                <div>Đến: <strong>@item.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</strong></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge @statusBadge px-2 py-1 rounded-pill">@item.TrangThaiHienThi</span>
+                            @if (item.SoLuotDaSuDung > 0)
+                            {
+                                <div class="small text-muted mt-1">Đã dùng: @item.SoLuotDaSuDung lượt</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Chỉnh sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-secondary" title="@(item.DangSuDung ? "Tắt khuyến mãi" : "Bật khuyến mãi")">
+                                        <i class="bi @(item.DangSuDung ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@item.Id" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- Delete Modal -->
+                            <div class="modal fade text-start" id="deleteModal-@item.Id" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Xác nhận xóa chương trình</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Bạn có chắc chắn muốn xóa chương trình khuyến mãi <strong>@item.TenChuongTrinh</strong>?
+                                            <div class="alert alert-warning mt-2 small mb-0">
+                                                Lưu ý: Nếu chương trình đã có lịch sử áp dụng trên hóa đơn thực tế, hệ thống sẽ tự động chuyển sang trạng thái <strong>Ngừng sử dụng</strong> để bảo toàn số liệu kế toán.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                            <form asp-action="Delete" asp-route-id="@item.Id" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-danger">Xác nhận xóa</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phân trang -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <span class="text-muted small">Hiển thị @Model.Items.Count / @Model.TotalItems chương trình</span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter" asp-route-phamViFilter="@Model.PhamViFilter">Trước</a>
+                </li>
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@p" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter" asp-route-phamViFilter="@Model.PhamViFilter">@p</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter" asp-route-phamViFilter="@Model.PhamViFilter">Sau</a>
+                </li>
+            </ul>
+        </div>
+    }
+</div>

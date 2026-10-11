@@ -4,33 +4,6 @@
 
     const antiForgeryToken = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "";
 
-    function indexRows(body) {
-        body.querySelectorAll('tr').forEach((row, index) => {
-            row.querySelectorAll('[data-field]').forEach(input => {
-                input.name = body.dataset.prefix + '[' + index + '].' + input.dataset.field;
-                input.removeAttribute('id');
-            });
-        });
-    }
-
-    document.querySelectorAll('[data-add]').forEach(button => {
-        button.addEventListener('click', () => {
-            const body = document.getElementById(button.dataset.add);
-            body.append(document.getElementById(button.dataset.template).content.cloneNode(true));
-            indexRows(body);
-        });
-    });
-
-    form.addEventListener('click', event => {
-        const button = event.target.closest('[data-remove]');
-        if (!button) return;
-        const body = button.closest('tbody');
-        button.closest('tr').remove();
-        indexRows(body);
-    });
-
-    form.addEventListener('submit', () => form.querySelectorAll('tbody[data-prefix]').forEach(indexRows));
-
     // Toast helper
     function showToast(message, isSuccess = true) {
         const toastEl = document.getElementById('quickToast');
@@ -52,6 +25,244 @@
         if (!el) return;
         el.classList.add('pulse-green');
         setTimeout(() => el.classList.remove('pulse-green'), 1500);
+    }
+
+    // --- RE-INDEX SIZES & MULTI-LEVEL INGREDIENT ITEMS ---
+    function indexSizes() {
+        const container = document.getElementById('sizes-container');
+        if (!container) return;
+
+        const cards = container.querySelectorAll('.size-card');
+        cards.forEach((card, sIdx) => {
+            card.dataset.sizeIndex = sIdx;
+
+            // Re-index size header fields
+            card.querySelectorAll('.card-header [data-field]').forEach(input => {
+                input.name = `Sizes[${sIdx}].${input.dataset.field}`;
+                input.removeAttribute('id');
+            });
+
+            // Re-index nested recipes inside this size
+            const recipeBody = card.querySelector('.size-recipes-body');
+            if (recipeBody) {
+                recipeBody.dataset.prefix = `Sizes[${sIdx}].DinhMucItems`;
+                recipeBody.querySelectorAll('tr').forEach((row, rIdx) => {
+                    row.querySelectorAll('[data-field]').forEach(input => {
+                        input.name = `Sizes[${sIdx}].DinhMucItems[${rIdx}].${input.dataset.field}`;
+                        input.removeAttribute('id');
+                    });
+                });
+            }
+        });
+    }
+
+    // Re-index standard tables (Combos)
+    function indexRows(body) {
+        if (!body) return;
+        body.querySelectorAll('tr').forEach((row, index) => {
+            row.querySelectorAll('[data-field]').forEach(input => {
+                input.name = body.dataset.prefix + '[' + index + '].' + input.dataset.field;
+                input.removeAttribute('id');
+            });
+        });
+    }
+
+    // --- SIZE ACTIONS ---
+    const btnAddSize = document.getElementById('btn-add-size');
+    const sizeTpl = document.getElementById('size-card-template');
+    const recipeRowTpl = document.getElementById('recipe-row-template');
+
+    if (btnAddSize && sizeTpl) {
+        btnAddSize.addEventListener('click', () => {
+            const container = document.getElementById('sizes-container');
+            const newIndex = container.querySelectorAll('.size-card').length;
+            const clone = sizeTpl.content.cloneNode(true);
+            
+            // Default size name
+            const nameInput = clone.querySelector('.input-size-name');
+            if (nameInput) {
+                nameInput.value = newIndex === 0 ? 'Mặc định' : `Size ${String.fromCharCode(65 + newIndex)}`;
+            }
+
+            container.appendChild(clone);
+            indexSizes();
+
+            const lastCard = container.lastElementChild;
+            pulseElement(lastCard);
+            lastCard.querySelector('.input-size-name')?.focus();
+        });
+    }
+
+    // Form Event Delegation for Size & Recipe actions
+    form.addEventListener('click', (e) => {
+        // Remove Size
+        const removeSizeBtn = e.target.closest('.btn-remove-size');
+        if (removeSizeBtn) {
+            const card = removeSizeBtn.closest('.size-card');
+            const totalSizes = document.querySelectorAll('#sizes-container .size-card').length;
+            if (totalSizes <= 1) {
+                showToast('Món ăn cần ít nhất 1 kích cỡ. Không thể xóa kích cỡ duy nhất!', false);
+                return;
+            }
+            if (confirm('Bạn có chắc muốn xóa kích cỡ này cùng các định mức nguyên liệu bên trong?')) {
+                card.remove();
+                indexSizes();
+            }
+            return;
+        }
+
+        // Add Recipe to a specific Size
+        const addRecipeBtn = e.target.closest('.btn-add-recipe');
+        if (addRecipeBtn && recipeRowTpl) {
+            const card = addRecipeBtn.closest('.size-card');
+            const recipeBody = card?.querySelector('.size-recipes-body');
+            if (recipeBody) {
+                const clone = recipeRowTpl.content.cloneNode(true);
+                recipeBody.appendChild(clone);
+                indexSizes();
+                recipeBody.lastElementChild.querySelector('.select-nguyenlieu')?.focus();
+            }
+            return;
+        }
+
+        // Remove Recipe from a specific Size
+        const removeRecipeBtn = e.target.closest('.btn-remove-recipe');
+        if (removeRecipeBtn) {
+            const row = removeRecipeBtn.closest('tr');
+            row?.remove();
+            indexSizes();
+            return;
+        }
+
+        // Copy Recipe between Sizes trigger
+        const copyRecipeBtn = e.target.closest('.btn-copy-recipe');
+        if (copyRecipeBtn) {
+            openCopyRecipeModal(copyRecipeBtn.closest('.size-card'));
+            return;
+        }
+
+        // Standard remove button (Combo items)
+        const stdRemoveBtn = e.target.closest('[data-remove]');
+        if (stdRemoveBtn) {
+            const body = stdRemoveBtn.closest('tbody');
+            stdRemoveBtn.closest('tr').remove();
+            if (body) indexRows(body);
+            return;
+        }
+    });
+
+    // Combos add button
+    document.querySelectorAll('[data-add]').forEach(button => {
+        button.addEventListener('click', () => {
+            const body = document.getElementById(button.dataset.add);
+            const tpl = document.getElementById(button.dataset.template);
+            if (body && tpl) {
+                body.append(tpl.content.cloneNode(true));
+                indexRows(body);
+            }
+        });
+    });
+
+    // Form submit validation & indexing
+    form.addEventListener('submit', () => {
+        indexSizes();
+        const combosBody = document.getElementById('combos');
+        if (combosBody) indexRows(combosBody);
+    });
+
+    // --- COPY RECIPES MODAL LOGIC ---
+    let currentTargetSizeCard = null;
+    const modalCopyEl = document.getElementById('modalCopyRecipe');
+    const selectSourceSize = document.getElementById('copySourceSizeSelect');
+    const inputCopyRatio = document.getElementById('copyRatioInput');
+    const btnExecuteCopy = document.getElementById('btnExecuteCopyRecipe');
+
+    function openCopyRecipeModal(targetCard) {
+        currentTargetSizeCard = targetCard;
+        const currentIdx = parseInt(targetCard.dataset.sizeIndex, 10);
+        const allCards = document.querySelectorAll('#sizes-container .size-card');
+
+        selectSourceSize.innerHTML = '';
+        let availableSources = 0;
+
+        allCards.forEach(c => {
+            const idx = parseInt(c.dataset.sizeIndex, 10);
+            if (idx === currentIdx) return;
+
+            const name = c.querySelector('.input-size-name')?.value?.trim() || `Size #${idx + 1}`;
+            const rowCount = c.querySelectorAll('.size-recipes-body tr').length;
+            const opt = document.createElement('option');
+            opt.value = idx;
+            opt.textContent = `${name} (${rowCount} nguyên liệu)`;
+            selectSourceSize.appendChild(opt);
+            availableSources++;
+        });
+
+        if (availableSources === 0) {
+            showToast('Chưa có kích cỡ nào khác để sao chép công thức.', false);
+            return;
+        }
+
+        inputCopyRatio.value = '1.0';
+        if (window.bootstrap && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalCopyEl);
+            modal.show();
+        }
+    }
+
+    if (btnExecuteCopy) {
+        btnExecuteCopy.addEventListener('click', () => {
+            if (!currentTargetSizeCard) return;
+
+            const sourceIdx = parseInt(selectSourceSize.value, 10);
+            const ratio = parseFloat(inputCopyRatio.value) || 1.0;
+            const sourceCard = document.querySelector(`#sizes-container .size-card[data-size-index="${sourceIdx}"]`);
+
+            if (!sourceCard || !recipeRowTpl) return;
+
+            const sourceRows = sourceCard.querySelectorAll('.size-recipes-body tr');
+            if (sourceRows.length === 0) {
+                showToast('Kích cỡ nguồn chưa có nguyên liệu nào.', false);
+                return;
+            }
+
+            const targetBody = currentTargetSizeCard.querySelector('.size-recipes-body');
+            let addedCount = 0;
+
+            sourceRows.forEach(sRow => {
+                const ingId = sRow.querySelector('[data-field="NguyenLieuId"]')?.value;
+                const qty = parseFloat(sRow.querySelector('[data-field="SoLuong"]')?.value) || 0;
+                if (!ingId) return;
+
+                // Check if target already has this ingredient
+                const existingSelect = Array.from(targetBody.querySelectorAll('[data-field="NguyenLieuId"]'))
+                    .find(s => s.value === ingId);
+
+                if (existingSelect) {
+                    // Update quantity
+                    const qtyInput = existingSelect.closest('tr')?.querySelector('[data-field="SoLuong"]');
+                    if (qtyInput) qtyInput.value = (qty * ratio).toFixed(4).replace(/\.?0+$/, '');
+                } else {
+                    // Add new row
+                    const clone = recipeRowTpl.content.cloneNode(true);
+                    const sel = clone.querySelector('[data-field="NguyenLieuId"]');
+                    const qtyInput = clone.querySelector('[data-field="SoLuong"]');
+                    if (sel) sel.value = ingId;
+                    if (qtyInput) qtyInput.value = (qty * ratio).toFixed(4).replace(/\.?0+$/, '');
+                    targetBody.appendChild(clone);
+                }
+                addedCount++;
+            });
+
+            indexSizes();
+
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getInstance(modalCopyEl)?.hide();
+            }
+
+            pulseElement(currentTargetSizeCard);
+            showToast(`Đã sao chép ${addedCount} nguyên liệu với tỷ lệ x${ratio}!`);
+        });
     }
 
     // --- QUICK ADD CATEGORY ---
@@ -88,7 +299,6 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    // Update main select
                     const cboDanhMuc = document.getElementById('cboDanhMuc') || document.querySelector('select[name="DanhMucId"]');
                     if (cboDanhMuc) {
                         const opt = new Option(data.name, data.id, true, true);
@@ -97,7 +307,6 @@
                         pulseElement(cboDanhMuc);
                     }
 
-                    // Hide modal & reset form
                     if (window.bootstrap && bootstrap.Modal) {
                         const modal = bootstrap.Modal.getInstance(modalCategoryEl) || new bootstrap.Modal(modalCategoryEl);
                         modal.hide();
@@ -160,29 +369,17 @@
                 if (data.success) {
                     const text = `${data.name} (${data.unit})`;
 
-                    // 1. Update all existing ingredient selects in #recipes
-                    document.querySelectorAll('#recipes select[data-field="NguyenLieuId"]').forEach(sel => {
+                    // 1. Update all existing selects on the page
+                    document.querySelectorAll('select.select-nguyenlieu').forEach(sel => {
                         sel.add(new Option(text, data.id));
                     });
 
                     // 2. Update the template so future rows get the new ingredient
-                    const recipeTpl = document.getElementById('recipe-template');
-                    if (recipeTpl) {
-                        const tplSelect = recipeTpl.content.querySelector('select[data-field="NguyenLieuId"]');
+                    if (recipeRowTpl) {
+                        const tplSelect = recipeRowTpl.content.querySelector('select.select-nguyenlieu');
                         if (tplSelect) {
                             tplSelect.add(new Option(text, data.id));
                         }
-                    }
-
-                    // 3. Automatically add a new row with this ingredient selected
-                    const recipesBody = document.getElementById('recipes');
-                    if (recipesBody && recipeTpl) {
-                        const rowNode = recipeTpl.content.cloneNode(true);
-                        const sel = rowNode.querySelector('select[data-field="NguyenLieuId"]');
-                        if (sel) sel.value = data.id;
-                        recipesBody.append(rowNode);
-                        indexRows(recipesBody);
-                        pulseElement(recipesBody.lastElementChild);
                     }
 
                     // Hide modal & reset form
@@ -209,4 +406,18 @@
             }
         });
     }
+
+    // Toggle combo section visibility based on dish type
+    const selectLoaiMon = document.getElementById('selectLoaiMon');
+    const comboSection = document.getElementById('combo-section');
+    if (selectLoaiMon && comboSection) {
+        function updateComboVisibility() {
+            comboSection.style.display = selectLoaiMon.value === 'Set' ? 'block' : 'none';
+        }
+        selectLoaiMon.addEventListener('change', updateComboVisibility);
+        updateComboVisibility();
+    }
+
+    // Initial indexing on load
+    indexSizes();
 })();
