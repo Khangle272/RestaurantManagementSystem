@@ -95,11 +95,17 @@ public class DanhMucController(RestaurantDbContext context) : ManagementControll
             ModelState.AddModelError(nameof(model.TenDanhMuc), "Tên danh mục đã tồn tại.");
     }
 
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> QuickCreate([FromBody] QuickCreateDanhMucVM model)
     {
-        if (string.IsNullOrWhiteSpace(model?.TenDanhMuc))
+        if (model == null || string.IsNullOrWhiteSpace(model.TenDanhMuc))
             return Json(new { success = false, message = "Vui lòng nhập tên danh mục." });
+
+        if (!TryValidateModel(model))
+        {
+            var err = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault();
+            return Json(new { success = false, message = err ?? "Thông tin danh mục không hợp lệ." });
+        }
 
         var name = model.TenDanhMuc.Trim();
         if (await Db.DanhMuc.AnyAsync(x => x.TenDanhMuc == name))
@@ -113,7 +119,14 @@ public class DanhMucController(RestaurantDbContext context) : ManagementControll
         };
 
         Db.DanhMuc.Add(entity);
-        await Db.SaveChangesAsync();
+        try
+        {
+            await Db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Json(new { success = false, message = "Tên danh mục đã tồn tại trong hệ thống." });
+        }
 
         return Json(new { success = true, id = entity.Id, name = entity.TenDanhMuc });
     }

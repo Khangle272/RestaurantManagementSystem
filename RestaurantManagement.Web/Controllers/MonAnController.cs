@@ -324,6 +324,7 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
             .SingleOrDefaultAsync(x => x.Id == id);
 
         if (dish == null) return NotFound();
+        if (!IsAdmin && dish.Loai == LoaiMon.Set) return Forbid();
 
         var allIngredients = await Db.NguyenLieu.AsNoTracking()
             .Where(x => x.DangSuDung)
@@ -375,8 +376,22 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveDinhMucTheoSize(DinhMucTheoSizeVM model)
     {
+        if (model == null || model.MonAnId <= 0) return NotFound();
         var dish = await Db.MonAn.Include(x => x.Sizes).SingleOrDefaultAsync(x => x.Id == model.MonAnId);
         if (dish == null) return NotFound();
+        if (!IsAdmin && dish.Loai == LoaiMon.Set) return Forbid();
+
+        var validSizeIds = dish.Sizes.Select(s => s.Id).ToHashSet();
+        if (model.Sizes != null && model.Sizes.Any(g => !validSizeIds.Contains(g.MonAnSizeId)))
+            return BadRequest("Kích cỡ món không thuộc món ăn này.");
+
+        var allIngredientIds = model.Sizes?.SelectMany(g => g.Items ?? []).Select(i => i.NguyenLieuId).Where(id => id > 0).Distinct().ToList() ?? [];
+        if (allIngredientIds.Count > 0)
+        {
+            var validIngredients = await Db.NguyenLieu.Where(x => allIngredientIds.Contains(x.Id) && x.DangSuDung).Select(x => x.Id).ToListAsync();
+            if (validIngredients.Count != allIngredientIds.Count)
+                return BadRequest("Một số nguyên liệu không tồn tại hoặc đã ngưng sử dụng.");
+        }
 
         await using var tx = await Db.Database.BeginTransactionAsync();
         try
@@ -391,7 +406,7 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                     if (sizeGroup.Items == null) continue;
                     foreach (var item in sizeGroup.Items)
                     {
-                        if (item.NguyenLieuId <= 0 || item.SoLuong <= 0) continue;
+                        if (item.NguyenLieuId <= 0 || item.SoLuong <= 0 || item.SoLuong > 1000000) continue;
 
                         Db.DinhMucMon.Add(new DinhMucMon
                         {

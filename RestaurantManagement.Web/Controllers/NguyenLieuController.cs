@@ -139,14 +139,20 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
             ModelState.AddModelError(nameof(model.TenNguyenLieu), "Tên nguyên liệu đã tồn tại.");
     }
 
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> QuickCreate([FromBody] QuickCreateNguyenLieuVM model)
     {
-        if (string.IsNullOrWhiteSpace(model?.TenNguyenLieu))
+        if (model == null || string.IsNullOrWhiteSpace(model.TenNguyenLieu))
             return Json(new { success = false, message = "Vui lòng nhập tên nguyên liệu." });
 
         if (string.IsNullOrWhiteSpace(model.DonViTinh))
             return Json(new { success = false, message = "Vui lòng nhập đơn vị tính." });
+
+        if (!TryValidateModel(model))
+        {
+            var err = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault();
+            return Json(new { success = false, message = err ?? "Thông tin nguyên liệu không hợp lệ." });
+        }
 
         var name = model.TenNguyenLieu.Trim();
         if (await Db.NguyenLieu.AnyAsync(x => x.TenNguyenLieu == name))
@@ -164,7 +170,14 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         };
 
         Db.NguyenLieu.Add(entity);
-        await Db.SaveChangesAsync();
+        try
+        {
+            await Db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Json(new { success = false, message = "Tên nguyên liệu đã tồn tại trong hệ thống." });
+        }
 
         return Json(new { success = true, id = entity.Id, name = entity.TenNguyenLieu, unit = entity.DonViTinh, price = entity.DonGia });
     }
@@ -188,13 +201,29 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         return Json(new { success = true, suppliers = links });
     }
 
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> LinkSuppliersToIngredient(int ingredientId, [FromBody] List<SupplierLinkDto> suppliers)
     {
         var ingredient = await Db.NguyenLieu.FindAsync(ingredientId);
         if (ingredient == null) return NotFound();
 
         suppliers ??= [];
+        if (suppliers.Count > 50)
+            return Json(new { success = false, message = "Số lượng nhà cung cấp liên kết vượt giới hạn." });
+
+        var supplierIds = suppliers.Select(s => s.MaNhaCungCap).ToList();
+        if (supplierIds.Any(id => id <= 0))
+            return Json(new { success = false, message = "Nhà cung cấp không hợp lệ." });
+        if (suppliers.Any(s => s.DonGiaCungUng < 0 || s.DonGiaCungUng > 999999999999.99m))
+            return Json(new { success = false, message = "Đơn giá cung ứng không hợp lệ." });
+        if (suppliers.Any(s => s.MaHangNCC != null && s.MaHangNCC.Trim().Length > 50))
+            return Json(new { success = false, message = "Mã hàng NCC quá dài (tối đa 50 ký tự)." });
+        if (suppliers.Any(s => s.GhiChu != null && s.GhiChu.Trim().Length > 500))
+            return Json(new { success = false, message = "Ghi chú liên kết quá dài (tối đa 500 ký tự)." });
+
+        var existingSuppliers = await Db.NhaCungCap.Where(x => supplierIds.Contains(x.Id)).Select(x => x.Id).ToListAsync();
+        if (existingSuppliers.Count != supplierIds.Distinct().Count())
+            return Json(new { success = false, message = "Một số nhà cung cấp không tồn tại." });
         var existing = await Db.NhaCungCapNguyenLieus.Where(x => x.MaNguyenLieu == ingredientId).ToListAsync();
         var newSupplierIds = suppliers.Select(s => s.MaNhaCungCap).ToHashSet();
 
@@ -229,7 +258,14 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
             }
         }
 
-        await Db.SaveChangesAsync();
+        try
+        {
+            await Db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Json(new { success = false, message = "Không thể cập nhật liên kết nhà cung cấp. Vui lòng thử lại." });
+        }
         return Json(new { success = true, message = "Cập nhật nhà cung cấp liên kết thành công." });
     }
 

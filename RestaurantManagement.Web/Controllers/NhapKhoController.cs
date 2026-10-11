@@ -92,7 +92,7 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
                 var staffId = await GetCurrentStaffIdAsync();
                 var phieuNhap = new PhieuNhap
                 {
-                    MaPhieu = "PN-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"),
+                    MaPhieu = "PN-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
                     NhaCungCapId = model.MaNhaCungCap,
                     NhanVienId = staffId,
                     ThoiDiem = new DateTimeOffset(model.NgayNhap),

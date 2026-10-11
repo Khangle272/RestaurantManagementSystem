@@ -92,8 +92,15 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
         foreach (var (ingredientId, qty) in ingredientRequirements)
         {
             if (!ingredients.TryGetValue(ingredientId, out var nguyenLieu)) continue;
+            if (qty <= 0 || qty > 1000000) continue;
 
-            nguyenLieu.SoLuongTon -= qty;
+            if (nguyenLieu.SoLuongTon < qty)
+            {
+                result.Success = false;
+                result.Warnings.Add($"Không đủ tồn kho [{nguyenLieu.TenNguyenLieu}] (còn {nguyenLieu.SoLuongTon:N2} {nguyenLieu.DonViTinh}, cần {qty:N2}). Đã ghi nhận thiếu và giữ tồn về 0.");
+            }
+
+            nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - qty);
 
             var donGiaXuat = nguyenLieu.DonGia;
             var thanhTien = qty * donGiaXuat;

@@ -99,8 +99,17 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         if (model.Items.Count == 0)
             return ("Vui lòng chọn ít nhất một món ăn vào đơn hàng.", null);
 
+        if (model.Items.Count > 60)
+            return ("Mỗi đơn hàng chỉ được tối đa 60 dòng món.", null);
+
         if (model.Items.Any(x => x.SoLuong <= 0))
             return ("Số lượng từng món phải lớn hơn 0.", null);
+
+        if (model.Items.Any(x => x.SoLuong > 99))
+            return ("Số lượng mỗi món không được vượt quá 99.", null);
+
+        if (model.Items.Any(x => x.YeuCauCheBien != null && x.YeuCauCheBien.Trim().Length > 500))
+            return ("Yêu cầu chế biến mỗi món tối đa 500 ký tự.", null);
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
@@ -163,6 +172,13 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
                 if (model.LoaiDonHang == LoaiDonHang.GiaoHang && string.IsNullOrWhiteSpace(model.DiaChiGiaoHang))
                     return ("Vui lòng nhập địa chỉ giao hàng.", null);
+
+                if (model.TenNguoiNhan.Trim().Length > 120 || model.SoDienThoaiNhan.Trim().Length > 20)
+                    return ("Tên hoặc số điện thoại người nhận quá dài.", null);
+                if (model.DiaChiGiaoHang != null && model.DiaChiGiaoHang.Trim().Length > 300)
+                    return ("Địa chỉ giao hàng tối đa 300 ký tự.", null);
+                if (model.GhiChuDonHang != null && model.GhiChuDonHang.Trim().Length > 500)
+                    return ("Ghi chú đơn hàng tối đa 500 ký tự.", null);
 
                 hoaDon = new HoaDon
                 {
@@ -250,8 +266,14 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
     {
         if (items.Count == 0)
             return ("Vui lòng chọn ít nhất một món ăn.", null);
+        if (items.Count > 60)
+            return ("Mỗi lần gọi thêm chỉ được tối đa 60 dòng món.", null);
         if (items.Any(x => x.SoLuong <= 0))
             return ("Số lượng từng món phải lớn hơn 0.", null);
+        if (items.Any(x => x.SoLuong > 99))
+            return ("Số lượng mỗi món không được vượt quá 99.", null);
+        if (items.Any(x => x.YeuCauCheBien != null && x.YeuCauCheBien.Trim().Length > 500))
+            return ("Yêu cầu chế biến mỗi món tối đa 500 ký tự.", null);
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
@@ -434,6 +456,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 ? await AvailableDepositAsync(bookingId, invoice.Id) : 0;
             var deposit = Math.Min(availableDeposit, total - discount);
             var amountDue = total - discount - deposit;
+            if (amountDue <= 0 && deposit <= 0)
+                return "Giảm giá không được miễn phí toàn bộ hóa đơn khi không có tiền cọc trừ.";
             if (form.PhuongThuc == PhuongThucThanhToan.TienMat && form.TienKhachDua < amountDue)
                 return $"Số tiền khách đưa ({form.TienKhachDua:N0} đ) không đủ để thanh toán ({amountDue:N0} đ).";
             if (form.PhuongThuc != PhuongThucThanhToan.TienMat && form.TienGiam is decimal submittedDiscount
@@ -444,6 +468,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 && (last4.Length != 4 || last4.Any(c => c < '0' || c > '9')))
                 return "Vui lòng nhập đúng 4 số cuối của thẻ.";
             var reference = string.IsNullOrWhiteSpace(form.MaGiaoDich) ? null : form.MaGiaoDich.Trim();
+            if (form.PhuongThuc != PhuongThucThanhToan.TienMat && reference is null)
+                return "Vui lòng nhập mã giao dịch/tham chiếu thanh toán.";
             var transactionReference = form.PhuongThuc == PhuongThucThanhToan.TienMat ? null : reference;
             if (form.PhuongThuc == PhuongThucThanhToan.The)
             {

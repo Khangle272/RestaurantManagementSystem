@@ -94,7 +94,7 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
                 var staffId = await GetCurrentStaffIdAsync();
                 var phieuThanhLy = new PhieuThanhLy
                 {
-                    MaPhieu = "TL-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"),
+                    MaPhieu = "TL-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
                     NhanVienId = staffId,
                     ThoiDiem = new DateTimeOffset(model.NgayThanhLy),
                     LyDoThanhLy = model.LyDoThanhLy,

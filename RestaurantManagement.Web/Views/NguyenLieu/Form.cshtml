@@ -259,7 +259,7 @@
                     try {
                         const res = await fetch("/NhaCungCap/QuickCreate", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: { "Content-Type": "application/json", "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "" },
                             body: JSON.stringify({ tenNhaCungCap, soDienThoai, nguoiLienHe, email, diaChi })
                         });
                         const data = await res.json();
@@ -319,7 +319,7 @@
                     try {
                         const res = await fetch(`/NguyenLieu/LinkSuppliersToIngredient?ingredientId=${ingredientId}`, {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: { "Content-Type": "application/json", "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "" },
                             body: JSON.stringify(currentLinks)
                         });
                         const data = await res.json();
@@ -352,7 +352,7 @@
                     try {
                         const res = await fetch(`/NguyenLieu/LinkSuppliersToIngredient?ingredientId=${ingredientId}`, {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: { "Content-Type": "application/json", "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "" },
                             body: JSON.stringify(currentLinks)
                         });
                         const data = await res.json();
