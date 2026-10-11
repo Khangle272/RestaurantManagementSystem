@@ -49,6 +49,7 @@ public class KhuyenMaiItemViewModel
 public class KhuyenMaiFormViewModel
 {
     public int Id { get; set; }
+    public string? RowVersion { get; set; }
 
     [Required(ErrorMessage = "Vui lòng nhập tên chương trình khuyến mãi.")]
     [MaxLength(150, ErrorMessage = "Tên chương trình không được vượt quá 150 ký tự.")]
@@ -74,9 +75,11 @@ public class KhuyenMaiFormViewModel
     public decimal GiaTri { get; set; } = 10;
 
     [Display(Name = "Mức giảm tối đa (VNĐ)")]
+    [Range(typeof(decimal), "0", "100000000", ErrorMessage = "Mức giảm tối đa phải không âm.")]
     public decimal? MucGiamToiDa { get; set; }
 
     [Display(Name = "Giá trị đơn tối thiểu (VNĐ)")]
+    [Range(typeof(decimal), "0", "100000000", ErrorMessage = "Giá trị đơn tối thiểu phải không âm.")]
     public decimal GiaTriToiThieu { get; set; } = 0;
 
     [Display(Name = "Cho phép kết hợp với ưu đãi khác")]
@@ -146,6 +149,8 @@ public class VoucherItemViewModel
 public class VoucherFormViewModel
 {
     public int Id { get; set; }
+    public string? RowVersion { get; set; }
+    public bool DaDuocSuDung { get; set; }
 
     [Required(ErrorMessage = "Vui lòng nhập mã Voucher.")]
     [MaxLength(40, ErrorMessage = "Mã Voucher không vượt quá 40 ký tự.")]

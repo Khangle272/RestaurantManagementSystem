@@ -121,6 +121,8 @@ public class PaymentFormModel
     public PhuongThucThanhToan PhuongThuc { get; set; } = PhuongThucThanhToan.TienMat;
     public decimal TienKhachDua { get; set; }
     public decimal? TienGiam { get; set; }
+    public decimal? TienGiamThuCong { get; set; }
+    public decimal? SoTienPhaiThuDuKien { get; set; }
     public string? MaGiaoDich { get; set; }
     public string? LoaiThe { get; set; }
     public string? SoThe4SoCuoi { get; set; }
