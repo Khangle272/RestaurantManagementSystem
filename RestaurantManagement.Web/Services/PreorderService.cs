@@ -293,7 +293,7 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
         var sent = await db.ChiTietHoaDon.Where(x => x.MonDatTruocId != null && x.MonDatTruoc!.DatBanId == id)
             .Select(x => new { Id = x.MonDatTruocId!.Value, x.TrangThai }).ToDictionaryAsync(x => x.Id);
         return lines.Select(x => new PreorderLineViewModel { Id = x.Id, MonAnId = x.MonAnId, SizeId = x.MonAnSizeId,
-            Name = x.TenMonLucDat, SizeName = x.TenSizeLucDat, Image = x.MonAn.HinhAnh, Price = x.DonGiaThoaThuan,
+            Name = x.TenMonLucDat, SizeName = x.TenSizeLucDat, Image = x.MonAn?.HinhAnh, Price = x.DonGiaThoaThuan,
             Quantity = x.SoLuong, Note = x.YeuCauCheBien, Sent = sent.ContainsKey(x.Id),
             Status = sent.TryGetValue(x.Id, out var detail) ? detail.TrangThai.ToString() : "Đặt trước" }).ToList();
     }

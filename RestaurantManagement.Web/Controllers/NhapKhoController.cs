@@ -92,7 +92,7 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
                 var staffId = await GetCurrentStaffIdAsync();
                 var phieuNhap = new PhieuNhap
                 {
-                    MaPhieu = "PN-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"),
+                    MaPhieu = "PN-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
                     NhaCungCapId = model.MaNhaCungCap,
                     NhanVienId = staffId,
                     ThoiDiem = new DateTimeOffset(model.NgayNhap),
@@ -185,14 +185,20 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
         var email = User.Identity?.Name;
         if (!string.IsNullOrEmpty(email))
         {
-            var nv = await Db.NhanVien.FirstOrDefaultAsync(x => x.Email == email);
+            var nv = await Db.NhanVien.FirstOrDefaultAsync(x => x.Email == email && x.DangLamViec);
             if (nv != null) return nv.Id;
+
+            if (int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var accountId))
+            {
+                var nvAccount = await Db.NhanVien.FirstOrDefaultAsync(x => x.TaiKhoanId == accountId && x.DangLamViec);
+                if (nvAccount != null) return nvAccount.Id;
+            }
         }
 
-        var warehouseNv = await Db.NhanVien.FirstOrDefaultAsync(x => x.ChucVu == "Nhân viên kho" || x.MaNhanVien == "NV003");
+        var warehouseNv = await Db.NhanVien.FirstOrDefaultAsync(x => (x.ChucVu == "Nhân viên kho" || x.MaNhanVien == "NV003") && x.DangLamViec);
         if (warehouseNv != null) return warehouseNv.Id;
 
-        var firstNv = await Db.NhanVien.FirstOrDefaultAsync();
+        var firstNv = await Db.NhanVien.FirstOrDefaultAsync(x => x.DangLamViec);
         return firstNv?.Id ?? 1;
     }
 }

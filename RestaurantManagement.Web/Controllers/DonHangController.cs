@@ -215,6 +215,7 @@ public class DonHangController(
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.BoiBan)]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> CapNhatMon(int id, int hoaDonId, TrangThaiCheBien trangThai)
     {

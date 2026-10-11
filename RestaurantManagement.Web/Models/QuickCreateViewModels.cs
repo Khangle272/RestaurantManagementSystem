@@ -64,13 +64,3 @@ public class SupplierLinkDto
     public string? MaHangNCC { get; set; }
     public string? GhiChu { get; set; }
 }
-
-public class SupplierItemDto
-{
-    public int Id { get; set; }
-    public string TenNhaCungCap { get; set; } = "";
-    public string? SoDienThoai { get; set; }
-    public decimal DonGiaCungUng { get; set; }
-    public string? MaHangNCC { get; set; }
-    public bool DaLienKet { get; set; }
-}

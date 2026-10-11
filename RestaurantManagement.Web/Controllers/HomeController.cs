@@ -9,9 +9,9 @@ using System.Diagnostics;
 
 namespace RestaurantManagement.Web.Controllers
 {
-    [AllowAnonymous]
     public class HomeController(RestaurantDbContext db) : Controller
     {
+        [AllowAnonymous]
         public async Task<IActionResult> Index(int? danhMucId = null)
         {
             var query = PublicMenu();
@@ -39,12 +39,14 @@ namespace RestaurantManagement.Web.Controllers
             });
         }
 
+        [AllowAnonymous]
         public async Task<IActionResult> MonAn(int id)
         {
             var dish = await LoadDish(id);
             return dish is null ? NotFound() : View(dish);
         }
 
+        [AllowAnonymous]
         [HttpGet]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> CartDish(int id)
@@ -95,6 +97,7 @@ namespace RestaurantManagement.Web.Controllers
                 + (item.GiaTriToiThieu > 0 ? $", từ {item.GiaTriToiThieu:N0} ₫" : "")
         };
 
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

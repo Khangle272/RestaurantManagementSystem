@@ -131,9 +131,16 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
             entity.GhiChu = model.GhiChu?.Trim();
             entity.DangSuDung = model.DangSuDung;
 
-            await Db.SaveChangesAsync();
-            TempData["Success"] = "Cập nhật thông tin nhà cung cấp thành công.";
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                await Db.SaveChangesAsync();
+                TempData["Success"] = "Cập nhật thông tin nhà cung cấp thành công.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ModelState.AddModelError("", "Dữ liệu nhà cung cấp đã được cập nhật bởi phiên làm việc khác. Vui lòng tải lại trang.");
+            }
         }
 
         return View(model);
@@ -146,8 +153,15 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
         if (entity == null) return NotFound();
 
         entity.DangSuDung = !entity.DangSuDung;
-        await Db.SaveChangesAsync();
-        TempData["Success"] = $"Đã chuyển trạng thái nhà cung cấp '{entity.TenNhaCungCap}' sang {(entity.DangSuDung ? "Đang hợp tác" : "Ngừng hợp tác")}.";
+        try
+        {
+            await Db.SaveChangesAsync();
+            TempData["Success"] = $"Đã chuyển trạng thái nhà cung cấp '{entity.TenNhaCungCap}' sang {(entity.DangSuDung ? "Đang hợp tác" : "Ngừng hợp tác")}.";
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            TempData["Error"] = "Dữ liệu nhà cung cấp đã được cập nhật bởi phiên làm việc khác. Vui lòng tải lại.";
+        }
         return RedirectToAction(nameof(Index));
     }
 
@@ -164,20 +178,44 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
             return RedirectToAction(nameof(Index));
         }
 
-        Db.NhaCungCap.Remove(entity);
-        await Db.SaveChangesAsync();
-        TempData["Success"] = $"Đã xóa nhà cung cấp '{entity.TenNhaCungCap}'.";
+        var linkedIngredients = await Db.NhaCungCapNguyenLieus.AnyAsync(x => x.MaNhaCungCap == id);
+        if (linkedIngredients)
+        {
+            TempData["Error"] = $"Không thể xóa nhà cung cấp '{entity.TenNhaCungCap}' vì đang được liên kết cung cấp nguyên liệu. Vui lòng gỡ liên kết nguyên liệu hoặc chuyển trạng thái sang Ngừng hợp tác.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            Db.NhaCungCap.Remove(entity);
+            await Db.SaveChangesAsync();
+            TempData["Success"] = $"Đã xóa nhà cung cấp '{entity.TenNhaCungCap}'.";
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            TempData["Error"] = "Nhà cung cấp đã bị thay đổi hoặc xóa bởi một phiên làm việc khác.";
+        }
+        catch (DbUpdateException)
+        {
+            TempData["Error"] = $"Không thể xóa nhà cung cấp '{entity.TenNhaCungCap}' do có dữ liệu liên quan trong hệ thống.";
+        }
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> QuickCreate([FromBody] QuickCreateNhaCungCapVM model)
     {
-        if (string.IsNullOrWhiteSpace(model?.TenNhaCungCap))
+        if (model == null || string.IsNullOrWhiteSpace(model.TenNhaCungCap))
             return Json(new { success = false, message = "Vui lòng nhập tên nhà cung cấp." });
 
         if (string.IsNullOrWhiteSpace(model.SoDienThoai))
             return Json(new { success = false, message = "Vui lòng nhập số điện thoại." });
+
+        if (!TryValidateModel(model))
+        {
+            var err = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault();
+            return Json(new { success = false, message = err ?? "Thông tin nhà cung cấp không hợp lệ." });
+        }
 
         var ten = model.TenNhaCungCap.Trim();
         var sdt = model.SoDienThoai.Trim();
@@ -201,7 +239,14 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
         };
 
         Db.NhaCungCap.Add(entity);
-        await Db.SaveChangesAsync();
+        try
+        {
+            await Db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Json(new { success = false, message = "Tên hoặc số điện thoại nhà cung cấp đã tồn tại." });
+        }
 
         return Json(new { success = true, id = entity.Id, name = entity.TenNhaCungCap, phone = entity.SoDienThoai });
     }

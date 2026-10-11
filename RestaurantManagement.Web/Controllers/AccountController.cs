@@ -37,6 +37,9 @@ public class AccountController(
                 var result = await signIn.PasswordSignInAsync(user, model.Password, false, lockoutOnFailure: true);
                 if (result.Succeeded)
                     return !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
+                        && model.ReturnUrl.StartsWith("/", StringComparison.Ordinal)
+                        && !model.ReturnUrl.StartsWith("//", StringComparison.Ordinal)
+                        && !model.ReturnUrl.StartsWith("/\\", StringComparison.Ordinal)
                         ? LocalRedirect(model.ReturnUrl)
                         : RedirectToAction("Index", "Home");
                 if (result.IsLockedOut) ModelState.AddModelError("", "Tài khoản tạm khóa 15 phút sau nhiều lần đăng nhập sai.");

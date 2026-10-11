@@ -92,8 +92,15 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
         foreach (var (ingredientId, qty) in ingredientRequirements)
         {
             if (!ingredients.TryGetValue(ingredientId, out var nguyenLieu)) continue;
+            if (qty <= 0 || qty > 1000000) continue;
 
-            nguyenLieu.SoLuongTon -= qty;
+            if (nguyenLieu.SoLuongTon < qty)
+            {
+                result.Success = false;
+                result.Warnings.Add($"Không đủ tồn kho [{nguyenLieu.TenNguyenLieu}] (còn {nguyenLieu.SoLuongTon:N2} {nguyenLieu.DonViTinh}, cần {qty:N2}). Đã ghi nhận thiếu và giữ tồn về 0.");
+            }
+
+            nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - qty);
 
             var donGiaXuat = nguyenLieu.DonGia;
             var thanhTien = qty * donGiaXuat;
@@ -116,7 +123,38 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
 
         phieuXuat.TongTien = tongTien;
         db.PhieuXuat.Add(phieuXuat);
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Reload modified ingredients and retry deduction once on concurrent conflict
+            foreach (var entry in db.ChangeTracker.Entries<NguyenLieu>())
+            {
+                await entry.ReloadAsync();
+                if (entry.Entity is NguyenLieu nl && ingredientRequirements.TryGetValue(nl.Id, out var neededQty))
+                {
+                    nl.SoLuongTon = Math.Max(0, nl.SoLuongTon - neededQty);
+                }
+            }
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Warnings.Add("Không thể hoàn tất tự động xuất kho do xung đột dữ liệu: " + ex.Message);
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.Warnings.Add("Không thể hoàn tất tự động xuất kho: " + ex.Message);
+            return result;
+        }
 
         result.PhieuXuatId = phieuXuat.Id;
         result.MaPhieuXuat = phieuXuat.MaPhieu;

@@ -2,6 +2,8 @@
     const form = document.getElementById('dish-form');
     if (!form) return;
 
+    const antiForgeryToken = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "";
+
     function indexRows(body) {
         body.querySelectorAll('tr').forEach((row, index) => {
             row.querySelectorAll('[data-field]').forEach(input => {
@@ -80,7 +82,7 @@
             try {
                 const res = await fetch('/DanhMuc/QuickCreate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken() },
                     body: JSON.stringify({ tenDanhMuc, moTa })
                 });
 
@@ -150,7 +152,7 @@
             try {
                 const res = await fetch('/NguyenLieu/QuickCreate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken() },
                     body: JSON.stringify({ tenNguyenLieu, donViTinh, donGia, dinhMucToiThieu })
                 });
 

@@ -46,7 +46,7 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         return View(invoice);
     }
 
-    [Authorize(Roles = AppRoles.ThuNgan)]
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmCash(int id, string? rowVersion, string? bookingRowVersion)
     {
@@ -54,6 +54,12 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         var cashierId = await db.NhanVien.AsNoTracking()
             .Where(x => x.TaiKhoanId == accountId && x.DangLamViec)
             .Select(x => x.Id).SingleOrDefaultAsync();
+
+        if (cashierId == 0 && User.IsInRole(AppRoles.Admin))
+        {
+            cashierId = await db.NhanVien.AsNoTracking().Where(x => x.DangLamViec).Select(x => x.Id).FirstOrDefaultAsync();
+        }
+
         if (cashierId == 0) return Forbid();
 
         var expectedVersion = new byte[8];
