@@ -131,9 +131,16 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
             entity.GhiChu = model.GhiChu?.Trim();
             entity.DangSuDung = model.DangSuDung;
 
-            await Db.SaveChangesAsync();
-            TempData["Success"] = "Cập nhật thông tin nhà cung cấp thành công.";
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                await Db.SaveChangesAsync();
+                TempData["Success"] = "Cập nhật thông tin nhà cung cấp thành công.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                ModelState.AddModelError("", "Dữ liệu nhà cung cấp đã được cập nhật bởi phiên làm việc khác. Vui lòng tải lại trang.");
+            }
         }
 
         return View(model);
@@ -146,8 +153,15 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
         if (entity == null) return NotFound();
 
         entity.DangSuDung = !entity.DangSuDung;
-        await Db.SaveChangesAsync();
-        TempData["Success"] = $"Đã chuyển trạng thái nhà cung cấp '{entity.TenNhaCungCap}' sang {(entity.DangSuDung ? "Đang hợp tác" : "Ngừng hợp tác")}.";
+        try
+        {
+            await Db.SaveChangesAsync();
+            TempData["Success"] = $"Đã chuyển trạng thái nhà cung cấp '{entity.TenNhaCungCap}' sang {(entity.DangSuDung ? "Đang hợp tác" : "Ngừng hợp tác")}.";
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            TempData["Error"] = "Dữ liệu nhà cung cấp đã được cập nhật bởi phiên làm việc khác. Vui lòng tải lại.";
+        }
         return RedirectToAction(nameof(Index));
     }
 
@@ -164,9 +178,27 @@ public class NhaCungCapController(RestaurantDbContext context) : ManagementContr
             return RedirectToAction(nameof(Index));
         }
 
-        Db.NhaCungCap.Remove(entity);
-        await Db.SaveChangesAsync();
-        TempData["Success"] = $"Đã xóa nhà cung cấp '{entity.TenNhaCungCap}'.";
+        var linkedIngredients = await Db.NhaCungCapNguyenLieus.AnyAsync(x => x.MaNhaCungCap == id);
+        if (linkedIngredients)
+        {
+            TempData["Error"] = $"Không thể xóa nhà cung cấp '{entity.TenNhaCungCap}' vì đang được liên kết cung cấp nguyên liệu. Vui lòng gỡ liên kết nguyên liệu hoặc chuyển trạng thái sang Ngừng hợp tác.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            Db.NhaCungCap.Remove(entity);
+            await Db.SaveChangesAsync();
+            TempData["Success"] = $"Đã xóa nhà cung cấp '{entity.TenNhaCungCap}'.";
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            TempData["Error"] = "Nhà cung cấp đã bị thay đổi hoặc xóa bởi một phiên làm việc khác.";
+        }
+        catch (DbUpdateException)
+        {
+            TempData["Error"] = $"Không thể xóa nhà cung cấp '{entity.TenNhaCungCap}' do có dữ liệu liên quan trong hệ thống.";
+        }
         return RedirectToAction(nameof(Index));
     }
 

@@ -107,9 +107,10 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
 
         foreach (var r in model.ChiTietBaoCao)
         {
-            var tenEscape = $"\"{r.TenNguyenLieu.Replace("\"", "\"\"")}\"";
-            var dmEscape = $"\"{(r.DanhMuc ?? "Khác").Replace("\"", "\"\"")}\"";
-            sb.AppendLine($"NL{r.MaNguyenLieu:D3},{tenEscape},{r.DonViTinh},{dmEscape},{r.DonGia:0.##},{r.TonDauKySL:0.##},{r.TonDauKyTien:0.##},{r.NhapTrongKySL:0.##},{r.NhapTrongKyTien:0.##},{r.XuatTrongKySL:0.##},{r.XuatTrongKyTien:0.##},{r.ThanhLyTrongKySL:0.##},{r.ThanhLyTrongKyTien:0.##},{r.TonCuoiKySL:0.##},{r.TonCuoiKyTien:0.##}");
+            var tenEscape = EscapeCsvCell(r.TenNguyenLieu);
+            var dvtEscape = EscapeCsvCell(r.DonViTinh);
+            var dmEscape = EscapeCsvCell(r.DanhMuc ?? "Khác");
+            sb.AppendLine($"NL{r.MaNguyenLieu:D3},{tenEscape},{dvtEscape},{dmEscape},{r.DonGia:0.##},{r.TonDauKySL:0.##},{r.TonDauKyTien:0.##},{r.NhapTrongKySL:0.##},{r.NhapTrongKyTien:0.##},{r.XuatTrongKySL:0.##},{r.XuatTrongKyTien:0.##},{r.ThanhLyTrongKySL:0.##},{r.ThanhLyTrongKyTien:0.##},{r.TonCuoiKySL:0.##},{r.TonCuoiKyTien:0.##}");
         }
 
         sb.AppendLine();
@@ -124,6 +125,17 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
 
         var fileName = $"BaoCaoNhapXuatTon_{model.TuNgay:yyyyMMdd}_{model.DenNgay:yyyyMMdd}.csv";
         return File(fileBytes, "text/csv; charset=utf-8", fileName);
+    }
+
+    private static string EscapeCsvCell(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "\"\"";
+        // Prevent CSV formula injection (CWE-1236)
+        if (value.StartsWith('=') || value.StartsWith('+') || value.StartsWith('-') || value.StartsWith('@') || value.StartsWith('\t') || value.StartsWith('\r'))
+        {
+            value = "'" + value;
+        }
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
     private async Task<BaoCaoTonKhoVM> GenerateBaoCaoModelAsync(DateTime? tuNgay, DateTime? denNgay, string? preset)
@@ -159,6 +171,11 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
                 end = now.Date.AddDays(1).AddTicks(-1);
                 preset = "thangnay";
                 break;
+        }
+
+        if (start > end)
+        {
+            (start, end) = (end, start);
         }
 
         var startOffset = new DateTimeOffset(start);

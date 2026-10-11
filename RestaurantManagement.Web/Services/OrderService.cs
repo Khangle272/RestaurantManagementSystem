@@ -247,7 +247,14 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
             if (khoService != null)
             {
-                await khoService.DeductInventoryForOrderDishesAsync(hoaDon.Id, model.Items, staffId);
+                try
+                {
+                    await khoService.DeductInventoryForOrderDishesAsync(hoaDon.Id, model.Items, staffId);
+                }
+                catch
+                {
+                    // Do not fail the committed order if background inventory deduction encounters errors
+                }
             }
 
             return (null, hoaDon.Id);
@@ -329,7 +336,14 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
             if (khoService != null)
             {
-                await khoService.DeductInventoryForOrderDishesAsync(bill.Id, items);
+                try
+                {
+                    await khoService.DeductInventoryForOrderDishesAsync(bill.Id, items);
+                }
+                catch
+                {
+                    // Do not fail the committed addition if background inventory deduction encounters errors
+                }
             }
 
             return (null, bill.Id);

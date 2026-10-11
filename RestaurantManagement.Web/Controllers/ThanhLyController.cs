@@ -82,12 +82,17 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
             try
             {
                 // Validate stock availability
-                foreach (var item in model.ChiTiets)
+                var requiredTotals = model.ChiTiets
+                    .GroupBy(c => c.MaNguyenLieu)
+                    .Select(g => new { MaNguyenLieu = g.Key, TongSoLuong = g.Sum(x => x.SoLuong) })
+                    .ToList();
+
+                foreach (var req in requiredTotals)
                 {
-                    var nl = await Db.NguyenLieu.FindAsync(item.MaNguyenLieu);
-                    if (nl == null || nl.SoLuongTon < item.SoLuong)
+                    var nl = await Db.NguyenLieu.FindAsync(req.MaNguyenLieu);
+                    if (nl == null || nl.SoLuongTon < req.TongSoLuong)
                     {
-                        throw new InvalidOperationException($"Nguyên liệu '{nl?.TenNguyenLieu ?? "N/A"}' không đủ tồn kho để thanh lý (Hiện tồn: {nl?.SoLuongTon.ToString("0.##") ?? "0"}, Đề nghị thanh lý: {item.SoLuong.ToString("0.##")}).");
+                        throw new InvalidOperationException($"Nguyên liệu '{nl?.TenNguyenLieu ?? "N/A"}' không đủ tồn kho để thanh lý (Hiện tồn: {nl?.SoLuongTon.ToString("0.##") ?? "0"}, Đề nghị thanh lý: {req.TongSoLuong.ToString("0.##")}).");
                     }
                 }
 
@@ -183,14 +188,20 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
         var email = User.Identity?.Name;
         if (!string.IsNullOrEmpty(email))
         {
-            var nv = await Db.NhanVien.FirstOrDefaultAsync(x => x.Email == email);
+            var nv = await Db.NhanVien.FirstOrDefaultAsync(x => x.Email == email && x.DangLamViec);
             if (nv != null) return nv.Id;
+
+            if (int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var accountId))
+            {
+                var nvAccount = await Db.NhanVien.FirstOrDefaultAsync(x => x.TaiKhoanId == accountId && x.DangLamViec);
+                if (nvAccount != null) return nvAccount.Id;
+            }
         }
 
-        var warehouseNv = await Db.NhanVien.FirstOrDefaultAsync(x => x.ChucVu == "Nhân viên kho" || x.MaNhanVien == "NV003");
+        var warehouseNv = await Db.NhanVien.FirstOrDefaultAsync(x => (x.ChucVu == "Nhân viên kho" || x.MaNhanVien == "NV003") && x.DangLamViec);
         if (warehouseNv != null) return warehouseNv.Id;
 
-        var firstNv = await Db.NhanVien.FirstOrDefaultAsync();
+        var firstNv = await Db.NhanVien.FirstOrDefaultAsync(x => x.DangLamViec);
         return firstNv?.Id ?? 1;
     }
 }

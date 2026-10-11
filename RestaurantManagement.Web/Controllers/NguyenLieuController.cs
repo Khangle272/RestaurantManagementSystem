@@ -24,6 +24,8 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
                 .Sum(c => (decimal?)c.SoLuong) ?? 0)
                 - (Db.ChiTietPhieuXuat.Where(c => c.NguyenLieuId == x.Id && c.PhieuXuat.TrangThai == TrangThaiPhieu.DaGhiSo)
                 .Sum(c => (decimal?)c.SoLuong) ?? 0)
+                - (Db.ChiTietPhieuThanhLy.Where(c => c.NguyenLieuId == x.Id && c.PhieuThanhLy.TrangThai == "DaThanhLy")
+                .Sum(c => (decimal?)c.SoLuong) ?? 0)
         });
         var result = await PageAsync(rows, page, search, trangThai);
         var total = await Db.NguyenLieu.CountAsync();
@@ -82,6 +84,7 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         var entity = await Db.NguyenLieu.FindAsync(id);
         if (entity == null) return NotFound();
 
+        await ValidateAsync(model, id);
         if (ModelState.IsValid && ApplyVersion(entity, model.RowVersion))
         {
             Map(model, entity);
@@ -212,6 +215,8 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
             return Json(new { success = false, message = "Số lượng nhà cung cấp liên kết vượt giới hạn." });
 
         var supplierIds = suppliers.Select(s => s.MaNhaCungCap).ToList();
+        if (supplierIds.Count != supplierIds.Distinct().Count())
+            return Json(new { success = false, message = "Danh sách nhà cung cấp bị trùng lặp." });
         if (supplierIds.Any(id => id <= 0))
             return Json(new { success = false, message = "Nhà cung cấp không hợp lệ." });
         if (suppliers.Any(s => s.DonGiaCungUng < 0 || s.DonGiaCungUng > 999999999999.99m))
