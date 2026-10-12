@@ -113,8 +113,8 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
         var entity = new KhuyenMai
         {
             TenChuongTrinh = model.TenChuongTrinh.Trim(),
-            BatDau = new DateTimeOffset(model.BatDau.ToUniversalTime(), TimeSpan.Zero),
-            KetThuc = new DateTimeOffset(model.KetThuc.Date.AddDays(1).AddTicks(-1).ToUniversalTime(), TimeSpan.Zero),
+            BatDau = new DateTimeOffset(model.BatDau.Date, TimeSpan.FromHours(7)),
+            KetThuc = new DateTimeOffset(model.KetThuc.Date.AddDays(1).AddTicks(-1), TimeSpan.FromHours(7)),
             PhamVi = model.PhamVi,
             KieuGiam = model.KieuGiam,
             GiaTri = model.GiaTri,
@@ -126,6 +126,7 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
             DangSuDung = model.DangSuDung
         };
 
+        await using var transaction = await db.Database.BeginTransactionAsync();
         db.KhuyenMai.Add(entity);
         await db.SaveChangesAsync();
 
@@ -142,6 +143,7 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
             await db.SaveChangesAsync();
         }
 
+        await transaction.CommitAsync();
         TempData["Success"] = $"Đã tạo chương trình ưu đãi '{entity.TenChuongTrinh}' thành công.";
         return RedirectToAction(nameof(Index));
     }
@@ -157,9 +159,10 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
         var model = new KhuyenMaiFormViewModel
         {
             Id = entity.Id,
+            RowVersion = Convert.ToBase64String(db.Entry(entity).Property<byte[]>("RowVersion").CurrentValue ?? []),
             TenChuongTrinh = entity.TenChuongTrinh,
-            BatDau = entity.BatDau.LocalDateTime,
-            KetThuc = entity.KetThuc.LocalDateTime,
+            BatDau = entity.BatDau.ToOffset(TimeSpan.FromHours(7)).DateTime,
+            KetThuc = entity.KetThuc.ToOffset(TimeSpan.FromHours(7)).DateTime,
             PhamVi = entity.PhamVi,
             KieuGiam = entity.KieuGiam,
             GiaTri = entity.GiaTri,
@@ -185,6 +188,10 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
         if (entity == null) return NotFound();
 
         await ValidateFormAsync(model, id);
+        var expected = new byte[8];
+        if (model.RowVersion is null || !Convert.TryFromBase64String(model.RowVersion, expected, out var length) || length != 8
+            || !expected.SequenceEqual(db.Entry(entity).Property<byte[]>("RowVersion").CurrentValue ?? []))
+            ModelState.AddModelError("", "Chương trình đã thay đổi. Vui lòng tải lại trang trước khi cập nhật.");
 
         if (!ModelState.IsValid)
         {
@@ -193,8 +200,8 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
         }
 
         entity.TenChuongTrinh = model.TenChuongTrinh.Trim();
-        entity.BatDau = new DateTimeOffset(model.BatDau.ToUniversalTime(), TimeSpan.Zero);
-        entity.KetThuc = new DateTimeOffset(model.KetThuc.Date.AddDays(1).AddTicks(-1).ToUniversalTime(), TimeSpan.Zero);
+        entity.BatDau = new DateTimeOffset(model.BatDau.Date, TimeSpan.FromHours(7));
+        entity.KetThuc = new DateTimeOffset(model.KetThuc.Date.AddDays(1).AddTicks(-1), TimeSpan.FromHours(7));
         entity.PhamVi = model.PhamVi;
         entity.KieuGiam = model.KieuGiam;
         entity.GiaTri = model.GiaTri;
@@ -221,8 +228,13 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
             }
         }
 
-        await db.SaveChangesAsync();
-
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            ModelState.AddModelError("", "Chương trình vừa được cập nhật bởi thao tác khác. Vui lòng tải lại trang.");
+            model.AvailableDishes = await GetAvailableDishesAsync(model.SelectedMonAnIds);
+            return View("Form", model);
+        }
         TempData["Success"] = $"Đã cập nhật chương trình '{entity.TenChuongTrinh}'.";
         return RedirectToAction(nameof(Index));
     }
@@ -272,6 +284,12 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
 
     private async Task ValidateFormAsync(KhuyenMaiFormViewModel model, int excludeId = 0)
     {
+        model.TenChuongTrinh = model.TenChuongTrinh?.Trim() ?? "";
+        model.SelectedMonAnIds ??= [];
+        if (!Enum.IsDefined(model.PhamVi) || !Enum.IsDefined(model.KieuGiam))
+            ModelState.AddModelError("", "Phạm vi hoặc kiểu giảm giá không hợp lệ.");
+        if (model.BatDau.Year < 1900 || model.KetThuc.Year > 2100)
+            ModelState.AddModelError("", "Ngày chương trình phải nằm trong khoảng năm 1900–2100.");
         if (model.BatDau > model.KetThuc)
         {
             ModelState.AddModelError(nameof(model.KetThuc), "Thời gian kết thúc phải sau thời gian bắt đầu.");
@@ -295,6 +313,12 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
         if (model.PhamVi == PhamViUuDai.MonAn && model.SelectedMonAnIds.Count == 0)
         {
             ModelState.AddModelError(nameof(model.SelectedMonAnIds), "Vui lòng chọn ít nhất một món ăn khi áp dụng ưu đãi theo Món ăn.");
+        }
+        if (model.PhamVi == PhamViUuDai.MonAn)
+        {
+            var selected = model.SelectedMonAnIds.Distinct().ToList();
+            if (await db.MonAn.CountAsync(x => selected.Contains(x.Id)) != selected.Count)
+                ModelState.AddModelError(nameof(model.SelectedMonAnIds), "Danh sách có món ăn không tồn tại. Vui lòng chọn lại.");
         }
 
         var duplicateName = await db.KhuyenMai.AnyAsync(x => x.Id != excludeId && x.TenChuongTrinh.ToLower() == model.TenChuongTrinh.Trim().ToLower());

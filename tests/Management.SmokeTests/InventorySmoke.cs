@@ -222,7 +222,9 @@ public static class InventorySmoke
         // 8. Test AJAX Quick-Add Endpoints
         // 8.1. QuickAdd Category
         var qCategoryName = "Danh mục QuickAdd " + Guid.NewGuid().ToString("N")[..6];
-        var qCategoryResp = await admin.PostAsJsonAsync("/DanhMuc/QuickCreate", new { tenDanhMuc = qCategoryName, moTa = "Mô tả test" });
+        using var missingQuickToken = await admin.PostAsJsonAsync("/DanhMuc/QuickCreate", new { tenDanhMuc = qCategoryName });
+        check(missingQuickToken.StatusCode == HttpStatusCode.BadRequest, "QuickCreate rejects missing antiforgery token");
+        using var qCategoryResp = await QuickPost("/DanhMuc/QuickCreate", new { tenDanhMuc = qCategoryName, moTa = "Mô tả test" });
         check(qCategoryResp.StatusCode == HttpStatusCode.OK, "QuickCreate Category returns 200 OK");
         var qCategoryJson = await qCategoryResp.Content.ReadFromJsonAsync<JsonElement>();
         check(qCategoryJson.GetProperty("success").GetBoolean(), "QuickCreate Category success is true");
@@ -231,7 +233,7 @@ public static class InventorySmoke
 
         // 8.2. QuickAdd Ingredient
         var qIngredientName = "Nguyên liệu QuickAdd " + Guid.NewGuid().ToString("N")[..6];
-        var qIngredientResp = await admin.PostAsJsonAsync("/NguyenLieu/QuickCreate", new { tenNguyenLieu = qIngredientName, donViTinh = "kg", donGia = 65000m, dinhMucToiThieu = 2m });
+        using var qIngredientResp = await QuickPost("/NguyenLieu/QuickCreate", new { tenNguyenLieu = qIngredientName, donViTinh = "kg", donGia = 65000m, dinhMucToiThieu = 2m });
         check(qIngredientResp.StatusCode == HttpStatusCode.OK, "QuickCreate Ingredient returns 200 OK");
         var qIngJson = await qIngredientResp.Content.ReadFromJsonAsync<JsonElement>();
         check(qIngJson.GetProperty("success").GetBoolean(), "QuickCreate Ingredient success is true");
@@ -241,15 +243,23 @@ public static class InventorySmoke
         // 8.3. QuickAdd Supplier
         var qSupplierName = "NCC QuickAdd " + Guid.NewGuid().ToString("N")[..6];
         var qSupplierPhone = "097" + Random.Shared.Next(1000000, 9999999);
-        var qSupplierResp = await admin.PostAsJsonAsync("/NhaCungCap/QuickCreate", new { tenNhaCungCap = qSupplierName, soDienThoai = qSupplierPhone });
+        using var qSupplierResp = await QuickPost("/NhaCungCap/QuickCreate", new { tenNhaCungCap = qSupplierName, soDienThoai = qSupplierPhone });
         check(qSupplierResp.StatusCode == HttpStatusCode.OK, "QuickCreate Supplier returns 200 OK");
         var qSuppJson = await qSupplierResp.Content.ReadFromJsonAsync<JsonElement>();
         check(qSuppJson.GetProperty("success").GetBoolean(), "QuickCreate Supplier success is true");
         var qSuppId = qSuppJson.GetProperty("id").GetInt32();
         check(await db.NhaCungCap.AnyAsync(x => x.Id == qSuppId && x.TenNhaCungCap == qSupplierName), "QuickCreate Supplier saved to db");
 
+        async Task<HttpResponseMessage> QuickPost(string path, object payload)
+        {
+            var form = await admin.GetStringAsync("/MonAn/Create");
+            using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(payload) };
+            request.Headers.Add("RequestVerificationToken", hidden(form, "__RequestVerificationToken"));
+            return await admin.SendAsync(request);
+        }
+
         // 9. Test Supplier-Ingredient Many-to-Many Linking
-        var linkResp = await admin.PostAsJsonAsync($"/NguyenLieu/LinkSuppliersToIngredient?ingredientId={qIngId}", new[]
+        using var linkResp = await QuickPost($"/NguyenLieu/LinkSuppliersToIngredient?ingredientId={qIngId}", new[]
         {
             new { maNhaCungCap = qSuppId, donGiaCungUng = 62000m, maHangNCC = "MH-01", ghiChu = "Thỏa thuận test" }
         });

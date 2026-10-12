@@ -4,6 +4,8 @@ namespace RestaurantManagement.Web.Models;
 
 public class BaoCaoDashboardViewModel
 {
+    public decimal TongTienCocDaTru { get; set; }
+    public int SoHoaDonThieuNgayThanhToan { get; set; }
     public DateTimeOffset TuNgay { get; set; }
     public DateTimeOffset DenNgay { get; set; }
 
@@ -37,6 +39,7 @@ public class BaoCaoDashboardViewModel
 
 public class BaoCaoDoanhThuViewModel
 {
+    public int SoHoaDonThieuNgayThanhToan { get; set; }
     public string CheDo { get; set; } = "TheoNgay"; // TheoNgay, TheoThang, TheoNam
     public DateTime TuNgay { get; set; } = DateTime.Today.AddDays(-30);
     public DateTime DenNgay { get; set; } = DateTime.Today;
@@ -159,6 +162,8 @@ public class TonKhoChiTietRow
 
 public class BaoCaoHieuQuaKhuyenMaiViewModel
 {
+    public int SoHoaDonThieuLichSu { get; set; }
+    public decimal TongGiamThuCong { get; set; }
     public DateTime TuNgay { get; set; } = DateTime.Today.AddDays(-30);
     public DateTime DenNgay { get; set; } = DateTime.Today;
 
@@ -192,10 +197,10 @@ public class HieuQuaKhuyenMaiItem
         get
         {
             if (SoLuotApDung == 0) return "Chưa phát sinh lượt dùng";
-            if (ChiSoROI >= 8) return "🌟 Rất hiệu quả (ROI cao)";
-            if (ChiSoROI >= 4) return "✅ Hiệu quả tốt";
-            if (ChiSoROI >= 2) return "⚖️ Trung bình";
-            return "⚠️ Chiết khấu cao (Cần cân đối)";
+            if (ChiSoROI >= 8) return "Tỷ lệ doanh thu/giảm cao";
+            if (ChiSoROI >= 4) return "Tỷ lệ doanh thu/giảm khá";
+            if (ChiSoROI >= 2) return "Tỷ lệ doanh thu/giảm trung bình";
+            return "Tiền giảm cao so với doanh thu bill";
         }
     }
 }

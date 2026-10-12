@@ -35,6 +35,9 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         // Đánh giá các chương trình ưu đãi và voucher áp dụng
         var promoEval = await promotionService.EvaluatePromotionsAsync(id, invoice.Voucher?.Ma);
         ViewBag.PromotionEvaluation = promoEval;
+        var effectiveDiscount = invoice.TrangThai == TrangThaiHoaDon.ChuaThanhToan ? promoEval.TongTienGiam : invoice.TienGiam;
+        ViewBag.EffectiveDiscount = effectiveDiscount;
+        ViewBag.ManualDiscount = promoEval.TienGiamThuCong;
 
         ViewBag.RowVersion = Convert.ToBase64String(db.Entry(invoice).Property<byte[]>("RowVersion").CurrentValue ?? []);
         ViewBag.BookingRowVersion = invoice.DatBan is null ? ""
@@ -43,20 +46,20 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         var available = invoice.DatBanId is int bookingId && invoice.TrangThai == TrangThaiHoaDon.ChuaThanhToan
             ? await orderService.AvailableDepositAsync(bookingId, invoice.Id) : 0;
         var deposit = invoice.TrangThai == TrangThaiHoaDon.ChuaThanhToan
-            ? Math.Min(available, Math.Max(0, total - invoice.TienGiam))
+            ? Math.Min(available, Math.Max(0, total - effectiveDiscount))
             : invoice.TienCocDaTru;
         ViewBag.AvailableDeposit = available;
         ViewBag.ActiveTotal = total;
         ViewBag.DepositDeduction = deposit;
-        ViewBag.PaymentAmount = Math.Max(0, total - invoice.TienGiam - deposit);
+        ViewBag.PaymentAmount = Math.Max(0, total - effectiveDiscount - deposit);
         return View(invoice);
     }
 
     [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ApplyVoucher(int id, string voucherCode)
+    public async Task<IActionResult> ApplyVoucher(int id, string voucherCode, string? rowVersion)
     {
-        var (success, error, result) = await promotionService.ApplyVoucherToInvoiceAsync(id, voucherCode);
+        var (success, error, result) = await promotionService.ApplyVoucherToInvoiceAsync(id, voucherCode, rowVersion);
         if (!success) TempData["Error"] = error;
         else TempData["Success"] = $"Đã áp dụng mã Voucher '{voucherCode.Trim()}' thành công (Giảm {result?.TongTienGiam:N0} đ).";
         return RedirectToAction(nameof(Details), new { id });
@@ -64,9 +67,9 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
 
     [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> RemoveVoucher(int id)
+    public async Task<IActionResult> RemoveVoucher(int id, string? rowVersion)
     {
-        var (success, error) = await promotionService.RemoveVoucherFromInvoiceAsync(id);
+        var (success, error) = await promotionService.RemoveVoucherFromInvoiceAsync(id, rowVersion);
         if (!success) TempData["Error"] = error;
         else TempData["Success"] = "Đã gỡ bỏ mã Voucher khỏi hóa đơn.";
         return RedirectToAction(nameof(Details), new { id });
@@ -91,15 +94,22 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         var expectedVersion = new byte[8];
         if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, expectedVersion, out var length) || length != 8)
             return BadRequest();
-        var invoice = await db.HoaDon.AsNoTracking().Include(x => x.ChiTiet).SingleOrDefaultAsync(x => x.Id == id);
+        var invoice = await db.HoaDon.AsNoTracking().Include(x => x.ChiTiet).Include(x => x.Voucher).SingleOrDefaultAsync(x => x.Id == id);
         if (invoice is null) return NotFound();
         var total = invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).Sum(x => x.SoLuong * x.DonGia);
         var deposit = invoice.DatBanId is int bookingId ? await orderService.AvailableDepositAsync(bookingId, id) : 0;
+        var quote = await promotionService.EvaluatePromotionsAsync(id, invoice.Voucher?.Ma);
+        if (!quote.IsSuccess)
+        {
+            TempData["Error"] = quote.ErrorMessage;
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        var quotedDue = Math.Max(0, total - quote.TongTienGiam - Math.Min(deposit, Math.Max(0, total - quote.TongTienGiam)));
         var error = await orderService.ProcessPaymentAsync(new RestaurantManagement.Web.Models.PaymentFormModel
         {
             Id = id, RowVersion = rowVersion, BookingRowVersion = bookingRowVersion,
             PhuongThuc = PhuongThucThanhToan.TienMat,
-            TienKhachDua = Math.Max(0, total - invoice.TienGiam - deposit)
+            TienKhachDua = quotedDue, SoTienPhaiThuDuKien = quotedDue
         }, cashierId);
         if (error is not null) TempData["Error"] = error;
         else TempData["Success"] = "Đã xác nhận thu tiền mặt.";

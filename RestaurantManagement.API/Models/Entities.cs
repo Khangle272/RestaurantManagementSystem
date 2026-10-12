@@ -232,6 +232,8 @@ public class HoaDon
     public TrangThaiHoaDon TrangThai { get; set; }
     public decimal TongTienHang { get; set; }
     public decimal TienGiam { get; set; }
+    // Ưu đãi và giảm thủ công thực tế; bill cũ để null, không suy đoán lịch sử.
+    public string? UuDaiSnapshot { get; set; }
     // Số cọc thực tế được trừ vào bill (tiền gốc lưu ở DatBan).
     public decimal TienCocDaTru { get; set; }
     public decimal TongThanhToan { get; private set; }

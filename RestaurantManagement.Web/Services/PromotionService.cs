@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Text.Json;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 
@@ -8,6 +11,8 @@ public class PromotionEvaluationResult
 {
     public decimal TongTienHang { get; set; }
     public decimal TongTienGiam { get; set; }
+    public decimal TienGiamThuCong { get; set; }
+    public bool ThieuLichSu { get; set; }
     public decimal TongThanhToanSauGiam { get; set; }
     public int? AppliedVoucherId { get; set; }
     public string? AppliedVoucherCode { get; set; }
@@ -30,6 +35,14 @@ public class AppliedPromotionDetail
     public string? MaVoucher { get; set; }
 }
 
+public class InvoiceDiscountSnapshot
+{
+    public int Version { get; set; } = 1;
+    public DateTimeOffset ThoiDiem { get; set; }
+    public decimal TienGiamThuCong { get; set; }
+    public List<AppliedPromotionDetail> UuDai { get; set; } = [];
+}
+
 public class IneligiblePromotionDetail
 {
     public string TenChuongTrinh { get; set; } = "";
@@ -38,21 +51,54 @@ public class IneligiblePromotionDetail
 
 public interface IPromotionService
 {
-    Task<PromotionEvaluationResult> EvaluatePromotionsAsync(int hoaDonId, string? voucherCode = null);
-    Task<(bool Success, string? Error, PromotionEvaluationResult? Result)> ApplyVoucherToInvoiceAsync(int hoaDonId, string voucherCode);
-    Task<(bool Success, string? Error)> RemoveVoucherFromInvoiceAsync(int hoaDonId);
+    Task<PromotionEvaluationResult> EvaluatePromotionsAsync(int hoaDonId, string? voucherCode = null, decimal? manualDiscount = null);
+    Task<(bool Success, string? Error, PromotionEvaluationResult? Result)> ApplyVoucherToInvoiceAsync(int hoaDonId, string voucherCode, string? rowVersion = null);
+    Task<(bool Success, string? Error)> RemoveVoucherFromInvoiceAsync(int hoaDonId, string? rowVersion = null);
     Task<int> GetVoucherUsageCountAsync(int voucherId);
+    Task LockVoucherAsync(int? voucherId);
 }
 
 public class PromotionService(RestaurantDbContext db) : IPromotionService
 {
+    public static InvoiceDiscountSnapshot? ReadSnapshot(HoaDon invoice)
+    {
+        if (string.IsNullOrWhiteSpace(invoice.UuDaiSnapshot)) return null;
+        try
+        {
+            var snapshot = JsonSerializer.Deserialize<InvoiceDiscountSnapshot>(invoice.UuDaiSnapshot);
+            if (snapshot is null || snapshot.Version != 1 || snapshot.UuDai is null
+                || snapshot.TienGiamThuCong < 0 || snapshot.UuDai.Any(x => x.SoTienGiam <= 0)
+                || (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan
+                    && snapshot.TienGiamThuCong + snapshot.UuDai.Sum(x => x.SoTienGiam) != invoice.TienGiam)) return null;
+            return snapshot;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    public static decimal ManualDiscount(HoaDon invoice) => ReadSnapshot(invoice)?.TienGiamThuCong
+        ?? (invoice.VoucherId is null ? invoice.TienGiam : 0);
+
+    public static string CaptureSnapshot(PromotionEvaluationResult result) => JsonSerializer.Serialize(new InvoiceDiscountSnapshot
+    {
+        ThoiDiem = DateTimeOffset.UtcNow, TienGiamThuCong = result.TienGiamThuCong, UuDai = result.AppliedPromotions
+    });
+
+    public async Task LockVoucherAsync(int? voucherId)
+    {
+        if (voucherId is null) return;
+        if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("Voucher phải được kiểm tra trong transaction.");
+        // Serialize reservations and payments for the same code, across all app instances.
+        await db.Voucher.FromSqlInterpolated($"SELECT * FROM [Voucher] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {voucherId.Value}")
+            .AsNoTracking().SingleOrDefaultAsync();
+    }
+
     public async Task<int> GetVoucherUsageCountAsync(int voucherId)
     {
         return await db.HoaDon.AsNoTracking()
             .CountAsync(x => x.VoucherId == voucherId && x.TrangThai != TrangThaiHoaDon.DaHuy);
     }
 
-    public async Task<PromotionEvaluationResult> EvaluatePromotionsAsync(int hoaDonId, string? voucherCode = null)
+    public async Task<PromotionEvaluationResult> EvaluatePromotionsAsync(int hoaDonId, string? voucherCode = null, decimal? manualDiscount = null)
     {
         var result = new PromotionEvaluationResult();
 
@@ -65,6 +111,19 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
             result.ErrorMessage = "Không tìm thấy hóa đơn.";
             return result;
         }
+
+        if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
+        {
+            var history = ReadSnapshot(invoice);
+            result.TongTienHang = invoice.TongTienHang;
+            result.TongTienGiam = invoice.TienGiam;
+            result.TongThanhToanSauGiam = invoice.TongTienHang - invoice.TienGiam;
+            result.TienGiamThuCong = history?.TienGiamThuCong ?? 0;
+            result.AppliedPromotions = history?.UuDai ?? [];
+            result.ThieuLichSu = history is null && invoice.TienGiam > 0;
+            return result;
+        }
+        result.TienGiamThuCong = manualDiscount ?? ManualDiscount(invoice);
 
         var activeItems = invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).ToList();
         var totalAmount = activeItems.Sum(x => x.SoLuong * x.DonGia);
@@ -81,7 +140,6 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
 
         // 1. Tải các chương trình khuyến mãi tự động đang hiệu lực (CanVoucher = false)
         var autoPromotions = await db.KhuyenMai.AsNoTracking()
-            .Include(x => x.Id != 0 ? db.KhuyenMaiMon.Where(km => km.KhuyenMaiId == x.Id) : null)
             .Where(x => x.DangSuDung && !x.CanVoucher && x.BatDau <= now && x.KetThuc >= now)
             .OrderBy(x => x.ThuTuApDung)
             .ToListAsync();
@@ -105,12 +163,12 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
                     LyDoKhongDuDieuKien = "Mã voucher không tồn tại."
                 });
             }
-            else if (!voucher.DangSuDung)
+            else if (!voucher.DangSuDung || !voucher.KhuyenMai.DangSuDung || !voucher.KhuyenMai.CanVoucher)
             {
                 result.IneligiblePromotions.Add(new IneligiblePromotionDetail
                 {
                     TenChuongTrinh = $"Mã '{voucher.Ma}'",
-                    LyDoKhongDuDieuKien = "Voucher đã bị khóa hoặc ngừng sử dụng."
+                    LyDoKhongDuDieuKien = "Voucher hoặc chương trình đã ngừng sử dụng, hoặc chương trình không dành cho voucher."
                 });
             }
             else
@@ -185,6 +243,16 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
             decimal discountForThis = 0;
             string calcDescription = "";
 
+            if (p.GiaTriToiThieu > 0 && totalAmount < p.GiaTriToiThieu)
+            {
+                result.IneligiblePromotions.Add(new IneligiblePromotionDetail
+                {
+                    TenChuongTrinh = p.TenChuongTrinh,
+                    LyDoKhongDuDieuKien = $"Tiền món toàn hóa đơn ({totalAmount:N0} đ) chưa đạt tối thiểu ({p.GiaTriToiThieu:N0} đ)."
+                });
+                continue;
+            }
+
             if (p.PhamVi == PhamViUuDai.MonAn)
             {
                 // Khuyến mãi theo món ăn
@@ -210,15 +278,6 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
                 }
 
                 var matchedTotal = matchedLines.Sum(x => x.SoLuong * x.DonGia);
-                if (p.GiaTriToiThieu > 0 && matchedTotal < p.GiaTriToiThieu)
-                {
-                    result.IneligiblePromotions.Add(new IneligiblePromotionDetail
-                    {
-                        TenChuongTrinh = p.TenChuongTrinh,
-                        LyDoKhongDuDieuKien = $"Tổng tiền các món ưu đãi ({matchedTotal:N0} đ) chưa đạt mức tối thiểu ({p.GiaTriToiThieu:N0} đ)."
-                    });
-                    continue;
-                }
 
                 if (p.KieuGiam == KieuGiam.PhanTram)
                 {
@@ -243,15 +302,6 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
             else
             {
                 // Khuyến mãi theo toàn bộ Hóa đơn
-                if (p.GiaTriToiThieu > 0 && totalAmount < p.GiaTriToiThieu)
-                {
-                    result.IneligiblePromotions.Add(new IneligiblePromotionDetail
-                    {
-                        TenChuongTrinh = p.TenChuongTrinh,
-                        LyDoKhongDuDieuKien = $"Tổng tiền hóa đơn ({totalAmount:N0} đ) chưa đạt giá trị tối thiểu ({p.GiaTriToiThieu:N0} đ)."
-                    });
-                    continue;
-                }
 
                 if (p.KieuGiam == KieuGiam.PhanTram)
                 {
@@ -294,8 +344,11 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
         // XỬ LÝ KẾT HỢP ĐỒNG THỜI (ChoPhepKetHop & ThuTuApDung)
         if (calculatedDetails.Count == 0)
         {
+            result.AppliedVoucherId = null;
+            result.AppliedVoucherCode = null;
             result.TongTienGiam = 0;
             result.TongThanhToanSauGiam = totalAmount;
+            FinishDiscount(result, totalAmount);
             return result;
         }
 
@@ -396,69 +449,74 @@ public class PromotionService(RestaurantDbContext db) : IPromotionService
         result.TongTienGiam = Math.Min(result.TongTienGiam, totalAmount);
         result.TongThanhToanSauGiam = Math.Max(0, totalAmount - result.TongTienGiam);
 
+        if (!result.AppliedPromotions.Any(x => x.TuVoucher))
+        {
+            result.AppliedVoucherId = null;
+            result.AppliedVoucherCode = null;
+        }
+        FinishDiscount(result, totalAmount);
+
         return result;
     }
 
-    public async Task<(bool Success, string? Error, PromotionEvaluationResult? Result)> ApplyVoucherToInvoiceAsync(int hoaDonId, string voucherCode)
+    private static void FinishDiscount(PromotionEvaluationResult result, decimal total)
     {
-        if (string.IsNullOrWhiteSpace(voucherCode))
-            return (false, "Vui lòng nhập mã Voucher.", null);
-
-        var invoice = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == hoaDonId);
-        if (invoice == null)
-            return (false, "Không tìm thấy hóa đơn.", null);
-
-        if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
-            return (false, "Chỉ có thể áp dụng Voucher cho hóa đơn chưa thanh toán.", null);
-
-        var eval = await EvaluatePromotionsAsync(hoaDonId, voucherCode.Trim());
-        if (!eval.IsSuccess)
-            return (false, eval.ErrorMessage, eval);
-
-        var appliedVoucher = eval.AppliedPromotions.FirstOrDefault(x => x.TuVoucher);
-        if (appliedVoucher == null)
+        if (result.TienGiamThuCong < 0 || result.TienGiamThuCong > total - result.TongTienGiam)
         {
-            var reasons = string.Join("; ", eval.IneligiblePromotions.Select(x => $"{x.TenChuongTrinh}: {x.LyDoKhongDuDieuKien}"));
-            return (false, string.IsNullOrEmpty(reasons) ? "Mã Voucher không đủ điều kiện áp dụng cho hóa đơn này." : reasons, eval);
+            result.ErrorMessage = "Giảm thủ công phải từ 0 đến phần tiền còn lại sau ưu đãi. Vui lòng điều chỉnh giảm thủ công.";
+            return;
         }
-
-        invoice.VoucherId = eval.AppliedVoucherId;
-        invoice.TienGiam = eval.TongTienGiam;
-
-        try
-        {
-            await db.SaveChangesAsync();
-            return (true, null, eval);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return (false, "Hóa đơn đã bị thay đổi bởi thao tác khác. Vui lòng tải lại trang.", null);
-        }
+        result.TongTienGiam += result.TienGiamThuCong;
+        result.TongThanhToanSauGiam = total - result.TongTienGiam;
     }
 
-    public async Task<(bool Success, string? Error)> RemoveVoucherFromInvoiceAsync(int hoaDonId)
+    public Task<(bool Success, string? Error, PromotionEvaluationResult? Result)> ApplyVoucherToInvoiceAsync(int hoaDonId, string voucherCode, string? rowVersion = null)
     {
-        var invoice = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == hoaDonId);
-        if (invoice == null)
-            return (false, "Không tìm thấy hóa đơn.");
+        if (string.IsNullOrWhiteSpace(voucherCode))
+            return Task.FromResult<(bool, string?, PromotionEvaluationResult?)>((false, "Vui lòng nhập mã Voucher.", null));
+        return ChangeVoucherAsync(hoaDonId, voucherCode.Trim(), rowVersion);
+    }
 
-        if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
-            return (false, "Hóa đơn đã thanh toán hoặc đã hủy, không thể thay đổi.");
+    public async Task<(bool Success, string? Error)> RemoveVoucherFromInvoiceAsync(int hoaDonId, string? rowVersion = null)
+    {
+        var result = await ChangeVoucherAsync(hoaDonId, null, rowVersion);
+        return (result.Success, result.Error);
+    }
 
-        invoice.VoucherId = null;
-
-        // Tính toán lại tiền giảm từ các khuyến mãi tự động còn lại
-        var eval = await EvaluatePromotionsAsync(hoaDonId, null);
-        invoice.TienGiam = eval.TongTienGiam;
-
+    private async Task<(bool Success, string? Error, PromotionEvaluationResult? Result)> ChangeVoucherAsync(int id, string? code, string? rowVersion)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
+            var invoice = await db.HoaDon.FromSqlInterpolated($"SELECT * FROM [HoaDon] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {id}").SingleOrDefaultAsync();
+            if (invoice is null) return (false, "Không tìm thấy hóa đơn.", null);
+            if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan) return (false, "Chỉ thay đổi ưu đãi trên hóa đơn chưa thanh toán.", null);
+            var expected = new byte[8];
+            if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, expected, out var length) || length != 8
+                || !expected.SequenceEqual(db.Entry(invoice).Property<byte[]>("RowVersion").CurrentValue ?? []))
+                return (false, "Hóa đơn đã thay đổi. Vui lòng tải lại và kiểm tra.", null);
+            if (code is not null)
+            {
+                var voucherId = await db.Voucher.Where(x => x.Ma == code.ToUpper()).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+                await LockVoucherAsync(voucherId);
+            }
+            var result = await EvaluatePromotionsAsync(id, code);
+            if (!result.IsSuccess) return (false, result.ErrorMessage, result);
+            if (code is not null && result.AppliedVoucherId is null)
+                return (false, string.Join("; ", result.IneligiblePromotions.Select(x => x.LyDoKhongDuDieuKien)) is { Length: > 0 } reason
+                    ? reason : "Voucher không được áp dụng trong phương án ưu đãi này.", result);
+            invoice.VoucherId = result.AppliedVoucherId;
+            invoice.TienGiam = result.TongTienGiam;
+            invoice.UuDaiSnapshot = CaptureSnapshot(result);
             await db.SaveChangesAsync();
-            return (true, null);
+            await transaction.CommitAsync();
+            return (true, null, result);
         }
         catch (DbUpdateConcurrencyException)
         {
-            return (false, "Hóa đơn đã bị thay đổi bởi thao tác khác. Vui lòng tải lại.");
+            return (false, "Hóa đơn đã thay đổi. Vui lòng tải lại.", null);
         }
+        catch (SqlException e) when (e.Number is 1205 or 1222)
+        { return (false, "Ưu đãi đang được xử lý bởi thao tác khác. Vui lòng tải lại và thử lại.", null); }
     }
 }

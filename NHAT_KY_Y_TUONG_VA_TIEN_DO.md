@@ -309,3 +309,92 @@ dotnet run --project RestaurantManagement.Web -- --remove-retired-menu-roles
      - Doanh thu chỉ ghi nhận từ hóa đơn ở trạng thái `DaThanhToan`. Tuyệt đối không tính cọc chưa đối chiếu hoặc hóa đơn đã hủy vào doanh thu.
      - Không cộng cọc hai lần khi đã cấn trừ trên hóa đơn (Doanh thu thực thu = Tiền hàng - Giảm giá).
      - Menu quản trị (`_ManagementNavigation.cshtml`) và định tuyến đăng nhập (`Program.cs`) đã được tích hợp thông suốt cho toàn bộ các module mới.
+
+## 10. Fix bổ sung việc của Người 3 — 11/10/2026 (`cong-viec-nguoi-3_khanh`)
+
+Đây là **bản fix bổ sung việc của Người 3**, không thay thế nhật ký hoặc phân công cũ. Phần này bổ sung và đính chính mục 9 theo code đã kiểm tra. Bản sửa dựa trên `8d58b50` của `cong-viec-nguoi-3`, bàn giao ở nhánh mới `cong-viec-nguoi-3_khanh` để nhóm kiểm tra; người phụ trách nhóm quyết định merge, không tự merge master. Không chỉnh README dùng chung.
+
+Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ voucher → tính tiền và cấn trừ cọc → chốt hóa đơn → báo cáo**, không chỉ che lỗi màn hình. Người 3 tiếp tục sở hữu phần nhân sự/phân quyền, khuyến mãi và báo cáo. Người 1 vẫn sở hữu đặt bàn/giỏ món/cọc/sơ đồ bàn; Người 2 vẫn sở hữu món–định lượng–kho. Bản này chỉ bổ sung một chốt bảo vệ đơn vị nguyên liệu do regression phát hiện, không nhận làm lại nghiệp vụ kho của Người 2.
+
+### Lỗi/sự cố cụ thể, nguyên nhân và hướng sửa
+
+1. **Mở chi tiết hóa đơn bị lỗi 500 — lỗi truy vấn trong code.**
+   - `PromotionService` dùng `Include` với biểu thức điều kiện/truy vấn thay vì navigation mà EF hỗ trợ. Lỗi phát sinh khi chạy truy vấn, nên build thành công vẫn không chứng minh trang hoạt động.
+   - Bỏ Include sai, tải dữ liệu ưu đãi bằng truy vấn hợp lệ; không bọc lỗi để trả bill trống hoặc bỏ luôn tính ưu đãi. Kiểm chứng bằng HTTP hóa đơn và mở trang hóa đơn trên trình duyệt.
+
+2. **Tiền hiển thị và tiền chốt chưa thống nhất — lỗi nối các bước tính tiền.**
+   - Màn hình có thể tính ưu đãi hiện tại nhưng bước thanh toán lại dùng tiền giảm đang lưu trên bill; ô giảm thủ công còn dễ bị hiểu là phải nhập lại cả tiền voucher. Khi chương trình/cọc đổi giữa lúc mở trang và chốt, số tiền QR hoặc số tiền đã đối chiếu cũng có thể cũ.
+   - Dùng cùng `PromotionService` cho màn hình và chốt; tách giảm thủ công khỏi ưu đãi. Server tính lại và so số tiền dự kiến trước khi ghi nhận. Ví dụ bill 1.000.000 đ, giảm 100.000 đ, cọc được trừ 500.000 đ thì còn thu **400.000 đ**, không thu lại cọc và không trừ giảm hai lần. Test kiểm tra số tiền đổi thì từ chối, thanh toán lặp thì từ chối, cọc không bị dùng lại.
+
+3. **Ưu đãi/voucher có thể vượt điều kiện hoặc bị đổi người nhận — thiếu chốt dữ liệu.**
+   - Chỉ kiểm tra bản thân voucher/dropdown chưa đủ: chương trình cha cũng phải đang hoạt động, cho dùng voucher, đúng hạn và đúng khách. Form sửa phải giữ khách nhận; voucher đã gắn bill không được đổi sang chương trình hoặc khách khác. Hai bill kiểm tra lượt còn lại riêng rẽ có thể cùng lấy lượt cuối.
+   - Kiểm tra lại toàn bộ ở server; giữ lượt và khóa mã trong cùng transaction; khóa các liên kết đã dùng, kiểm tra phiên bản khi sửa/áp/gỡ. Test hai bill tranh một lượt chỉ một bill thành công; gỡ mã trả lại lượt; chương trình bị ngừng dùng, sai khách hoặc sửa liên kết đã dùng đều bị chặn.
+
+4. **Bill đã trả và hiệu quả khuyến mãi có thể thay đổi theo cấu hình mới — thiếu lịch sử tại thời điểm bán.**
+   - Tính lại bill cũ từ chương trình đang chạy không còn phản ánh ưu đãi khách thực sự nhận; suy tiền giảm theo ID/mức giảm hiện tại còn dễ gộp nhầm phần giảm thủ công.
+   - Chốt bản ghi JSON của các ưu đãi thực tế trong cùng transaction thanh toán. Bill đã trả/báo cáo đọc lịch sử này. Test đổi tên, mức giảm và ngừng chương trình sau khi trả không làm đổi bill cũ. Bill cũ không có lịch sử vẫn giữ số tiền đã lưu và báo thiếu thông tin; không tự dựng lịch sử cho đẹp báo cáo.
+
+5. **Doanh thu chưa đúng ý nghĩa khi có cọc, trả tiền khác ngày hoặc nhiều ưu đãi.**
+   - Tiền thu thêm khi chốt không phải toàn bộ doanh thu: trong ví dụ trên thu thêm 400.000 đ nhưng doanh thu sau giảm là **900.000 đ**, đã bao gồm 500.000 đ cọc cấn trừ. Ngày lập bill cũng không phải ngày nhận tiền. Cộng doanh thu từng chương trình dễ đếm cùng bill nhiều lần.
+   - Tách doanh thu sau giảm, cọc cấn trừ và khoản thu thêm; lọc bill đã trả theo ngày thanh toán UTC+7. Tổng bill/doanh thu chung đếm một lần; giảm từng chương trình lấy snapshot. Test số tiền 900.000/400.000, ranh giới nửa đêm và bill lập kỳ trước nhưng trả trong kỳ. Không gọi tỷ lệ doanh thu/tiền giảm là lợi nhuận hay ROI.
+
+6. **Role Kho không vào được báo cáo tồn — quyền menu và endpoint không khớp.**
+   - Gắn quyền Admin lên toàn controller chặn cả action tồn kho dù nhân viên kho cần dùng chức năng này.
+   - Phân quyền theo action: tồn kho cho Admin/Kho, báo cáo và file xuất kinh doanh chỉ Admin. Test Kho vào tồn kho được nhưng vẫn bị chặn doanh thu/khuyến mãi và xuất kinh doanh; không mở toàn controller cho mọi nhân viên.
+
+7. **Nguyên liệu đang dùng vẫn đổi trực tiếp đơn vị — lỗi được bộ regression phát hiện.**
+   - Đổi nhãn g thành kg khi đã có tồn/công thức/chứng từ làm thay ý nghĩa số lượng cũ mà không có nghiệp vụ quy đổi. Đây là chốt tích hợp với phần Người 2, không mặc định quy lỗi này do Người 3 tạo.
+   - Chặn sửa đơn vị trong các trường hợp đã phát sinh dữ liệu liên quan; vẫn cho sửa thông tin khác. Test kho xác nhận chốt này. Nếu sau cần đổi đơn vị thật, Người 2 phải thiết kế quy đổi có kiểm soát, không xóa chốt để form lưu được.
+
+8. **Các rủi ro bổ sung được chặn, không phải sự cố dữ liệu thật đã xảy ra.**
+   - Lọc năm/ngày quá xa có thể tràn hoặc tạo biểu đồ quá lớn: kiểm tra khoảng hợp lệ và giới hạn biểu đồ theo ngày. Tên trong CSV có dấu ngoặc kép/công thức bảng tính: escape đúng và chống thực thi công thức. Tạo ưu đãi nhưng lưu danh sách món lỗi: dùng transaction để không còn bản ghi cha dở dang. Đã có ca HTTP/database kiểm tra các nhánh này.
+   - Bộ test cũ dùng HTTP/cookie Secure và một số yêu cầu AJAX thiếu token chống giả mạo nên cần sửa cách test. Chuyển test sang HTTPS, gửi CSRF token đúng; vẫn test thiếu token bị chặn. **Không hạ bảo mật của ứng dụng để làm test xanh.**
+
+### Một luồng tính tiền, giữ nguyên phần Người 1
+
+- `PromotionService` là nguồn tính ưu đãi cho màn hình hóa đơn và khi chốt tiền. Bỏ truy vấn Include không phải navigation gây lỗi 500.
+- Tiền món lấy từ các dòng hóa đơn chưa hủy và **đơn giá đã lưu lúc bán**, không lấy lại giá thực đơn hiện tại. Đổi giá/size/công thức sau đó không viết lại giá bill cũ.
+- Giá trị đơn tối thiểu xét trên tiền món toàn bill; ưu đãi theo món chỉ giảm trên các dòng món được chọn, không giảm các món khác hoặc dòng đã hủy. Áp dụng trần tiền giảm.
+- Các ưu đãi cho kết hợp cộng tiền giảm tính trên giá gốc; thứ tự dùng khi giới hạn tổng giảm. So sánh nhóm này với ưu đãi độc lập tốt nhất, không cộng thêm ưu đãi độc lập vào nhóm. Giảm thủ công được tách riêng, không nhập lại tiền ưu đãi vào ô giảm thủ công.
+- `Tiền còn phải thu = tiền món - tổng giảm - cọc được cấn trừ`. Giữ nguyên `TongThanhToan` và cách phân bổ cọc: cọc không được dùng lại ở bill khác, tiền đã hoàn/giữ bị loại khỏi số cọc còn khả dụng.
+- Các form thanh toán gửi số tiền dự kiến; server tự tính lại. Nếu ưu đãi/cọc làm số tiền thay đổi, dừng và yêu cầu tải lại, đối chiếu lại tiền; không âm thầm xác nhận theo QR/số tiền cũ.
+- Giữ transaction, phiên bản bill và phiên bản đặt bàn, chặn thanh toán lại. Bill 0 đồng chỉ hoàn tất khi có cọc đủ, ưu đãi 100% hợp lệ do server kiểm tra, hoặc mọi dòng món thực sự đã hủy. Không dùng giảm thủ công để vượt chốt miễn phí. Đóng bill hủy hết món giải phóng lượt voucher, không tự hoàn/nuốt cọc.
+- Không thay giỏ khách, QR cọc/upload ảnh, hạn giữ chỗ một giờ, điều kiện kết thúc phục vụ/dọn bàn, hoặc cơ chế tự xét quá ba giờ của Người 1.
+
+### Voucher và lịch sử
+
+- Server kiểm tra chương trình phải dành cho voucher, đang sử dụng, đúng thời hạn/đúng khách và còn lượt. Không chỉ tin dropdown hoặc trạng thái riêng của mã.
+- Lượt đang gắn trên bill chưa thanh toán được giữ cùng lượt đã dùng; gỡ mã hoặc hủy bill giải phóng lượt. Kiểm tra và ghi giữ lượt trong cùng transaction, khóa cùng mã ở SQL để hai bill không cùng lấy lượt cuối.
+- Voucher đã gắn bill không được đổi mã/chương trình/khách nhận. Cập nhật phải đúng phiên bản; vẫn được ngừng dùng hoặc chỉnh giới hạn không thấp hơn số lượt đã dùng/giữ. Mã mới dùng bộ sinh ngẫu nhiên mật mã.
+- Migration `20261011133230_InvoiceDiscountHistory` **chỉ thêm cột nullable `HoaDon.UuDaiSnapshot`**, không thêm bảng và không backfill đoán dữ liệu.
+- JSON phiên bản 1 lưu thời điểm, giảm thủ công và danh sách ưu đãi thực tế (ID, tên, phạm vi, kiểu/mức giảm, số tiền giảm, mã voucher). Bill chưa trả có thể tính lại; khi chốt thành công, lưu cùng transaction với tiền và trạng thái bill. Bill đã trả chỉ đọc lịch sử, không tính lại chương trình hiện tại.
+- Đổi tên/mức giảm, ngừng dùng hoặc xóa chương trình sau này không làm đổi lịch sử bill đã chốt. Báo cáo tách các phiên bản điều kiện khi cần.
+- Bill cũ không có JSON, hoặc JSON không khớp tiền giảm đã lưu, được ghi rõ thiếu lịch sử. Giữ tiền gốc của bill; không gán giảm thủ công cho chương trình đang chạy hoặc suy luận chương trình qua thời gian.
+- Rollback ứng dụng có thể giữ cột nullable để code cũ tiếp tục chạy. Không chạy migration Down trên dữ liệu thật đã có lịch sử nếu chưa backup, vì Down sẽ xóa cột này.
+
+### Báo cáo, quyền và điểm tích hợp
+
+- Doanh thu chỉ từ bill đã hoàn tất: `TongTienHang - TienGiam`, có gồm cọc cấn trừ nhưng không cộng cọc lần nữa. Tiền mặt/QR/thẻ trong phần phương thức là **tiền thu thêm lúc chốt**, không được gán cọc nhận trước sang phương thức của bill.
+- Doanh thu, món bán và ưu đãi theo ngày thanh toán, ranh giới ngày/tháng/năm dùng UTC+7. Số đơn tạo/đơn lập trong kỳ hiện đã hủy vẫn theo ngày lập, không thay máy móc mọi ngày thành ngày thanh toán.
+- Bill cũ thiếu ngày thanh toán tạm theo ngày lập và báo rõ, không sửa dữ liệu gốc. Khoảng theo ngày của biểu đồ tối đa một năm; dùng tháng/năm cho khoảng dài, chặn lọc ngày/năm sai gây tràn hoặc tạo quá nhiều dòng.
+- Hiệu quả chương trình lấy đúng tiền giảm từng ưu đãi trong lịch sử, tách giảm thủ công. Bill dùng nhiều chương trình có thể nằm trong nhiều dòng, nhưng tổng bill/doanh thu chung đếm một lần. Tỷ lệ doanh thu bill/tiền giảm **không phải lợi nhuận hay ROI đầu tư**.
+- `Kho` xem được `/BaoCao/TonKho`; doanh thu, khuyến mãi và các file xuất kinh doanh vẫn chỉ Admin. CSV dùng chung cách escape/chống công thức bảng tính, không để tên món/chương trình trở thành lệnh Excel.
+- Regression phát hiện chốt đổi đơn vị nguyên liệu bị thiếu: nguyên liệu có tồn kho/công thức/chứng từ không đổi đơn vị trực tiếp. Người 2 tiếp tục nghiệp vụ nhập–xuất/định lượng; không quy đổi lịch sử bằng cách sửa chữ “g” thành “kg”.
+- Điểm nối: `HoaDonController` (hiển thị, áp/gỡ mã, số tiền dự kiến), `OrderService.ProcessPaymentAsync` (kiểm tra cuối, phân bổ cọc, chốt snapshot), `PromotionService` (tính và giữ lượt), `BaoCaoService` (đọc dữ liệu đã chốt). Khi đổi một phần, phải chạy các ca liên quan tiền/cọc và phần còn lại.
+
+### Kiểm thử
+
+- Bộ regression dùng HTTPS đúng chính sách cookie Secure, cần chứng chỉ development của .NET đã tin cậy. Không hạ chính sách cookie của ứng dụng để test.
+- Chạy từ root repo với LocalDB: đặt `CRUD_TEST_SQL_SERVER=(localdb)\MSSQLLocalDB`; `dotnet run --project tests/Management.SmokeTests -- --promotions-only` cho tài chính/báo cáo; bỏ `--promotions-only` để chạy toàn bộ.
+- Test ghi vào database GUID riêng và tự xóa; không sửa dữ liệu thật của nhóm. Migration có ca đi từ schema trước sang schema mới, kiểm tra tiền bill cũ không đổi và chạy lại không nhân đôi dữ liệu.
+- Kết quả đã chạy: build **0 lỗi, 0 cảnh báo**; **53 kiểm tra HTTP/database tài chính–khuyến mãi–báo cáo**, **81 kiểm tra kho** và **884 kiểm tra HTTP/database toàn bộ bộ regression** đều đạt. Hai bộ kiểm tra riêng nằm trong tổng 884, không cộng chúng thành một tổng khác. EF xác nhận model không còn thay đổi chưa có migration; `git diff --check` đạt.
+- Bộ toàn phần kiểm tra cả các luồng tài khoản/quyền, món–size–định lượng, đặt bàn/giỏ món/cọc, gọi món/bếp/phục vụ/thanh toán, hết hạn giữ chỗ và kho. Các ca tài chính bổ sung kiểm tra hai bill tranh lượt voucher cuối, số tiền dự kiến bị đổi, cọc chỉ trừ một lần, bill đã trả không bị đổi theo chương trình mới, ngày thanh toán UTC+7, bill cũ thiếu lịch sử và quyền xuất báo cáo.
+- Đã mở hóa đơn trên trình duyệt bằng tài khoản Admin: trang tải được, ưu đãi tự động và cọc hiện trong tiền cần thu. Bản xem thử dùng database riêng; không phải dữ liệu ngân hàng thật. Nhãn nhập giảm giá được làm rõ là **giảm thủ công thêm**, tránh nhập trùng tiền voucher/ưu đãi đã tính.
+
+### Phạm vi đã rà và giới hạn bàn giao
+
+- Đã rà code nối giữa controller, service, form thanh toán, dữ liệu lịch sử, báo cáo và các kiểm tra hồi quy liên quan; không chỉ kiểm tra build. Đây không phải cam kết mọi dòng code trong toàn repo tuyệt đối hết bug.
+- Chưa kiểm chứng tải lớn/stress test, đối soát ngân hàng thật hoặc cổng thanh toán thật. QR và việc nhân viên xác nhận vẫn theo cơ chế của nhóm; không tự biến thao tác xác nhận thành chứng cứ ngân hàng đã thu tiền.
+- Hóa đơn cũ thiếu lịch sử ưu đãi/ngày trả tiền vẫn phải được nhận diện là dữ liệu thiếu. Không tạo lịch sử giả để làm báo cáo trông đủ, không backfill suy đoán.
+- Khi tích hợp, lấy cả service/controller/form liên quan và migration nullable nói trên; chạy migration trên database của nhóm sau khi backup, rồi chạy regression. Không chỉ chép giao diện hoặc một file service vì sẽ mất chốt phiên bản, số tiền dự kiến hoặc snapshot.
+- Nếu Người 2 sửa giá/size/công thức: đơn giá bill đã bán vẫn giữ nguyên; chạy lại gọi món–bếp–thanh toán/cọc. Nếu Người 3 sửa ưu đãi/báo cáo: giữ một nguồn tính tiền, lịch sử bill đã chốt và chốt giữ lượt voucher; chạy `--promotions-only` rồi bộ toàn phần. Không sửa trực tiếp tiền của bill đã thanh toán để khớp báo cáo.
