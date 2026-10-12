@@ -66,6 +66,7 @@ public class MonAnSizeFormViewModel
     [Range(typeof(decimal), "0", "9999999999999999.99", ErrorMessage = "Giá bán phải không âm.")]
     public decimal GiaBan { get; set; }
     public bool DangSuDung { get; set; } = true;
+    public List<DinhMucItemViewModel> DinhMucItems { get; set; } = new();
 }
 
 public class DinhMucItemViewModel

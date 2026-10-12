@@ -10,7 +10,6 @@
         <div><h2 class="h3 mb-1">@ViewData["Title"]</h2><p class="text-muted mb-0">@(admin ? "Kiểm tra món, duyệt giá theo size và quản lý trạng thái phục vụ." : "Chuẩn bị thông tin kỹ thuật của món; Quản lý duyệt trước khi mở bán.")</p></div>
         <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm món ăn</a>
     </div>
-    <partial name="_ManagementMessages" />
     <div class="row g-3 mb-4">
         @foreach (var stat in new[] { ("Tổng số món", Model.TotalCount), ("Chờ duyệt", Model.ChoDuyetCount), ("Đang phục vụ", Model.DangPhucVuCount), ("Tạm hết", Model.TamHetCount), ("Ngừng kinh doanh", Model.NgungKinhDoanhCount) })
         { <div class="col-md col-6"><div class="card border-0 shadow-sm"><div class="card-body">@stat.Item1<strong class="d-block fs-3">@stat.Item2</strong></div></div></div> }
@@ -51,7 +50,6 @@
                 </div>
                 <div class="card-footer bg-white d-flex flex-wrap gap-2">
                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1"></i>Sửa</a>
-                    <a asp-action="DinhMuc" asp-route-id="@item.Id" class="btn btn-sm btn-outline-success"><i class="bi bi-diagram-3 me-1"></i>Định mức (BOM)</a>
                     @if (admin) { <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa</a> }
                 </div>
             </article></div>

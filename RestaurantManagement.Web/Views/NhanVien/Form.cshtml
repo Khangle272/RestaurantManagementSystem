@@ -42,13 +42,16 @@
                         <small class="text-muted">Đổi email đăng nhập ở phần Tài khoản đăng nhập bên dưới.</small>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="ChucVu" class="form-label fw-medium">Vai trò công việc</label>
-                        <select asp-for="ChucVu" class="form-select">
+                        <label asp-for="ChucVu" class="form-label fw-medium">Vai trò công việc & Phân quyền</label>
+                        <select asp-for="ChucVu" class="form-select" id="selectChucVu" onchange="updateRoleDescription()">
                             <option value="">Chọn vai trò</option>
                             @if (Model.ChucVu == AppRoles.Admin) { <option value="Admin">Quản lý (tài khoản hiện có)</option> }
                             @foreach (var role in AppRoles.AssignableStaff) { <option value="@role">@AppRoles.Label(role)</option> }
                         </select>
-                        <small class="text-muted">Mỗi vai trò có bộ quyền cố định. Đổi vai trò sẽ yêu cầu nhân viên đăng nhập lại.</small>
+                        <div id="rolePermissionBox" class="alert alert-info py-2 px-3 mt-2 small mb-0 d-none">
+                            <i class="bi bi-shield-check me-1"></i> <span id="rolePermissionText"></span>
+                        </div>
+                        <small class="text-muted d-block mt-1">Mỗi vai trò có bộ quyền cố định theo chức vụ. Đổi vai trò sẽ yêu cầu nhân viên đăng nhập lại.</small>
                         <span asp-validation-for="ChucVu" class="text-danger small"></span>
                     </div>
                     <div class="col-md-6">
@@ -114,5 +117,27 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        const rolePerms = {
+            'TiepTan': 'Tiếp tân: Tiếp nhận yêu cầu đặt bàn, xếp bàn, quản lý sơ đồ bàn, ghi nhận gọi món tại quầy.',
+            'BoiBan': 'Phục vụ: Xem sơ đồ bàn, gọi món tại bàn, xác nhận mang món ra bàn (Đã phục vụ), kết thúc phục vụ, dọn bàn.',
+            'ThuNgan': 'Thu ngân: Xuất hóa đơn, xử lý thanh toán đa hình thức (Tiền mặt, VietQR, Thẻ POS), cấn trừ tiền cọc, áp dụng voucher, in bill.',
+            'Bep': 'Quản lý bếp: Màn hình KDS điều phối chế biến theo thứ tự FIFO, chuẩn bị định mức & công thức món lẻ.',
+            'Kho': 'Kho: Quản lý danh mục nguyên liệu, theo dõi tồn kho, lập phiếu nhập kho, xuất kho chế biến, thanh lý nguyên liệu.',
+            'Admin': 'Quản lý / Admin: Toàn quyền quản trị hệ thống, cấp tài khoản & phân quyền nhân viên, duyệt thực đơn, quản lý khuyến mãi/voucher, theo dõi báo cáo doanh thu & kinh doanh.'
+        };
+        function updateRoleDescription() {
+            const role = document.getElementById('selectChucVu').value;
+            const box = document.getElementById('rolePermissionBox');
+            const text = document.getElementById('rolePermissionText');
+            if (role && rolePerms[role]) {
+                text.textContent = rolePerms[role];
+                box.classList.remove('d-none');
+            } else {
+                box.classList.add('d-none');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', updateRoleDescription);
+    </script>
 }
 

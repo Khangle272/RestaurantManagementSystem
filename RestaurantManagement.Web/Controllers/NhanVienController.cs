@@ -28,6 +28,17 @@ public class NhanVienController(RestaurantDbContext context, UserManager<TaiKhoa
     }
 
     [HttpGet]
+    public async Task<IActionResult> PhanQuyen()
+    {
+        var staffList = await Db.NhanVien.AsNoTracking().Include(x => x.TaiKhoan).ToListAsync();
+        var accountIds = staffList.Where(x => x.TaiKhoanId != null).Select(x => x.TaiKhoanId!.Value).ToArray();
+        var links = await (from link in Db.UserRoles join role in Db.Roles on link.RoleId equals role.Id
+                          where accountIds.Contains(link.UserId) select new { link.UserId, role.Name }).ToListAsync();
+        ViewBag.AccountRoles = links.GroupBy(x => x.UserId).ToDictionary(x => x.Key, x => string.Join(", ", x.Select(r => AppRoles.Label(r.Name))));
+        return View(staffList);
+    }
+
+    [HttpGet]
     public IActionResult Create() => View("Form", new NhanVienFormViewModel());
 
     [HttpPost, ValidateAntiForgeryToken]

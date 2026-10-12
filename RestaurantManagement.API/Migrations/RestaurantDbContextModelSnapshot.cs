@@ -928,6 +928,9 @@ namespace RestaurantManagement.API.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<string>("UuDaiSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("VoucherId")
                         .HasColumnType("int");
 

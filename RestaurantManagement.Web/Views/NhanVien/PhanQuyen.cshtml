@@ -1,0 +1,206 @@
+@model List<RestaurantManagement.API.Models.NhanVien>
+@using RestaurantManagement.Web.Security
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Ma trận phân quyền chức vụ";
+    ViewData["ActiveMenu"] = "PhanQuyen";
+    var accountRoles = ViewBag.AccountRoles as Dictionary<int, string> ?? new();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a asp-action="Index">Quản lý nhân viên</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Ma trận phân quyền</li>
+                </ol>
+            </nav>
+            <h1 class="h3 fw-bold mb-1">🛡️ Cơ Chế Phân Quyền Theo Chức Vụ (RBAC)</h1>
+            <p class="text-muted mb-0">Bộ quyền hạn cố định theo chức vụ công việc nhằm chuẩn hóa quy trình tiếp nhận đặt bàn, phục vụ, thu ngân, kho và giám sát kinh doanh.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-people me-1"></i> Danh sách nhân viên
+            </a>
+            <a asp-action="Create" class="btn btn-primary btn-brand-primary">
+                <i class="bi bi-plus-lg me-1"></i> Thêm nhân viên
+            </a>
+        </div>
+    </div>
+
+    <!-- Bảng Ma Trận Quyền -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h2 class="h6 mb-0 fw-bold text-primary"><i class="bi bi-grid-3x3-gap me-2"></i>Ma trận quyền hạn theo 6 chức vụ nội bộ</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-start" style="width: 280px;">Nghiệp vụ hệ thống</th>
+                        <th style="width: 120px;" class="bg-primary-subtle text-primary">👑 Quản trị<br/><small>(Admin)</small></th>
+                        <th style="width: 120px;">🛎️ Tiếp tân<br/><small>(TiepTan)</small></th>
+                        <th style="width: 120px;">🍽️ Phục vụ<br/><small>(BoiBan)</small></th>
+                        <th style="width: 120px;">💵 Thu ngân<br/><small>(ThuNgan)</small></th>
+                        <th style="width: 120px;">🍳 Bếp<br/><small>(Bep)</small></th>
+                        <th style="width: 120px;">📦 Kho<br/><small>(Kho)</small></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Tiếp nhận đặt bàn & Sơ đồ bàn</div>
+                            <small class="text-muted">Nhận lịch, xếp bàn, đối chiếu sức chứa, sơ đồ bàn</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Phục vụ bàn & Dọn bàn</div>
+                            <small class="text-muted">Mang món ra bàn, kết thúc phục vụ, xác nhận dọn xong</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Ghi nhận gọi món (POS)</div>
+                            <small class="text-muted">Tạo đơn tại bàn/mang đi/giao hàng, gọi thêm món</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>KDS Điều phối chế biến món</div>
+                            <small class="text-muted">Nhận món FIFO, chuyển trạng thái nấu, chuẩn bị công thức</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Xuất hóa đơn & Thanh toán đa phương thức</div>
+                            <small class="text-muted">Tiền mặt, VietQR, thẻ POS, cấn trừ cọc, in bill K80/A5</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Quản lý Kho & Cung ứng</div>
+                            <small class="text-muted">Theo dõi tồn kho, lập phiếu nhập, xuất chế biến, thanh lý</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Quản lý Khuyến mãi & Voucher</div>
+                            <small class="text-muted">Thiết lập chương trình ưu đãi, tạo voucher, điều kiện kết hợp</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Báo cáo doanh thu & Thống kê kinh doanh</div>
+                            <small class="text-muted">Doanh thu ngày/tháng/năm, món bán chạy, hiệu quả khuyến mãi</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Quản trị nhân sự & Cấp tài khoản</div>
+                            <small class="text-muted">CRUD nhân viên, phân công vai trò, khóa/mở khóa tài khoản</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Danh sách phân bổ nhân viên theo chức vụ -->
+    <div class="row g-4">
+        @foreach (var role in AppRoles.All.Where(r => r != AppRoles.KhachHang))
+        {
+            var roleTitle = AppRoles.Label(role);
+            var staffInRole = Model.Where(x =>
+            {
+                var assigned = x.TaiKhoanId is int aid && accountRoles.TryGetValue(aid, out var rLabel)
+                    ? rLabel : AppRoles.Label(AppRoles.RoleForJob(x.ChucVu) ?? x.ChucVu);
+                return assigned.Contains(roleTitle) || (role == AppRoles.Admin && x.ChucVu == "Admin");
+            }).ToList();
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h2 class="h6 mb-0 fw-bold text-dark">@AppRoles.StaffLabel(role)</h2>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">@staffInRole.Count nhân sự</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush small">
+                            @if (staffInRole.Count == 0)
+                            {
+                                <li class="list-group-item text-muted py-3 text-center">Chưa có nhân viên nào đảm nhiệm.</li>
+                            }
+                            @foreach (var st in staffInRole)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                                    <div>
+                                        <div class="fw-semibold">@st.HoTen (@st.MaNhanVien)</div>
+                                        <div class="text-muted" style="font-size: 11px;">@(st.TaiKhoan?.Email ?? "Chưa cấp tài khoản")</div>
+                                    </div>
+                                    <span class="badge @(st.DangLamViec ? "bg-success" : "bg-secondary")">
+                                        @(st.DangLamViec ? "Đang làm" : "Đã nghỉ")
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

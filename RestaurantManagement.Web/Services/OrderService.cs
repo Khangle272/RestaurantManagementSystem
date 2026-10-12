@@ -7,7 +7,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
 
-public class OrderService(RestaurantDbContext db, IKhoService? khoService = null)
+public class OrderService(RestaurantDbContext db, IKhoService? khoService = null, IPromotionService? promotionService = null)
 {
     public async Task<List<BanAnCardItem>> GetOccupiedTablesAsync()
     {
@@ -446,7 +446,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
-            var invoice = await db.HoaDon.Include(x => x.ChiTiet).Include(x => x.DatBan)
+            var invoice = await db.HoaDon.Include(x => x.ChiTiet).Include(x => x.DatBan).Include(x => x.Voucher)
                 .SingleOrDefaultAsync(x => x.Id == form.Id);
             if (invoice is null) return "Không tìm thấy hóa đơn cần thanh toán.";
             if (invoice.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
@@ -463,19 +463,30 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
             var total = invoice.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy)
                 .Sum(x => x.SoLuong * x.DonGia);
-            var discount = form.TienGiam ?? invoice.TienGiam;
+            var canceledOnly = invoice.ChiTiet.Count > 0 && invoice.ChiTiet.All(x => x.TrangThai == TrangThaiCheBien.DaHuy);
+            var promotions = promotionService ?? new PromotionService(db);
+            await promotions.LockVoucherAsync(invoice.VoucherId);
+            var evaluation = await promotions.EvaluatePromotionsAsync(invoice.Id, invoice.Voucher?.Ma,
+                form.TienGiamThuCong ?? form.TienGiam);
+            if (!evaluation.IsSuccess) return evaluation.ErrorMessage;
+            if (!canceledOnly && invoice.VoucherId is not null && evaluation.AppliedVoucherId != invoice.VoucherId)
+                return "Voucher không còn đủ điều kiện hoặc không nằm trong phương án ưu đãi hiện tại. Vui lòng tải lại và gỡ/đổi mã trước khi thanh toán.";
+            var discount = evaluation.TongTienGiam;
             if (discount < 0 || discount > total)
                 return "Giảm giá phải từ 0 đến tổng tiền món.";
             var availableDeposit = invoice.DatBanId is int bookingId
                 ? await AvailableDepositAsync(bookingId, invoice.Id) : 0;
             var deposit = Math.Min(availableDeposit, total - discount);
             var amountDue = total - discount - deposit;
-            if (amountDue <= 0 && deposit <= 0)
+            if (form.SoTienPhaiThuDuKien is decimal expectedDue && expectedDue != amountDue)
+                return "Số tiền phải thu đã thay đổi. Vui lòng tải lại hóa đơn và đối chiếu trước khi xác nhận.";
+            if (amountDue <= 0 && deposit <= 0 && !canceledOnly
+                && (evaluation.AppliedPromotions.Count == 0 || evaluation.AppliedPromotions.Sum(x => x.SoTienGiam) < total))
                 return "Giảm giá không được miễn phí toàn bộ hóa đơn khi không có tiền cọc trừ.";
             if (form.PhuongThuc == PhuongThucThanhToan.TienMat && form.TienKhachDua < amountDue)
                 return $"Số tiền khách đưa ({form.TienKhachDua:N0} đ) không đủ để thanh toán ({amountDue:N0} đ).";
-            if (form.PhuongThuc != PhuongThucThanhToan.TienMat && form.TienGiam is decimal submittedDiscount
-                && submittedDiscount != invoice.TienGiam)
+            if (form.PhuongThuc != PhuongThucThanhToan.TienMat && form.SoTienPhaiThuDuKien is null
+                && discount != invoice.TienGiam)
                 return "Vui lòng tải lại hóa đơn sau khi thay đổi giảm giá để đối chiếu số tiền thanh toán.";
             var last4 = form.SoThe4SoCuoi?.Trim();
             if (form.PhuongThuc == PhuongThucThanhToan.The && !string.IsNullOrEmpty(last4)
@@ -494,6 +505,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
 
             invoice.TongTienHang = total;
             invoice.TienGiam = discount;
+            if (canceledOnly) { invoice.VoucherId = null; evaluation.TienGiamThuCong = 0; }
+            invoice.UuDaiSnapshot = PromotionService.CaptureSnapshot(evaluation);
             invoice.TienCocDaTru = deposit;
             if (invoice.DatBan is not null)
             {

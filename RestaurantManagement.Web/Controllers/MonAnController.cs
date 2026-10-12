@@ -65,6 +65,7 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
         var entity = await Db.MonAn.Include(x => x.Sizes).SingleOrDefaultAsync(x => x.Id == id);
         if (entity == null) return NotFound();
         if (!IsAdmin && entity.Loai == LoaiMon.Set) return Forbid();
+        var existingRecipes = await Db.DinhMucMon.Where(x => x.MonAnId == id).ToListAsync();
         var model = new MonAnFormViewModel
         {
             Id = id, RowVersion = VersionOf(entity), TenMon = entity.TenMon, DanhMucId = entity.DanhMucId,
@@ -73,10 +74,12 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
             LyDoNgung = entity.LyDoNgung,
             Sizes = entity.Sizes.OrderBy(x => x.Id).Select(x => new MonAnSizeFormViewModel
             {
-                Id = x.Id, TenSize = x.TenSize, GiaBan = IsAdmin ? x.GiaBan : 0, DangSuDung = x.DangSuDung
+                Id = x.Id, TenSize = x.TenSize, GiaBan = IsAdmin ? x.GiaBan : 0, DangSuDung = x.DangSuDung,
+                DinhMucItems = existingRecipes.Where(r => r.MaKichCo == x.Id).OrderBy(r => r.NguyenLieuId)
+                    .Select(r => new DinhMucItemViewModel { MaKichCo = r.MaKichCo, NguyenLieuId = r.NguyenLieuId, SoLuong = r.SoLuong }).ToList()
             }).ToList(),
-            DinhMucItems = await Db.DinhMucMon.Where(x => x.MonAnId == id).OrderBy(x => x.NguyenLieuId)
-                .Select(x => new DinhMucItemViewModel { MaKichCo = x.MaKichCo, NguyenLieuId = x.NguyenLieuId, SoLuong = x.SoLuong }).ToListAsync(),
+            DinhMucItems = existingRecipes.OrderBy(x => x.NguyenLieuId)
+                .Select(x => new DinhMucItemViewModel { MaKichCo = x.MaKichCo, NguyenLieuId = x.NguyenLieuId, SoLuong = x.SoLuong }).ToList(),
             ComboItems = await Db.ChiTietCombo.Where(x => x.ComboId == id).OrderBy(x => x.MonAnId)
                 .Select(x => new ComboItemViewModel { MonAnId = x.MonAnId, SoLuong = x.SoLuong }).ToListAsync()
         };
@@ -152,25 +155,65 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                     var removedSizes = entity.Sizes.Where(x => !model.Sizes.Any(s => s.Id == x.Id)).ToList();
                     Db.MonAnSize.RemoveRange(removedSizes);
                 }
+                var sizeMap = new Dictionary<MonAnSizeFormViewModel, MonAnSize>();
                 foreach (var size in model.Sizes)
                 {
                     var target = size.Id == 0 ? new MonAnSize { MonAn = entity } : entity.Sizes.Single(x => x.Id == size.Id);
                     target.TenSize = size.TenSize.Trim(); target.GiaBan = size.GiaBan; target.DangSuDung = size.DangSuDung;
                     if (size.Id == 0) Db.MonAnSize.Add(target);
+                    sizeMap[size] = target;
                 }
                 if (await SaveAsync("", "Tên size bị trùng. Vui lòng kiểm tra lại."))
                 {
                     var defaultSizeId = entity.Sizes.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefault();
                     var recipes = await Db.DinhMucMon.Where(x => x.MonAnId == entity.Id).ToListAsync();
-                    Db.DinhMucMon.RemoveRange(recipes.Where(x => !model.DinhMucItems.Any(i => i.NguyenLieuId == x.NguyenLieuId && (i.MaKichCo == x.MaKichCo || (i.MaKichCo == 0 && x.MaKichCo == defaultSizeId)))));
-                    foreach (var item in model.DinhMucItems)
+                    Db.DinhMucMon.RemoveRange(recipes);
+
+                    foreach (var size in model.Sizes)
                     {
-                        var targetSizeId = item.MaKichCo > 0 ? item.MaKichCo : defaultSizeId;
+                        var targetSizeId = sizeMap.TryGetValue(size, out var targetEntity) && targetEntity.Id > 0
+                            ? targetEntity.Id
+                            : defaultSizeId;
                         if (targetSizeId == 0) continue;
-                        var target = recipes.SingleOrDefault(x => x.NguyenLieuId == item.NguyenLieuId && x.MaKichCo == targetSizeId);
-                        if (target == null) Db.DinhMucMon.Add(new DinhMucMon { MonAnId = entity.Id, MaKichCo = targetSizeId, NguyenLieuId = item.NguyenLieuId, SoLuong = item.SoLuong });
-                        else target.SoLuong = item.SoLuong;
+
+                        if (size.DinhMucItems != null)
+                        {
+                            foreach (var item in size.DinhMucItems)
+                            {
+                                if (item.NguyenLieuId <= 0 || item.SoLuong <= 0) continue;
+                                if (!Db.DinhMucMon.Local.Any(x => x.MonAnId == entity.Id && x.MaKichCo == targetSizeId && x.NguyenLieuId == item.NguyenLieuId))
+                                {
+                                    Db.DinhMucMon.Add(new DinhMucMon
+                                    {
+                                        MonAnId = entity.Id,
+                                        MaKichCo = targetSizeId,
+                                        NguyenLieuId = item.NguyenLieuId,
+                                        SoLuong = item.SoLuong
+                                    });
+                                }
+                            }
+                        }
                     }
+
+                    if (model.DinhMucItems != null)
+                    {
+                        foreach (var item in model.DinhMucItems)
+                        {
+                            var targetSizeId = item.MaKichCo > 0 ? item.MaKichCo : defaultSizeId;
+                            if (targetSizeId == 0 || item.NguyenLieuId <= 0 || item.SoLuong <= 0) continue;
+                            if (!Db.DinhMucMon.Local.Any(x => x.MonAnId == entity.Id && x.MaKichCo == targetSizeId && x.NguyenLieuId == item.NguyenLieuId))
+                            {
+                                Db.DinhMucMon.Add(new DinhMucMon
+                                {
+                                    MonAnId = entity.Id,
+                                    MaKichCo = targetSizeId,
+                                    NguyenLieuId = item.NguyenLieuId,
+                                    SoLuong = item.SoLuong
+                                });
+                            }
+                        }
+                    }
+
                     var components = await Db.ChiTietCombo.Where(x => x.ComboId == entity.Id).ToListAsync();
                     Db.ChiTietCombo.RemoveRange(components.Where(x => !model.ComboItems.Any(i => i.MonAnId == x.MonAnId)));
                     foreach (var item in model.ComboItems)
@@ -213,7 +256,11 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
     {
         var entityId = entity?.Id ?? 0;
         var currentCategoryId = entity?.DanhMucId ?? 0;
-        model.Sizes ??= new(); model.DinhMucItems ??= new(); model.ComboItems ??= new();
+        model.Sizes ??= new();
+        foreach (var s in model.Sizes) s.DinhMucItems ??= new();
+        model.DinhMucItems ??= new();
+        model.ComboItems ??= new();
+
         if (!await Db.DanhMuc.AnyAsync(x => x.Id == model.DanhMucId && (x.DangSuDung || x.Id == currentCategoryId)))
             ModelState.AddModelError(nameof(model.DanhMucId), "Danh mục không tồn tại hoặc đã ngừng sử dụng.");
         if (model.Sizes.Count == 0 || !model.Sizes.Any(x => x.DangSuDung))
@@ -240,16 +287,24 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                     && (x.HoaDon.TrangThai == TrangThaiHoaDon.ChuaThanhToan || x.HoaDon.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan)))
                 ModelState.AddModelError(nameof(model.TrangThai), "Món đang có trong hóa đơn chưa thanh toán, chưa thể ngừng phục vụ.");
         }
-        var ingredientIds = model.DinhMucItems.Select(x => x.NguyenLieuId).ToList();
-        if (model.DinhMucItems.GroupBy(x => new { x.MaKichCo, x.NguyenLieuId }).Any(g => g.Count() > 1))
+
+        var allDinhMuc = model.Sizes.SelectMany(s => s.DinhMucItems).Concat(model.DinhMucItems).ToList();
+        foreach (var s in model.Sizes)
+        {
+            if (s.DinhMucItems.Where(i => i.NguyenLieuId > 0).GroupBy(x => x.NguyenLieuId).Any(g => g.Count() > 1))
+                ModelState.AddModelError("", $"Nguyên liệu trong định mức của size '{s.TenSize}' không được trùng.");
+        }
+        if (model.DinhMucItems.Where(i => i.NguyenLieuId > 0).GroupBy(x => new { x.MaKichCo, x.NguyenLieuId }).Any(g => g.Count() > 1))
             ModelState.AddModelError("", "Nguyên liệu trong định mức không được trùng.");
+
+        var ingredientIds = allDinhMuc.Select(x => x.NguyenLieuId).Where(id => id > 0).Distinct().ToList();
         var allowedIngredients = await Db.NguyenLieu.Where(x => x.DangSuDung || Db.DinhMucMon.Any(d => d.MonAnId == entityId && d.NguyenLieuId == x.Id)).Select(x => x.Id).ToListAsync();
         if (ingredientIds.Any(id => !allowedIngredients.Contains(id))) ModelState.AddModelError("", "Nguyên liệu không tồn tại hoặc đã ngừng sử dụng.");
         if (model.Loai != LoaiMon.Set && model.ComboItems.Count > 0)
             ModelState.AddModelError(nameof(model.Loai), "Chỉ món loại Set mới có thành phần combo.");
         if (model.Loai == LoaiMon.Set && model.ComboItems.Count == 0)
             ModelState.AddModelError("", "Set cần ít nhất một món thành phần.");
-        if (model.Loai == LoaiMon.Set && model.DinhMucItems.Count > 0)
+        if (model.Loai == LoaiMon.Set && allDinhMuc.Count > 0)
             ModelState.AddModelError("", "Combo dùng công thức của các món thành phần, không nhập lại nguyên liệu thô.");
         var dishIds = model.ComboItems.Select(x => x.MonAnId).ToList();
         var allowedDishes = await Db.MonAn.Where(x => x.Loai != LoaiMon.Set && x.Id != entityId
@@ -276,7 +331,7 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
     private async Task LoadOptionsAsync(MonAnFormViewModel model, int? currentCategory = null)
     {
         model.DanhMucList = await Db.DanhMuc.AsNoTracking().Where(x => x.DangSuDung || x.Id == currentCategory).OrderBy(x => x.TenDanhMuc).ToListAsync();
-        var ingredientIds = model.DinhMucItems.Select(x => x.NguyenLieuId).ToList();
+        var ingredientIds = model.Sizes.SelectMany(s => s.DinhMucItems ?? []).Concat(model.DinhMucItems ?? []).Select(x => x.NguyenLieuId).Where(id => id > 0).Distinct().ToList();
         model.NguyenLieuList = await Db.NguyenLieu.AsNoTracking().Where(x => x.DangSuDung || ingredientIds.Contains(x.Id)).OrderBy(x => x.TenNguyenLieu).ToListAsync();
         model.MonLeList = IsAdmin ? await Db.MonAn.AsNoTracking().Where(x => x.Id != model.Id && x.Loai != LoaiMon.Set).OrderBy(x => x.TenMon).ToListAsync() : [];
     }

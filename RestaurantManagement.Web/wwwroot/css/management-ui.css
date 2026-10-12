@@ -31,3 +31,31 @@
     .pos-menu-filters { flex-wrap: wrap; }
     .pos-menu-filters .form-select { width: 100%; }
 }
+
+/* --- Admin declutter layer (giữ nguyên navigation, chỉ giảm nhiễu thị giác) --- */
+.admin-main .container-fluid { max-width: 1120px; margin-inline: auto; padding-top: 1.25rem; padding-bottom: 2rem; }
+.admin-main h1.h3, .admin-main h2.h3, .admin-main h1.h4 { font-size: 1.3rem; font-weight: 650; letter-spacing: -.01em; margin-bottom: .2rem; }
+.admin-main .text-muted.mb-0 { font-size: .9rem; max-width: 68ch; }
+/* Một lớp card duy nhất: bỏ shadow nổi, chỉ giữ viền mảnh */
+.admin-main .card.border-0.shadow-sm,
+.admin-main .card.shadow-sm,
+.admin-main .card.border.shadow-sm { box-shadow: none !important; border: 1px solid var(--border-subtle) !important; border-radius: .75rem; }
+.admin-main .card-header.bg-white { border-bottom: 1px solid var(--border-subtle); padding: .75rem 1rem; }
+.admin-main .btn.shadow-sm { box-shadow: none !important; }
+.admin-main .btn { border-radius: .5rem; }
+/* Bảng nhẹ hơn: header nhỏ, cho phép xuống dòng để không tràn trang */
+.admin-main .table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .02em; font-weight: 600; color: #64748b; background: #f8fafc; white-space: normal; line-height: 1.35; vertical-align: bottom; }
+.admin-main .table tbody td { padding: .65rem .75rem; font-size: .9rem; vertical-align: middle; overflow-wrap: anywhere; }
+/* Badge trạng thái và nút thao tác không được rớt dòng */
+.admin-main .badge, .admin-main .badge-status-success, .admin-main .badge-status-warning, .admin-main .badge-status-danger { white-space: nowrap; }
+.admin-main td.text-end, .admin-main th.text-end { white-space: nowrap; }
+/* Khung cuộn bảng chỉ cuộn trong card, không đẩy tràn cả trang */
+.admin-main .card .table-responsive { overflow-x: auto; max-width: 100%; }
+.admin-main .table { width: 100%; margin-bottom: 0; }
+/* KPI bớt chói: số nhỏ lại, chữ mô tả gọn */
+.admin-main .fs-3 { font-size: 1.35rem !important; line-height: 1.2; }
+.admin-main .text-uppercase.small, .admin-main span.text-uppercase { font-size: .72rem !important; }
+/* Form lọc gọn: label nhỏ, input thấp hơn */
+.admin-main form .form-label { font-size: .8rem; font-weight: 600; color: #475569; margin-bottom: .25rem; }
+/* Topbar: tiêu đề không tràn, bớt chiếm chỗ */
+.admin-topbar h5 { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }

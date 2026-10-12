@@ -33,14 +33,15 @@ var start = new ProcessStartInfo("dotnet")
 };
 start.ArgumentList.Add(webDll);
 start.Environment["ConnectionStrings__DefaultConnection"] = connection.ConnectionString;
-start.Environment["ASPNETCORE_URLS"] = $"http://127.0.0.1:{port}";
+// Match the production Secure cookie policy; requires a trusted dotnet development certificate.
+start.Environment["ASPNETCORE_URLS"] = $"https://localhost:{port}";
 start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
 start.Environment["Logging__LogLevel__Default"] = "Warning";
 start.Environment["PaymentQr__Directory"] = qrTestDirectory;
 using var process = new Process { StartInfo = start };
 using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CookieContainer = new CookieContainer() })
 {
-    BaseAddress = new Uri($"http://127.0.0.1:{port}"), Timeout = TimeSpan.FromSeconds(10)
+    BaseAddress = new Uri($"https://localhost:{port}"), Timeout = TimeSpan.FromSeconds(10)
 };
 Task<string>? output = null;
 Task<string>? errors = null;
@@ -76,6 +77,26 @@ try
         await using var qrDb = new RestaurantDbContext(options);
         await Management.SmokeTests.PaymentQrSmoke.Run(qrDb, client, NewClient, Hidden, Check);
         Console.WriteLine($"PASS: {checks} QR HTTP/database checks.");
+        return;
+    }
+
+    if (args.Contains("--inventory-only"))
+    {
+        await InitDemoAccounts();
+        await using var inventoryDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(inventoryDb);
+        await InventorySmoke.Run(inventoryDb, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} inventory HTTP/database checks.");
+        return;
+    }
+
+    if (args.Contains("--promotions-only"))
+    {
+        await InitDemoAccounts();
+        await using var promotionDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(promotionDb);
+        await Management.SmokeTests.PromotionSmoke.Run(promotionDb, client, NewClient, Hidden, Check, connection.ConnectionString);
+        Console.WriteLine($"PASS: {checks} promotion/payment/report HTTP/database checks.");
         return;
     }
 
@@ -497,6 +518,7 @@ try
     await Management.SmokeTests.TableExpirySmoke.Run(db, client, Check);
     await InventorySmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PaymentQrSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.PromotionSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch
