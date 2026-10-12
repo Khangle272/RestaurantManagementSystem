@@ -3,10 +3,6 @@
     <p class="small text-success fw-semibold mb-2">THÔNG TIN TÀI KHOẢN</p>
     <h1 class="h3 mb-2">Thông tin cá nhân</h1>
     <p class="text-muted">Thông tin đăng nhập và bảo mật của bạn.</p>
-    @if (TempData["Success"] is string success)
-    {
-        <div class="alert alert-success" role="status">@success</div>
-    }
     <dl class="my-4">
         <dt class="small text-muted">Tài khoản đăng nhập</dt>
         <dd class="mt-2 text-break">@User.Identity?.Name</dd>

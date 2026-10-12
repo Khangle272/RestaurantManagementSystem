@@ -55,14 +55,6 @@
     </div>
 </div>
 
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger no-print">@error</div>
-}
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success no-print">@success</div>
-}
 
 <div class="mx-auto invoice-container" style="max-width: 780px;">
     <!-- Bill in / hiển thị -->
