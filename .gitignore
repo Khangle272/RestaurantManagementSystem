@@ -490,3 +490,5 @@ TODO.md
 
 # Runtime QR uploads are local configuration, not source code
 RestaurantManagement.Web/App_Data/
+
+cloudflared.exe
