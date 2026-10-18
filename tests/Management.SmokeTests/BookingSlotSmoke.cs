@@ -170,5 +170,44 @@ public static class BookingSlotSmoke
         await Week9DemoSetup.InitializeAsync(db, service);
         check(demoCount == 3 && await db.DatBan.CountAsync(x => x.MaDatBan.StartsWith("W9-") && x.YeuCau == "Khách dùng bữa theo ca tại nhà hàng.") == 3,
             "Explicit week-nine demo creates lunch, dinner and pending requests idempotently without resetting existing bookings");
+
+        var turnoverDay = day.AddDays(20);
+        var turnoverArea = new KhuVuc { TenKhuVuc = "W9-TURNOVER-AREA" };
+        var afternoonTable = new BanAn { MaBan = "W9-TURNOVER-A", KhuVuc = turnoverArea, SoChoNgoi = 4, TrangThai = TrangThaiBan.SanSang };
+        var otherTable = new BanAn { MaBan = "W9-TURNOVER-B", KhuVuc = turnoverArea, SoChoNgoi = 4, TrangThai = TrangThaiBan.SanSang };
+        db.BanAn.AddRange(afternoonTable, otherTable); await db.SaveChangesAsync();
+        var afternoonStart = TableService.VietnamTime(turnoverDay.ToDateTime(new(17, 0)));
+        var eveningStart = TableService.VietnamTime(turnoverDay.ToDateTime(new(19, 30)));
+        var afternoonBooking = Booking("W9-TURNOVER-AFTERNOON", afternoonStart, TrangThaiDatBan.DaXacNhan);
+        afternoonBooking.KhuVucUuTienId = turnoverArea.Id;
+        afternoonBooking.Ban.Add(new() { BanAnId = afternoonTable.Id });
+        db.DatBan.Add(afternoonBooking); await db.SaveChangesAsync();
+        check(await service.OverlappingBookings(eveningStart, eveningStart.AddHours(3)).AnyAsync(x => x.BanAnId == afternoonTable.Id),
+            "A 17:00 reservation keeps its table unavailable for the 19:30 slot until the serving allowance ends");
+        check(await service.HasCapacity(eveningStart, eveningStart.AddHours(2), 4, turnoverArea.Id, false),
+            "The evening slot remains open when another suitable table is available");
+        var eveningBooking = Booking("W9-TURNOVER-EVENING", eveningStart, TrangThaiDatBan.DaXacNhan);
+        eveningBooking.KhuVucUuTienId = turnoverArea.Id;
+        eveningBooking.Ban.Add(new() { BanAnId = otherTable.Id });
+        db.DatBan.Add(eveningBooking); await db.SaveChangesAsync();
+        check(!await service.HasCapacity(eveningStart, eveningStart.AddHours(2), 4, turnoverArea.Id, false),
+            "The evening slot closes when the only other table is also reserved");
+        var turnoverRequest = Booking("W9-TURNOVER-REQUEST", eveningStart, TrangThaiDatBan.ChoXacNhan);
+        turnoverRequest.KhuVucUuTienId = turnoverArea.Id;
+        db.DatBan.Add(turnoverRequest); await db.SaveChangesAsync();
+        var turnoverDialog = await Get(admin, $"/SoDoBan?datBanId={turnoverRequest.Id}&dialog=true&khuVucId={turnoverArea.Id}");
+        check(Card(turnoverDialog, afternoonTable.Id).Contains("disabled=\"disabled\"")
+            && Card(turnoverDialog, afternoonTable.Id).Contains("20:00"),
+            "The assignment dialog explains why the afternoon table cannot take the 19:30 reservation");
+        check(await Post(admin, "/QuanLyDatBan/XacNhan", turnoverDialog, new() { ["datBanId"] = turnoverRequest.Id.ToString(),
+            ["banAnIds"] = afternoonTable.Id.ToString(), ["rowVersion"] = Version(turnoverRequest) }, true) == HttpStatusCode.Conflict,
+            "A direct staff POST cannot bypass the afternoon serving allowance");
+        var todayEvening = TableService.VietnamTime(DateOnly.FromDateTime(TableService.VietnamNow).ToDateTime(new(19, 30)));
+        check(!TableService.ReadyForSchedule(a, todayEvening), "An occupied table is unavailable for another slot today");
+        a.TrangThai = TrangThaiBan.CanDon;
+        check(!TableService.ReadyForSchedule(a, todayEvening), "A finished but uncleaned table remains unavailable today");
+        a.TrangThai = TrangThaiBan.SanSang;
+        check(TableService.ReadyForSchedule(a, todayEvening), "Cleaning reopens a table for a later slot today");
+        a.TrangThai = TrangThaiBan.DangPhucVu;
     }
 }

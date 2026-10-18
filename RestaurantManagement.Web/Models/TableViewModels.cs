@@ -14,6 +14,7 @@ public class TableBoardViewModel
     public int? PreferredTableId { get; set; }
     public DateTimeOffset From { get; set; }
     public DateTimeOffset Until { get; set; }
+    public DateTimeOffset CheckUntil { get; set; }
     public DateOnly ScheduleDay { get; set; }
     public TimeOnly ScheduleTime { get; set; }
     public string SlotId { get; set; } = "now";

@@ -102,13 +102,19 @@ public static class TableSmoke
         { ["datBanId"] = other.Id.ToString(), ["banAnIds"] = table.Id.ToString(), ["rowVersion"] = await Version(other) });
         await db.Entry(other).ReloadAsync();
         check(other.TrangThai == TrangThaiDatBan.ChoXacNhan, "Actual overlapping intervals cannot claim occupied reservation slot");
-        // Adjacent non-overlapping intervals can use the same physical table.
+        // The nominal two-hour slot ends here, but the previous party may still be serving.
         other.GioDen = reception.GioKetThucDuKien; other.GioKetThucDuKien = other.GioDen.AddHours(1);
         await db.SaveChangesAsync();
         await Post(admin, "/QuanLyDatBan/XacNhan", board, new()
         { ["datBanId"] = other.Id.ToString(), ["banAnIds"] = table.Id.ToString(), ["rowVersion"] = await Version(other) });
         await db.Entry(other).ReloadAsync();
-        check(other.TrangThai == TrangThaiDatBan.DaXacNhan, "Back-to-back reservations do not falsely conflict");
+        check(other.TrangThai == TrangThaiDatBan.ChoXacNhan, "A second party cannot claim a table at the nominal end of an unfinished meal");
+        other.GioDen = TableService.ServingDeadline(reception); other.GioKetThucDuKien = other.GioDen.AddHours(1);
+        await db.SaveChangesAsync();
+        await Post(admin, "/QuanLyDatBan/XacNhan", board, new()
+        { ["datBanId"] = other.Id.ToString(), ["banAnIds"] = table.Id.ToString(), ["rowVersion"] = await Version(other) });
+        await db.Entry(other).ReloadAsync();
+        check(other.TrangThai == TrangThaiDatBan.DaXacNhan, "A later reservation may use the table after the three-hour allowance if it is ready");
         table.TrangThai = TrangThaiBan.CanDon; await db.SaveChangesAsync();
         await Post(admin, "/QuanLyDatBan/NhanBan", board, new() { ["datBanId"] = reception.Id.ToString(), ["rowVersion"] = await Version(reception) });
         await db.Entry(reception).ReloadAsync();

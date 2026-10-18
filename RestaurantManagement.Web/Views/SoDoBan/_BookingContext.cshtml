@@ -8,6 +8,7 @@
         <h2 class="h4 mb-2">@booking.HoTenLienHe</h2>
         <p class="fs-5 fw-semibold mb-1">@(booking.SoNguoiLon + booking.SoTreEm) khách · @booking.SoDienThoaiLienHe</p>
         <p class="fw-semibold">@booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")–@booking.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</p>
+        @if (Model.CheckUntil > booking.GioKetThucDuKien) { <p class="small text-muted">Bàn được tính có thể phục vụ đến @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm"); chỉ mở lại cho ca sau khi kết thúc lượt và dọn xong.</p> }
         <p class="small mb-2">Khu vực: @(Model.Areas.FirstOrDefault(x => x.Id == booking.KhuVucUuTienId)?.TenKhuVuc ?? "Bàn chung, không yêu cầu VIP")</p>
         @if (booking.YeuCauVip) { <p class="fw-semibold">Khách yêu cầu VIP.</p> }
         @if (!string.IsNullOrWhiteSpace(booking.YeuCau)) { <p class="bg-light rounded p-2">@booking.YeuCau</p> }

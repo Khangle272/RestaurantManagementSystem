@@ -36,7 +36,7 @@ public static class Week9DemoSetup
             }
             var slot = ReservationSchedule.Slots[index == 0 ? 0 : 2];
             var arrival = slot.Arrival(day);
-            if (table.Id > 0 && await tables.OverlappingBookings(TableService.VietnamTime(arrival), ReservationSchedule.EndOf(arrival))
+            if (table.Id > 0 && await tables.OverlappingBookings(TableService.VietnamTime(arrival), TableService.VietnamTime(arrival).AddHours(TableService.MaxDiningHours))
                 .AnyAsync(x => x.BanAnId == table.Id))
                 throw new InvalidOperationException($"{name} đã có lịch, không tự chèn dữ liệu chồng lịch.");
             var booking = new DatBan

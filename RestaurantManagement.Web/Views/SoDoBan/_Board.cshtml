@@ -10,8 +10,9 @@
         var label = table.TrangThai switch { TrangThaiBan.SanSang => "Sẵn sàng", TrangThaiBan.DangPhucVu => "Đang phục vụ", TrangThaiBan.CanDon => "Cần dọn", _ => "Ngừng sử dụng" };
         var css = table.TrangThai switch { TrangThaiBan.SanSang => "ready", TrangThaiBan.DangPhucVu => "occupied", TrangThaiBan.CanDon => "cleaning", _ => "inactive" };
         if (!Model.IsLive && table.TrangThai != TrangThaiBan.NgungSuDung && area.DangSuDung) {
-            label = card.ScheduledBookings.Count > 0 ? "Đã đặt trong ca" : "Trống trong ca";
-            css = card.ScheduledBookings.Count > 0 ? "occupied" : "ready";
+            var bookedInSlot = card.ScheduledBookings.Any(x => x.GioDen < Model.Until && x.GioKetThucDuKien > Model.From);
+            label = bookedInSlot ? "Đã đặt trong ca" : card.UnavailableReason is not null ? "Chưa thể xếp ca này" : "Trống trong ca";
+            css = card.UnavailableReason is not null ? "occupied" : "ready";
         }
         if (!area.DangSuDung) { label = "Khu vực ngừng sử dụng"; css = "inactive"; }
         var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan");
@@ -27,7 +28,7 @@
             }
             @if (card.ScheduledBookings.Count > 0) { <div class="table-bookings small"><strong>Lịch ngày @Model.ScheduleDay.ToString("dd/MM/yyyy")</strong>
                 @foreach (var scheduled in card.ScheduledBookings) {
-                    var overlaps = scheduled.GioDen < Model.Until && scheduled.GioKetThucDuKien > Model.From;
+                    var overlaps = scheduled.GioDen < Model.CheckUntil && TableService.BlockingUntil(scheduled) > Model.From;
                     <div class="@(overlaps ? "fw-semibold text-danger" : "text-muted")">@scheduled.MaDatBan · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") – @scheduled.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") @(overlaps ? "· Trong khung kiểm tra" : "")</div>
                 }
             </div> }

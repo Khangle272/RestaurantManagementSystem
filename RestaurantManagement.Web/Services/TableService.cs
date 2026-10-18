@@ -11,6 +11,10 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
 {
     public const int MaxDiningHours = 3;
     public static DateTimeOffset ServingDeadline(DatBan booking) => (booking.ThoiDiemNhanBan ?? booking.GioDen).AddHours(MaxDiningHours);
+    public static DateTimeOffset BlockingUntil(DatBan booking) =>
+        booking.GioKetThucDuKien > ServingDeadline(booking) ? booking.GioKetThucDuKien : ServingDeadline(booking);
+    public static bool ReadyForSchedule(BanAn table, DateTimeOffset arrival) => table.TrangThai == TrangThaiBan.SanSang
+        || DateOnly.FromDateTime(arrival.ToOffset(TimeSpan.FromHours(7)).DateTime) > DateOnly.FromDateTime(VietnamNow);
     public static DateTimeOffset VietnamTime(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.FromHours(7));
     public static DateTime VietnamNow => DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).DateTime;
     public static string NewCode(string prefix) => prefix + "-" + Guid.NewGuid().ToString("N")[..20].ToUpperInvariant();
@@ -37,7 +41,8 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
 
     public IQueryable<ChiTietDatBan> OverlappingBookings(DateTimeOffset from, DateTimeOffset until, int? exclude = null) =>
         BlockingBookings().Where(x => (!exclude.HasValue || x.DatBanId != exclude.Value)
-            && x.DatBan.GioDen < until && x.DatBan.GioKetThucDuKien > from);
+            && x.DatBan.GioDen < until && (x.DatBan.GioKetThucDuKien > from
+                || (x.DatBan.ThoiDiemNhanBan ?? x.DatBan.GioDen).AddHours(MaxDiningHours) > from));
 
     public static List<BanAn>? PickTables(IEnumerable<BanAn> available, int guests)
     {
@@ -61,9 +66,10 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var candidates = await db.BanAn.AsNoTracking().Where(x => x.KhuVuc.DangSuDung
             && x.TrangThai != TrangThaiBan.NgungSuDung && (!areaId.HasValue || x.KhuVucId == areaId)
             && x.KhuVuc.LaPhongVip == vip).ToListAsync();
-        var busy = await OverlappingBookings(from, until).Select(x => x.BanAnId).Distinct().ToListAsync();
+        var busy = await OverlappingBookings(from, from.AddHours(MaxDiningHours) > until ? from.AddHours(MaxDiningHours) : until)
+            .Select(x => x.BanAnId).Distinct().ToListAsync();
         return PickTables(candidates.Where(x => !busy.Contains(x.Id)
-            && (from > DateTimeOffset.UtcNow.AddMinutes(30) || x.TrangThai == TrangThaiBan.SanSang)), guests) is not null;
+            && ReadyForSchedule(x, from)), guests) is not null;
     }
 
     public async Task<(string? Error, List<DiningSlotAvailability> Slots)> AvailableSlots(DateOnly day, int guests, int? areaId)
@@ -89,16 +95,14 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
     // Caller owns the serializable transaction; reserve before asking the customer for money.
     public async Task<string?> ReserveOnlineWithinTransaction(DatBan booking)
     {
-        var now = DateTimeOffset.UtcNow;
         var candidates = await db.BanAn.Where(x => x.KhuVuc.DangSuDung && x.TrangThai != TrangThaiBan.NgungSuDung
             && (!booking.KhuVucUuTienId.HasValue || x.KhuVucId == booking.KhuVucUuTienId)
             && x.KhuVuc.LaPhongVip == booking.YeuCauVip).Select(x => x.Id).ToListAsync();
         var tables = await LockTables(candidates);
-        var busy = await OverlappingBookings(booking.GioDen, booking.GioKetThucDuKien, booking.Id)
+        var busy = await OverlappingBookings(booking.GioDen, BlockingUntil(booking), booking.Id)
             .Where(x => candidates.Contains(x.BanAnId))
             .Select(x => x.BanAnId).Distinct().ToListAsync();
-        var available = tables.Where(x => !busy.Contains(x.Id)
-            && (booking.GioDen > now.AddMinutes(30) || x.TrangThai == TrangThaiBan.SanSang));
+        var available = tables.Where(x => !busy.Contains(x.Id) && ReadyForSchedule(x, booking.GioDen));
         var guests = booking.SoNguoiLon + booking.SoTreEm;
         var chosen = PickTables(available, guests);
         if (chosen is null) return "Khung giờ/khu vực này không còn đủ bàn phù hợp. Chọn giờ hoặc khu vực khác; bạn chưa phải thanh toán.";
@@ -158,12 +162,12 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         if (tables.Sum(x => x.SoChoNgoi) < booking.SoNguoiLon + booking.SoTreEm) return "Các bàn đã chọn không đủ chỗ cho khách.";
         if (booking.YeuCauVip && tables.Any(x => !x.KhuVuc.LaPhongVip)) return "Yêu cầu phòng VIP cần được xếp vào khu vực VIP.";
         if (!booking.YeuCauVip && tables.Any(x => x.KhuVuc.LaPhongVip)) return "Khách chưa yêu cầu VIP. Thống nhất yêu cầu với khách trước khi chọn khu vực VIP.";
-        if (booking.GioDen <= DateTimeOffset.UtcNow.AddMinutes(30) && tables.Any(x => x.TrangThai != TrangThaiBan.SanSang))
-            return "Bàn đang phục vụ hoặc chưa dọn. Chọn bàn sẵn sàng cho khách sắp đến.";
-        var conflict = await OverlappingBookings(booking.GioDen, booking.GioKetThucDuKien, id)
+        if (tables.Any(x => !ReadyForSchedule(x, booking.GioDen)))
+            return "Bàn đang phục vụ hoặc chưa dọn trong ngày này. Chọn bàn sẵn sàng hoặc chờ dọn xong.";
+        var conflict = await OverlappingBookings(booking.GioDen, BlockingUntil(booking), id)
             .Where(x => ids.Contains(x.BanAnId)).OrderBy(x => x.DatBan.GioDen).Select(x => x.DatBan).FirstOrDefaultAsync();
         if (conflict is not null)
-            return $"Bàn đã có lịch {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm}–{conflict.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)):HH:mm}, không đủ thời gian cho bữa của khách. Chọn bàn khác hoặc đổi giờ với khách.";
+            return $"Bàn đã có lịch {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm}–{conflict.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)):HH:mm}, giữ bàn tối đa đến {BlockingUntil(conflict).ToOffset(TimeSpan.FromHours(7)):HH:mm} hoặc khi phục vụ và dọn xong. Chọn bàn khác.";
         var removed = booking.Ban.Where(x => !ids.Contains(x.BanAnId)).ToList();
         db.ChiTietDatBan.RemoveRange(removed);
         foreach (var tableId in ids.Where(x => !booking.Ban.Any(b => b.BanAnId == x)))

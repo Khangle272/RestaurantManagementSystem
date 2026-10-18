@@ -41,6 +41,9 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
             : TableService.VietnamTime(day.ToDateTime(time)));
         var until = booking?.GioKetThucDuKien ?? (slot is not null
             ? TableService.VietnamTime(day.ToDateTime(slot.End)) : gio.HasValue ? from.AddHours(TableService.MaxDiningHours) : from.AddTicks(1));
+        var checkUntil = booking is not null ? TableService.BlockingUntil(booking)
+            : slot is not null || gio.HasValue ? (from.AddHours(TableService.MaxDiningHours) > until ? from.AddHours(TableService.MaxDiningHours) : until)
+            : until;
         var isLive = (booking is null && slot is null && !gio.HasValue)
             || (from <= DateTimeOffset.UtcNow && until > DateTimeOffset.UtcNow);
         var bookingSlot = booking is null ? null : ReservationSchedule.Match(local.DateTime);
@@ -55,7 +58,7 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
         var model = new TableBoardViewModel
         {
             Areas = areas, AreaId = khuVucId, Floor = tang, Booking = booking, PreferredTableId = preferredTableId,
-            BookingVersion = booking is null ? "" : VersionOf(booking), From = from, Until = until,
+            BookingVersion = booking is null ? "" : VersionOf(booking), From = from, Until = until, CheckUntil = checkUntil,
             ScheduleDay = day, ScheduleTime = TimeOnly.FromDateTime(from.ToOffset(TimeSpan.FromHours(7)).DateTime),
             SlotId = booking is not null ? bookingSlot?.Id ?? "legacy" : slot?.Id ?? (gio.HasValue ? "legacy" : "now"),
             IsLive = isLive,
@@ -66,19 +69,18 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
                         .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan).Select(x => x.DatBan).FirstOrDefault() : null;
                 return new TableCard { Table = table, Version = VersionOf(table), Occupant = occupant,
                     OccupantVersion = occupant is null ? "" : VersionOf(occupant),
-                    ScheduledBookings = links.Where(x => x.BanAnId == table.Id && x.DatBan.GioDen < until
-                        && x.DatBan.GioKetThucDuKien > from).Select(x => x.DatBan).OrderBy(x => x.GioDen).ToList(),
-                    Conflicts = links.Where(x => x.BanAnId == table.Id && x.DatBanId != datBanId && x.DatBan.GioDen < until
-                        && x.DatBan.GioKetThucDuKien > from).Select(x => x.DatBan).OrderBy(x => x.GioDen).ToList() };
+                    ScheduledBookings = links.Where(x => x.BanAnId == table.Id && x.DatBan.GioDen < checkUntil
+                        && TableService.BlockingUntil(x.DatBan) > from).Select(x => x.DatBan).OrderBy(x => x.GioDen).ToList(),
+                    Conflicts = links.Where(x => x.BanAnId == table.Id && x.DatBanId != datBanId && x.DatBan.GioDen < checkUntil
+                        && TableService.BlockingUntil(x.DatBan) > from).Select(x => x.DatBan).OrderBy(x => x.GioDen).ToList() };
             }).ToList()
         };
         foreach (var card in model.Tables)
         {
             card.UnavailableReason = !card.Table.KhuVuc.DangSuDung || card.Table.TrangThai == TrangThaiBan.NgungSuDung ? "Bàn hoặc khu vực ngừng sử dụng."
-                : card.Conflicts.FirstOrDefault() is { } conflict ? $"Đã có lịch {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm}–{conflict.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)):HH:mm}. Chọn bàn khác."
+                : card.Conflicts.FirstOrDefault() is { } conflict ? $"Đã có lịch {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm}–{conflict.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)):HH:mm}, chỉ mở lại sau khi phục vụ và dọn xong (tối đa {TableService.BlockingUntil(conflict).ToOffset(TimeSpan.FromHours(7)):HH:mm}). Chọn bàn khác."
                 : booking is not null && booking.YeuCauVip != card.Table.KhuVuc.LaPhongVip ? "Không đúng loại khu vực khách yêu cầu."
-                : from <= DateTimeOffset.UtcNow.AddMinutes(30) && until > DateTimeOffset.UtcNow && card.Table.TrangThai != TrangThaiBan.SanSang
-                    ? "Bàn đang phục vụ hoặc chưa dọn, chưa thể nhận khách." : null;
+                : !TableService.ReadyForSchedule(card.Table, from) ? "Bàn đang phục vụ hoặc chưa dọn trong ngày này. Chờ dọn xong rồi kiểm tra lại." : null;
             card.CanChoose = model.CanAssign && card.UnavailableReason is null;
             card.IsSelected = card.CanChoose && (links.Any(x => x.BanAnId == card.Table.Id && x.DatBanId == datBanId)
                 || preferredTableId == card.Table.Id);

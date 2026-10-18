@@ -54,7 +54,7 @@
     </aside>
 }
 <section class="booking-board-panel" aria-label="Sơ đồ bàn và lịch đặt">
-    <p class="small text-muted mb-3">@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ca, không phải trạng thái bàn ngay lúc này") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy"). Bàn trống trong ca chưa có nghĩa khách được nhận bàn khi bàn chưa dọn.</p>
+    <p class="small text-muted mb-3">@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ca, không phải trạng thái bàn ngay lúc này") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy"). @if (Model.CheckUntil > Model.Until) { <span>Bàn có lịch trước chỉ mở lại khi kết thúc và dọn xong; hệ thống kiểm tra khả năng trùng đến @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy").</span> } Bàn chưa dọn chưa thể nhận khách.</p>
     <div id="assignment-warning" class="alert alert-warning" role="alert" tabindex="-1" hidden></div>
     <div id="table-board" data-poll="@(Model.Booking is null ? "true" : "false")"><partial name="_Board" model="Model" /></div>
 </section>
