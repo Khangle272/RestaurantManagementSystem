@@ -56,6 +56,7 @@ public class MonAnFormViewModel : EditRecordViewModel
     [ValidateNever] public List<DanhMuc> DanhMucList { get; set; } = new();
     [ValidateNever] public List<NguyenLieu> NguyenLieuList { get; set; } = new();
     [ValidateNever] public List<MonAn> MonLeList { get; set; } = new();
+    [ValidateNever] public List<string> TenSizeOptions { get; set; } = new();
 }
 
 public class MonAnSizeFormViewModel
@@ -66,15 +67,52 @@ public class MonAnSizeFormViewModel
     [Range(typeof(decimal), "0", "9999999999999999.99", ErrorMessage = "Giá bán phải không âm.")]
     public decimal GiaBan { get; set; }
     public bool DangSuDung { get; set; } = true;
+    [Range(typeof(decimal), "0.000001", "9999", ErrorMessage = "Hệ số tỷ lệ phải lớn hơn 0.")]
+    public decimal HeSoTyLe { get; set; } = 1.0m;
+    [StringLength(1000)] public string? GhiChuThanhPhanKhacBiet { get; set; }
     public List<DinhMucItemViewModel> DinhMucItems { get; set; } = new();
 }
 
 public class DinhMucItemViewModel
 {
-    public int MaKichCo { get; set; }
     [Range(1, int.MaxValue)] public int NguyenLieuId { get; set; }
     [Range(typeof(decimal), "0.000001", "999999999999.999999", ErrorMessage = "Định mức phải lớn hơn 0.")]
     public decimal SoLuong { get; set; }
+}
+
+// View model riêng cho partial chia đôi Định mức & Kích cỡ dùng chung Form món ăn và trang BOM.
+public class BomSplitViewModel
+{
+    public string BaseName { get; set; } = "DinhMucItems";
+    public string SizeName { get; set; } = "Sizes";
+    public string SizeItemsName { get; set; } = "DinhMucItems";
+    public string SizeIdName { get; set; } = "Id";
+    public bool Admin { get; set; }
+    public bool ChoPhepSuaSize { get; set; } = true;
+    public bool HienTrangThaiSize { get; set; }
+    public bool LaThucUong { get; set; }
+    public bool LaCombo { get; set; }
+    public List<BomSplitItemViewModel> BaseItems { get; set; } = new();
+    public List<BomSplitSizeViewModel> Sizes { get; set; } = new();
+    public List<NguyenLieuOptionVM> NguyenLieuList { get; set; } = new();
+    public List<string> TenSizeOptions { get; set; } = new();
+}
+
+public class BomSplitItemViewModel
+{
+    public int NguyenLieuId { get; set; }
+    public decimal SoLuong { get; set; }
+}
+
+public class BomSplitSizeViewModel
+{
+    public int Id { get; set; }
+    public string TenSize { get; set; } = "";
+    public decimal GiaBan { get; set; }
+    public bool DangSuDung { get; set; } = true;
+    public decimal HeSoTyLe { get; set; } = 1.0m;
+    public string? GhiChuThanhPhanKhacBiet { get; set; }
+    public List<BomSplitItemViewModel> Items { get; set; } = new();
 }
 
 public class ComboItemViewModel

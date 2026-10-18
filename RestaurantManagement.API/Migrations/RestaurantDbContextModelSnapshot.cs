@@ -751,6 +751,9 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<int>("NguyenLieuId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("LaNguyenLieuPhu")
+                        .HasColumnType("bit");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -1214,9 +1217,17 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<bool>("DangSuDung")
                         .HasColumnType("bit");
 
+                    b.Property<string>("GhiChuThanhPhanKhacBiet")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<decimal>("GiaBan")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("HeSoTyLe")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
 
                     b.Property<int>("MonAnId")
                         .HasColumnType("int");
@@ -1239,6 +1250,8 @@ namespace RestaurantManagement.API.Migrations
                     b.ToTable("MonAnSize", null, t =>
                         {
                             t.HasCheckConstraint("CK_MonAnSize_Gia", "[GiaBan]>=0");
+
+                            t.HasCheckConstraint("CK_MonAnSize_HeSoTyLe", "[HeSoTyLe]>0");
                         });
                 });
 

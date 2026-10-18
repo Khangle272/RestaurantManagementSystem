@@ -517,3 +517,65 @@ Tuân thủ toàn bộ Design Tokens tại Mục 1 và Layout Shell tại Mục 
   + Nếu có nguyên liệu bị cạn kho hoặc không đủ định mức:
     - Hiển thị Banner cảnh báo màu vàng viền cam: *"Cảnh báo: Nguyên liệu [Thịt bò Wagyu] tồn kho chỉ còn 0.2kg, thiếu định mức phục vụ cho đơn hàng!"* kèm nút tắt hoặc lập phiếu nhập khẩn cấp.
 
+---
+
+### 10. ĐẶC TẢ GIAO DIỆN & UI/UX TUẦN 9 (W9 REVISION)
+Tuân thủ toàn bộ Design Tokens tại Mục 1 và Layout Shell tại Mục 2. Đợt cập nhật Tuần 9 giải quyết 3 trải nghiệm trọng tâm của Thành viên 1: **Tối giản hóa Form Tạo/Sửa Món**, **Thiết kế Bố cục Định mức Chia đôi (Split Layout BOM) với Bảng đối chiếu 3 Size**, và **Chuẩn hóa Thông tin Chế biến Màn hình Bếp (KDS)**.
+
+#### 10.1. Tối ưu Form Tạo/Sửa Món Ăn (`Views/MonAn/Create.cshtml` & `Form.cshtml`)
+- **Loại bỏ lựa chọn loại món:**
+  + Không hiển thị trường chọn hoặc radio `Món lẻ / Món Combo`. Form này chuyên biệt 100% cho việc tạo món lẻ.
+  + Giao diện tạo Combo được phân tách sang trang quản lý riêng biệt.
+- **Tự động hóa cờ trạng thái (State Badges / Toggle Removal):**
+  + Trên Form tạo mới, **ẩn hoàn toàn các công tắc Toggle**: *"Món mới"*, *"Món nổi bật"*, *"Đang mở bán"*, và *"Trạng thái kích cỡ"*.
+  + Hệ thống tự động gán nhãn mặc định: Món mới (`LaMonMoi = true`), Đang mở bán (`DangMoBan = true`), Size (`TrangThaiKichCo = "Đang dùng"`).
+- **Bộ lọc & Phân loại linh hoạt theo Danh mục Thức uống:**
+  + Khi người dùng chọn Danh mục thuộc nhóm **Thức uống / Đồ uống** (ví dụ: Cà phê, Nước ngọt, Trà trái cây...):
+    - Tự động ẩn vùng cấu hình nguyên vật liệu nấu nướng phức tạp của bếp.
+    - Chuyển sang chế độ nhập liệu tinh gọn (chỉ gồm: Tên thức uống, Ảnh, Danh mục, Giá bán theo Size).
+
+#### 10.2. Bố cục Form Định Mức & Kích Cỡ Chia Đôi (Split Layout Recipe Builder)
+Form thiết lập kích cỡ và định mức được cấu trúc lại dạng **2 cột song song (Bootstrap `row`, `col-lg-5` và `col-lg-7`)**:
++----------------------------------------+----------------------------------------------------+
+| CỘT TRÁI (col-lg-5): ĐỊNH MỨC NGUYÊN THỦY | CỘT PHẢI (col-lg-7): KÍCH CỠ & TỶ LỆ SIZE         |
+|----------------------------------------+----------------------------------------------------|
+| [1. Thiết lập Định lượng Gốc (x1.0)]   | [2. Danh sách Kích cỡ & Hệ số Tỷ lệ]               |
+| - Chọn nguyên liệu từ kho:             | - Size Nhỏ:  Giá [ 45,000 ] | Hệ số: [ 1.0 ] (Gốc) |
+|   + Tôm sú tươi: 100g                  | - Size Vừa:  Giá [ 65,000 ] | Hệ số: [ 1.3 ]       |
+|   + Thịt ba chỉ: 80g                   | - Size Lớn:  Giá [ 85,000 ] | Hệ số: [ 1.5 ]       |
+|   + Ngó sen: 150g                      |   [+ Thêm nguyên liệu phụ / Ghi chú khác biệt]     |
+|   + Rau răm, ớt: 20g                   |----------------------------------------------------|
+| (Nhập 1 lần duy nhất cho Size đầu)     | [3. Bảng Đối Chiếu Tổng Hợp 3 Size Trước Khi Lưu]  |
+|                                        | +---------------+-----+--------+--------+--------+ |
+|                                        | | Nguyên liệu   | ĐVT | Nhỏ(x1)|Vừa(1.3)|Lớn(1.5)| |
+|                                        | +---------------+-----+--------+--------+--------+ |
+|                                        | | Tôm sú tươi   | g   |  100   |  130   |  150   | |
+|                                        | | Thịt ba chỉ   | g   |   80   |  104   |  120   | |
+|                                        | | Ngó sen       | g   |  150   |  195   |  225   | |
+|                                        | +---------------+-----+--------+--------+--------+ |
++----------------------------------------+----------------------------------------------------+
+- **Quy chuẩn Cột Trái — Base Recipe (Định lượng gốc):**
+  + Người dùng chỉ cần xây dựng công thức chuẩn 1 lần duy nhất ứng với Size cơ sở (Size đầu tiên, hệ số mặc định là `1.0`).
+  + Các thao tác: Chọn nguyên liệu từ kho, nhập số lượng cần, đơn vị tính.
+- **Quy chuẩn Cột Phải — Ratio Scaler & Multi-Size Comparison Table:**
+  + **Bỏ hoàn toàn** nút *"Sao chép từ size khác"*.
+  + Mỗi Size (Nhỏ, Vừa, Lớn) gồm: Tên Size, Giá bán niêm yết (VNĐ), **Hệ số tỷ lệ** (`HeSoTyLe`, ví dụ `1.0`, `1.3`, `1.5`).
+  + Nút bấm `[+ Nguyên liệu phụ / Ghi chú]`: Cho phép mở ô/dialog tích chọn thêm nguyên vật liệu phụ hoặc ghi chú khác biệt riêng cho từng size (ví dụ Size Lớn có thêm bánh phồng tôm, hộp xốp lớn...).
+  + **Bảng đối chiếu tổng hợp:** Tự động tính toán theo thời gian thực (Real-time recalculation bằng JavaScript) và hiển thị bảng gom cả 3 size liền kề. Giúp đầu bếp / người thiết lập thực đơn kiểm tra độ chính xác trước khi bấm "Lưu món".
+
+#### 10.3. Màn hình Bếp Chuyên dụng - KDS (`Views/Bep/Index.cshtml`)
+Giao diện KDS được tối ưu để đầu bếp quan sát rõ nét từ khoảng cách xa (2–3 mét) trong môi trường nhiệt độ cao và thao tác nhanh:
+- **Thẻ chế biến (KDS Ticket Card):**
+  + **Header thẻ bàn:**
+    - **Tên bàn bắt buộc viết đầy đủ:** Hiển thị rõ chữ lớn in đậm như `"Bàn VIP 1"`, `"Bàn Sân Vườn 2"`, tuyệt đối không viết tắt (`B1`, `VIP1`, `SV2`).
+    - **Thông tin thời gian:** Hiển thị rõ **Ngày** (`dd/MM/yyyy`) và **Thời gian cần ra món / Thời gian gọi** (ví dụ: `18/10/2026 - 11:45`).
+    - Badge trạng thái món: `Chờ nấu` (Vàng Amber #F59E0B), `Đang nấu` (Xanh Cyan #0EA5E9), `Sẵn sàng ra món` (Xanh lá Emerald #10B981).
+- **Phần thân danh sách món (Ticket Items):**
+  + **Tên món:** Cỡ chữ to (18px - Bold), màu đen tương phản cao (#0F172A).
+  + **Size món:** Hiển thị huy hiệu nổi bật (Badge Pill: `Size Nhỏ`, `Size Vừa`, `Size Lớn`).
+  + **Số lượng đĩa:** Chữ số kích thước lớn nổi bật (ví dụ: `x 2 đĩa`).
+  + **Ghi chú chế biến:** Đặt trong khung viền cam/vàng cảnh báo nếu có (ví dụ: `* Ghi chú: Không hành lá, ít cay`).
+- **Nguyên tắc loại bỏ thông tin thừa (Noise Reduction):**
+  + **Xóa hoàn toàn** Mã đơn hàng (`MaHoaDon` / `Order ID #12345`).
+  + **Xóa hoàn toàn** Đơn giá và Giá tiền (`VNĐ`).
+  + Bếp chỉ tập trung vào: Bàn nào - Ngày giờ nào - Nấu món gì - Size gì - Số lượng bao nhiêu đĩa - Ghi chú chế biến ra sao.

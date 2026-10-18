@@ -17,17 +17,21 @@ public static class DbSeeder
 
         await AddMissingAsync(db, db.Set<KhuVuc>(), x => x.TenKhuVuc,
             new KhuVuc { TenKhuVuc = "Sảnh chung", LaPhongVip = false },
-            new KhuVuc { TenKhuVuc = "Phòng VIP", LaPhongVip = true });
+            new KhuVuc { TenKhuVuc = "Phòng VIP", LaPhongVip = true },
+            new KhuVuc { TenKhuVuc = "Sân Vườn", LaPhongVip = false });
         await db.SaveChangesAsync();
 
         var sanh = await db.Set<KhuVuc>().SingleAsync(x => x.TenKhuVuc == "Sảnh chung");
         var vip = await db.Set<KhuVuc>().SingleAsync(x => x.TenKhuVuc == "Phòng VIP");
+        var sanVuon = await db.Set<KhuVuc>().SingleAsync(x => x.TenKhuVuc == "Sân Vườn");
         await AddMissingAsync(db, db.Set<BanAn>(), x => x.MaBan,
             new BanAn { MaBan = "S01", KhuVucId = sanh.Id, SoChoNgoi = 2, TrangThai = TrangThaiBan.SanSang },
             new BanAn { MaBan = "S02", KhuVucId = sanh.Id, SoChoNgoi = 4, TrangThai = TrangThaiBan.SanSang },
             new BanAn { MaBan = "S03", KhuVucId = sanh.Id, SoChoNgoi = 6, TrangThai = TrangThaiBan.SanSang },
             new BanAn { MaBan = "V01", KhuVucId = vip.Id, SoChoNgoi = 8, TrangThai = TrangThaiBan.SanSang },
-            new BanAn { MaBan = "V02", KhuVucId = vip.Id, SoChoNgoi = 10, TrangThai = TrangThaiBan.SanSang });
+            new BanAn { MaBan = "V02", KhuVucId = vip.Id, SoChoNgoi = 10, TrangThai = TrangThaiBan.SanSang },
+            new BanAn { MaBan = "SV01", KhuVucId = sanVuon.Id, SoChoNgoi = 4, TrangThai = TrangThaiBan.SanSang },
+            new BanAn { MaBan = "SV02", KhuVucId = sanVuon.Id, SoChoNgoi = 6, TrangThai = TrangThaiBan.SanSang });
 
         await AddMissingAsync(db, db.Set<DanhMuc>(), x => x.TenDanhMuc,
             new DanhMuc { TenDanhMuc = "Khai vị", MoTa = "Dữ liệu minh họa cho CRUD" },
@@ -36,6 +40,19 @@ public static class DbSeeder
             new DanhMuc { TenDanhMuc = "Set món", MoTa = "Dữ liệu minh họa cho CRUD" });
         await db.SaveChangesAsync();
 
+        // Seed nghiệp vụ thực đơn chỉ chạy khi schema đã có các cột của Tuần 9.
+        // (PromotionSmoke.MigrationProof seed trên schema cũ trước khi migrate lên bản mới.)
+        var coCotWeek9 = await db.Database
+            .SqlQueryRaw<int?>("SELECT CAST(COL_LENGTH('MonAnSize', 'HeSoTyLe') AS int) AS [Value]")
+            .SingleAsync() is not null;
+        if (coCotWeek9) await SeedMenuAsync(db);
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
+
+    private static async Task SeedMenuAsync(RestaurantDbContext db)
+    {
         var dmKhaiVi = await db.Set<DanhMuc>().SingleAsync(x => x.TenDanhMuc == "Khai vị");
         var dmMonChinh = await db.Set<DanhMuc>().SingleAsync(x => x.TenDanhMuc == "Món chính");
         var dmThucUong = await db.Set<DanhMuc>().SingleAsync(x => x.TenDanhMuc == "Thức uống");
@@ -45,19 +62,31 @@ public static class DbSeeder
             new MonAn { TenMon = "Bò lúc lắc", DanhMucId = dmMonChinh.Id, Loai = LoaiMon.MonLe, TrangThai = TrangThaiMon.DangPhucVu, LaMonMoi = false, LaMonNoiBat = true },
             new MonAn { TenMon = "Cơm trắng", DanhMucId = dmMonChinh.Id, Loai = LoaiMon.MonLe, TrangThai = TrangThaiMon.DangPhucVu, LaMonMoi = false, LaMonNoiBat = false },
             new MonAn { TenMon = "Nước cam", DanhMucId = dmThucUong.Id, Loai = LoaiMon.ThucUong, TrangThai = TrangThaiMon.DangPhucVu, LaMonMoi = true, LaMonNoiBat = false },
+            new MonAn { TenMon = "Gỏi ngó sen tôm thịt", DanhMucId = dmKhaiVi.Id, Loai = LoaiMon.MonLe, TrangThai = TrangThaiMon.DangPhucVu, LaMonMoi = true, LaMonNoiBat = true },
+            new MonAn { TenMon = "Gỏi bò bóp thấu", DanhMucId = dmKhaiVi.Id, Loai = LoaiMon.MonLe, TrangThai = TrangThaiMon.DangPhucVu, LaMonMoi = false, LaMonNoiBat = true },
             new MonAn { TenMon = "Set gia đình", DanhMucId = dmSet.Id, Loai = LoaiMon.Set, TrangThai = TrangThaiMon.DangPhucVu, LaMonMoi = true, LaMonNoiBat = true });
         await db.SaveChangesAsync();
 
         var dishes = await db.Set<MonAn>().ToDictionaryAsync(x => x.TenMon);
-        var sizeSaladS = await AddSizeAsync(db, dishes["Salad rau"].Id, "Nhỏ (S)", 49000);
-        var sizeSaladM = await AddSizeAsync(db, dishes["Salad rau"].Id, "Vừa (M)", 59000);
-        var sizeSaladL = await AddSizeAsync(db, dishes["Salad rau"].Id, "Lớn (L)", 79000);
+        var sizeSaladS = await AddSizeAsync(db, dishes["Salad rau"].Id, "Nhỏ (S)", 49000, 1.0m);
+        var sizeSaladM = await AddSizeAsync(db, dishes["Salad rau"].Id, "Vừa (M)", 59000, 1.5m);
+        var sizeSaladL = await AddSizeAsync(db, dishes["Salad rau"].Id, "Lớn (L)", 79000, 2.25m);
         await AddSizeAsync(db, dishes["Salad rau"].Id, "Mặc định", 59000);
 
-        var sizeBoS = await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Nhỏ (S)", 139000);
-        var sizeBoM = await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Vừa (M)", 159000);
-        var sizeBoL = await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Lớn (L)", 199000);
+        var sizeBoS = await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Nhỏ (S)", 139000, 1.0m);
+        var sizeBoM = await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Vừa (M)", 159000, 1.5m);
+        var sizeBoL = await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Lớn (L)", 199000, 2.083333m);
         await AddSizeAsync(db, dishes["Bò lúc lắc"].Id, "Mặc định", 159000);
+
+        var sizeGoiNgoSenS = await AddSizeAsync(db, dishes["Gỏi ngó sen tôm thịt"].Id, "Nhỏ (S)", 89000, 1.0m);
+        var sizeGoiNgoSenM = await AddSizeAsync(db, dishes["Gỏi ngó sen tôm thịt"].Id, "Vừa (M)", 119000, 1.3m);
+        var sizeGoiNgoSenL = await AddSizeAsync(db, dishes["Gỏi ngó sen tôm thịt"].Id, "Lớn (L)", 149000, 1.5m,
+            "Size lớn kèm thêm bánh phồng tôm và tôm sú tăng cường");
+
+        var sizeGoiBoS = await AddSizeAsync(db, dishes["Gỏi bò bóp thấu"].Id, "Nhỏ (S)", 99000, 1.0m);
+        var sizeGoiBoM = await AddSizeAsync(db, dishes["Gỏi bò bóp thấu"].Id, "Vừa (M)", 129000, 1.3m);
+        var sizeGoiBoL = await AddSizeAsync(db, dishes["Gỏi bò bóp thấu"].Id, "Lớn (L)", 159000, 1.5m,
+            "Size lớn kèm thêm bánh phồng tôm; nước mắm chua ngọt tách riêng");
 
         var sizeCom = await AddSizeAsync(db, dishes["Cơm trắng"].Id, "Mặc định", 19000);
         var sizeNuocCam = await AddSizeAsync(db, dishes["Nước cam"].Id, "Mặc định", 39000);
@@ -68,7 +97,19 @@ public static class DbSeeder
             new NguyenLieu { TenNguyenLieu = "Rau xà lách", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 500, SoLuongTon = 5000, DonGia = 30 },
             new NguyenLieu { TenNguyenLieu = "Gạo", DonViTinh = "g", DanhMuc = "Đồ khô", NguongCanhBao = 2000, SoLuongTon = 20000, DonGia = 22 },
             new NguyenLieu { TenNguyenLieu = "Nước cam", DonViTinh = "ml", DanhMuc = "Đồ uống", NguongCanhBao = 2000, SoLuongTon = 12000, DonGia = 50 },
-            new NguyenLieu { TenNguyenLieu = "Trứng gà", DonViTinh = "cái", DanhMuc = "Thực phẩm khác", NguongCanhBao = 20, SoLuongTon = 100, DonGia = 3000 });
+            new NguyenLieu { TenNguyenLieu = "Trứng gà", DonViTinh = "cái", DanhMuc = "Thực phẩm khác", NguongCanhBao = 20, SoLuongTon = 100, DonGia = 3000 },
+            new NguyenLieu { TenNguyenLieu = "Ngó sen", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 300, SoLuongTon = 3000, DonGia = 45 },
+            new NguyenLieu { TenNguyenLieu = "Tôm sú tươi", DonViTinh = "g", DanhMuc = "Hải sản", NguongCanhBao = 500, SoLuongTon = 4000, DonGia = 320 },
+            new NguyenLieu { TenNguyenLieu = "Thịt ba chỉ", DonViTinh = "g", DanhMuc = "Thịt", NguongCanhBao = 500, SoLuongTon = 5000, DonGia = 150 },
+            new NguyenLieu { TenNguyenLieu = "Khế", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 200, SoLuongTon = 1500, DonGia = 25 },
+            new NguyenLieu { TenNguyenLieu = "Chuối chát", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 200, SoLuongTon = 1500, DonGia = 20 },
+            new NguyenLieu { TenNguyenLieu = "Rau răm", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 100, SoLuongTon = 800, DonGia = 40 },
+            new NguyenLieu { TenNguyenLieu = "Đậu phộng rang", DonViTinh = "g", DanhMuc = "Đồ khô", NguongCanhBao = 300, SoLuongTon = 2000, DonGia = 90 },
+            new NguyenLieu { TenNguyenLieu = "Bánh phồng tôm", DonViTinh = "cái", DanhMuc = "Đồ khô", NguongCanhBao = 50, SoLuongTon = 400, DonGia = 1500 },
+            new NguyenLieu { TenNguyenLieu = "Nước mắm", DonViTinh = "ml", DanhMuc = "Gia vị", NguongCanhBao = 500, SoLuongTon = 5000, DonGia = 60 },
+            new NguyenLieu { TenNguyenLieu = "Đường", DonViTinh = "g", DanhMuc = "Gia vị", NguongCanhBao = 500, SoLuongTon = 10000, DonGia = 20 },
+            new NguyenLieu { TenNguyenLieu = "Chanh", DonViTinh = "g", DanhMuc = "Rau củ", NguongCanhBao = 200, SoLuongTon = 1200, DonGia = 30 },
+            new NguyenLieu { TenNguyenLieu = "Ớt", DonViTinh = "g", DanhMuc = "Gia vị", NguongCanhBao = 100, SoLuongTon = 600, DonGia = 50 });
 
         await AddMissingAsync(db, db.Set<NhaCungCap>(), x => x.TenNhaCungCap,
             new NhaCungCap { TenNhaCungCap = "Công ty TNHH Thực phẩm Tươi Sạch Sài Gòn", SoDienThoai = "0901234567", Email = "tuoisach@sgfood.vn", DiaChi = "Q. Bình Thạnh, TP.HCM", MaSoThue = "0312345678", NguoiLienHe = "Nguyễn Văn Tuấn" },
@@ -115,6 +156,38 @@ public static class DbSeeder
         await AddRecipeAsync(db, dishes["Bò lúc lắc"].Id, sizeBoM, ingredients["Thịt bò"].Id, 180);
         await AddRecipeAsync(db, dishes["Bò lúc lắc"].Id, sizeBoL, ingredients["Thịt bò"].Id, 250);
 
+        // W9: BOM món mới — định lượng gốc theo size S, các size sau nhân hệ số tỷ lệ.
+        await AddRecipeTheoTyLeAsync(db, dishes["Gỏi ngó sen tôm thịt"].Id,
+            new[] { sizeGoiNgoSenS, sizeGoiNgoSenM, sizeGoiNgoSenL }, new[] { 1.0m, 1.3m, 1.5m },
+            new (int, decimal)[]
+            {
+                (ingredients["Tôm sú tươi"].Id, 100),
+                (ingredients["Thịt ba chỉ"].Id, 80),
+                (ingredients["Ngó sen"].Id, 150),
+                (ingredients["Rau răm"].Id, 20),
+                (ingredients["Đậu phộng rang"].Id, 30),
+                (ingredients["Nước mắm"].Id, 15),
+                (ingredients["Chanh"].Id, 10),
+                (ingredients["Ớt"].Id, 5)
+            });
+        await AddExtraRecipeAsync(db, dishes["Gỏi ngó sen tôm thịt"].Id, sizeGoiNgoSenL, ingredients["Bánh phồng tôm"].Id, 4);
+
+        await AddRecipeTheoTyLeAsync(db, dishes["Gỏi bò bóp thấu"].Id,
+            new[] { sizeGoiBoS, sizeGoiBoM, sizeGoiBoL }, new[] { 1.0m, 1.3m, 1.5m },
+            new (int, decimal)[]
+            {
+                (ingredients["Thịt bò"].Id, 100),
+                (ingredients["Khế"].Id, 40),
+                (ingredients["Chuối chát"].Id, 40),
+                (ingredients["Rau răm"].Id, 15),
+                (ingredients["Đậu phộng rang"].Id, 25),
+                (ingredients["Nước mắm"].Id, 20),
+                (ingredients["Đường"].Id, 10),
+                (ingredients["Chanh"].Id, 10),
+                (ingredients["Ớt"].Id, 5)
+            });
+        await AddExtraRecipeAsync(db, dishes["Gỏi bò bóp thấu"].Id, sizeGoiBoL, ingredients["Bánh phồng tôm"].Id, 4);
+
         await AddRecipeAsync(db, dishes["Cơm trắng"].Id, sizeCom, ingredients["Gạo"].Id, 100);
         await AddRecipeAsync(db, dishes["Nước cam"].Id, sizeNuocCam, ingredients["Nước cam"].Id, 250);
 
@@ -146,23 +219,68 @@ public static class DbSeeder
             });
         }
 
+        // Chứng từ tồn kho cho các nguyên liệu mới (bình đẳng với dữ liệu tồn đầu kỳ, không sửa chứng từ cũ).
+        if (!await db.Set<PhieuNhap>().AnyAsync(x => x.MaPhieu == "PN-W9-TONKHO-001"))
+        {
+            var warehouseman = await db.Set<NhanVien>().SingleAsync(x => x.MaNhanVien == "NV003");
+            var receipt = new PhieuNhap
+            {
+                MaPhieu = "PN-W9-TONKHO-001",
+                NhanVienId = warehouseman.Id,
+                NhaCungCapId = nccTuoiSach.Id,
+                ThoiDiem = new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.FromHours(7)),
+                TrangThai = TrangThaiPhieu.DaGhiSo,
+                LyDo = LyDoNhap.MuaHang,
+                GhiChu = "Nhập kho nguyên liệu cho các món mới Tuần 9 (gỏi ngó sen tôm thịt, gỏi bò bóp thấu)"
+            };
+            var lines = new (string Ten, decimal SoLuong)[]
+            {
+                ("Ngó sen", 3000), ("Tôm sú tươi", 4000), ("Thịt ba chỉ", 5000),
+                ("Khế", 1500), ("Chuối chát", 1500), ("Rau răm", 800),
+                ("Đậu phộng rang", 2000), ("Bánh phồng tôm", 400), ("Nước mắm", 5000),
+                ("Đường", 10000), ("Chanh", 1200), ("Ớt", 600)
+            };
+            foreach (var (ten, soLuong) in lines)
+            {
+                receipt.ChiTiet.Add(new ChiTietPhieuNhap
+                {
+                    NguyenLieuId = ingredients[ten].Id,
+                    SoLuong = soLuong,
+                    DonGia = ingredients[ten].DonGia,
+                    ThanhTien = soLuong * ingredients[ten].DonGia
+                });
+            }
+            receipt.TongTien = receipt.ChiTiet.Sum(x => x.ThanhTien);
+            db.Add(receipt);
+        }
+
         await db.SaveChangesAsync();
-        await transaction.CommitAsync();
     }
 
     private static async Task AddMissingAsync<TEntity, TKey>(RestaurantDbContext db, DbSet<TEntity> set,
         Func<TEntity, TKey> key, params TEntity[] values) where TEntity : class
     {
-        var existing = (await set.AsNoTracking().ToListAsync()).Select(key).ToHashSet();
+        var comparer = typeof(TKey) == typeof(string)
+            ? (IEqualityComparer<TKey>)StringComparer.OrdinalIgnoreCase
+            : EqualityComparer<TKey>.Default;
+        var existing = (await set.AsNoTracking().ToListAsync()).Select(key).ToHashSet(comparer);
         await set.AddRangeAsync(values.Where(x => !existing.Contains(key(x))));
         await db.SaveChangesAsync();
     }
 
-    private static async Task<int> AddSizeAsync(RestaurantDbContext db, int dishId, string size, decimal price)
+    private static async Task<int> AddSizeAsync(RestaurantDbContext db, int dishId, string size, decimal price,
+        decimal heSoTyLe = 1.0m, string? ghiChu = null)
     {
         var existing = await db.Set<MonAnSize>().FirstOrDefaultAsync(x => x.MonAnId == dishId && x.TenSize == size);
-        if (existing != null) return existing.Id;
-        var entity = new MonAnSize { MonAnId = dishId, TenSize = size, GiaBan = price };
+        if (existing != null)
+        {
+            if (existing.HeSoTyLe <= 0) existing.HeSoTyLe = heSoTyLe;
+            if (string.IsNullOrWhiteSpace(existing.GhiChuThanhPhanKhacBiet) && !string.IsNullOrWhiteSpace(ghiChu))
+                existing.GhiChuThanhPhanKhacBiet = ghiChu;
+            await db.SaveChangesAsync();
+            return existing.Id;
+        }
+        var entity = new MonAnSize { MonAnId = dishId, TenSize = size, GiaBan = price, HeSoTyLe = heSoTyLe, GhiChuThanhPhanKhacBiet = ghiChu };
         db.Add(entity);
         await db.SaveChangesAsync();
         return entity.Id;
@@ -172,6 +290,21 @@ public static class DbSeeder
     {
         if (!await db.Set<DinhMucMon>().AnyAsync(x => x.MonAnId == dishId && x.MaKichCo == sizeId && x.NguyenLieuId == ingredientId))
             db.Add(new DinhMucMon { MonAnId = dishId, MaKichCo = sizeId, NguyenLieuId = ingredientId, SoLuong = quantity });
+    }
+
+    private static async Task AddRecipeTheoTyLeAsync(RestaurantDbContext db, int dishId, int[] sizeIds, decimal[] heSoTyLe,
+        (int NguyenLieuId, decimal SoLuongGoc)[] dinhMucGoc)
+    {
+        for (var i = 0; i < sizeIds.Length; i++)
+            foreach (var (nguyenLieuId, soLuongGoc) in dinhMucGoc)
+                await AddRecipeAsync(db, dishId, sizeIds[i], nguyenLieuId,
+                    Math.Round(soLuongGoc * heSoTyLe[i], 4, MidpointRounding.AwayFromZero));
+    }
+
+    private static async Task AddExtraRecipeAsync(RestaurantDbContext db, int dishId, int sizeId, int ingredientId, decimal quantity)
+    {
+        if (!await db.Set<DinhMucMon>().AnyAsync(x => x.MonAnId == dishId && x.MaKichCo == sizeId && x.NguyenLieuId == ingredientId))
+            db.Add(new DinhMucMon { MonAnId = dishId, MaKichCo = sizeId, NguyenLieuId = ingredientId, SoLuong = quantity, LaNguyenLieuPhu = true });
     }
 
     private static async Task AddSupplyAsync(RestaurantDbContext db, int supplierId, int ingredientId, decimal price, string? productCode = null)

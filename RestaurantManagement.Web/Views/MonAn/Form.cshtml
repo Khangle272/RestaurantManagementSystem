@@ -1,10 +1,35 @@
-@using Microsoft.AspNetCore.Mvc.Rendering
+@using RestaurantManagement.Web.Controllers
+@using RestaurantManagement.API.Models
 @model MonAnFormViewModel
 @{
     Layout = "_AdminLayout";
     var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
+    var comboCreate = ViewContext.RouteData.Values["action"]?.ToString() == "CreateCombo";
+    var laCombo = comboCreate || (editing && Model.Loai == LoaiMon.Set);
     var admin = User.IsInRole("Admin");
     ViewData["Title"] = editing ? "Cập nhật món ăn & định mức" : "Thêm món ăn & định mức";
+    var tenDanhMucDaChon = Model.DanhMucList.FirstOrDefault(x => x.Id == Model.DanhMucId)?.TenDanhMuc;
+    var bomSplit = new BomSplitViewModel
+    {
+        BaseName = "DinhMucItems",
+        SizeName = "Sizes",
+        SizeItemsName = "DinhMucItems",
+        SizeIdName = "Id",
+        Admin = admin,
+        ChoPhepSuaSize = true,
+        HienTrangThaiSize = editing && admin,
+        LaThucUong = !laCombo && MonAnController.LaDanhMucThucUong(tenDanhMucDaChon),
+        LaCombo = laCombo,
+        BaseItems = Model.DinhMucItems.Select(x => new BomSplitItemViewModel { NguyenLieuId = x.NguyenLieuId, SoLuong = x.SoLuong }).ToList(),
+        Sizes = Model.Sizes.Select(x => new BomSplitSizeViewModel
+        {
+            Id = x.Id, TenSize = x.TenSize, GiaBan = x.GiaBan, DangSuDung = x.DangSuDung,
+            HeSoTyLe = x.HeSoTyLe, GhiChuThanhPhanKhacBiet = x.GhiChuThanhPhanKhacBiet,
+            Items = x.DinhMucItems.Select(i => new BomSplitItemViewModel { NguyenLieuId = i.NguyenLieuId, SoLuong = i.SoLuong }).ToList()
+        }).ToList(),
+        NguyenLieuList = Model.NguyenLieuList.Select(x => new NguyenLieuOptionVM { Id = x.Id, TenNguyenLieu = x.TenNguyenLieu, DonViTinh = x.DonViTinh, DonGia = x.DonGia }).ToList(),
+        TenSizeOptions = Model.TenSizeOptions
+    };
 }
 <div class="container-fluid py-4">
     <a asp-action="Index" class="text-muted text-decoration-none">← Quay lại thực đơn</a>
@@ -12,7 +37,7 @@
     @if (!admin)
     { <div class="alert alert-light border">Bạn chuẩn bị thông tin món, size và công thức. Mỗi lần lưu sẽ chuyển món về <strong>Chờ duyệt</strong>; Quản lý kiểm tra và đặt giá trước khi mở bán. Món đang gọi nằm riêng ở “Bếp chế biến”.</div> }
 
-    <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post" enctype="multipart/form-data" id="dish-form">
+    <form asp-action="@(comboCreate ? "CreateCombo" : editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post" enctype="multipart/form-data" id="dish-form">
         @if (editing) { <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /> }
         <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
         <div class="card border-0 shadow-sm mb-4"><div class="card-body row g-3">
@@ -20,23 +45,47 @@
             <div class="col-md-6">
                 <label asp-for="DanhMucId" class="form-label">Danh mục</label>
                 <div class="input-group">
-                    <select asp-for="DanhMucId" id="cboDanhMuc" class="form-select" asp-items="@(new SelectList(Model.DanhMucList, "Id", "TenDanhMuc"))">
+                    <select asp-for="DanhMucId" id="cboDanhMuc" class="form-select">
                         <option value="">Chọn danh mục</option>
+                        @foreach (var danhMuc in Model.DanhMucList)
+                        {
+                            <option value="@danhMuc.Id" data-thuc-uong="@(MonAnController.LaDanhMucThucUong(danhMuc.TenDanhMuc) ? "true" : "false")" selected="@(danhMuc.Id == Model.DanhMucId)">@danhMuc.TenDanhMuc</option>
+                        }
                     </select>
                     <button class="btn btn-outline-rose" type="button" data-bs-toggle="modal" data-bs-target="#modalQuickAddCategory" title="Thêm danh mục mới">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
             </div>
-            <div class="col-md-6"><label asp-for="Loai" class="form-label">Loại món</label><select asp-for="Loai" class="form-select" id="selectLoaiMon"><option value="MonLe">Món lẻ</option><option value="ThucUong">Thức uống</option>@if (admin) { <option value="Set">Set / Combo</option> }</select></div>
+            @if (laCombo)
+            {
+                <div class="col-md-6">
+                    <label class="form-label">Loại món</label>
+                    <p class="form-control-plaintext mb-0">Set / Combo</p>
+                    <input type="hidden" asp-for="Loai" />
+                </div>
+            }
+            else if (editing)
+            {
+                <div class="col-md-6"><label asp-for="Loai" class="form-label">Loại món</label><select asp-for="Loai" class="form-select" id="selectLoaiMon"><option value="MonLe">Món lẻ</option><option value="ThucUong">Thức uống</option></select></div>
+            }
+            else
+            {
+                <div class="col-md-6">
+                    <label class="form-label">Loại món</label>
+                    <p class="form-control-plaintext mb-0">Món lẻ / Thức uống (tự nhận theo danh mục)</p>
+                </div>
+            }
             @if (editing && admin)
             {
                 <div class="col-md-6"><label asp-for="TrangThai" class="form-label">Trạng thái</label><select asp-for="TrangThai" class="form-select"><option value="DangPhucVu">Đang phục vụ</option><option value="TamHet">Tạm hết</option><option value="NgungKinhDoanh">Ngừng kinh doanh</option></select></div>
             }
-            else if (!editing && admin)
+            else if (!editing)
             {
-                <input type="hidden" name="TrangThai" value="DangPhucVu" />
-                <div class="col-md-6"><label class="form-label">Trạng thái ban đầu</label><p class="form-control-plaintext mb-0">Đang phục vụ</p></div>
+                <div class="col-md-6">
+                    <label class="form-label">Trạng thái ban đầu</label>
+                    <p class="form-control-plaintext mb-0">Đang phục vụ · Món mới</p>
+                </div>
             }
             <div class="col-12"><label asp-for="MoTa" class="form-label">Mô tả</label><textarea asp-for="MoTa" class="form-control" rows="3"></textarea></div>
             <div class="col-md-6">
@@ -48,7 +97,7 @@
                     <div class="form-check mt-2"><input asp-for="XoaHinhAnh" class="form-check-input" /><label asp-for="XoaHinhAnh" class="form-check-label">Xóa ảnh hiện tại</label></div>
                 }
             </div>
-            @if (admin) { <div class="col-md-6">
+            @if (editing && admin) { <div class="col-md-6">
                 <div class="form-check"><input asp-for="LaMonMoi" class="form-check-input" /><label asp-for="LaMonMoi" class="form-check-label">Món mới</label></div>
                 <div class="form-check"><input asp-for="LaMonNoiBat" class="form-check-input" /><label asp-for="LaMonNoiBat" class="form-check-label">Món nổi bật</label></div>
                 <div class="form-check mt-2"><input asp-for="DaDuyet" class="form-check-input" /><label asp-for="DaDuyet" class="form-check-label">Duyệt mở bán</label></div>
@@ -57,123 +106,32 @@
             <div class="col-12"><label asp-for="LyDoNgung" class="form-label">Lý do ngừng kinh doanh</label><input asp-for="LyDoNgung" class="form-control" maxlength="500" /><span class="small text-muted">Bắt buộc khi ngừng kinh doanh. Tạm hết do Quản lý cập nhật khi không đủ nguyên liệu để nhận món mới.</span></div> }
         </div></div>
 
-        <!-- Section gộp chung Size & Định mức nguyên liệu cho từng phần -->
+        <!-- Section chia đôi: Định lượng gốc | Kích cỡ & Hệ số tỷ lệ + Bảng đối chiếu -->
         <section class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3 border-subtle d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
                     <h3 class="h5 mb-1">
-                        <i class="bi bi-diagram-3 text-danger me-2"></i>Kích cỡ & Định mức nguyên liệu
+                        <i class="bi bi-diagram-3 text-danger me-2"></i>@(laCombo ? "Kích cỡ & Giá bán" : "Kích cỡ & Định mức nguyên liệu")
                     </h3>
                     <p class="text-muted small mb-0">
-                        Cấu hình giá bán cùng định mức tiêu hao nguyên vật liệu cho từng size (Mặc định, S, M, L...). Kho sẽ tự động trừ theo đúng size khi phục vụ.
+                        @(laCombo
+                            ? "Set / Combo dùng công thức của các món thành phần; chỉ cần cấu hình kích cỡ và giá bán."
+                            : "Nhập định lượng nguyên thủy một lần; hệ thống tự nhân theo hệ số tỷ lệ cho từng size. Kho tự động trừ đúng size khi phục vụ.")
                     </p>
                 </div>
-                <div class="d-flex gap-2">
+                @if (!laCombo)
+                {
                     <button type="button" class="btn btn-sm btn-outline-rose" data-bs-toggle="modal" data-bs-target="#modalQuickAddIngredient">
                         <i class="bi bi-plus-lg me-1"></i> Thêm nhanh nguyên liệu
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-size">
-                        <i class="bi bi-plus-circle me-1"></i> + Thêm kích cỡ (Size)
-                    </button>
-                </div>
+                }
             </div>
             <div class="card-body p-3 p-md-4">
-                <div id="sizes-container" class="d-flex flex-column gap-3">
-                    @for (var sIdx = 0; sIdx < Model.Sizes.Count; sIdx++)
-                    {
-                        var size = Model.Sizes[sIdx];
-                        <div class="card border shadow-xs rounded-3 size-card" data-size-index="@sIdx">
-                            <div class="card-header bg-light-subtle py-3 border-subtle">
-                                <div class="row g-2 align-items-center">
-                                    <input asp-for="Sizes[sIdx].Id" type="hidden" data-field="Id" />
-                                    <div class="col-md-4 col-sm-6">
-                                        <label class="form-label small fw-semibold text-muted mb-1">Tên kích cỡ / Size</label>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
-                                            <input asp-for="Sizes[sIdx].TenSize" class="form-control fw-semibold input-size-name" data-field="TenSize" placeholder="VD: Mặc định, Size S, M, L..." required maxlength="50" />
-                                        </div>
-                                    </div>
-                                    @if (admin)
-                                    {
-                                        <div class="col-md-3 col-sm-6">
-                                            <label class="form-label small fw-semibold text-muted mb-1">Giá bán (VNĐ)</label>
-                                            <div class="input-group input-group-sm">
-                                                <input asp-for="Sizes[sIdx].GiaBan" type="number" min="0" step="100" class="form-control" data-field="GiaBan" required />
-                                                <span class="input-group-text bg-white">đ</span>
-                                            </div>
-                                        </div>
-                                    }
-                                    <div class="col-md-3 col-sm-6">
-                                        <label class="form-label small fw-semibold text-muted mb-1">Trạng thái kích cỡ</label>
-                                        <select asp-for="Sizes[sIdx].DangSuDung" class="form-select form-select-sm" data-field="DangSuDung">
-                                            <option value="true">Đang dùng</option>
-                                            <option value="false">Ngừng dùng</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2 col-sm-6 text-end pt-md-3">
-                                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-size" title="Xóa kích cỡ này">
-                                            <i class="bi bi-trash me-1"></i> Xóa size
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small fw-semibold text-secondary">
-                                        <i class="bi bi-basket me-1"></i> Định mức nguyên liệu tiêu hao cho size này:
-                                    </span>
-                                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 btn-copy-recipe" title="Sao chép công thức từ size khác">
-                                        <i class="bi bi-copy me-1"></i> Sao chép từ size khác
-                                    </button>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm align-middle table-hover mb-0">
-                                        <thead class="table-light small">
-                                            <tr>
-                                                <th style="min-width: 250px;">Nguyên liệu / Đơn vị</th>
-                                                <th style="width: 200px;">Định lượng tiêu hao</th>
-                                                <th style="width: 60px;" class="text-center">Xóa</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="size-recipes-body" data-prefix="Sizes[@sIdx].DinhMucItems">
-                                            @for (var rIdx = 0; rIdx < size.DinhMucItems.Count; rIdx++)
-                                            {
-                                                <tr>
-                                                    <td>
-                                                        <select asp-for="Sizes[sIdx].DinhMucItems[rIdx].NguyenLieuId" class="form-select form-select-sm select-nguyenlieu" data-field="NguyenLieuId" required>
-                                                            <option value="">-- Chọn nguyên liệu --</option>
-                                                            @foreach (var ing in Model.NguyenLieuList)
-                                                            {
-                                                                <option value="@ing.Id" selected="@(ing.Id == size.DinhMucItems[rIdx].NguyenLieuId)">@ing.TenNguyenLieu (@ing.DonViTinh)</option>
-                                                            }
-                                                        </select>
-                                                    </td>
-                                                    <td>
-                                                        <input asp-for="Sizes[sIdx].DinhMucItems[rIdx].SoLuong" type="number" min="0.000001" step="0.000001" class="form-control form-control-sm" data-field="SoLuong" required />
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-recipe" title="Xóa nguyên liệu">
-                                                            <i class="bi bi-x-lg"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-add-recipe">
-                                        <i class="bi bi-plus-lg me-1"></i> Thêm nguyên liệu cho size này
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
+                <partial name="_BomSplit" model="bomSplit" />
             </div>
         </section>
 
-        @if (admin) { <section class="card border-0 shadow-sm mb-4" id="combo-section"><div class="card-body">
+        @if (admin && laCombo) { <section class="card border-0 shadow-sm mb-4" id="combo-section"><div class="card-body">
             <h3 class="h5">Thành phần Set / Combo</h3><p class="text-muted small">Chỉ điền phần này khi chọn loại Set / Combo.</p>
             <div class="table-responsive"><table class="table align-middle">
                 <thead><tr><th>Món thành phần</th><th>Số lượng</th><th></th></tr></thead>
@@ -197,39 +155,6 @@
         <button type="submit" class="btn btn-primary btn-brand-primary">@(admin ? "Lưu món ăn" : "Lưu & gửi duyệt")</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Hủy bỏ</a>
     </form>
-</div>
-
-<!-- Modal Copy Recipe Between Sizes -->
-<div class="modal fade" id="modalCopyRecipe" tabindex="-1" aria-labelledby="modalCopyRecipeLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-subtle">
-                <h5 class="modal-title fw-bold" id="modalCopyRecipeLabel">
-                    <i class="bi bi-copy text-danger me-2"></i>Sao Chép Định Mức Nguyên Liệu
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="small text-muted mb-3">Sao chép nhanh các nguyên liệu từ một kích cỡ có sẵn sang kích cỡ đang chọn kèm theo hệ số nhân tiêu hao.</p>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Sao chép từ Size:</label>
-                    <select id="copySourceSizeSelect" class="form-select">
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Hệ số tỷ lệ định lượng:</label>
-                    <input type="number" id="copyRatioInput" class="form-control" value="1.0" min="0.1" step="0.1" />
-                    <span class="small text-muted">Ví dụ: 1.0 (nguyên lượng), 1.2 (+20%), 1.5 (+50%).</span>
-                </div>
-            </div>
-            <div class="modal-footer border-subtle">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="button" class="btn btn-brand-primary" id="btnExecuteCopyRecipe">
-                    <i class="bi bi-check2 me-1"></i> Thực hiện sao chép
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Modal Quick Add Category -->
@@ -331,97 +256,7 @@
     </div>
 </div>
 
-<!-- Templates for dynamic JS -->
-<template id="size-card-template">
-    <div class="card border shadow-xs rounded-3 size-card" data-size-index="{sizeIndex}">
-        <div class="card-header bg-light-subtle py-3 border-subtle">
-            <div class="row g-2 align-items-center">
-                <input type="hidden" data-field="Id" value="0" />
-                <div class="col-md-4 col-sm-6">
-                    <label class="form-label small fw-semibold text-muted mb-1">Tên kích cỡ / Size</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
-                        <input class="form-control fw-semibold input-size-name" data-field="TenSize" placeholder="VD: Mặc định, Size S, M, L..." value="Size mới" required maxlength="50" />
-                    </div>
-                </div>
-                @if (admin)
-                {
-                    <div class="col-md-3 col-sm-6">
-                        <label class="form-label small fw-semibold text-muted mb-1">Giá bán (VNĐ)</label>
-                        <div class="input-group input-group-sm">
-                            <input type="number" min="0" step="100" value="0" class="form-control" data-field="GiaBan" required />
-                            <span class="input-group-text bg-white">đ</span>
-                        </div>
-                    </div>
-                }
-                <div class="col-md-3 col-sm-6">
-                    <label class="form-label small fw-semibold text-muted mb-1">Trạng thái kích cỡ</label>
-                    <select class="form-select form-select-sm" data-field="DangSuDung">
-                        <option value="true" selected>Đang dùng</option>
-                        <option value="false">Ngừng dùng</option>
-                    </select>
-                </div>
-                <div class="col-md-2 col-sm-6 text-end pt-md-3">
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-size" title="Xóa kích cỡ này">
-                        <i class="bi bi-trash me-1"></i> Xóa size
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="small fw-semibold text-secondary">
-                    <i class="bi bi-basket me-1"></i> Định mức nguyên liệu tiêu hao cho size này:
-                </span>
-                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 btn-copy-recipe" title="Sao chép công thức từ size khác">
-                    <i class="bi bi-copy me-1"></i> Sao chép từ size khác
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle table-hover mb-0">
-                    <thead class="table-light small">
-                        <tr>
-                            <th style="min-width: 250px;">Nguyên liệu / Đơn vị</th>
-                            <th style="width: 200px;">Định lượng tiêu hao</th>
-                            <th style="width: 60px;" class="text-center">Xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody class="size-recipes-body" data-prefix="Sizes[{sizeIndex}].DinhMucItems">
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary btn-add-recipe">
-                    <i class="bi bi-plus-lg me-1"></i> Thêm nguyên liệu cho size này
-                </button>
-            </div>
-        </div>
-    </div>
-</template>
-
-<template id="recipe-row-template">
-    <tr>
-        <td>
-            <select class="form-select form-select-sm select-nguyenlieu" data-field="NguyenLieuId" required>
-                <option value="">-- Chọn nguyên liệu --</option>
-                @foreach (var ingredient in Model.NguyenLieuList)
-                {
-                    <option value="@ingredient.Id">@ingredient.TenNguyenLieu (@ingredient.DonViTinh)</option>
-                }
-            </select>
-        </td>
-        <td>
-            <input type="number" min="0.000001" step="0.000001" class="form-control form-control-sm" data-field="SoLuong" placeholder="Số lượng" required />
-        </td>
-        <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-recipe" title="Xóa nguyên liệu">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </td>
-    </tr>
-</template>
-
-@if (admin) { <template id="combo-template"><tr>
+@if (admin && laCombo) { <template id="combo-template"><tr>
     <td><select data-field="MonAnId" class="form-select" required aria-label="Món thành phần"><option value="">Chọn món</option>
     @foreach (var dish in Model.MonLeList) { <option value="@dish.Id">@dish.TenMon</option> }
     </select></td>
@@ -431,5 +266,6 @@
 }
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/bom-split.js" asp-append-version="true"></script>
     <script src="~/js/dish-form.js" asp-append-version="true"></script>
 }
