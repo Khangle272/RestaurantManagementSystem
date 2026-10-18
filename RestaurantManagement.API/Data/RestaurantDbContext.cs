@@ -108,6 +108,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<DanhGia>().HasIndex(x => new { x.HoaDonId, x.ChiTietHoaDonId }).IsUnique().HasFilter(null);
 
         Check<MonAnSize>(b, "Gia", "[GiaBan]>=0");
+        Check<MonAnSize>(b, "HeSoTyLe", "[HeSoTyLe]>0");
         Check<ChiTietCombo>(b, "ThanhPhan", "[ComboId]<>[MonAnId] AND [SoLuong]>0");
         Check<BanAn>(b, "SoCho", "[SoChoNgoi]>0");
         Check<DatBan>(b, "ThoiGian", "[GioKetThucDuKien]>[GioDen]");
@@ -144,7 +145,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
             {
                 if (p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?))
                 {
-                    bool quantity = p.Name is "SoLuong" or "NguongCanhBao" or "SoLuongTon";
+                    bool quantity = p.Name is "SoLuong" or "NguongCanhBao" or "SoLuongTon" or "HeSoTyLe";
                     b.Entity(entity.ClrType).Property(p.Name).HasPrecision(18, quantity ? 6 : 2);
                 }
                 if (p.ClrType.IsEnum)

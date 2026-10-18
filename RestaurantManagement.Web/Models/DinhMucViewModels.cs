@@ -9,7 +9,10 @@ public class DinhMucTheoSizeVM
     public string TenMon { get; set; } = "";
     public string TenDanhMuc { get; set; } = "";
     public LoaiMon Loai { get; set; }
+    public bool LaThucUong { get; set; }
 
+    // Định lượng gốc (size đầu tiên); các size khác = định lượng gốc × Hệ số tỷ lệ.
+    public List<DinhMucItemViewModel> DinhMucItems { get; set; } = [];
     public List<SizeDinhMucGroupVM> Sizes { get; set; } = [];
     public List<NguyenLieuOptionVM> AllIngredients { get; set; } = [];
 }
@@ -20,11 +23,11 @@ public class SizeDinhMucGroupVM
     public string TenSize { get; set; } = "";
     public decimal GiaBan { get; set; }
     public bool DangSuDung { get; set; } = true;
+    public decimal HeSoTyLe { get; set; } = 1.0m;
+    public string? GhiChuThanhPhanKhacBiet { get; set; }
 
+    // Nguyên liệu phụ / thành phần khác biệt chỉ có ở size này, không nhân theo hệ số.
     public List<SizeDinhMucItemVM> Items { get; set; } = [];
-
-    public decimal FoodCost => Items.Sum(x => x.SoLuong * x.DonGia);
-    public decimal GrossMargin => GiaBan > 0 ? Math.Round(((GiaBan - FoodCost) / GiaBan) * 100, 1) : 0;
 }
 
 public class SizeDinhMucItemVM

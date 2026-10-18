@@ -52,7 +52,7 @@ public static class OrderSmoke
             DaDuyet = true,
             Sizes =
             {
-                new MonAnSize { TenSize = "Nhỏ (S)", GiaBan = 65000, DangSuDung = true },
+                new MonAnSize { TenSize = "Nhỏ (S)", GiaBan = 65000, DangSuDung = true, GhiChuThanhPhanKhacBiet = "Kèm nước mắm chua ngọt" },
                 new MonAnSize { TenSize = "Lớn (L)", GiaBan = 85000, DangSuDung = true }
             }
         };
@@ -219,8 +219,14 @@ public static class OrderSmoke
 
         var kdsView = await Get(cook, "/Bep");
         var kdsText = WebUtility.HtmlDecode(kdsView);
-        check(kdsText.Contains("Bò né đặc biệt TEST") && kdsText.Contains("Nhỏ (S)"),
-            "Kitchen KDS displays dish name and size snapshot");
+        var kitchenDate = tableDetails.First(x => x.MonAnSizeId == sizeS.Id).ThoiDiemGoi
+            .ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy");
+        check(kdsText.Contains("Bò né đặc biệt TEST") && kdsText.Contains("Nhỏ (S)")
+            && kdsText.Contains("Bàn ORDER-TEST-ZONE 1")
+            && kdsText.Contains(kitchenDate) && kdsText.Contains("Không hành") && kdsText.Contains("Kèm nước mắm chua ngọt"),
+            "Kitchen KDS shows full table name, date, dish, size and preparation/size notes");
+        check(!kdsText.Contains(tableBill.MaHoaDon) && !kdsText.Contains("65.000") && !kdsText.Contains("85.000"),
+            "Kitchen KDS omits order code and prices");
 
         var firstDetail = tableDetails.First(x => x.MonAnSizeId == sizeS.Id);
         // Kitchen begins cooking: ChoCheBien -> DangCheBien

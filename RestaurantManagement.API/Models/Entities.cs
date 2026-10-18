@@ -85,6 +85,9 @@ public class MonAnSize
     [MaxLength(50)] public string TenSize { get; set; } = "Mặc định";
     public decimal GiaBan { get; set; }
     public bool DangSuDung { get; set; } = true;
+    // Hệ số tỷ lệ so với định lượng gốc (size đầu tiên); size gốc luôn bằng 1.
+    public decimal HeSoTyLe { get; set; } = 1.0m;
+    [MaxLength(1000)] public string? GhiChuThanhPhanKhacBiet { get; set; }
     public ICollection<DinhMucMon> DinhMuc { get; set; } = new List<DinhMucMon>();
 }
 
@@ -288,6 +291,8 @@ public class DinhMucMon
     public int NguyenLieuId { get; set; }
     public NguyenLieu NguyenLieu { get; set; } = null!;
     public decimal SoLuong { get; set; }
+    // true = nguyên liệu phụ chỉ có ở size này, không nhân theo hệ số tỷ lệ.
+    public bool LaNguyenLieuPhu { get; set; }
 }
 
 public class NhaCungCap

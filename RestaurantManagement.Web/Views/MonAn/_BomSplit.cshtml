@@ -1,0 +1,253 @@
+@using System.Text.Json
+@model BomSplitViewModel
+@{
+    var baseLabel = Model.Sizes.Count > 0 ? Model.Sizes[0].TenSize : "";
+}
+<style>
+    [data-bom-root].bom-thuc-uong [data-bom-base-col],
+    [data-bom-root].bom-thuc-uong [data-bom-compare],
+    [data-bom-root].bom-thuc-uong [data-bom-extra-toggle],
+    [data-bom-root].bom-thuc-uong [data-bom-extra-collapse],
+    [data-bom-root].bom-thuc-uong [data-bom-ratio-col] { display: none !important; }
+    [data-bom-root].bom-thuc-uong [data-bom-size-col] { flex: 0 0 100%; max-width: 100%; }
+    [data-bom-root] [data-bom-thuc-uong-notice] { display: none; }
+    [data-bom-root].bom-thuc-uong [data-bom-thuc-uong-notice] { display: block; }
+    [data-bom-root].bom-combo [data-bom-base-col],
+    [data-bom-root].bom-combo [data-bom-compare],
+    [data-bom-root].bom-combo [data-bom-extra-toggle],
+    [data-bom-root].bom-combo [data-bom-extra-collapse],
+    [data-bom-root].bom-combo [data-bom-ratio-col] { display: none !important; }
+    [data-bom-root].bom-combo [data-bom-size-col] { flex: 0 0 100%; max-width: 100%; }
+    [data-bom-root] [data-bom-combo-notice] { display: none; }
+    [data-bom-root].bom-combo [data-bom-combo-notice] { display: block; }
+    [data-bom-root] .bom-compare-table th, [data-bom-root] .bom-compare-table td { white-space: nowrap; }
+</style>
+
+<div class="row g-4 @(Model.LaThucUong ? "bom-thuc-uong" : "") @(Model.LaCombo ? "bom-combo" : "")" data-bom-root
+     data-base-name="@Model.BaseName" data-size-name="@Model.SizeName"
+     data-extra-name="@Model.SizeItemsName" data-size-id-name="@Model.SizeIdName"
+     data-admin="@(Model.Admin ? "true" : "false")" data-thuc-uong="@(Model.LaThucUong ? "true" : "false")"
+     data-combo="@(Model.LaCombo ? "true" : "false")">
+
+    <div class="col-lg-5" data-bom-base-col>
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 border-subtle">
+                <h3 class="h6 mb-1"><i class="bi bi-database-check text-danger me-2"></i>1. Định lượng nguyên thủy (định mức gốc)</h3>
+                <p class="small text-muted mb-0">
+                    Nhập định lượng cho size gốc <strong data-bom-base-label>@baseLabel</strong>.
+                    Các size còn lại được tính tự động theo hệ số tỷ lệ ở bên phải.
+                </p>
+            </div>
+            <div class="card-body p-3">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light small">
+                            <tr>
+                                <th style="min-width: 200px;">Nguyên liệu / Đơn vị</th>
+                                <th style="width: 130px;">Định lượng gốc</th>
+                                <th style="width: 50px;" class="text-center">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bom-base-rows>
+                            @for (var i = 0; i < Model.BaseItems.Count; i++)
+                            {
+                                <tr data-bom-row>
+                                    <td>
+                                        <select name="@($"{Model.BaseName}[{i}].NguyenLieuId")" class="form-select form-select-sm select-nguyenlieu" data-field="NguyenLieuId" required>
+                                            <option value="">-- Chọn nguyên liệu --</option>
+                                            @foreach (var ing in Model.NguyenLieuList)
+                                            {
+                                                <option value="@ing.Id" data-dvt="@ing.DonViTinh" selected="@(ing.Id == Model.BaseItems[i].NguyenLieuId)">@ing.TenNguyenLieu (@ing.DonViTinh)</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input name="@($"{Model.BaseName}[{i}].SoLuong")" value="@Model.BaseItems[i].SoLuong" type="number" min="0.000001" step="0.000001" class="form-control form-control-sm" data-field="SoLuong" required />
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-recipe" title="Xóa nguyên liệu"><i class="bi bi-x-lg"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2 btn-add-base-recipe">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm nguyên liệu gốc
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7" data-bom-size-col>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <h3 class="h6 mb-0"><i class="bi bi-aspect-ratio text-danger me-2"></i>2. Kích cỡ & Hệ số tỷ lệ</h3>
+            @if (Model.ChoPhepSuaSize)
+            {
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-size">
+                    <i class="bi bi-plus-circle me-1"></i> Thêm kích cỡ (Size)
+                </button>
+            }
+        </div>
+        <div class="alert alert-light border small py-2" data-bom-thuc-uong-notice role="status">
+            <i class="bi bi-info-circle text-primary me-1"></i>
+            Thức uống chỉ cần cấu hình kích cỡ và giá bán; phần định mức nguyên liệu không bắt buộc.
+        </div>
+        <div class="alert alert-light border small py-2" data-bom-combo-notice role="status">
+            <i class="bi bi-box-seam text-primary me-1"></i>
+            Set / Combo dùng công thức của các món thành phần; chỉ cần cấu hình kích cỡ và giá bán.
+        </div>
+
+        <div class="d-flex flex-column gap-3" data-size-list>
+            @for (var k = 0; k < Model.Sizes.Count; k++)
+            {
+                var size = Model.Sizes[k];
+                var moPhanKhacBiet = size.Items.Count > 0 || !string.IsNullOrWhiteSpace(size.GhiChuThanhPhanKhacBiet);
+                <div class="card border rounded-3 size-card" data-size-card data-size-index="@k">
+                    <div class="card-header bg-light-subtle py-3 border-subtle size-head">
+                        <input type="hidden" name="@($"{Model.SizeName}[{k}].{Model.SizeIdName}")" value="@size.Id" data-field="@Model.SizeIdName" />
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4 col-sm-6">
+                                <label class="form-label small fw-semibold text-muted mb-1">Tên kích cỡ / Size</label>
+                                @if (Model.ChoPhepSuaSize)
+                                {
+                                    var coTrongDanhSach = Model.TenSizeOptions.Any(x => string.Equals(x, size.TenSize, StringComparison.OrdinalIgnoreCase));
+                                    <div class="input-group input-group-sm">
+                                        <select name="@($"{Model.SizeName}[{k}].TenSize")" class="form-select form-select-sm fw-semibold input-size-name" data-field="TenSize" required>
+                                            @foreach (var option in Model.TenSizeOptions)
+                                            {
+                                                <option value="@option" selected="@(string.Equals(option, size.TenSize, StringComparison.OrdinalIgnoreCase))">@option</option>
+                                            }
+                                            @if (!coTrongDanhSach && !string.IsNullOrWhiteSpace(size.TenSize))
+                                            {
+                                                <option value="@size.TenSize" selected>@size.TenSize</option>
+                                            }
+                                        </select>
+                                        <button type="button" class="btn btn-outline-primary btn-add-size-name" title="Thêm tên size mới">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="form-control-plaintext fw-semibold mb-0">@size.TenSize</p>
+                                    <input type="hidden" name="@($"{Model.SizeName}[{k}].TenSize")" value="@size.TenSize" data-field="TenSize" />
+                                }
+                            </div>
+                            @if (Model.Admin)
+                            {
+                                <div class="col-md-3 col-sm-6">
+                                    <label class="form-label small fw-semibold text-muted mb-1">Giá bán (VNĐ)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input name="@($"{Model.SizeName}[{k}].GiaBan")" value="@size.GiaBan" type="number" min="0" step="100" class="form-control" data-field="GiaBan" required />
+                                        <span class="input-group-text bg-white">đ</span>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col-md-3 col-sm-6">
+                                    <label class="form-label small fw-semibold text-muted mb-1">Giá bán</label>
+                                    <p class="form-control-plaintext mb-0">@size.GiaBan.ToString("N0") đ</p>
+                                </div>
+                            }
+                            <div class="col-md-3 col-sm-6" data-bom-ratio-col>
+                                <label class="form-label small fw-semibold text-muted mb-1">Hệ số tỷ lệ so với size gốc</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white">x</span>
+                                    <input name="@($"{Model.SizeName}[{k}].HeSoTyLe")" value="@size.HeSoTyLe" type="number" min="0.01" step="0.05" class="form-control" data-field="HeSoTyLe" data-bom-ratio readonly="@(k == 0)" />
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-sm-6">
+                                @if (Model.HienTrangThaiSize)
+                                {
+                                    <label class="form-label small fw-semibold text-muted mb-1">Trạng thái kích cỡ</label>
+                                    <select name="@($"{Model.SizeName}[{k}].DangSuDung")" class="form-select form-select-sm" data-field="DangSuDung">
+                                        <option value="true" selected="@size.DangSuDung">Đang dùng</option>
+                                        <option value="false" selected="@(!size.DangSuDung)">Ngừng dùng</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="@($"{Model.SizeName}[{k}].DangSuDung")" value="@(size.DangSuDung ? "true" : "false")" data-field="DangSuDung" />
+                                    @if (Model.ChoPhepSuaSize)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger w-100 btn-remove-size" title="Xóa kích cỡ này">
+                                            <i class="bi bi-trash me-1"></i> Xóa size
+                                        </button>
+                                    }
+                                }
+                            </div>
+                            @if (Model.HienTrangThaiSize && Model.ChoPhepSuaSize)
+                            {
+                                <div class="col-12 text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-size" title="Xóa kích cỡ này">
+                                        <i class="bi bi-trash me-1"></i> Xóa size
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-2 text-end">
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 btn-toggle-extra" data-bom-extra-toggle>
+                                <i class="bi bi-plus-square me-1"></i> Nguyên liệu phụ / Ghi chú khác biệt
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-3 @(moPhanKhacBiet ? "" : "d-none")" data-bom-extra-collapse>
+                        <div class="small fw-semibold text-secondary mb-1">
+                            <i class="bi bi-basket me-1"></i> Nguyên liệu phụ / thành phần khác biệt (chỉ có ở size này, không nhân theo hệ số):
+                        </div>
+                        <table class="table table-sm align-middle mb-1">
+                            <tbody data-bom-extra-rows>
+                                @for (var j = 0; j < size.Items.Count; j++)
+                                {
+                                    <tr data-bom-row>
+                                        <td>
+                                            <select name="@($"{Model.SizeName}[{k}].{Model.SizeItemsName}[{j}].NguyenLieuId")" class="form-select form-select-sm select-nguyenlieu" data-field="NguyenLieuId" required>
+                                                <option value="">-- Chọn nguyên liệu --</option>
+                                                @foreach (var ing in Model.NguyenLieuList)
+                                                {
+                                                    <option value="@ing.Id" data-dvt="@ing.DonViTinh" selected="@(ing.Id == size.Items[j].NguyenLieuId)">@ing.TenNguyenLieu (@ing.DonViTinh)</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td style="width: 130px;">
+                                            <input name="@($"{Model.SizeName}[{k}].{Model.SizeItemsName}[{j}].SoLuong")" value="@size.Items[j].SoLuong" type="number" min="0.000001" step="0.000001" class="form-control form-control-sm" data-field="SoLuong" required />
+                                        </td>
+                                        <td class="text-center" style="width: 50px;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-recipe" title="Xóa nguyên liệu"><i class="bi bi-x-lg"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-add-extra">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm nguyên liệu phụ
+                        </button>
+                        <div class="mt-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">Ghi chú thành phần khác biệt</label>
+                            <textarea name="@($"{Model.SizeName}[{k}].GhiChuThanhPhanKhacBiet")" class="form-control form-control-sm" rows="2" maxlength="1000" data-field="GhiChuThanhPhanKhacBiet" placeholder="VD: Size lớn kèm thêm bánh phồng tôm và hộp xốp lớn...">@size.GhiChuThanhPhanKhacBiet</textarea>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="card border-0 shadow-sm mt-3" data-bom-compare>
+            <div class="card-header bg-white py-3 border-subtle">
+                <h3 class="h6 mb-1"><i class="bi bi-table text-danger me-2"></i>3. Bảng đối chiếu định lượng các size</h3>
+                <p class="small text-muted mb-0">Số liệu cập nhật trực tiếp trước khi lưu; cột cuối tổng hợp nguyên liệu phụ và ghi chú.</p>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 bom-compare-table">
+                        <thead><tr data-bom-compare-head></tr></thead>
+                        <tbody data-bom-compare-body></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" data-bom-ingredients>@Html.Raw(JsonSerializer.Serialize(Model.NguyenLieuList))</script>

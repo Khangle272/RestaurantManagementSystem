@@ -28,6 +28,10 @@ internal static class MenuSmoke
         var create = await kitchen.GetStringAsync("/MonAn/Create");
         check(!create.Contains(".GiaBan") && !create.Contains("name=\"DaDuyet\"")
             && !create.Contains("name=\"TrangThai\"") && !create.Contains("value=\"Set\""), "Kitchen form exposes no price, publish, status or combo fields");
+        var createText = WebUtility.HtmlDecode(create);
+        check(createText.Contains("name=\"Sizes[0].TenSize\"") && !createText.Contains("<input name=\"Sizes[0].TenSize\"")
+            && System.Text.RegularExpressions.Regex.IsMatch(createText, "<option value=\"Vừa \\(M\\)\"[^>]*selected"),
+            "Create form uses a size dropdown defaulting to Vừa (M)");
         var category = await db.DanhMuc.Where(x => x.DangSuDung).Select(x => x.Id).FirstAsync();
         var fields = new Dictionary<string, string> {
             ["TenMon"] = "TEST-KITCHEN-DRAFT", ["DanhMucId"] = category.ToString(), ["Loai"] = "MonLe",

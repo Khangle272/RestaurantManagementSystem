@@ -117,6 +117,23 @@ try
         "Web startup creates schema without inserting sample business data");
     // Fixtures belong only to this run's isolated, disposable test database.
     await DbSeeder.SeedAsync(db);
+    foreach (var (tenMon, nguyenLieu, soLuongGoc) in new[]
+    {
+        ("Gỏi ngó sen tôm thịt", "Tôm sú tươi", 100m),
+        ("Gỏi bò bóp thấu", "Thịt bò", 100m)
+    })
+    {
+        var demoDish = await db.MonAn.AsNoTracking().Include(x => x.Sizes).SingleAsync(x => x.TenMon == tenMon);
+        var demoSizes = demoDish.Sizes.OrderBy(x => x.Id).ToList();
+        Check(demoSizes.Count == 3 && demoSizes.Select(x => x.HeSoTyLe).SequenceEqual(new[] { 1m, 1.3m, 1.5m })
+            && demoSizes.All(x => x.DangSuDung),
+            $"Demo dish '{tenMon}' seeds 3 active sizes with ratios 1 / 1.3 / 1.5");
+        var demoIngredientId = await db.NguyenLieu.Where(x => x.TenNguyenLieu == nguyenLieu).Select(x => x.Id).SingleAsync();
+        Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == demoDish.Id && x.MaKichCo == demoSizes[1].Id
+                && x.NguyenLieuId == demoIngredientId && x.SoLuong == soLuongGoc * 1.3m && !x.LaNguyenLieuPhu)
+            && await db.DinhMucMon.AnyAsync(x => x.MonAnId == demoDish.Id && x.MaKichCo == demoSizes[2].Id && x.LaNguyenLieuPhu),
+            $"Demo dish '{tenMon}' seeds ratio-scaled BOM and size-specific extras");
+    }
     using (var publicClient = NewClient())
     {
         var firstDish = await db.MonAn.AsNoTracking().FirstAsync();
@@ -388,6 +405,19 @@ try
     Check(await db.MonAn.AnyAsync(x => x.Id == dishId && x.TrangThai == TrangThaiMon.DangPhucVu), "New dish always starts serving even when a different state is posted");
     var sizeId = await db.MonAnSize.Where(x => x.MonAnId == dishId).Select(x => x.Id).SingleAsync();
     Check(await db.DinhMucMon.AnyAsync(x => x.MonAnId == dishId && x.NguyenLieuId == ingredientId && x.SoLuong == 120), "Recipe persisted with dish");
+    await Post("/MonAn/CreateCombo", await Get("/MonAn/CreateCombo"), new()
+    {
+        ["TenMon"] = "TEST-COMBO", ["DanhMucId"] = categoryId.ToString(),
+        ["Sizes[0].Id"] = "0", ["Sizes[0].TenSize"] = "Mặc định", ["Sizes[0].GiaBan"] = "99000", ["Sizes[0].DangSuDung"] = "true",
+        ["ComboItems[0].MonAnId"] = dishId.ToString(), ["ComboItems[0].SoLuong"] = "2"
+    }, true);
+    var comboId = await db.MonAn.Where(x => x.TenMon == "TEST-COMBO").Select(x => x.Id).SingleAsync();
+    Check(await db.MonAn.AnyAsync(x => x.Id == comboId && x.Loai == LoaiMon.Set)
+        && await db.ChiTietCombo.AnyAsync(x => x.ComboId == comboId && x.MonAnId == dishId && x.SoLuong == 2)
+        && !await db.DinhMucMon.AnyAsync(x => x.MonAnId == comboId),
+        "Separate combo create flow persists a Set with components and no raw BOM");
+    await Post($"/MonAn/Delete/{comboId}", await Get($"/MonAn/Delete/{comboId}"), new() { ["Id"] = comboId.ToString() }, true);
+    Check(!await db.MonAn.AnyAsync(x => x.Id == comboId), "Combo deletion removes the set");
     await BlockDelete("NguyenLieu", ingredientId);
     var ingredientEdit = await Get($"/NguyenLieu/Edit/{ingredientId}");
     await Post($"/NguyenLieu/Edit/{ingredientId}", ingredientEdit, new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["DonViTinh"] = "kg" }, false, "Không thể đổi đơn vị");

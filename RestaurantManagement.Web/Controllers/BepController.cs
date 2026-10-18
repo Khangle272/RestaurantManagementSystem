@@ -10,6 +10,14 @@ namespace RestaurantManagement.Web.Controllers;
 [Authorize(Roles = AppRoles.Admin + "," + AppRoles.Bep + "," + AppRoles.BoiBan)]
 public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Services.OrderService orders) : Controller
 {
+    // Tên bàn đầy đủ cho bếp: "Bàn VIP 1" / "Bàn Sân Vườn 2" thay vì mã viết tắt.
+    public static string TenBanHienThi(BanAn ban)
+    {
+        var khuVuc = ban.KhuVuc.LaPhongVip ? "VIP" : ban.KhuVuc.TenKhuVuc;
+        var soBan = new string(ban.MaBan.Where(char.IsDigit).ToArray()).TrimStart('0');
+        return string.IsNullOrEmpty(soBan) ? $"Bàn {ban.MaBan}" : $"Bàn {khuVuc} {soBan}";
+    }
+
     public async Task<IActionResult> Index(string? filter = "active")
     {
         ViewData["ActiveMenu"] = "Bep";
@@ -17,7 +25,7 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
 
         var query = db.ChiTietHoaDon.AsNoTracking()
             .Include(x => x.MonAnSize)
-            .Include(x => x.HoaDon).ThenInclude(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn)
+            .Include(x => x.HoaDon).ThenInclude(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn).ThenInclude(x => x.KhuVuc)
             .Where(x => x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
                 && (x.HoaDon.DatBan == null || x.HoaDon.DatBan.TrangThai != TrangThaiDatBan.DaHuy));
 
@@ -47,7 +55,7 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
             {
                 LoaiDonHang.TaiBan => x.HoaDon.DatBan == null
                     ? "Tại bàn"
-                    : string.Join(", ", x.HoaDon.DatBan.Ban.Select(b => b.BanAn.MaBan)),
+                    : string.Join(", ", x.HoaDon.DatBan.Ban.Select(b => TenBanHienThi(b.BanAn))),
                 LoaiDonHang.MangDi => "Mang đi",
                 LoaiDonHang.GiaoHang => string.IsNullOrWhiteSpace(x.HoaDon.TenNguoiNhan) ? "Giao hàng" : $"Giao hàng · {x.HoaDon.TenNguoiNhan}",
                 _ => "—"
@@ -59,9 +67,9 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
                 Mon = x.TenMonLucBan,
                 Size = !string.IsNullOrEmpty(x.TenSizeLucBan) ? x.TenSizeLucBan : (x.MonAnSize?.TenSize ?? "Mặc định"),
                 SoLuong = x.SoLuong,
-                GhiChu = x.YeuCauCheBien,
+                GhiChu = string.Join(" · ", new[] { x.YeuCauCheBien, x.MonAnSize?.GhiChuThanhPhanKhacBiet }
+                    .Where(s => !string.IsNullOrWhiteSpace(s))),
                 TrangThai = x.TrangThai,
-                MaHoaDon = x.HoaDon.MaHoaDon,
                 Ban = banName,
                 ThoiDiemGoi = x.ThoiDiemGoi
             };
@@ -92,7 +100,6 @@ public class BepRow
     public int SoLuong { get; set; }
     public string? GhiChu { get; set; }
     public TrangThaiCheBien TrangThai { get; set; }
-    public string MaHoaDon { get; set; } = "";
     public string Ban { get; set; } = "";
     public DateTimeOffset ThoiDiemGoi { get; set; }
 }
