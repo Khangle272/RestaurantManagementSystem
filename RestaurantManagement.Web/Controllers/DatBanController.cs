@@ -14,18 +14,26 @@ using System.Security.Claims;
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.KhachHang)]
-public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, PreorderService preorders, OrderService orders, PaymentQrStore qrStore) : Controller
+public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, PreorderService preorders, OrderService orders, PaymentQrStore qrStore, TableService tables) : Controller
 {
     private int AccountId => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     private IQueryable<DatBan> OwnedBookings() => db.DatBan.Where(x => x.KhachHang != null && x.KhachHang.TaiKhoanId == AccountId);
     private bool IsAjax => Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
+    [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> KhungGio(DateOnly ngay, int soNguoi = 2, int? maKhuVuc = null)
+    {
+        if (!ModelState.IsValid) return BadRequest(new { message = "Ngày hoặc số khách không hợp lệ." });
+        var result = await tables.AvailableSlots(ngay, soNguoi, maKhuVuc);
+        return result.Error is { } error ? BadRequest(new { message = error }) : Json(new { slots = result.Slots });
+    }
     // GET /DatBan
     [HttpGet]
     public async Task<IActionResult> Index()
     {
         var model = new DatBanCreateVM
         {
-            ThoiGianDen = TableService.VietnamNow.AddHours(2),
+            ThoiGianDen = ReservationSchedule.NextArrival(TableService.VietnamNow),
             RequestId = Guid.NewGuid(),
             KhuVucOptions = await GetKhuVucOptionsAsync()
         };
@@ -47,8 +55,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         if (model.SoTreEm > model.SoNguoi)
             ModelState.AddModelError(nameof(model.SoTreEm), "Số trẻ em không được lớn hơn tổng số khách.");
         if (!ModelState.IsValid) return await CreateFailure(model);
-        if (model.ThoiGianDen < TableService.VietnamNow.AddMinutes(30) || model.ThoiGianDen > TableService.VietnamNow.AddDays(180))
-            ModelState.AddModelError(nameof(model.ThoiGianDen), "Vui lòng đặt trước ít nhất 30 phút và trong 180 ngày tới.");
+        if (ReservationSchedule.Validate(model.ThoiGianDen, TableService.VietnamNow) is { } scheduleError)
+            ModelState.AddModelError(nameof(model.ThoiGianDen), scheduleError);
         var ghiChuDayDu = ContactNote(model);
         if ((ghiChuDayDu?.Length ?? 0) > 1000)
             ModelState.AddModelError(nameof(model.GhiChu), "Email và ghi chú gộp lại không quá 1000 ký tự.");
@@ -77,7 +85,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                         SoDienThoaiLienHe = model.SoDienThoai.Trim(), KhachHangId = khachHang.Id,
                         KhuVucUuTienId = model.MaKhuVuc, YeuCauVip = area?.LaPhongVip == true,
                         ThoiDiemTao = DateTimeOffset.UtcNow, GioDen = thoiGianDenUtc,
-                        GioKetThucDuKien = thoiGianDenUtc.AddHours(TableService.MaxDiningHours), SoNguoiLon = model.SoNguoi - model.SoTreEm,
+                        GioKetThucDuKien = ReservationSchedule.EndOf(model.ThoiGianDen), SoNguoiLon = model.SoNguoi - model.SoTreEm,
                         SoTreEm = model.SoTreEm, YeuCau = ghiChuDayDu, YeuCauTrangTri = model.YeuCauTrangTri,
                         ChuanBiTruoc = model.ChuanBiTruoc,
                         YeuCauTaoId = model.RequestId, MonDatTruoc = lines,

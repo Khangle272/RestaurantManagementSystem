@@ -84,6 +84,16 @@ if (args.Contains("--import-sql-data", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--init-week9-demo", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Chỉ tạo dữ liệu tuần 9 trong Development.");
+    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
+    using var scope = app.Services.CreateScope();
+    await RestaurantManagement.Web.Services.Week9DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>(),
+        scope.ServiceProvider.GetRequiredService<RestaurantManagement.Web.Services.TableService>());
+    return;
+}
+
 if (args.Contains("--init-week8-demo", StringComparer.OrdinalIgnoreCase))
 {
     if (!app.Environment.IsDevelopment())
@@ -131,4 +141,4 @@ app.MapControllerRoute(
 
 
 app.Run();
- 
+

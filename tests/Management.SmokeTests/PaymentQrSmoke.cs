@@ -76,7 +76,7 @@ public static class PaymentQrSmoke
         using (var create = await customer.PostAsync("/DatBan", new FormUrlEncodedContent(new Dictionary<string, string>
             { ["__RequestVerificationToken"] = hidden(bookingForm, "__RequestVerificationToken"), ["RequestId"] = request.ToString(),
                 ["HoTen"] = "QR smoke", ["SoDienThoai"] = "0901234567", ["SoNguoi"] = "2", ["MaKhuVuc"] = area.Id.ToString(),
-                ["ThoiGianDen"] = TableService.VietnamNow.AddDays(2).ToString("yyyy-MM-ddTHH:mm") })))
+                ["ThoiGianDen"] = TableService.VietnamNow.AddDays(2).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm") })))
             check(create.StatusCode == HttpStatusCode.Redirect, "Reservation with configured QR is created normally");
         var booking = await db.DatBan.AsNoTracking().SingleAsync(x => x.YeuCauTaoId == request);
         var checkout = await Page(customer, "/DatBan/ThanhToanCoc/" + booking.Id);

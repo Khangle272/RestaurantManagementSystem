@@ -1,4 +1,5 @@
 @model RestaurantManagement.Web.Models.DatBanCreateVM
+@using RestaurantManagement.Web.Services
 @{
     ViewData["Title"] = "Đặt bàn trực tuyến";
 }
@@ -22,7 +23,7 @@
             </div>
         </div>
 
-        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true">
+        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-slot-url="@Url.Action("KhungGio")">
             @Html.AntiForgeryToken()
             <input type="hidden" name="RequestId" value="@Model.RequestId" />
             <div data-cart-inputs></div>
@@ -56,28 +57,19 @@
                         <div class="card-body p-4">
                             <!-- Chọn ngày & giờ -->
                             <div class="mb-4">
-                                <label asp-for="ThoiGianDen" class="form-label fw-semibold text-secondary">
-                                    <i class="bi bi-calendar-event me-1"></i>Thời gian đến <span class="text-danger">*</span>
-                                </label>
-                                <input asp-for="ThoiGianDen" type="datetime-local" class="form-control form-control-lg border-2" 
-                                       min="@DateTime.Now.AddMinutes(30).ToString("yyyy-MM-ddTHH:mm")" id="inputThoiGianDen" />
+                                <label for="booking-day" class="form-label fw-semibold">Ngày đặt bàn</label>
+                                <input id="booking-day" name="NgayDat" type="date" required class="form-control mb-3"
+                                    value="@Model.ThoiGianDen.ToString("yyyy-MM-dd")" min="@TableService.VietnamNow.ToString("yyyy-MM-dd")" max="@TableService.VietnamNow.AddDays(180).ToString("yyyy-MM-dd")" />
+                                <label asp-for="ThoiGianDen" class="form-label fw-semibold">Ca đặt bàn</label>
+                                <select asp-for="ThoiGianDen" id="inputThoiGianDen" class="form-select" required>
+                                    @foreach (var slot in ReservationSchedule.Slots) {
+                                        var start = slot.Arrival(DateOnly.FromDateTime(Model.ThoiGianDen));
+                                        <option value="@start.ToString("yyyy-MM-ddTHH:mm")" selected="@(start == Model.ThoiGianDen)" disabled="@(ReservationSchedule.Validate(start, TableService.VietnamNow) is not null)">@slot.Label</option>
+                                    }
+                                </select>
                                 <span asp-validation-for="ThoiGianDen" class="text-danger small"></span>
-                                <div class="form-text small text-muted">
-                                    <i class="bi bi-info-circle me-1"></i>Vui lòng đặt trước thời điểm đến ít nhất 30 phút. Khung dùng bàn dự kiến 3 tiếng.
-                                </div>
-                            </div>
-
-                            <!-- Khung giờ gợi ý (Pills) -->
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold text-secondary small text-uppercase">Khung giờ phổ biến</label>
-                                <div class="d-flex flex-wrap gap-2" id="timePills">
-                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="11:30">11:30 Trưa</button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="12:00">12:00 Trưa</button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="18:00">18:00 Tối</button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="18:30">18:30 Tối</button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="19:00">19:00 Tối</button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill time-btn" data-time="19:30">19:30 Tối</button>
-                                </div>
+                                <p id="slot-status" class="form-text" role="status" aria-live="polite">Đặt trước ít nhất 30 phút. Nhà hàng kiểm tra lại bàn trước khi giữ chỗ.</p>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-recheck-slots>Kiểm tra lại ca</button>
                             </div>
 
                             <!-- Số lượng khách -->
@@ -209,20 +201,7 @@
                 });
             });
 
-            // Chọn nhanh giờ
-            const inputThoiGian = document.getElementById("inputThoiGianDen");
-            document.querySelectorAll(".time-btn").forEach(btn => {
-                btn.addEventListener("click", function() {
-                    const time = this.getAttribute("data-time");
-                    if (inputThoiGian.value) {
-                        const datePart = inputThoiGian.value.split("T")[0];
-                        inputThoiGian.value = datePart + "T" + time;
-                    } else {
-                        const today = new Date().toISOString().split("T")[0];
-                        inputThoiGian.value = today + "T" + time;
-                    }
-                });
-            });
         });
     </script>
+    <script src="~/js/reservation-slots.js" asp-append-version="true"></script>
 }

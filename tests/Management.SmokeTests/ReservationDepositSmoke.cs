@@ -58,7 +58,7 @@ public static class ReservationDepositSmoke
         await Login(customer, "khach.demo@example.test", "/Account/Login");
         await Login(cashier, "thungan.demo@example.test", "/admin");
         var form = await Get(customer, "/DatBan");
-        var arrival = TableService.VietnamNow.AddDays(2).ToString("yyyy-MM-ddTHH:mm");
+        var arrival = TableService.VietnamNow.AddDays(2).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm");
         var requestId = Guid.NewGuid();
         var create = new Dictionary<string, string> { ["RequestId"] = requestId.ToString(), ["HoTen"] = "PAYMENT-CUSTOMER",
             ["SoDienThoai"] = "0901234567", ["SoNguoi"] = "2", ["MaKhuVuc"] = areaId.ToString(), ["ThoiGianDen"] = arrival,
@@ -118,7 +118,7 @@ public static class ReservationDepositSmoke
             && booking.ThoiDiemBaoChuyenKhoan == null && await db.GiaoDichCoc.CountAsync(x => x.DatBanId == id) == 1,
             "Cashier confirmation needs no bank transaction code; repeated confirmation records one receipt");
         check(await db.GiaoDichCoc.AnyAsync(x => x.DatBanId == id && x.MaThamChieu == null), "No transaction code is invented when the cashier simply verifies receipt");
-        check(booking.GioKetThucDuKien == booking.GioDen.AddHours(TableService.MaxDiningHours), "New online reservation holds a three-hour dining interval");
+        check(booking.GioKetThucDuKien == booking.GioDen.AddHours(2), "New online reservation holds its fixed two-hour slot, separate from the serving watchdog");
         check(!internalPage.Contains("confirmed-bank-ref"), "Cashier form does not ask for a bank transaction code");
         await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, new(receipt) { ["RequestId"] = Guid.NewGuid().ToString() }, HttpStatusCode.BadRequest);
         var add = new Dictionary<string, string> { ["RowVersion"] = Version(booking), ["RequestId"] = Guid.NewGuid().ToString(),
@@ -144,7 +144,7 @@ public static class ReservationDepositSmoke
 
         var emptyId = Guid.NewGuid();
         var empty = new Dictionary<string, string> { ["RequestId"] = emptyId.ToString(), ["HoTen"] = "PAYMENT-NO-FOOD", ["SoDienThoai"] = "0901234567",
-            ["SoNguoi"] = "2", ["MaKhuVuc"] = areaId.ToString(), ["ThoiGianDen"] = TableService.VietnamNow.AddDays(3).ToString("yyyy-MM-ddTHH:mm") };
+            ["SoNguoi"] = "2", ["MaKhuVuc"] = areaId.ToString(), ["ThoiGianDen"] = TableService.VietnamNow.AddDays(3).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm") };
         await Post(customer, "/DatBan", form, empty);
         var noFood = await db.DatBan.SingleAsync(x => x.YeuCauTaoId == emptyId);
         check(noFood.TienCocYeuCau == 299000m, "No-food reservation has the published per-booking deposit, not a fabricated per-person fee");

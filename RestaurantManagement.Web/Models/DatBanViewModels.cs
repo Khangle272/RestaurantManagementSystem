@@ -22,7 +22,8 @@ public class DatBanCreateVM : IValidatableObject
 
     [Required(ErrorMessage = "Vui lòng chọn thời gian đến.")]
     [Display(Name = "Thời gian đến")]
-    public DateTime ThoiGianDen { get; set; } = Services.TableService.VietnamNow.AddHours(2);
+    public DateTime ThoiGianDen { get; set; } = Services.ReservationSchedule.NextArrival(Services.TableService.VietnamNow);
+    public DateOnly? NgayDat { get; set; }
 
     [Range(1, 50, ErrorMessage = "Số lượng khách từ 1 đến 50 người.")]
     [Display(Name = "Số lượng khách")]
@@ -44,12 +45,10 @@ public class DatBanCreateVM : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (ThoiGianDen <= Services.TableService.VietnamNow.AddMinutes(29) || ThoiGianDen > Services.TableService.VietnamNow.AddDays(180))
-        {
-            yield return new ValidationResult(
-                "Thời gian đến phải lớn hơn thời gian hiện tại ít nhất 30 phút.",
-                [nameof(ThoiGianDen)]);
-        }
+        if (NgayDat.HasValue && NgayDat.Value != DateOnly.FromDateTime(ThoiGianDen))
+            yield return new ValidationResult("Ngày và ca chưa khớp. Vui lòng chọn lại ca.", [nameof(ThoiGianDen)]);
+        if (Services.ReservationSchedule.Validate(ThoiGianDen, Services.TableService.VietnamNow) is { } error)
+            yield return new ValidationResult(error, [nameof(ThoiGianDen)]);
     }
 }
 
@@ -84,6 +83,8 @@ public class DatBanItemVM
     public bool DaDanhGia { get; set; }
     public string? GhiChu { get; set; }
     public List<ChiTietMonAnItemVM> ChiTietMonAn { get; set; } = [];
+    public DateTimeOffset? GioKetThuc { get; set; }
+    public string TinhTrangCoc { get; set; } = "";
 }
 
 public class ChiTietMonAnItemVM
@@ -105,6 +106,7 @@ public class DatBanAdminVM
     public int ChoXacNhanCount { get; set; }
     public int DaXacNhanCount { get; set; }
     public int DangPhucVuCount { get; set; }
+    public int DaHuyCount { get; set; }
     public int HomNayCount { get; set; }
 }
 

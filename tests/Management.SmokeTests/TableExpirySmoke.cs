@@ -18,7 +18,7 @@ public static class TableExpirySmoke
         var area = new KhuVuc { TenKhuVuc = "Expiry smoke", Tang = 1, DangSuDung = true };
         db.KhuVuc.Add(area); await db.SaveChangesAsync();
         var reception = new ReceptionBookingViewModel();
-        check(reception.SoPhut == 180, "Reception defaults to three hours");
+        check(reception.SoPhut == 120, "Walk-in defaults to two hours, separate from the three-hour serving watchdog");
         check(!Validator.TryValidateProperty(181, new ValidationContext(reception) { MemberName = nameof(reception.SoPhut) }, []), "Server rejects dining duration above three hours");
 
         async Task<(DatBan Booking, BanAn[] Tables, HoaDon Bill)> Party(double hours, int tableCount = 1, bool paid = true, decimal amount = 100)
