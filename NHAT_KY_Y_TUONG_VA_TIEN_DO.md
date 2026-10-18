@@ -398,3 +398,58 @@ Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ
 - Hóa đơn cũ thiếu lịch sử ưu đãi/ngày trả tiền vẫn phải được nhận diện là dữ liệu thiếu. Không tạo lịch sử giả để làm báo cáo trông đủ, không backfill suy đoán.
 - Khi tích hợp, lấy cả service/controller/form liên quan và migration nullable nói trên; chạy migration trên database của nhóm sau khi backup, rồi chạy regression. Không chỉ chép giao diện hoặc một file service vì sẽ mất chốt phiên bản, số tiền dự kiến hoặc snapshot.
 - Nếu Người 2 sửa giá/size/công thức: đơn giá bill đã bán vẫn giữ nguyên; chạy lại gọi món–bếp–thanh toán/cọc. Nếu Người 3 sửa ưu đãi/báo cáo: giữ một nguồn tính tiền, lịch sử bill đã chốt và chốt giữ lượt voucher; chạy `--promotions-only` rồi bộ toàn phần. Không sửa trực tiếp tiền của bill đã thanh toán để khớp báo cáo.
+
+## 11. Tuần 9 Người 2 Đặt bàn và sơ đồ bàn — 18/10/2026
+
+### Phạm vi và phân công mới
+
+- Nhánh local `member2-week9`, xuất phát từ master `b6fa0fb`. Chưa push/merge. Đây là phân công **tuần 9**: Người 2 làm đặt bàn/sơ đồ; Người 1 làm món–size–định lượng/KDS; Người 3 làm POS–đơn hàng/thanh toán. Các mục trước là lịch sử phân công cũ, không xóa hoặc sửa ngược ý nghĩa của chúng.
+- Chỉ triển khai web. Ảnh phân công có nhắc mobile, nhưng người thực hiện chưa xác nhận phạm vi app; `RestaurantManagement.Mobile` chưa bị sửa. Giao diện web có hỗ trợ màn hình nhỏ không đồng nghĩa đã hoàn thiện app native.
+- Không sửa README, schema, tiền cọc đã ghi nhận, đơn giá bill cũ hay nghiệp vụ bếp/kho của hai thành viên còn lại. Không thêm bảng/cột cho khung giờ: dùng các thời điểm bắt đầu/kết thúc đã có.
+
+### Vấn đề từ feedback và hướng xử lý
+
+1. **Nhiều giờ gợi ý nhưng vẫn nhập giờ bất kỳ.** Đây là chênh lệch với quy định mới, không kết luận mọi lịch cũ là dữ liệu sai. `ReservationSchedule` định nghĩa chung ba ca 11:00–13:00, 17:00–19:00, 19:30–21:30. Khách chọn ngày/ca; server kiểm tra đúng giờ bắt đầu, đặt trước ít nhất 30 phút và không quá 180 ngày. Sửa request trực tiếp hoặc gửi lệch ngày vẫn bị từ chối trước khi giữ bàn/tính cọc.
+2. **Màu bàn hiện tại dễ bị hiểu thành trạng thái của mọi ca.** Sơ đồ tách xem hiện tại với xem ngày/ca. Lịch ca lấy theo giao nhau của khoảng bắt đầu/kết thúc; không hiển thị lịch trưa làm bận ca tối. Xem tương lai không có nút kết thúc/dọn lượt đang phục vụ. Khi nhận khách thật, bàn vẫn phải sẵn sàng: không coi một bàn còn khách/chưa dọn là trống chỉ vì lịch dự kiến đã hết.
+3. **Xếp bàn còn chuyển trang, phải tìm lại ngữ cảnh.** Nút Xếp bàn mở modal trên danh sách. Thông tin khách, số điện thoại, số người, ngày/khoảng giờ, yêu cầu khu vực và cọc hiện cùng sơ đồ. Dùng lại `_Board` và `_BookingContext`, không xây một bộ quy tắc xếp bàn thứ hai. Tạo yêu cầu qua tiếp tân cũng quay về danh sách và tự mở hộp của yêu cầu mới.
+4. **Cần khóa bàn trùng và giải thích vì sao không chọn được.** Ô trùng lịch bị disable, hiện khoảng giờ xung đột và nút xem lý do. POST vẫn kiểm tra lại trong transaction với khóa SQL và RowVersion. Hai người cùng mở sơ đồ trống không có nghĩa cả hai đều được giữ bàn: một người thành công, người còn lại nhận 409 và phải làm mới/kiểm tra lại.
+5. **Gợi ý phải phù hợp số người và loại khu vực.** Ưu tiên bàn đơn đủ chỗ với số chỗ dư ít; nếu cần ghép thì các bàn cùng khu vực, tổng đủ chỗ, tối đa 20 bàn theo giới hạn sẵn có. Không tự chuyển khách thường vào VIP. Màn hình và POST cùng kiểm tra VIP, sức chứa, bàn/khu vực ngừng dùng và lịch giao nhau.
+6. **Danh sách duyệt và cọc cần dễ hiểu.** Mặc định vào nhóm Chờ xác nhận/Chờ cọc; số đếm theo cùng bộ lọc ngày. Hiện tình trạng còn chờ cọc/khách báo chuyển/chờ đối chiếu. Không coi khách báo chuyển là đã nhận tiền. Xếp bàn không tự thu tiền và không xác nhận lịch chưa đủ cọc. Yêu cầu cũ còn báo chuyển hoặc tiền chưa xử lý không bị giấu chỉ vì quá giờ; vẫn phải đối chiếu/xử lý theo luồng cọc. Yêu cầu chờ cũ không còn nghĩa vụ tiền được loại khỏi hàng đợi mặc định nhưng vẫn tra cứu được khi chọn ngày, không bị xóa hoặc biến mất khỏi mọi bộ lọc.
+
+### Các quy tắc dùng chung phải giữ
+
+- `TableService.BlockingBookings` là nguồn xác định lịch còn chiếm chỗ: đã xác nhận; chờ cọc còn giữ chỗ hoặc cần đối chiếu/đã có tiền; đang nhận khách chưa kết thúc. `OverlappingBookings` dùng điều kiện `bắt đầu < cuối khoảng xem` và `kết thúc > đầu khoảng xem`. Hai khoảng chỉ chạm biên không bị coi là trùng.
+- Kiểm tra còn bàn ở form khách chỉ là dự báo. `AvailableSlots`, sơ đồ và lúc giữ/xếp bàn dùng cùng điều kiện; POST có khóa và kiểm tra lại. Không sửa trạng thái bàn chỉ để làm kết quả dự báo trông còn chỗ.
+- **Ca đặt mới dài hai tiếng khác với mốc phục vụ ba tiếng.** Lịch giữ bàn mới theo ca; `ServingDeadline` vẫn theo giờ nhận khách cộng ba tiếng. Giữ điều kiện thanh toán, món và cọc trước khi kết thúc; dọn xong mới sẵn sàng. Không tự thanh toán, tự giải phóng khi còn nghĩa vụ tiền/món hoặc kéo mọi ca mới thành ba tiếng.
+- Tiếp tân nhận khách vãng lai theo giờ thực tế gần hiện tại, thời lượng dự kiến mặc định 120 phút trong giới hạn sẵn có. Yêu cầu đặt trước quá 30 phút phải theo ca; không được lách bằng cách bỏ tick Đặt theo ca. Khoảng dự kiến của khách vãng lai cũng kiểm tra trùng với lịch tiếp theo.
+- Giữ nguyên các lịch cũ ngoài ca và thời lượng cũ; chúng vẫn chặn lịch mới nếu giao nhau. Lịch cũ 17:00–20:00 không bị đổi thành 17:00–19:00 hoặc gắn nhãn sai là ca mới. Link xem giờ cũ vẫn đọc được, không dùng nó làm đường tạo lịch mới tùy tiện.
+
+### AJAX và dữ liệu đang nhập
+
+- Form khách tải ba ca theo ngày, số người và khu vực; ca hết chỗ/quá giờ không chọn được. Không lấy ngày bằng UTC trên trình duyệt để tránh lệch ngày Việt Nam. Đổi lựa chọn nhanh hủy request dự báo cũ, không cho kết quả cũ ghi đè kết quả mới.
+- Modal xếp bàn dùng AJAX form/CSRF hiện có. Thành công đóng hộp và cập nhật danh sách/số đếm, giữ tab/ngày đang lọc. Nếu đã lưu nhưng tải lại danh sách lỗi, thông báo rõ đã lưu và không yêu cầu gửi lại thao tác.
+- Mất mạng/lỗi xác nhận không đóng hộp hoặc xóa lựa chọn. Khi làm mới sơ đồ, chỉ giữ lại các bàn đã chọn còn hợp lệ; cập nhật token phiên bản từ server và để người dùng kiểm tra lại trước khi xác nhận. Không tự retry POST có thể tạo tác dụng lặp.
+
+### Điểm bàn giao và dữ liệu báo cáo
+
+- Người 1 tiếp tục đọc tên bàn, ngày/giờ hẹn và lượt phục vụ từ dữ liệu hiện có cho KDS. Không lấy màu đang xem của sơ đồ để suy ra bếp được nấu hoặc món đã phục vụ.
+- Người 3 tiếp tục dùng đúng `DatBanId`/liên kết bàn khi nhận khách, tạo bill, gọi thêm và cấn cọc. Không tính tiền cọc lại từ ca hoặc tên bàn, không coi thao tác Xếp bàn là thanh toán.
+- `--init-week9-demo` chỉ chạy Development, phải chủ động gọi; không chạy mỗi lần mở web. Tạo hai bàn trong Sảnh đặt bàn: một lịch trưa và một lịch tối cho ngày sau lúc khởi tạo, cùng một yêu cầu chờ để thử modal. Chạy lại cùng ngày không nhân đôi hoặc mở lại lịch đã sửa/kết thúc, không chèn đè lịch đang có. Đây là dữ liệu thử nội bộ, không phải chứng từ ngân hàng.
+- Demo: mở cùng ngày, chuyển ca trưa/tối để thấy bàn khóa đúng ca; mở yêu cầu chờ, thử chọn bàn bận rồi chọn gợi ý và lưu ngay trong hộp. Ngày báo cáo cần khởi tạo dữ liệu gần buổi demo, không dùng một ngày quá khứ cố định.
+
+### Kiểm chứng và giới hạn
+
+- Bộ `BookingSlotSmoke` kiểm tra ca cố định, qua nửa đêm theo giờ Việt Nam, sơ đồ theo ca, lịch cũ, AJAX/RowVersion, tranh bàn, VIP, cọc và dữ liệu thử lặp an toàn. Fixtures đặt mới của bộ cũ được chuyển sang ca hợp lệ; test lịch tuần 8 được đổi từ kỳ vọng cả ngày sang đúng khoảng đang xem, không bỏ kiểm tra dữ liệu cũ.
+- Kết quả cuối: **933 kiểm tra HTTP/database toàn phần đạt**, bao gồm bộ khung giờ mới và regression tài khoản, món/size/định lượng, đặt bàn–giỏ món–cọc, gọi món–bếp–phục vụ–thanh toán, quá hạn giữ chỗ/ba tiếng, kho, QR, ưu đãi và báo cáo. Vòng đầu có 48 kiểm tra riêng; sau đó đã bổ sung ca legacy 17–20, tiếp tân đặt trước và truy lại yêu cầu chờ cũ theo ngày vào bộ toàn phần. Không cộng 48 với 933 thành một tổng khác.
+- Build thành công, không có lỗi biên dịch; có cảnh báo dependency sẵn có nêu dưới. `git diff --check` và kiểm tra cú pháp ba script bằng Node đạt. Trình duyệt đã kiểm chứng chọn gợi ý, lưu AJAX không đổi URL, đóng hộp và tự cập nhật số đếm; form tiếp tân đổi ngày/khu vực thì ca cập nhật, ca hết bàn không chọn được. Tạo lịch theo ca qua tiếp tân quay về danh sách và tự mở đúng modal; đã kiểm tra desktop 1280px và màn hình web hẹp 390px không tràn ngang, sau đó trả viewport về mặc định. Không tính kiểm chứng web hẹp này thành kiểm chứng app native.
+- Model/schema không đổi; EF kiểm tra không có thay đổi chưa có migration. Các gói sẵn có trên master phát sinh cảnh báo NuGet NU1902/NU1903 với `System.Security.Cryptography.Pkcs 9.0.11`; chưa tự nâng dependency chung trong phạm vi Người 2. Không gọi build là sạch cảnh báo khi cảnh báo này còn tồn tại.
+- Chưa có kiểm chứng app native, tải lớn hoặc ngân hàng thật. Chưa push/merge; dữ liệu kiểm thử và bản xem thử dùng database GUID riêng, không sửa database của nhóm.
+
+### Bổ sung: popup bàn bận, tách tab Đã hủy, thời lượng tối thiểu
+
+- **Popup giải thích vì sao không chọn được bàn.** `_TableBlockedModal` được chuyển vào `Views/Shared` để cả sơ đồ và danh sách dùng chung. Mỗi thẻ bàn có `data-table-name`/`data-table-blocked`; `tables.js` mở modal khi bấm/Enter vào thẻ bận (bỏ qua khi bấm vào link/nút/ô chọn), có nhánh dự phòng ghi vào `#assignment-warning` nếu chưa có Bootstrap. Không đổi cách disable ô chọn hay luật POST.
+- **Thông tin đặt bàn trong danh sách dễ đọc hơn.** Cột khách gộp tên đậm, điện thoại và badge số khách; mã đặt bàn kèm nhãn ca (`ReservationSchedule.Match`, nhãn "Lịch cũ" khi ngoài ca); khung giờ và ngày, bàn đã xếp và tình trạng cọc hiển thị dạng badge. Bỏ cột "Số khách" trùng; bảng còn bảy cột và hàng trống `colspan=7`.
+- **Thời lượng bữa tối thiểu 60 phút.** `ReceptionBookingViewModel.SoPhut` đổi `Range(30,180)` thành `Range(60,180)`, mặc định 120; form tiếp tân báo tối thiểu 60 phút và gợi ý vì sao. Giữ nguyên `MaxDiningHours = 3` chỉ là mốc cảnh báo quá ba tiếng, không biến mọi ca thành ba tiếng.
+- **Thông báo trùng lịch nêu rõ khoảng giờ.** `TableService.Assign` lấy xung đột sớm nhất và trả về dạng `Bàn đã có lịch HH:mm–HH:mm...` (giờ UTC+7), thay vì câu chung.
+- **Tách tab "Đã hủy" khỏi "Hoàn tất".** Controller chấp nhận `HoanTat`/`DaHuy` và vẫn ánh xạ link cũ `HoanTatHuy` sang `HoanTat` để không phá link/test cũ; thêm `DaHuyCount` cho badge. Hủy và hoàn tất không còn lẫn trong một danh sách.
+- **Kiểm thử.** `BookingSlotSmoke` bổ sung ca: sơ đồ/queue có `table-blocked-modal`, thẻ bàn bận mang `data-table-blocked`, walk-in 30 phút bị từ chối trước khi lưu, tab `DaHuy` tách khỏi `HoanTat`, link cũ `HoanTatHuy` vẫn chạy và không rò lịch đã hủy. Kết quả cuối: **941 kiểm tra HTTP/database toàn phần đạt**; build 0 lỗi biên dịch (còn cảnh báo NuGet sẵn có NU1902/NU1903); `git diff --check` đạt. Vòng lỗi trong lúc làm: partial đặt sai thư mục gây `Views/Shared` thiếu (đã chuyển đúng), fixture `DaHuy` thiếu `ThoiDiemHuy` vi phạm `CK_DatBan_NhanHuy` (đã bổ sung).

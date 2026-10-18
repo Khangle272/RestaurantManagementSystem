@@ -1,16 +1,25 @@
 @model ReceptionBookingViewModel
+@using RestaurantManagement.Web.Services
 @{ ViewData["Title"] = "Đặt bàn cho khách"; }
 <div class="mb-3"><a asp-controller="SoDoBan" asp-action="Index" class="text-muted">← Sơ đồ bàn</a></div>
 <section class="card border-0 shadow-sm" style="max-width:860px"><div class="card-body p-4"><h1 class="h3 mb-2">Đặt bàn cho khách</h1><p class="text-muted">Tiếp nhận khách gọi điện, nhắn tin hoặc khách đến trực tiếp. Sau khi lưu, chọn bàn trên sơ đồ để xác nhận.</p>
-<form method="post" asp-action="Create" data-ajax-form="true"><div asp-validation-summary="All" class="text-danger" role="alert"></div><div class="row g-3">
+<form method="post" asp-action="Create" data-ajax-form="true" data-slot-url="@Url.Action("KhungGio", "SoDoBan")"><div asp-validation-summary="All" class="text-danger" role="alert"></div><div class="row g-3">
 <input asp-for="BanAnId" type="hidden" />
 @if (Model.RequestedTableName is not null) { <div class="col-12"><div class="alert alert-success mb-0">Bàn dự kiến: <strong>@Model.RequestedTableName</strong><br /><span class="small">Chưa giữ bàn. Sau khi lưu, hệ thống kiểm tra lịch theo giờ bạn nhập; có thể chọn thêm bàn nếu nhóm đông.</span></div></div> }
 <div class="col-md-6"><label asp-for="HoTen" class="form-label">Họ tên khách</label><input asp-for="HoTen" class="form-control" /></div>
 <div class="col-md-6"><label asp-for="SoDienThoai" class="form-label">Số điện thoại</label><input asp-for="SoDienThoai" class="form-control" type="tel" /></div>
-<div class="col-md-6"><label asp-for="GioDen" class="form-label">Giờ đến (giờ Việt Nam)</label><input asp-for="GioDen" class="form-control" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" /></div>
+<div class="col-12 form-check ms-2"><input asp-for="DatTheoCa" class="form-check-input" /><label asp-for="DatTheoCa" class="form-check-label">Khách đặt trước theo ca (gọi điện / nhắn tin)</label></div>
+<div class="col-md-6" data-walkin-fields><label asp-for="GioDen" class="form-label">Khách vãng lai — giờ đến thực tế</label><input asp-for="GioDen" class="form-control" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" /></div>
+<div class="col-md-6" data-reservation-fields hidden="@(!Model.DatTheoCa)">
+    <label for="booking-day" class="form-label">Ngày đặt bàn</label><input id="booking-day" name="NgayDat" type="date" required class="form-control mb-2" value="@Model.GioDen.ToString("yyyy-MM-dd")" />
+    <label for="inputThoiGianDen" class="form-label">Ca đặt bàn</label><select id="inputThoiGianDen" name="GioDen" class="form-select" required>
+    @foreach (var slot in ReservationSchedule.Slots) { <option value="@slot.Arrival(DateOnly.FromDateTime(Model.GioDen)).ToString("yyyy-MM-ddTHH:mm")">@slot.Label</option> }
+    </select><span asp-validation-for="GioDen" class="text-danger small"></span>
+</div>
 <div class="col-md-3"><label asp-for="SoNguoi" class="form-label">Số khách</label><input asp-for="SoNguoi" class="form-control" min="1" max="50" /></div>
-<div class="col-md-3"><label asp-for="SoPhut" class="form-label">Thời lượng (tối đa 3 tiếng)</label><input asp-for="SoPhut" class="form-control" min="30" max="180" /></div>
+<div class="col-md-3" data-walkin-fields><label asp-for="SoPhut" class="form-label">Số phút dự kiến</label><input asp-for="SoPhut" class="form-control" min="60" max="180" /><span class="form-text">Tối thiểu 60 phút. Hệ thống chặn nếu bữa ăn không đủ thời gian trước lịch kế tiếp của bàn.</span></div>
+<p id="slot-status" class="small text-muted col-12" role="status">Khách vãng lai vẫn cần đủ thời gian trước lịch đặt tiếp theo.</p>
 <div class="col-12"><label asp-for="KhuVucId" class="form-label">Khu vực ưu tiên</label><select asp-for="KhuVucId" class="form-select"><option value="">Không yêu cầu</option>@foreach (var area in Model.Areas) { <option value="@area.Id">@area.TenKhuVuc · tầng @area.Tang</option> }</select></div>
 <div class="col-12"><label asp-for="GhiChu" class="form-label">Ghi chú / yêu cầu của khách</label><textarea asp-for="GhiChu" class="form-control" rows="3"></textarea></div>
 </div><button class="btn btn-success mt-4">Lưu và chọn bàn</button><a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-secondary mt-4 ms-2">Hủy</a></form></div></section>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/reservation-slots.js" asp-append-version="true"></script> }

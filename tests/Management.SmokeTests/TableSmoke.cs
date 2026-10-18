@@ -38,7 +38,7 @@ public static class TableSmoke
         var tableCreate = await Get(admin, "/QuanLyDatBan/Create?banAnId=" + table.Id);
         check(tableCreate.Contains(table.MaBan) && hidden(tableCreate, "BanAnId") == table.Id.ToString(), "Clicking a table pre-fills the reception request without reserving it");
         await Post(admin, "/QuanLyDatBan/Create", tableCreate, new()
-        { ["HoTen"] = "Khách chọn ô bàn", ["SoDienThoai"] = "0907777888", ["GioDen"] = TableService.VietnamNow.AddHours(6).ToString("yyyy-MM-ddTHH:mm"),
+        { ["HoTen"] = "Khách chọn ô bàn", ["SoDienThoai"] = "0907777888", ["GioDen"] = TableService.VietnamNow.AddDays(1).Date.AddHours(17).ToString("yyyy-MM-ddTHH:mm"),
           ["SoPhut"] = "120", ["SoNguoi"] = "2", ["KhuVucId"] = area.Id.ToString(), ["BanAnId"] = table.Id.ToString() });
         var selectedRequest = await db.DatBan.SingleAsync(x => x.HoTenLienHe == "Khách chọn ô bàn");
         check(selectedRequest.TrangThai == TrangThaiDatBan.ChoXacNhan && !await db.ChiTietDatBan.AnyAsync(x => x.DatBanId == selectedRequest.Id),
@@ -60,7 +60,7 @@ public static class TableSmoke
             ["__RequestVerificationToken"] = hidden(receptionBoard, "__RequestVerificationToken") })))
             check(denied.StatusCode == HttpStatusCode.Redirect, "Reception cannot perform waiter-only finish or cleaning operations");
         // The ownership fixture now holds a table; keep it outside the dedicated overlap/race scenarios.
-        var arrival = TableService.VietnamNow.AddDays(4).ToString("yyyy-MM-ddTHH:mm");
+        var arrival = TableService.VietnamNow.AddDays(4).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm");
         await Post(customer, "/DatBan", await Get(customer, "/DatBan"), new()
         { ["HoTen"] = "Khách sở hữu", ["SoDienThoai"] = "0903333444", ["ThoiGianDen"] = arrival,
           ["SoNguoi"] = "2", ["MaKhuVuc"] = area.Id.ToString() });

@@ -9,11 +9,17 @@
         var table = card.Table;
         var label = table.TrangThai switch { TrangThaiBan.SanSang => "Sẵn sàng", TrangThaiBan.DangPhucVu => "Đang phục vụ", TrangThaiBan.CanDon => "Cần dọn", _ => "Ngừng sử dụng" };
         var css = table.TrangThai switch { TrangThaiBan.SanSang => "ready", TrangThaiBan.DangPhucVu => "occupied", TrangThaiBan.CanDon => "cleaning", _ => "inactive" };
+        if (!Model.IsLive && table.TrangThai != TrangThaiBan.NgungSuDung && area.DangSuDung) {
+            label = card.ScheduledBookings.Count > 0 ? "Đã đặt trong ca" : "Trống trong ca";
+            css = card.ScheduledBookings.Count > 0 ? "occupied" : "ready";
+        }
+        if (!area.DangSuDung) { label = "Khu vực ngừng sử dụng"; css = "inactive"; }
         var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan");
-        <article class="table-card @css @(card.IsSuggested ? "suggested" : "") @(card.IsSelected ? "is-selected" : "")"><div class="d-flex justify-content-between align-items-start"><h3 class="h5 mb-0">
+        <article data-table-id="@table.Id" data-table-name="@table.MaBan" data-table-blocked="@card.UnavailableReason" class="table-card @css @(card.UnavailableReason is not null ? "blocked" : "") @(card.IsSuggested ? "suggested" : "") @(card.IsSelected ? "is-selected" : "")" role="@(card.UnavailableReason is not null && reception ? "button" : null)" tabindex="@(card.UnavailableReason is not null && reception ? "0" : null)" aria-describedby="@(card.UnavailableReason is not null ? $"table-blocked-note-{table.Id}" : null)"><div class="d-flex justify-content-between align-items-start"><h3 class="h5 mb-0">
             @if (Model.Booking is null && reception && area.DangSuDung && table.TrangThai != TrangThaiBan.NgungSuDung) { <a asp-controller="QuanLyDatBan" asp-action="Create" asp-route-banAnId="@table.Id" class="text-body text-decoration-none">@table.MaBan</a> } else { @table.MaBan }
         </h3><span class="table-status">@label</span></div>
             <p class="small text-muted mt-2 mb-2">@table.SoChoNgoi chỗ ngồi @(!area.DangSuDung ? "· Khu vực đã ngừng" : "")</p>
+            @if (card.UnavailableReason is not null) { <p id="table-blocked-note-@table.Id" class="small text-danger mb-2">@card.UnavailableReason</p> }
             @if (card.Occupant is { } guest) {
                 var deadline = TableService.ServingDeadline(guest);
                 <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") · Mốc 3 tiếng: @deadline.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span></p>
@@ -29,7 +35,8 @@
             @if (Model.CanAssign && reception) {
                 <label class="table-select small"><input class="form-check-input me-2" type="checkbox" name="banAnIds" value="@table.Id" form="assign-booking"
                     data-seats="@table.SoChoNgoi" data-area="@table.KhuVucId" data-suggested="@(card.IsSuggested ? "true" : "false")" checked="@card.IsSelected" disabled="@(!card.CanChoose)" />Chọn bàn này</label>
-            } else if (Model.Booking is null && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (table.TrangThai == TrangThaiBan.CanDon || table.TrangThai == TrangThaiBan.DangPhucVu)) {
+                @if (!card.CanChoose) { <button type="button" class="btn btn-sm btn-outline-secondary" data-table-warning="@(card.UnavailableReason ?? "Yêu cầu không còn được xếp bàn.")">Vì sao không chọn được?</button> }
+            } else if (Model.Booking is null && Model.IsLive && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (table.TrangThai == TrangThaiBan.CanDon || table.TrangThai == TrangThaiBan.DangPhucVu)) {
                 <div class="mt-auto pt-2 d-flex flex-column gap-1">
                 @if (table.TrangThai == TrangThaiBan.DangPhucVu) {
                     <a asp-controller="DonHang" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-primary w-100">Gọi món / Order</a>

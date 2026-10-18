@@ -1,8 +1,10 @@
 (() => {
-    const board = document.getElementById('table-board');
-    const status = document.getElementById('board-refresh');
-    const assignment = document.getElementById('assign-booking');
+    function initialize(root = document) {
+    const board = root.querySelector('#table-board');
+    const assignment = root.querySelector('#assign-booking');
     if (assignment && board) {
+        if (assignment.dataset.boardInitialized) return;
+        assignment.dataset.boardInitialized = 'true';
         const choices = () => [...board.querySelectorAll('input[name="banAnIds"]')];
         const summary = document.getElementById('table-selection-summary');
         const updateSelection = () => {
@@ -14,13 +16,53 @@
             for (const input of choices()) input.closest('.table-card').classList.toggle('is-selected', input.checked);
         };
         board.addEventListener('change', updateSelection);
-        document.getElementById('choose-suggestion')?.addEventListener('click', () => {
+        root.querySelector('#choose-suggestion')?.addEventListener('click', () => {
             for (const input of choices()) input.checked = !input.disabled && input.dataset.suggested === 'true';
             updateSelection();
             choices().find(input => input.checked)?.closest('.table-card').scrollIntoView({behavior:'smooth',block:'center'});
         });
         updateSelection();
     }
+    }
+    initialize();
+    document.addEventListener('booking:loaded', e => initialize(e.target));
+    document.addEventListener('click', e => {
+        const button = e.target.closest('[data-table-warning]');
+        if (!button) return;
+        const warning = document.getElementById('assignment-warning');
+        if (warning) { warning.textContent = button.dataset.tableWarning; warning.hidden = false; warning.tabIndex = -1; warning.focus(); }
+    });
+    const blockedModal = document.getElementById('table-blocked-modal');
+    const blockedBody = document.getElementById('table-blocked-body');
+    const blockedTitle = document.getElementById('table-blocked-title');
+    function showBlocked(card) {
+        const reason = card.dataset.tableBlocked;
+        if (!reason) return;
+        const name = card.dataset.tableName;
+        if (blockedModal && blockedBody && window.bootstrap) {
+            if (blockedTitle) blockedTitle.textContent = name ? `Bàn ${name} không thể chọn` : 'Không thể chọn bàn';
+            blockedBody.textContent = reason;
+            bootstrap.Modal.getOrCreateInstance(blockedModal).show();
+            return;
+        }
+        const warning = document.getElementById('assignment-warning');
+        if (warning) { warning.textContent = reason; warning.hidden = false; warning.tabIndex = -1; warning.focus(); }
+    }
+    document.addEventListener('click', e => {
+        const card = e.target.closest('[data-table-blocked]');
+        if (!card) return;
+        if (e.target.closest('a, button, input, select, textarea, form, label')) return;
+        showBlocked(card);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('[data-table-blocked][role="button"]');
+        if (!card) return;
+        e.preventDefault();
+        showBlocked(card);
+    });
+    const board = document.getElementById('table-board');
+    const status = document.getElementById('board-refresh');
     if (!board || board.dataset.poll !== 'true') { if (status) status.textContent = 'Đang xếp bàn · tạm dừng tự cập nhật'; return; }
     let busy = false;
     setInterval(async () => {

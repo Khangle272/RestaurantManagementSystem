@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,9 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     [HttpGet]
     public async Task<IActionResult> Index(string? tab = "ChoXacNhan", string? filterNgay = null)
     {
+        tab ??= "ChoXacNhan";
+        if (tab == "HoanTatHuy") tab = "HoanTat";
+        if (tab is not ("ChoXacNhan" or "DaXacNhan" or "DangPhucVu" or "HoanTat" or "DaHuy")) return BadRequest("Trạng thái lọc không hợp lệ.");
         ViewData["ActiveMenu"] = "QuanLyDatBan";
         ViewBag.CurrentTab = tab ?? "ChoXacNhan";
 
@@ -29,21 +33,26 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             .AsTracking();
 
         DateOnly? parsedDate = null;
-        if (!string.IsNullOrWhiteSpace(filterNgay) && DateOnly.TryParse(filterNgay, out var d))
+        if (!string.IsNullOrWhiteSpace(filterNgay))
         {
+            if (!DateOnly.TryParse(filterNgay, out var d) || d.Year is < 1900 or > 2100) return BadRequest("Ngày lọc không hợp lệ.");
             parsedDate = d;
             var startUtc = TableService.VietnamTime(d.ToDateTime(TimeOnly.MinValue));
-            var endUtc = TableService.VietnamTime(d.ToDateTime(TimeOnly.MaxValue));
-            allQuery = allQuery.Where(x => x.GioDen >= startUtc && x.GioDen <= endUtc);
+            var endUtc = startUtc.AddDays(1);
+            allQuery = allQuery.Where(x => x.GioDen >= startUtc && x.GioDen < endUtc);
         }
 
         var todayStart = TableService.VietnamTime(TableService.VietnamNow.Date);
         var todayEnd = todayStart.AddDays(1);
 
         // Thống kê nhanh theo tab
-        var choXacNhanCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc);
-        var daXacNhanCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaXacNhan);
-        var dangPhucVuCount = await Db.DatBan.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc == null);
+        var now = DateTimeOffset.UtcNow;
+        Expression<Func<DatBan, bool>> pending = x => (x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc)
+            && (parsedDate.HasValue || x.GioKetThucDuKien > now || x.ThoiDiemBaoChuyenKhoan != null || x.TienCocDaNop > x.TienCocDaHoan + x.TienCocDaGiu);
+        var choXacNhanCount = await allQuery.CountAsync(pending);
+        var daXacNhanCount = await allQuery.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaXacNhan);
+        var dangPhucVuCount = await allQuery.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc == null);
+        var daHuyCount = await allQuery.CountAsync(x => x.TrangThai == TrangThaiDatBan.DaHuy);
         var homNayCount = await Db.DatBan.CountAsync(x => x.GioDen >= todayStart && x.GioDen < todayEnd);
 
         // Lọc dữ liệu theo tab đã chọn
@@ -51,10 +60,10 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         {
             "DaXacNhan" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaXacNhan),
             "DangPhucVu" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc == null),
-            "HoanTatHuy" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaHuy
-                                                || x.TrangThai == TrangThaiDatBan.KhongDen
+            "HoanTat" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.KhongDen
                                                 || (x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc != null)),
-            _ => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc)
+            "DaHuy" => allQuery.Where(x => x.TrangThai == TrangThaiDatBan.DaHuy),
+            _ => allQuery.Where(pending)
         };
 
         var rawList = await tabQuery.OrderBy(x => x.GioDen).ToListAsync();
@@ -66,6 +75,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             ChoXacNhanCount = choXacNhanCount,
             DaXacNhanCount = daXacNhanCount,
             DangPhucVuCount = dangPhucVuCount,
+            DaHuyCount = daHuyCount,
             HomNayCount = homNayCount,
             DanhSachBanTrong = await GetBanAnSelectOptionsAsync(),
             DanhSachDatBan = rawList.Select(x =>
@@ -108,6 +118,11 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
                     TrangThai = trangThaiStr,
                     TrangThaiBadgeClass = badgeClass,
                     GhiChu = x.YeuCau,
+                    GioKetThuc = x.GioKetThucDuKien,
+                    TinhTrangCoc = x.TienCocYeuCau <= 0 ? "Không yêu cầu cọc"
+                        : ReservationDepositPolicy.Remaining(x) <= 0 ? "Đã đối chiếu đủ cọc"
+                        : x.ThoiDiemBaoChuyenKhoan != null ? "Khách báo chuyển — chờ đối chiếu"
+                        : $"Còn chờ cọc {ReservationDepositPolicy.Remaining(x):N0} đ",
                     HoaDonId = invoice?.Id,
                     TongTienHoaDon = invoice?.ChiTiet.Sum(c => c.SoLuong * c.DonGia) ?? 0,
                     DaThanhToan = daThanhToan
@@ -124,6 +139,9 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     {
         if (banAnIds.Length == 0 && banAnId > 0) banAnIds = [banAnId];
         var error = await tables.Assign(datBanId, banAnIds, rowVersion, await StaffId());
+        if (Request.Headers.XRequestedWith == "XMLHttpRequest")
+            return error is null ? Json(new { ok = true, message = "Đã lưu xếp bàn. Lịch chỉ xác nhận khi đủ cọc đã đối chiếu." })
+                : StatusCode(409, new { ok = false, message = error });
         TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã xếp bàn. Lịch cần cọc chỉ được xác nhận sau khi đủ cọc đã thỏa thuận.";
         return RedirectToAction("Index", "SoDoBan", error is null ? null : new { datBanId });
     }
@@ -170,6 +188,15 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     {
         model.Areas = await Db.KhuVuc.Where(x => x.DangSuDung).ToListAsync();
         var arrival = TableService.VietnamTime(model.GioDen);
+        var until = arrival.AddMinutes(model.SoPhut);
+        if (model.DatTheoCa || arrival > DateTimeOffset.UtcNow.AddMinutes(30))
+        {
+            if (ReservationSchedule.Validate(model.GioDen, TableService.VietnamNow) is { } scheduleError)
+                ModelState.AddModelError(nameof(model.GioDen), scheduleError);
+            else until = ReservationSchedule.EndOf(model.GioDen);
+            if (model.NgayDat.HasValue && model.NgayDat != DateOnly.FromDateTime(model.GioDen))
+                ModelState.AddModelError(nameof(model.GioDen), "Ngày và ca chưa khớp. Chọn lại ca đặt bàn.");
+        }
         if (arrival < DateTimeOffset.UtcNow.AddMinutes(-15) || arrival > DateTimeOffset.UtcNow.AddDays(180))
             ModelState.AddModelError(nameof(model.GioDen), "Chọn giờ đến từ hiện tại đến tối đa 180 ngày.");
         if (model.KhuVucId.HasValue && !model.Areas.Any(x => x.Id == model.KhuVucId))
@@ -191,7 +218,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         var booking = new DatBan {
             MaDatBan = await TableService.NewBookingCode(Db), HoTenLienHe = model.HoTen.Trim(), SoDienThoaiLienHe = model.SoDienThoai,
             KhachHangId = customerId, LaKhachTrucTiep = true, ThoiDiemTao = DateTimeOffset.UtcNow,
-            GioDen = arrival, GioKetThucDuKien = arrival.AddMinutes(model.SoPhut), SoNguoiLon = model.SoNguoi,
+            GioDen = arrival, GioKetThucDuKien = until, SoNguoiLon = model.SoNguoi,
             KhuVucUuTienId = model.KhuVucId, YeuCau = model.GhiChu?.Trim(), TrangThai = TrangThaiDatBan.ChoXacNhan,
             YeuCauVip = model.Areas.Any(x => x.Id == model.KhuVucId && x.LaPhongVip),
             YeuCauCoc = model.SoNguoi >= 8 || model.Areas.Any(x => x.Id == model.KhuVucId && x.LaPhongVip),
@@ -200,9 +227,9 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         Db.DatBan.Add(booking);
         if (!await SaveAsync("", "Không tạo được yêu cầu. Vui lòng thử lại.")) return View(model);
         if (Request.Headers.XRequestedWith == "XMLHttpRequest")
-            return Json(new { ok = true, redirectUrl = Url.Action("Index", "SoDoBan", new { datBanId = booking.Id, khuVucId = model.KhuVucId, preferredTableId = model.BanAnId }) });
+            return Json(new { ok = true, redirectUrl = Url.Action(nameof(Index), new { xepBanId = booking.Id, preferredTableId = model.BanAnId }) });
         TempData["SuccessMessage"] = "Đã ghi nhận khách. Chọn bàn phù hợp để xác nhận.";
-        return RedirectToAction("Index", "SoDoBan", new { datBanId = booking.Id, khuVucId = model.KhuVucId, preferredTableId = model.BanAnId });
+        return RedirectToAction(nameof(Index), new { xepBanId = booking.Id, preferredTableId = model.BanAnId });
     }
 
     private Task<BanAn?> RequestedTable(int id) => Db.BanAn.AsNoTracking().Include(x => x.KhuVuc)

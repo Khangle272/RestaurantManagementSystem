@@ -1,10 +1,14 @@
 @model RestaurantManagement.Web.Models.DatBanAdminVM
+@using RestaurantManagement.Web.Services
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Tiếp nhận & Quản lý Đặt bàn";
     var currentTab = ViewBag.CurrentTab as string ?? "ChoXacNhan";
 }
 
+@section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
+<div id="reservation-feedback" role="status" class="alert alert-success" hidden></div>
+<div id="reservation-list">
 <!-- THẺ TÓM TẮT NHANH (SUMMARY CARDS) -->
 <div class="d-flex gap-2 mb-4"><a asp-action="Create" class="btn btn-success">Đặt bàn cho khách</a><a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-success">Sơ đồ bàn</a></div>
 <div class="row g-3 mb-4">
@@ -96,9 +100,15 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(currentTab == "HoanTatHuy" ? "active bg-secondary fw-bold" : "text-dark")" 
-                       asp-action="Index" asp-route-tab="HoanTatHuy">
-                        <i class="bi bi-archive me-1"></i>Hoàn tất / Đã hủy
+                    <a class="nav-link @(currentTab == "HoanTat" ? "active bg-secondary fw-bold" : "text-dark")"
+                       asp-action="Index" asp-route-tab="HoanTat">
+                        <i class="bi bi-archive me-1"></i>Hoàn tất
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(currentTab == "DaHuy" ? "active bg-danger text-white fw-bold" : "text-dark")"
+                       asp-action="Index" asp-route-tab="DaHuy">
+                        <i class="bi bi-x-octagon me-1"></i>Đã hủy (@Model.DaHuyCount)
                     </a>
                 </li>
             </ul>
@@ -127,9 +137,8 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-3">Mã đặt bàn</th>
-                        <th>Khách hàng & SĐT</th>
+                        <th>Khách hàng</th>
                         <th>Giờ đến hẹn</th>
-                        <th class="text-center">Số khách</th>
                         <th>Bàn ăn đã xếp</th>
                         <th>Trạng thái</th>
                         <th>Ghi chú</th>
@@ -142,23 +151,25 @@
                         @foreach (var item in Model.DanhSachDatBan)
                         {
                             <tr>
-                                <td class="ps-3 font-monospace fw-bold text-danger">
-                                    @item.BookingCode
+                                @{
+                                    var local = item.ThoiGianDen.ToOffset(TimeSpan.FromHours(7));
+                                    var slot = ReservationSchedule.Match(local.DateTime);
+                                    var slotLabel = slot?.Name ?? "Lịch cũ";
+                                }
+                                <td class="ps-3">
+                                    <div class="font-monospace fw-bold text-danger">@item.BookingCode</div>
+                                    <span class="badge bg-light text-secondary border mt-1">@slotLabel</span>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold text-dark">@item.HoTen</div>
+                                    <div class="fw-bold fs-6 text-dark">@item.HoTen</div>
                                     <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@item.SoDienThoai</div>
+                                    <span class="badge bg-light text-dark border mt-1"><i class="bi bi-people me-1"></i>@item.SoNguoi khách</span>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold">
-                                        <i class="bi bi-clock me-1 text-secondary"></i>@item.ThoiGianDen.ToLocalTime().ToString("HH:mm")
+                                    <div class="fw-bold text-dark">
+                                        <i class="bi bi-clock me-1 text-secondary"></i>@local.ToString("HH:mm")–@item.GioKetThuc?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")
                                     </div>
-                                    <div class="text-muted small">@item.ThoiGianDen.ToLocalTime().ToString("dd/MM/yyyy")</div>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-dark border px-2 py-1">
-                                        <i class="bi bi-people me-1"></i>@item.SoNguoi
-                                    </span>
+                                    <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>@local.ToString("dd/MM/yyyy")</div>
                                 </td>
                                 <td>
                                     @if (item.TenBan != "Chưa gán" && item.TenBan != "Chưa xếp bàn")
@@ -178,6 +189,7 @@
                                     <span class="badge @item.TrangThaiBadgeClass px-2 py-1">
                                         @item.TrangThai
                                     </span>
+                                    <div class="mt-1"><span class="badge bg-light text-secondary border fw-normal">@item.TinhTrangCoc</span></div>
                                 </td>
                                 <td class="small text-muted" style="max-width: 200px;">
                                     @(string.IsNullOrEmpty(item.GhiChu) ? "—" : item.GhiChu)
@@ -188,7 +200,7 @@
                                         <!-- Nút Xếp bàn (Cho Chờ xác nhận hoặc muốn đổi bàn) -->
                                         @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Chờ cọc" || item.TrangThai == "Đã xác nhận")
                                         {
-                                            <a asp-controller="SoDoBan" asp-action="Index" asp-route-datBanId="@item.MaDatBan" class="btn btn-sm btn-outline-primary" title="Duyệt và xếp bàn">
+                                            <a asp-controller="SoDoBan" asp-action="Index" asp-route-datBanId="@item.MaDatBan" data-assign-booking="@item.MaDatBan" class="btn btn-sm btn-primary fw-semibold" title="Duyệt và xếp bàn">
                                                 <i class="bi bi-table me-1"></i>Xếp bàn
                                             </a>
                                         }
@@ -234,7 +246,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2"></i>
                                 Không có yêu cầu đặt bàn nào trong danh mục này.
                             </td>
@@ -247,6 +259,14 @@
 </div>
 
 
+</div>
+<partial name="_TableBlockedModal" />
+<div class="modal fade" id="assignment-modal" tabindex="-1" aria-labelledby="assignment-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down"><div class="modal-content">
+        <div class="modal-header"><h2 id="assignment-modal-title" class="modal-title h5">Xếp bàn cho yêu cầu đặt chỗ</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+        <div id="assignment-content" class="modal-body" aria-live="polite"></div>
+    </div></div>
+</div>
 <!-- MODAL HỦY ĐẶT BÀN -->
 <div class="modal fade" id="modalHuyBan" tabindex="-1" aria-labelledby="modalHuyBanTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -284,6 +304,8 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/tables.js" asp-append-version="true"></script>
+    <script src="~/js/reservation-admin.js" asp-append-version="true"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             // Modal Hủy bàn

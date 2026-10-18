@@ -1,0 +1,18 @@
+@model TableBoardViewModel
+@{ ViewData["AssignmentDialog"] = true; }
+<form id="assignment-filters" asp-controller="SoDoBan" asp-action="Index" method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    <input type="hidden" name="datBanId" value="@Model.Booking?.Id" /><input type="hidden" name="dialog" value="true" />
+    <div><label for="assignment-area" class="form-label">Khu vực / tầng</label><select id="assignment-area" name="khuVucId" class="form-select">
+        <option value="">Tất cả khu vực</option>
+        @foreach (var area in Model.Areas) { <option value="@area.Id" selected="@(area.Id == Model.AreaId)">@area.TenKhuVuc · tầng @area.Tang</option> }
+    </select></div>
+    <button type="submit" class="btn btn-outline-success">Làm mới sơ đồ</button>
+    <p class="small text-muted mb-0">Chỉ xét đúng khoảng giờ của yêu cầu; lịch cũ ngoài ca vẫn được giữ nguyên.</p>
+</form>
+<div class="booking-workspace">
+    <aside id="booking-context" class="booking-context"><partial name="_BookingContext" model="Model" /></aside>
+    <section class="booking-board-panel" aria-label="Bàn còn trống cho yêu cầu">
+        <div id="assignment-warning" class="alert alert-warning" role="alert" hidden></div>
+        <div id="table-board" data-poll="false"><partial name="_Board" model="Model" /></div>
+    </section>
+</div>

@@ -71,6 +71,16 @@ try
         ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
 
+    if (args.Contains("--slots-only"))
+    {
+        await InitDemoAccounts();
+        await using var slotDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(slotDb);
+        await BookingSlotSmoke.Run(slotDb, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} fixed-slot booking HTTP/database checks.");
+        return;
+    }
+
     if (args.Contains("--qr-only"))
     {
         await InitDemoAccounts();
@@ -511,6 +521,7 @@ try
 
     await MenuSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
     await TableSmoke.Run(db, client, NewClient, Hidden, Check);
+    await BookingSlotSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.OrderSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PreorderSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.ReservationDepositSmoke.Run(db, client, NewClient, Hidden, Check);

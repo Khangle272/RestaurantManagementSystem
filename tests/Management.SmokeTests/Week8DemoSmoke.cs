@@ -33,13 +33,11 @@ public static class Week8DemoSmoke
         var areaId = sample.Ban.Single().BanAn.KhuVucId;
         var query = $"/SoDoBan?ngay={day:yyyy-MM-dd}&gio={Uri.EscapeDataString(scanTime.ToString("HH:mm"))}&khuVucId={areaId}";
         var page = WebUtility.HtmlDecode(await admin.GetStringAsync(query));
-        check(page.Contains("type=\"date\"") && page.Contains("type=\"time\"")
-            && bookings.All(x => page.Contains(x.MaDatBan)
-                && page.Contains(x.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM"))
-                && page.Contains(x.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM"))),
-            "Floor board shows full-day booking start/end ranges outside the selected two-hour window");
+        check(page.Contains("type=\"date\"") && page.Contains("name=\"ca\"") && page.Contains("name=\"gio\"")
+            && !bookings.Any(x => page.Contains(x.MaDatBan)),
+            "Floor board retains legacy time links but does not mix bookings outside the selected interval");
         var fragment = WebUtility.HtmlDecode(await admin.GetStringAsync(query + "&fragment=true"));
-        check(bookings.All(x => fragment.Contains(x.MaDatBan)), "AJAX board refresh preserves the selected schedule day");
+        check(!bookings.Any(x => fragment.Contains(x.MaDatBan)), "AJAX board refresh preserves the selected interval rather than showing the entire day");
         var otherDay = WebUtility.HtmlDecode(await admin.GetStringAsync($"/SoDoBan?ngay={day.AddDays(2):yyyy-MM-dd}&gio=12%3A00&khuVucId={areaId}&fragment=true"));
         check(!bookings.Any(x => otherDay.Contains(x.MaDatBan)), "Floor board schedule excludes bookings outside the selected day");
         var bookingPage = await admin.GetStringAsync($"/SoDoBan?datBanId={sample.Id}");

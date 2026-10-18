@@ -25,38 +25,82 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         throw new InvalidOperationException("Không cấp được mã đặt bàn. Vui lòng thử lại.");
     }
 
+    public IQueryable<ChiTietDatBan> BlockingBookings()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return db.ChiTietDatBan.Where(x => x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan
+            || (x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc && (!x.DatBan.CocTuDong
+                || x.DatBan.HanThanhToanCoc > now || x.DatBan.ThoiDiemBaoChuyenKhoan != null
+                || x.DatBan.TienCocDaNop > x.DatBan.TienCocDaHoan + x.DatBan.TienCocDaGiu))
+            || (x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null));
+    }
+
+    public IQueryable<ChiTietDatBan> OverlappingBookings(DateTimeOffset from, DateTimeOffset until, int? exclude = null) =>
+        BlockingBookings().Where(x => (!exclude.HasValue || x.DatBanId != exclude.Value)
+            && x.DatBan.GioDen < until && x.DatBan.GioKetThucDuKien > from);
+
+    public static List<BanAn>? PickTables(IEnumerable<BanAn> available, int guests)
+    {
+        var single = available.Where(x => x.SoChoNgoi >= guests).OrderBy(x => x.SoChoNgoi).ThenBy(x => x.Id).FirstOrDefault();
+        if (single is not null) return [single];
+        foreach (var group in available.GroupBy(x => x.KhuVucId).OrderBy(x => x.Key))
+        {
+            var selection = new List<BanAn>();
+            foreach (var table in group.OrderByDescending(x => x.SoChoNgoi).ThenBy(x => x.Id))
+            {
+                selection.Add(table);
+                if (selection.Sum(x => x.SoChoNgoi) >= guests) break;
+            }
+            if (selection.Count <= 20 && selection.Sum(x => x.SoChoNgoi) >= guests) return selection;
+        }
+        return null;
+    }
+
+    public async Task<bool> HasCapacity(DateTimeOffset from, DateTimeOffset until, int guests, int? areaId, bool vip)
+    {
+        var candidates = await db.BanAn.AsNoTracking().Where(x => x.KhuVuc.DangSuDung
+            && x.TrangThai != TrangThaiBan.NgungSuDung && (!areaId.HasValue || x.KhuVucId == areaId)
+            && x.KhuVuc.LaPhongVip == vip).ToListAsync();
+        var busy = await OverlappingBookings(from, until).Select(x => x.BanAnId).Distinct().ToListAsync();
+        return PickTables(candidates.Where(x => !busy.Contains(x.Id)
+            && (from > DateTimeOffset.UtcNow.AddMinutes(30) || x.TrangThai == TrangThaiBan.SanSang)), guests) is not null;
+    }
+
+    public async Task<(string? Error, List<DiningSlotAvailability> Slots)> AvailableSlots(DateOnly day, int guests, int? areaId)
+    {
+        var today = DateOnly.FromDateTime(VietnamNow);
+        if (day < today || day > today.AddDays(180) || guests is < 1 or > 50)
+            return ("Chọn ngày trong 180 ngày tới và từ 1 đến 50 khách.", []);
+        var area = areaId.HasValue ? await db.KhuVuc.AsNoTracking().SingleOrDefaultAsync(x => x.Id == areaId && x.DangSuDung) : null;
+        if (areaId.HasValue && area is null) return ("Khu vực không còn sử dụng.", []);
+        var result = new List<DiningSlotAvailability>();
+        foreach (var slot in ReservationSchedule.Slots)
+        {
+            var arrival = slot.Arrival(day);
+            var error = ReservationSchedule.Validate(arrival, VietnamNow);
+            var available = error is null && await HasCapacity(VietnamTime(arrival), ReservationSchedule.EndOf(arrival),
+                guests, areaId, area?.LaPhongVip == true);
+            result.Add(new(slot.Id, slot.Label, arrival.ToString("yyyy-MM-ddTHH:mm"), available,
+                error ?? (available ? "Còn bàn phù hợp" : "Không còn đủ bàn phù hợp")));
+        }
+        return (null, result);
+    }
+
     // Caller owns the serializable transaction; reserve before asking the customer for money.
     public async Task<string?> ReserveOnlineWithinTransaction(DatBan booking)
     {
         var now = DateTimeOffset.UtcNow;
         var candidates = await db.BanAn.Where(x => x.KhuVuc.DangSuDung && x.TrangThai != TrangThaiBan.NgungSuDung
             && (!booking.KhuVucUuTienId.HasValue || x.KhuVucId == booking.KhuVucUuTienId)
-            && (!booking.YeuCauVip || x.KhuVuc.LaPhongVip)).Select(x => x.Id).ToListAsync();
+            && x.KhuVuc.LaPhongVip == booking.YeuCauVip).Select(x => x.Id).ToListAsync();
         var tables = await LockTables(candidates);
-        var busy = await db.ChiTietDatBan.Where(x => candidates.Contains(x.BanAnId) && x.DatBanId != booking.Id
-            && (x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan
-                || (x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc && (!x.DatBan.CocTuDong
-                    || x.DatBan.HanThanhToanCoc > now || x.DatBan.ThoiDiemBaoChuyenKhoan != null
-                    || x.DatBan.TienCocDaNop > x.DatBan.TienCocDaHoan + x.DatBan.TienCocDaGiu))
-                || (x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null))
-            && x.DatBan.GioDen < booking.GioKetThucDuKien && x.DatBan.GioKetThucDuKien > booking.GioDen)
+        var busy = await OverlappingBookings(booking.GioDen, booking.GioKetThucDuKien, booking.Id)
+            .Where(x => candidates.Contains(x.BanAnId))
             .Select(x => x.BanAnId).Distinct().ToListAsync();
         var available = tables.Where(x => !busy.Contains(x.Id)
             && (booking.GioDen > now.AddMinutes(30) || x.TrangThai == TrangThaiBan.SanSang));
         var guests = booking.SoNguoiLon + booking.SoTreEm;
-        var single = available.Where(x => x.SoChoNgoi >= guests).OrderBy(x => x.SoChoNgoi).ThenBy(x => x.Id).FirstOrDefault();
-        List<BanAn>? chosen = single is null ? null : [single];
-        if (chosen is null)
-            foreach (var group in available.GroupBy(x => x.KhuVucId).OrderBy(x => x.Key))
-            {
-                var selection = new List<BanAn>();
-                foreach (var table in group.OrderByDescending(x => x.SoChoNgoi).ThenBy(x => x.Id))
-                {
-                    selection.Add(table);
-                    if (selection.Sum(x => x.SoChoNgoi) >= guests) break;
-                }
-                if (selection.Count <= 20 && selection.Sum(x => x.SoChoNgoi) >= guests) { chosen = selection; break; }
-            }
+        var chosen = PickTables(available, guests);
         if (chosen is null) return "Khung giờ/khu vực này không còn đủ bàn phù hợp. Chọn giờ hoặc khu vực khác; bạn chưa phải thanh toán.";
         var chosenIds = chosen.Select(x => x.Id).ToArray();
         foreach (var link in booking.Ban.Where(x => !chosenIds.Contains(x.BanAnId)).ToList())
@@ -113,13 +157,13 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         if (tables.Select(x => x.KhuVucId).Distinct().Count() != 1) return "Bàn ghép phải thuộc cùng một khu vực.";
         if (tables.Sum(x => x.SoChoNgoi) < booking.SoNguoiLon + booking.SoTreEm) return "Các bàn đã chọn không đủ chỗ cho khách.";
         if (booking.YeuCauVip && tables.Any(x => !x.KhuVuc.LaPhongVip)) return "Yêu cầu phòng VIP cần được xếp vào khu vực VIP.";
-        if (await db.ChiTietDatBan.AnyAsync(x => ids.Contains(x.BanAnId) && x.DatBanId != id
-            && (x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan || (x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc
-                && (!x.DatBan.CocTuDong || x.DatBan.HanThanhToanCoc > DateTimeOffset.UtcNow || x.DatBan.ThoiDiemBaoChuyenKhoan != null
-                    || x.DatBan.TienCocDaNop > x.DatBan.TienCocDaHoan + x.DatBan.TienCocDaGiu))
-                || (x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null))
-            && x.DatBan.GioDen < booking.GioKetThucDuKien && x.DatBan.GioKetThucDuKien > booking.GioDen))
-            return "Bàn đã có lịch trùng khoảng thời gian này. Chọn bàn khác hoặc đổi lịch với khách.";
+        if (!booking.YeuCauVip && tables.Any(x => x.KhuVuc.LaPhongVip)) return "Khách chưa yêu cầu VIP. Thống nhất yêu cầu với khách trước khi chọn khu vực VIP.";
+        if (booking.GioDen <= DateTimeOffset.UtcNow.AddMinutes(30) && tables.Any(x => x.TrangThai != TrangThaiBan.SanSang))
+            return "Bàn đang phục vụ hoặc chưa dọn. Chọn bàn sẵn sàng cho khách sắp đến.";
+        var conflict = await OverlappingBookings(booking.GioDen, booking.GioKetThucDuKien, id)
+            .Where(x => ids.Contains(x.BanAnId)).OrderBy(x => x.DatBan.GioDen).Select(x => x.DatBan).FirstOrDefaultAsync();
+        if (conflict is not null)
+            return $"Bàn đã có lịch {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm}–{conflict.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)):HH:mm}, không đủ thời gian cho bữa của khách. Chọn bàn khác hoặc đổi giờ với khách.";
         var removed = booking.Ban.Where(x => !ids.Contains(x.BanAnId)).ToList();
         db.ChiTietDatBan.RemoveRange(removed);
         foreach (var tableId in ids.Where(x => !booking.Ban.Any(b => b.BanAnId == x)))

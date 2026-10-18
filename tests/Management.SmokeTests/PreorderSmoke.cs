@@ -69,7 +69,7 @@ public static class PreorderSmoke
         var createFields = new Dictionary<string, string>
         {
             ["RequestId"] = createId.ToString(), ["HoTen"] = "PREORDER-TEST-CUSTOMER", ["SoDienThoai"] = "0901234567",
-            ["ThoiGianDen"] = TableService.VietnamNow.AddHours(4).ToString("yyyy-MM-ddTHH:mm"), ["SoNguoi"] = "2", ["ChuanBiTruoc"] = "true",
+            ["ThoiGianDen"] = ReservationSchedule.NextArrival(TableService.VietnamNow.AddHours(4)).ToString("yyyy-MM-ddTHH:mm"), ["SoNguoi"] = "2", ["ChuanBiTruoc"] = "true",
             ["Items[0].MonAnId"] = dish.Id.ToString(), ["Items[0].MonAnSizeId"] = size.Id.ToString(), ["Items[0].SoLuong"] = "1",
             ["Items[0].YeuCauCheBien"] = "PREORDER-FIFO-FIRST", ["Items[0].DonGiaThoaThuan"] = "1"
         };
