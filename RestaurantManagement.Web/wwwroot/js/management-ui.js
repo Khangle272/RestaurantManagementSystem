@@ -88,19 +88,20 @@
         byId('empty-cart-message').hidden = cart.length > 0;
         let quantity = 0;
         let total = 0;
+        let flashCard = null;
         cart.forEach((item, index) => {
             quantity += item.qty;
             total += item.qty * item.price;
             const card = node('div', 'card pos-cart-line border p-2 bg-white shadow-none');
             // Thẻ món vừa được bấm thêm sẽ nháy sáng để nhân viên thấy nó “nhảy” vào giỏ.
-            if (flashSizeId !== null && item.sizeId === flashSizeId) card.classList.add('pos-item-flash');
+            if (flashSizeId !== null && item.sizeId === flashSizeId) { card.classList.add('pos-item-flash'); flashCard = card; }
             const header = node('div', 'd-flex justify-content-between align-items-start gap-2');
             const title = node('div', 'pos-item-title');
             title.append(node('div', 'fw-bold text-dark', item.dishName), node('span', 'badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1', item.sizeName));
             header.append(title, actionButton('Xóa', `Xóa ${item.dishName} khỏi giỏ`, () => { cart = cart.filter(candidate => candidate !== item); renderCart(); }, 'btn btn-sm btn-outline-danger pos-line-remove'));
-            const info = node('div', 'd-flex justify-content-between text-muted small mt-1 gap-2');
-            info.append(node('span', '', `Đơn giá: ${currency(item.price)}`), node('span', 'fw-semibold text-dark text-end', `Thành tiền: ${currency(item.qty * item.price)}`));
-            const row = node('div', 'd-flex align-items-center gap-2 my-2');
+            const info = node('div', 'pos-line-prices d-flex flex-wrap align-items-center gap-2 small text-muted');
+            info.append(node('span', '', `Đơn giá: ${currency(item.price)}`), node('span', 'fw-semibold text-dark', `Thành tiền: ${currency(item.qty * item.price)}`));
+            const row = node('div', 'pos-line-controls d-flex flex-wrap align-items-center gap-2 my-2');
             const quantities = node('div', 'btn-group btn-group-sm');
             quantities.setAttribute('role', 'group');
             quantities.setAttribute('aria-label', `Số lượng ${item.dishName}`);
@@ -113,7 +114,7 @@
                 actionButton('−', `Giảm số lượng ${item.dishName}`, () => changeQuantity(-1), 'btn btn-sm btn-outline-secondary'),
                 node('span', 'btn btn-outline-secondary disabled fw-bold pos-line-qty', String(item.qty)),
                 actionButton('+', `Tăng số lượng ${item.dishName}`, () => changeQuantity(1), 'btn btn-sm btn-outline-secondary'));
-            row.append(node('span', 'small text-muted text-nowrap', 'Số lượng'), quantities);
+            row.append(node('span', 'small text-muted text-nowrap', 'Số lượng'), quantities, info);
             const note = node('input', 'form-control form-control-sm');
             note.type = 'text';
             note.name = `Items[${index}].YeuCauCheBien`;
@@ -122,7 +123,7 @@
             note.placeholder = 'Ghi chú chế biến: ít cay, không hành...';
             note.setAttribute('aria-label', `Ghi chú chế biến ${item.dishName}`);
             note.addEventListener('input', () => { item.note = note.value; saveDraft(); });
-            card.append(header, info, row, note);
+            card.append(header, row, note);
             for (const [name, value] of Object.entries({ MonAnId: item.dishId, MonAnSizeId: item.sizeId, SoLuong: item.qty })) {
                 const hidden = node('input');
                 hidden.type = 'hidden';
@@ -132,6 +133,8 @@
             }
             list.append(card);
         });
+        // Giỏ đã cuộn khỏi tầm nhìn: kéo dòng vừa thêm vào khung để phản hồi thao tác luôn thấy được.
+        if (flashCard && typeof flashCard.scrollIntoView === 'function') flashCard.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         flashSizeId = null;
         byId('cart-item-count').textContent = String(cart.length);
         byId('cart-total-qty').textContent = `${quantity} phần`;

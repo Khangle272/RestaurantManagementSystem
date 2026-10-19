@@ -22,7 +22,8 @@
 .pos-dish-search i { position: absolute; left: .55rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: .85rem; }
 .pos-dish-search .form-control { padding-left: 1.75rem; }
 .pos-dish-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.pos-dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .5rem; align-content: start; }
+/* Thẻ món đủ rộng để nút size + giá nằm trên một dòng kể cả khi cột giỏ order mở rộng. */
+.pos-dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: .5rem; align-content: start; }
 .pos-dish-card { border: 1px solid var(--border-subtle, #e2e8f0) !important; border-radius: .65rem; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
 .pos-dish-card:hover { border-color: var(--brand-primary, #E11D48) !important; box-shadow: 0 2px 10px rgba(225, 29, 72, .12); }
 /* Thẻ món bấm được: nút size đầu tiên (size mặc định khi bấm cả thẻ) được làm nổi khi rê chuột. */
@@ -34,9 +35,14 @@
 .pos-table-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; max-height: 16dvh; overflow-y: auto; }
 .table-select-card { border: 1px solid var(--border-subtle, #e2e8f0); border-radius: .6rem; background: #fff; padding: .4rem .55rem; display: flex; flex-direction: column; gap: .1rem; align-items: flex-start; text-align: left; overflow: hidden; }
 .table-select-card:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
-.pos-cart { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 16rem; }
+/* Giỏ order là vùng thao tác chính: nền hơi khác để tách khỏi bảng bàn phía trên. */
+.pos-cart { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 16rem; border-color: #cbd5e1 !important; box-shadow: 0 4px 16px rgba(15, 23, 42, .06); }
 .pos-cart #cart-container { overflow-y: auto; min-height: 6rem; flex: 1 1 auto; padding: .65rem .75rem !important; }
 .pos-cart .card-header { padding: .6rem .75rem !important; }
+/* Tiêu đề giỏ order đổi nền nhẹ để nhân viên nhận ra ngay vùng thao tác chính. */
+.pos-cart > .card-header { background: #fff7f8 !important; border-bottom-color: #fecdd3 !important; }
+.pos-cart > .card-header h2 { font-size: .95rem; }
+.pos-cart > .card-header #cart-item-count { color: var(--brand-primary, #E11D48); }
 .pos-cart .card-footer { padding: .75rem !important; font-size: .95rem; }
 .pos-cart .card-header, .pos-cart .card-footer { flex-shrink: 0; }
 .pos-cart .pos-item-title { overflow-wrap: anywhere; }
@@ -44,6 +50,10 @@
 .pos-cart-line { border-color: var(--border-subtle, #e2e8f0) !important; }
 .pos-cart-line .pos-line-qty { min-width: 2.4rem; }
 .pos-cart-line .pos-line-remove { white-space: nowrap; }
+/* Số lượng và tiền nằm cùng một hàng trên màn hình rộng để giỏ đỡ cao khi có nhiều món. */
+.pos-cart-line .pos-line-controls { row-gap: .25rem; }
+.pos-cart-line .pos-line-prices { margin-left: auto; justify-content: flex-end; }
+.pos-cart-line .pos-line-prices > span { white-space: nowrap; }
 /* Dòng món vừa được thêm nháy sáng để mắt nhân viên bám theo ngay. */
 .pos-item-flash { animation: pos-item-flash 1.2s ease-out 1; }
 @keyframes pos-item-flash {
@@ -66,7 +76,8 @@
         max-width: none; padding: 0;
         height: calc(100dvh - 5.5rem); display: flex; flex-direction: column; gap: .5rem; overflow-y: auto;
     }
-    .pos-layout { flex: 1 1 auto; min-height: 26rem; grid-template-columns: minmax(11rem, 13rem) minmax(0, 1fr) minmax(20rem, 25rem); align-items: stretch; }
+    /* Cột giỏ order rộng theo màn hình: tối thiểu 23rem, tối đa 35rem hoặc 40% workspace. */
+    .pos-layout { flex: 1 1 auto; min-height: 26rem; grid-template-columns: minmax(9.5rem, 11rem) minmax(0, 1fr) minmax(23rem, min(40%, 35rem)); align-items: stretch; }
     .pos-categories .pos-category-list { max-height: none; }
     /* Danh sách món đã order có vùng cuộn riêng để không ép phần giỏ order phía dưới. */
     .pos-cart .pos-existing-list { max-height: 11dvh; overflow-y: auto; padding-right: .15rem; }
