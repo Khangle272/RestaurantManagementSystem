@@ -1,35 +1,93 @@
 /* Keep the existing management colors; only adjust space and scrolling. */
 [hidden] { display: none !important; }
-.pos-page, .pos-menu-column, .pos-cart { min-width: 0; }
-.pos-menu-column { display: flex; flex-direction: column; }
-.pos-menu-card { flex: 1; min-height: 0; }
-.pos-menu-filters { display: flex; gap: .5rem; }
-.pos-menu-filters .form-select { width: 43%; }
-.pos-menu-filters .form-control { min-width: 0; flex: 1; }
-.pos-dish-grid { max-height: 65dvh; overflow-y: auto; align-content: flex-start; }
-.pos-table-picker { max-height: 36dvh; overflow-y: auto; }
-.pos-cart { position: sticky; top: 4.75rem; max-height: calc(100dvh - 5.5rem); }
-.pos-cart #cart-container { overflow-y: auto; min-height: 4rem; flex: 1; }
+.pos-page { min-width: 0; }
+.pos-page-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+.pos-page-header h1 { margin-bottom: .15rem; }
+/* POS header subtitle stays on one line on desktop to give the workspace more height. */
+.admin-main .pos-page-header .text-muted.mb-0 { max-width: 110ch; }
+.pos-page > form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+/* Fixed 3-column POS layout: categories | dishes | served tables & order cart */
+.pos-layout { display: grid; grid-template-columns: 1fr; gap: .75rem; min-height: 0; }
+.pos-zone { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pos-zone > .card-header, .pos-cart > .card-footer { flex: 0 0 auto; }
+.pos-categories .pos-category-list { display: flex; flex-direction: column; gap: .25rem; overflow-y: auto; padding: .5rem; min-height: 0; }
+.pos-category-btn { display: flex; justify-content: space-between; align-items: center; gap: .5rem; width: 100%; border: 1px solid var(--border-subtle, #e2e8f0); background: #fff; border-radius: .5rem; padding: .45rem .6rem; font-size: .85rem; font-weight: 600; color: #334155; text-align: left; }
+.pos-category-btn:hover:not(:disabled) { border-color: var(--brand-primary, #E11D48); color: var(--brand-primary, #E11D48); }
+.pos-category-btn.active { background: var(--brand-primary, #E11D48); border-color: var(--brand-primary, #E11D48); color: #fff; }
+.pos-category-btn:disabled { opacity: .55; cursor: not-allowed; }
+.pos-category-name { overflow-wrap: anywhere; }
+.pos-category-count { flex: 0 0 auto; font-size: .72rem; font-weight: 700; padding: .05rem .4rem; border-radius: 9999px; background: #f1f5f9; color: #64748b; }
+.pos-category-btn.active .pos-category-count { background: rgba(255, 255, 255, .25); color: #fff; }
+.pos-dish-search { position: relative; flex: 1 1 12rem; max-width: 22rem; }
+.pos-dish-search i { position: absolute; left: .55rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: .85rem; }
+.pos-dish-search .form-control { padding-left: 1.75rem; }
+.pos-dish-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.pos-dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .5rem; align-content: start; }
+.pos-dish-card { border: 1px solid var(--border-subtle, #e2e8f0) !important; border-radius: .65rem; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.pos-dish-card:hover { border-color: var(--brand-primary, #E11D48) !important; box-shadow: 0 2px 10px rgba(225, 29, 72, .12); }
+/* Thẻ món bấm được: nút size đầu tiên (size mặc định khi bấm cả thẻ) được làm nổi khi rê chuột. */
+.pos-dish-card:hover .pos-dish-sizes .btn:first-child { background: #fff1f2; border-color: var(--brand-primary, #E11D48); color: var(--brand-primary, #E11D48); }
+.pos-dish-thumb { height: 4.25rem; border-radius: .5rem; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #cbd5e1; font-size: 1.4rem; margin-bottom: .35rem; }
+.pos-dish-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pos-order { gap: .75rem; }
+.pos-table-panel { flex: 0 0 auto; }
+.pos-table-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; max-height: 16dvh; overflow-y: auto; }
+.table-select-card { border: 1px solid var(--border-subtle, #e2e8f0); border-radius: .6rem; background: #fff; padding: .4rem .55rem; display: flex; flex-direction: column; gap: .1rem; align-items: flex-start; text-align: left; overflow: hidden; }
+.table-select-card:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+.pos-cart { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 16rem; }
+.pos-cart #cart-container { overflow-y: auto; min-height: 6rem; flex: 1 1 auto; padding: .65rem .75rem !important; }
+.pos-cart .card-header { padding: .6rem .75rem !important; }
+.pos-cart .card-footer { padding: .75rem !important; font-size: .95rem; }
 .pos-cart .card-header, .pos-cart .card-footer { flex-shrink: 0; }
 .pos-cart .pos-item-title { overflow-wrap: anywhere; }
-.pos-cart .btn-group .btn { min-width: 2rem; }
-.table-select-card:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
-.pos-config-collapsed .pos-dish-grid { max-height: calc(100dvh - 14rem); }
+.pos-cart .pos-item-title .fw-bold { font-size: .95rem; }
+.pos-cart-line { border-color: var(--border-subtle, #e2e8f0) !important; }
+.pos-cart-line .pos-line-qty { min-width: 2.4rem; }
+.pos-cart-line .pos-line-remove { white-space: nowrap; }
+/* Dòng món vừa được thêm nháy sáng để mắt nhân viên bám theo ngay. */
+.pos-item-flash { animation: pos-item-flash 1.2s ease-out 1; }
+@keyframes pos-item-flash {
+    from { background: #fff1f2; box-shadow: 0 0 0 2px rgba(225, 29, 72, .35); }
+    to { background: #fff; box-shadow: none; }
+}
+.pos-cart #cart-items-list .card { padding: .6rem .7rem !important; }
+.pos-cart #cart-container hr { margin: .4rem 0 !important; }
+.pos-cart #cart-total-amount { font-size: 1.1rem; }
+.pos-cart .btn-group .btn { min-width: 2.4rem; }
+.pos-section-label { font-size: .72rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; margin: .15rem 0 .35rem; }
+/* Khối món đã gửi bếp: nền nhạt + viền đứt để thấy rõ là vùng chỉ đọc, không sửa/xóa. */
+.pos-locked-block, .pos-table-existing { background: #f8fafc; border: 1px dashed var(--border-subtle, #e2e8f0); border-radius: .5rem; padding: .45rem .55rem; }
+.pos-existing-list li { display: flex; flex-wrap: wrap; gap: .15rem .5rem; align-items: baseline; font-size: .88rem; padding: .35rem 0; border-bottom: 1px dashed var(--border-subtle, #e2e8f0); }
+.pos-existing-list li:last-child { border-bottom: 0; }
+@media (min-width: 992px) {
+    /* Fixed POS workspace: the three zones fill the viewport and scroll internally. */
+    .admin-main:has(.pos-page) { padding: .75rem 1rem; }
+    .admin-main .container-fluid.pos-page {
+        max-width: none; padding: 0;
+        height: calc(100dvh - 5.5rem); display: flex; flex-direction: column; gap: .5rem; overflow-y: auto;
+    }
+    .pos-layout { flex: 1 1 auto; min-height: 26rem; grid-template-columns: minmax(11rem, 13rem) minmax(0, 1fr) minmax(20rem, 25rem); align-items: stretch; }
+    .pos-categories .pos-category-list { max-height: none; }
+    /* Danh sách món đã order có vùng cuộn riêng để không ép phần giỏ order phía dưới. */
+    .pos-cart .pos-existing-list { max-height: 11dvh; overflow-y: auto; padding-right: .15rem; }
+}
+@media (max-width: 991.98px) {
+    .pos-layout { grid-template-columns: 1fr; }
+    .pos-categories .pos-category-list { flex-direction: row; flex-wrap: wrap; }
+    .pos-category-btn { width: auto; }
+    .pos-dish-scroll { max-height: 60dvh; }
+}
+@media (max-width: 767.98px) {
+    .pos-page { padding-bottom: 14rem !important; }
+    .pos-dish-scroll { max-height: 48dvh; }
+    .pos-table-picker { max-height: 40dvh; }
+    .pos-cart #cart-container { max-height: 35dvh; }
+    .pos-cart .card-footer { position: fixed; bottom: 0; left: .5rem; right: .5rem; z-index: 999; max-height: 42dvh; overflow-y: auto; border: 1px solid var(--border-subtle); box-shadow: 0 -2px 8px #0001; }
+}
 @media (min-width: 768px) {
     .sidebar-collapsed .admin-sidebar { display: none; }
     .sidebar-collapsed .admin-topbar { left: 0; }
     .sidebar-collapsed .admin-main { margin-left: 0; }
-    .pos-page { padding-left: 0; padding-right: 0; }
-    .admin-main:has(.pos-page) { padding: 1rem; }
-}
-@media (max-width: 767.98px) {
-    .pos-page { padding-bottom: 14rem !important; }
-    .pos-cart { position: static; max-height: none; }
-    .pos-cart #cart-container { max-height: 35dvh; }
-    .pos-cart .card-footer { position: fixed; bottom: 0; left: .5rem; right: .5rem; z-index: 999; max-height: 42dvh; overflow-y: auto; border: 1px solid var(--border-subtle); box-shadow: 0 -2px 8px #0001; }
-    .pos-dish-grid, .pos-config-collapsed .pos-dish-grid { max-height: 48dvh; }
-    .pos-menu-filters { flex-wrap: wrap; }
-    .pos-menu-filters .form-select { width: 100%; }
 }
 
 /* --- Admin declutter layer (giữ nguyên navigation, chỉ giảm nhiễu thị giác) --- */

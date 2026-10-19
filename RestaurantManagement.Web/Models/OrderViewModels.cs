@@ -41,6 +41,14 @@ public class OrderCreateViewModel
     public List<BanAnCardItem> OccupiedTables { get; set; } = [];
     public List<DanhMuc> Categories { get; set; } = [];
     public List<MenuDishItem> MenuDishes { get; set; } = [];
+
+    // Read-only context of the invoice being topped up (screen "Gọi thêm món").
+    public string? ExistingInvoiceCode { get; set; }
+    public string? ExistingTableLabel { get; set; }
+    public string? ExistingCustomerLabel { get; set; }
+    public List<TableOrderLineItem> ExistingItems { get; set; } = [];
+    public int ExistingQuantity => ExistingItems.Sum(x => x.SoLuong);
+    public decimal ExistingTotal => ExistingItems.Sum(x => x.ThanhTien);
 }
 
 public class BanAnCardItem
@@ -54,6 +62,23 @@ public class BanAnCardItem
     public string? KhachHang { get; set; }
     public int SoKhach { get; set; }
     public DateTimeOffset? GioNhan { get; set; }
+
+    // Dishes already ordered on the open bill of this table (POS column "Bàn đang phục vụ").
+    public string? MaHoaDonDangMo { get; set; }
+    public List<TableOrderLineItem> OrderedItems { get; set; } = [];
+    public int OrderedQuantity => OrderedItems.Sum(x => x.SoLuong);
+    public decimal OrderedTotal => OrderedItems.Sum(x => x.ThanhTien);
+}
+
+public class TableOrderLineItem
+{
+    public string TenMon { get; set; } = "";
+    public string TenSize { get; set; } = "";
+    public int SoLuong { get; set; }
+    public decimal DonGia { get; set; }
+    public TrangThaiCheBien TrangThai { get; set; }
+    public DateTimeOffset ThoiDiemGoi { get; set; }
+    public decimal ThanhTien => SoLuong * DonGia;
 }
 
 public class MenuDishItem

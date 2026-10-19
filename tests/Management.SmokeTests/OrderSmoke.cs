@@ -67,6 +67,8 @@ public static class OrderSmoke
         var createForm = await Get(admin, "/DonHang/Create");
         var createFormText = WebUtility.HtmlDecode(createForm);
         check(createFormText.Contains("Ghi nhận gọi món") && createFormText.Contains("Mang đi"), "Admin/Staff views order creation page");
+        check(createFormText.Contains("Đang phục vụ:") && createFormText.Contains("Khóa — không sửa/xóa"),
+            "POS create screen shows the serving context and locks already-ordered dishes");
 
         await Post(admin, "/DonHang/Create", createForm, new()
         {
@@ -161,6 +163,8 @@ public static class OrderSmoke
         var addDishesForm = await Get(admin, $"/DonHang/AddDishes/{tableBill!.Id}");
         check(addDishesForm.Contains("Gọi thêm món") && addDishesForm.Contains(tableBill.MaHoaDon),
             "Staff opens AddDishes view for existing bill");
+        check(WebUtility.HtmlDecode(addDishesForm).Contains("Đang phục vụ:") && addDishesForm.Contains("Món gọi thêm") && addDishesForm.Contains("Khóa — không sửa/xóa"),
+            "AddDishes screen locks ordered dishes and separates the add-on cart section");
 
         await Post(admin, $"/DonHang/AddDishes/{tableBill.Id}", addDishesForm, new()
         {

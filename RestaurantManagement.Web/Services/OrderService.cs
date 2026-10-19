@@ -25,12 +25,24 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 && x.DatBan.ThoiDiemKetThuc == null)
             .ToListAsync();
 
+        var bookingIds = bookings.Select(x => x.DatBanId).Distinct().ToList();
+        var openInvoices = await db.HoaDon.AsNoTracking()
+            .Include(x => x.ChiTiet)
+            .Where(x => x.DatBanId != null && bookingIds.Contains(x.DatBanId.Value)
+                && x.TrangThai != TrangThaiHoaDon.DaHuy && x.TrangThai != TrangThaiHoaDon.DaThanhToan)
+            .OrderByDescending(x => x.ThoiDiemLap)
+            .ToListAsync();
+
         return occupiedTables.Select(t =>
         {
             var b = bookings.Where(x => x.BanAnId == t.Id)
                 .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan)
                 .Select(x => x.DatBan)
                 .FirstOrDefault();
+
+            var openInvoice = b is null
+                ? null
+                : openInvoices.FirstOrDefault(x => x.DatBanId == b.Id);
 
             return new BanAnCardItem
             {
@@ -42,10 +54,28 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 DatBanId = b?.Id,
                 KhachHang = b?.HoTenLienHe,
                 SoKhach = (b?.SoNguoiLon ?? 0) + (b?.SoTreEm ?? 0),
-                GioNhan = b?.ThoiDiemNhanBan
+                GioNhan = b?.ThoiDiemNhanBan,
+                MaHoaDonDangMo = openInvoice?.MaHoaDon,
+                OrderedItems = openInvoice is null
+                    ? []
+                    : openInvoice.ChiTiet
+                        .Where(x => x.TrangThai != TrangThaiCheBien.DaHuy)
+                        .OrderBy(x => x.ThoiDiemGoi).ThenBy(x => x.Id)
+                        .Select(ToOrderLine)
+                        .ToList()
             };
         }).ToList();
     }
+
+    private static TableOrderLineItem ToOrderLine(ChiTietHoaDon detail) => new()
+    {
+        TenMon = detail.TenMonLucBan,
+        TenSize = string.IsNullOrWhiteSpace(detail.TenSizeLucBan) ? "Mặc định" : detail.TenSizeLucBan,
+        SoLuong = detail.SoLuong,
+        DonGia = detail.DonGia,
+        TrangThai = detail.TrangThai,
+        ThoiDiemGoi = detail.ThoiDiemGoi
+    };
 
     public async Task<OrderCreateViewModel> PrepareCreateViewModelAsync(int? banAnId = null)
     {
