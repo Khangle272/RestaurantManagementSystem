@@ -462,3 +462,59 @@ Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ
 - **Tích hợp:** Không đổi schema, `DatBanId`, cọc, hóa đơn, món hay trạng thái bếp. Người 3 vẫn dùng đúng lượt/bàn để gọi món và thanh toán; nhân viên kết thúc lượt, xử lý nghĩa vụ còn lại rồi dọn bàn theo luồng đang có. Không tự đóng bàn khi còn tiền/món chưa xử lý.
 - **Kiểm chứng mới:** 76 kiểm tra riêng phần ca đạt; bộ toàn dự án đạt **952 kiểm tra HTTP/database**. Có ca 17:00 chặn cùng bàn lúc 19:30, cho phép bàn khác, báo hết chỗ khi bàn khác cũng đã đặt, chặn POST xếp bàn trực tiếp, và chỉ mở bàn cùng ngày sau khi trạng thái chuyển `SanSang`. Kiểm tra cũ cho phép đặt sát ngay sau 2 tiếng đã được sửa thành kỳ vọng từ chối ở mốc đó và cho phép sau mốc 3 tiếng nếu bàn sẵn sàng. Database thử được xóa sau chạy. Build 0 lỗi; cảnh báo NU1902/NU1903 ở gói dùng chung vẫn còn.
 - **Trạng thái bàn giao:** Commit `b7d0d74` đã có trên nhánh GitHub `member2-week9`; hai dòng “chưa push” phía trên là trạng thái ở thời điểm ghi trước đó. Chưa merge vào `master`. Phần Người 2 ở nhánh này là web đặt bàn/sơ đồ; tablet cho khách chọn món thuộc luồng Người 3 theo định hướng nhóm. Ảnh phân công vẫn có chữ mobile cho Người 2, nên cần xác nhận lại cách tính phần đó với cô, không tự nhận đã có app native.
+
+## 12. Tuần 9 — POS gọi món: gỡ popup chọn món & bố cục 3 cột — 19/10/2026
+
+### Phạm vi và quyết định
+
+- Hai yêu cầu **1.1 (gỡ hộp thoại khi chọn món)** và **1.2 (chia cố định 3 cột)** được áp cho màn hình POS gọi món trên Web Desktop: **Ghi nhận gọi món** (`/DonHang/Create`) và **Gọi thêm món** (`/DonHang/AddDishes`) — thuộc phần POS–đơn hàng của phân công tuần 9.
+- Thực đơn/giỏ phía khách (`Home`, `_CustomerCart.cshtml`, `customer-cart.js`) giữ nguyên trong lượt này; nếu nhóm muốn gỡ hộp thoại chọn món tương tự ở phía khách thì mở việc riêng vì đó là luồng khách tự đặt, không phải POS nhân viên.
+- Không đổi schema, migration, nghiệp vụ tính tiền/cọc, KDS, hay đặt bàn/sơ đồ; chỉ đọc thêm hóa đơn đang mở của lượt bàn để hiển thị, không thêm bảng/cột.
+
+### Đã làm
+
+1. **Không còn popup khi chọn món (1.1).** Mỗi thẻ món hiển thị sẵn nút size + giá; bấm là món vào giỏ ngay, chọn lại cùng size thì cộng dồn (tối đa 999 phần/dòng); phản hồi nằm trong giỏ (số món, tăng/giảm/xóa, ghi chú chế biến, tạm tính). Chọn “Tại bàn” khi chưa chọn bàn thì hiện cảnh báo ngay trong trang (`#table-validation-error`) và cuộn tới vùng chọn bàn, không mở dialog. Dòng mô tả đầu trang nói rõ màn hình không dùng hộp thoại.
+2. **Bố cục cố định 3 phân vùng (1.2).**
+   - Trái — **Danh mục**: tab dọc `[data-pos-category]` gồm “Tất cả món” và từng danh mục kèm số món; danh mục chưa có món bị khóa; chọn danh mục lọc lưới món kết hợp ô tìm theo tên.
+   - Giữa — **Danh sách món**: lưới thẻ món (ảnh, tên, mô tả tối đa 2 dòng, nút size + giá).
+   - Phải — **Bàn đang phục vụ & Giỏ order**: thẻ bàn (mã bàn, khu vực/tầng, khách, badge “N phần đã order”); chọn bàn hiện ngay “Món đã order của bàn” (số lượng × món, size, giờ gọi UTC+7, thành tiền, tổng, mã hóa đơn đang mở) lấy từ hóa đơn chưa thanh toán của lượt; bên dưới là giỏ order món mới + ghi chú đơn + nút gửi. Khối loại đơn vẫn thu gọn sau khi chọn bàn và mở lại bằng nút “Đổi bàn” như trước.
+   - Trang **Gọi thêm món** dùng cùng bố cục với một đích cố định (bàn/khách + mã hóa đơn) và danh sách món đã order kèm badge trạng thái chế biến (Chờ nấu/Đang nấu/Sẵn sàng/Đã phục vụ/Đã hủy).
+   - **Desktop ≥992px**: workspace cao `calc(100dvh - 5.5rem)`, cột `minmax(11rem,13rem) | 1fr | minmax(20rem,25rem)`, từng vùng tự cuộn bên trong; **<992px** xếp dọc 3 vùng; **<768px** chân giỏ ghim đáy.
+   - **Cân đối lại theo ảnh chụp trực quan từ người dùng (19/10):** cột phải rộng hơn; danh sách bàn giới hạn 16dvh; “Món đã order của bàn” có vùng cuộn riêng (11dvh) để không ép phần giỏ; tăng cỡ chữ/nút trong giỏ (tên món `.95rem`, nút số lượng tối thiểu `2.4rem`, chân giỏ `.95rem`, tạm tính `1.1rem`); giảm padding thừa của thẻ giỏ và cho dòng mô tả đầu trang gọn 1 dòng trên desktop.
+3. **Dữ liệu và tương thích.** `OrderService.GetOccupiedTablesAsync` nạp thêm hóa đơn chưa thanh toán + dòng món chưa hủy của từng lượt bàn; `DonHangController.AddDishes` (GET) nạp ngữ cảnh đơn đang mở. Giữ nguyên toàn bộ id/hợp đồng JavaScript mà kiểm thử đang dùng; phần mới chỉ thêm `[data-pos-category]`, `[data-table-order]`, `#pos-existing-empty` và có phòng vệ khi phần tử thiếu (trang Gọi thêm món không có danh sách bàn). Đặc tả UI ở Mục 11 của `DESIGN.md`.
+
+### Kiểm chứng và giới hạn
+
+- Build solution/Web: **0 lỗi biên dịch**; cảnh báo NuGet sẵn có NU1902/NU1903 của gói dùng chung vẫn còn, không gọi build này là sạch cảnh báo.
+- Bộ tích hợp toàn phần: **PASS 964 kiểm tra HTTP/database** trên database GUID riêng đã tự xóa sau chạy, gồm các ca `/DonHang/Create` và `AddDishes` của `OrderSmoke` (không sửa kỳ vọng cũ).
+- Kiểm thử DOM/cú pháp Node: `StaffPosUiSmoke.cjs` (vùng 3 cột, tab danh mục, panel món đã order, thêm món một chạm không modal), `customer-cart.check.cjs` và `reservation-payment.check.cjs` đều đạt; `git diff --check` đạt.
+- Bộ tích hợp chạy HTTPS với chính sách cookie Secure nên cần chứng chỉ development tin cậy; máy chạy lượt này chưa tin cậy chứng chỉ dev, đã bật trước khi chạy (không hạ chính sách cookie của ứng dụng để test).
+- **Kiểm trực quan:** đã có ảnh chụp màn hình từ người dùng xác nhận bố cục 3 cột chạy đúng; theo ảnh, cột phải/giỏ còn nhỏ nên đã cân đối lại như trên (thay đổi chỉ ở CSS, không đổi HTML/JS). Cần chụp lại sau tinh chỉnh ở desktop 1280px và khung hẹp 390px. Chưa kiểm tải lớn.
+- Trạng thái bàn giao: các thay đổi đang ở **working tree trên `master`, chưa commit/push** tại thời điểm ghi (đứng sau `aaab2ec`). Người phụ trách nhóm quyết định tạo nhánh/PR; không merge thẳng nếu chưa chạy lại kiểm thử.
+
+## 13. Tuần 9 — POS gọi món: tinh gọn thông tin món, chọn nhanh & khóa món đã gửi bếp — 19/10/2026
+
+### Phạm vi và quyết định
+
+- Bảy yêu cầu **2.1–3.4** áp cho hai màn hình POS nhân viên (`/DonHang/Create`, `/DonHang/AddDishes`) và danh sách quản lý món (`/MonAn`); trang khách (`Home`, `_MenuCard.cshtml`) giữ nguyên — mô tả món chỉ còn hiển thị cho khách.
+- Món đã gửi bếp chỉ hiển thị để đối chiếu và bị **khóa**: POS không thêm nút sửa/xóa cho các món này; mọi thay đổi (hủy đổi trạng thái) vẫn đi qua luồng chi tiết đơn như cũ.
+- Món nhiều size: bấm cả thẻ món thêm **size mặc định (size đầu tiên theo giá)**; muốn size khác bấm nút size tương ứng — giữ một thao tác chạm là món vào giỏ, không mở hộp thoại.
+- Trường `MoTa` vẫn giữ trong form sửa món (nhãn “chỉ hiển thị cho khách hàng”) vì đó là màn nhập liệu của quản lý, không phải màn hiển thị cho nhân viên phục vụ.
+
+### Đã làm
+
+1. **Rút gọn thông tin món (2.1) & ẩn mô tả nguyên liệu (2.2).** Thẻ món ở lưới POS bỏ dòng mô tả — chỉ còn ảnh nhỏ, tên món, nút size + giá; thẻ món ở `MonAn/Index` bỏ đoạn mô tả, giữ ảnh, tên, danh mục/trạng thái, giá, số size; form món đổi nhãn mô tả. Trang khách vẫn hiển thị mô tả như trước.
+2. **Chọn món nhanh bằng click cả thẻ (2.3).** JS tách hàm `addMenuItem` dùng chung cho nút size và lưới `#dish-grid`: bấm vào thẻ (ngoài nút size) là món vào giỏ ngay ở cột phải, thẻ đổi con trỏ/sáng viền khi rê chuột, nút size đầu tiên được làm nổi; dòng mới trong giỏ nháy sáng (`pos-item-flash`). Chưa chọn bàn ở chế độ “Tại bàn” thì vẫn bị chặn bằng `#table-validation-error` như trước, không mở dialog.
+3. **Ngữ cảnh “Đang phục vụ: [Tên Bàn]” (3.1).** Tiêu đề giỏ ở màn tạo đơn luôn hiển thị và cập nhật theo bàn/loại đơn (`#order-target-display`, `#pos-current-table`); màn gọi thêm hiển thị cố định theo hóa đơn (bàn hoặc Mang đi/Giao hàng) kèm khách.
+4. **Chi tiết dòng trong giỏ (3.2).** Mỗi dòng gồm tên món + badge size, “Đơn giá”, bộ “Số lượng” với nút Tăng/Giảm, “Thành tiền” và nút “Xóa”; giữ nguyên các input ẩn `Items[i].MonAnId/MonAnSizeId/SoLuong/YeuCauCheBien` cho form.
+5. **Khóa món đã gửi bếp (3.3).** Mục “Món đã order của bàn (đã gửi bếp)” ở màn tạo đơn và “Món đã order — đã gửi bếp” ở màn gọi thêm có nhãn “Khóa — không sửa/xóa”, badge trạng thái chế biến (Chờ nấu/Đang nấu/Sẵn sàng/Đã phục vụ/Đã hủy), `data-locked="true"` và không có nút sửa/xóa.
+6. **Tách mục “Món gọi thêm” (3.4).** Giỏ của màn gọi thêm là mục riêng “Món gọi thêm (chưa gửi bếp)”, chỉ chọn thêm món mới; nút gửi đổi thành “Gửi bếp — món gọi thêm”; các món đã order nằm ở mục khóa phía trên.
+
+### Kiểm chứng và giới hạn
+
+- `StaffPosUiSmoke.cjs` đạt, bổ sung ca **click thẻ món thêm nhanh** và **chi tiết dòng giỏ** (Số lượng/Đơn giá/Thành tiền/Xóa ±); `customer-cart.check.cjs` và `reservation-payment.check.cjs` vẫn đạt; `git diff --check` sạch.
+- Bộ tích hợp toàn phần: **PASS 966 kiểm tra HTTP/database** (tăng 2 ca so với lượt trước nhờ 2 kiểm tra giao diện mới trong `OrderSmoke`: dòng “Đang phục vụ:”, nhãn khóa, mục “Món gọi thêm” trên `/DonHang/Create` và `AddDishes`), database GUID riêng tự xóa sau chạy.
+- Build Web: **0 lỗi biên dịch** (cảnh báo NuGet sẵn có NU1902/NU1903 vẫn còn ở gói dùng chung của test project).
+- **Chưa chụp lại màn hình trình duyệt** sau các thay đổi 2.1–3.4; trước demo nên rà `/DonHang/Create` và `/DonHang/AddDishes` ở desktop 1280px + khung hẹp 390px (mô phỏng click thẻ món, kiểm tra nháy sáng trong giỏ, nhãn khóa ở cột phải). Chưa kiểm tải lớn.
+- Giới hạn đã biết: bấm cả thẻ món luôn thêm size đầu tiên (size rẻ nhất theo giá) — nhóm có thể yêu cầu đổi thành size đang chọn gần nhất nếu cần. Mục 12 (bản ghi trước) mô tả lưới món “có mô tả tối đa 2 dòng” — nay bỏ theo 2.1/2.2.
+- Trạng thái bàn giao: thay đổi 1.1–3.4 đang ở **working tree trên `master`, chưa commit/push** (đứng sau `aaab2ec`); `RestaurantManagement.Web/appsettings.json` có chỉnh máy cục bộ (`Server=.\SQLEXPRESS`) không thuộc phạm vi hai việc này — không đưa vào commit nếu nhóm không muốn.

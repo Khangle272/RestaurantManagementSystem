@@ -1,57 +1,174 @@
 @model RestaurantManagement.Web.Models.OrderCreateViewModel
+@using RestaurantManagement.API.Models
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Gọi thêm món - " + ViewBag.MaHoaDon;
+    var dishCountByCategory = Model.MenuDishes.GroupBy(x => x.DanhMucId).ToDictionary(x => x.Key, x => x.Count());
+    var isDineIn = Model.LoaiDonHang == LoaiDonHang.TaiBan;
+    var servingLabel = isDineIn
+        ? (string.IsNullOrWhiteSpace(Model.ExistingTableLabel) ? "Tại bàn" : Model.ExistingTableLabel)
+        : Model.LoaiDonHang == LoaiDonHang.MangDi ? "Mang đi" : "Giao hàng";
+    string StatusLabel(TrangThaiCheBien status) => status switch
+    {
+        TrangThaiCheBien.ChoCheBien => "Chờ nấu",
+        TrangThaiCheBien.DangCheBien => "Đang nấu",
+        TrangThaiCheBien.SanSang => "Sẵn sàng",
+        TrangThaiCheBien.DaPhucVu => "Đã phục vụ",
+        _ => "Đã hủy"
+    };
+    string StatusClass(TrangThaiCheBien status) => status switch
+    {
+        TrangThaiCheBien.ChoCheBien => "bg-warning-subtle text-warning-emphasis border border-warning-subtle",
+        TrangThaiCheBien.DangCheBien => "bg-info-subtle text-info-emphasis border border-info-subtle",
+        TrangThaiCheBien.SanSang => "bg-success-subtle text-success-emphasis border border-success-subtle",
+        TrangThaiCheBien.DaPhucVu => "bg-light text-success border border-success-subtle",
+        _ => "bg-danger-subtle text-danger border border-danger-subtle"
+    };
 }
-<div class="container-fluid py-2 pos-page">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-        <div><h1 class="h4 mb-1">Gọi thêm món</h1><p class="small text-muted mb-0">Đơn hàng <strong class="text-primary">@ViewBag.MaHoaDon</strong></p></div>
-        <a asp-action="Details" asp-route-id="@ViewBag.HoaDonId" class="btn btn-sm btn-outline-secondary">Quay lại đơn</a>
+
+<div class="container-fluid pos-page">
+    <div class="pos-page-header">
+        <div>
+            <h1 class="h4 mb-1">Gọi thêm món</h1>
+            <p class="text-muted small mb-0">Đơn hàng <strong class="text-primary">@ViewBag.MaHoaDon</strong> · chỉ chọn thêm món; bấm vào thẻ món (hoặc size) để thêm vào giỏ ngay, không mở hộp thoại.</p>
+        </div>
+        <a asp-action="Details" asp-route-id="@ViewBag.HoaDonId" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại đơn</a>
     </div>
+
     <form asp-action="AddDishes" asp-route-id="@ViewBag.HoaDonId" method="post" id="add-dishes-form" data-ajax-form="true" data-pos-form="add" data-invoice-id="@ViewBag.HoaDonId" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-        <div class="row g-2 pos-columns">
-            <div class="col-12 col-md-7 col-xl-8 pos-menu-column">
-                <div class="card border-0 shadow-sm pos-menu-card"><div class="card-body p-3">
-                    <div class="pos-menu-filters mb-2">
-                        <label class="visually-hidden" for="dish-category">Danh mục món</label><select id="dish-category" class="form-select form-select-sm"><option value="all">Tất cả danh mục</option>@foreach (var category in Model.Categories) { <option value="@category.Id">@category.TenDanhMuc</option> }</select>
-                        <label class="visually-hidden" for="dish-search">Tìm món ăn</label><input type="search" id="dish-search" class="form-control form-control-sm" placeholder="Tìm món ăn..." />
+
+        <div class="pos-layout">
+            <!-- Phân vùng 1: Cột trái - Danh mục món ăn -->
+            <aside class="pos-zone pos-categories card" aria-label="Danh mục món ăn">
+                <div class="card-header bg-white">
+                    <h2 class="h6 mb-0"><i class="bi bi-grid-3x3-gap me-1"></i>Danh mục</h2>
+                </div>
+                <div class="pos-category-list" role="tablist" aria-orientation="vertical">
+                    <input type="hidden" id="dish-category" value="all" />
+                    <button type="button" class="pos-category-btn active" data-pos-category="all" role="tab" aria-selected="true">
+                        <span class="pos-category-name">Tất cả món</span><span class="pos-category-count">@Model.MenuDishes.Count</span>
+                    </button>
+                    @foreach (var category in Model.Categories)
+                    {
+                        var count = dishCountByCategory.TryGetValue(category.Id, out var value) ? value : 0;
+                        <button type="button" class="pos-category-btn" data-pos-category="@category.Id" role="tab" aria-selected="false" disabled="@(count == 0)">
+                            <span class="pos-category-name">@category.TenDanhMuc</span><span class="pos-category-count">@count</span>
+                        </button>
+                    }
+                </div>
+            </aside>
+
+            <!-- Phân vùng 2: Cột giữa - Danh sách món thuộc danh mục đang chọn -->
+            <section class="pos-zone pos-dishes card" aria-label="Danh sách món ăn">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center">
+                    <h2 class="h6 mb-0"><i class="bi bi-journal-richtext me-1"></i>Danh sách món</h2>
+                    <div class="pos-dish-search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <label class="visually-hidden" for="dish-search">Tìm món ăn</label>
+                        <input type="search" id="dish-search" class="form-control form-control-sm" placeholder="Tìm món ăn..." autocomplete="off" />
                     </div>
+                </div>
+                <div class="card-body p-2 pos-dish-scroll">
                     @if (Model.MenuDishes.Count == 0)
                     {
-                        <div class="alert alert-warning" role="alert">Thực đơn chưa có món sẵn sàng phục vụ. Kiểm tra món đã duyệt và size đang mở bán trước khi gửi món thêm.</div>
+                        <div class="alert alert-warning mb-0" role="alert">Thực đơn chưa có món sẵn sàng phục vụ. Kiểm tra món đã duyệt và size đang mở bán trước khi gửi món thêm.</div>
                     }
-                    <div class="row g-2 pos-dish-grid" id="dish-grid">
+                    <div class="pos-dish-grid" id="dish-grid">
                         @foreach (var dish in Model.MenuDishes)
                         {
-                            <div class="col-6 col-xl-4 dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
-                                <div class="card h-100 border shadow-none"><div class="card-body p-2 d-flex flex-column">
-                                    <strong class="small text-dark">@dish.TenMon</strong><span class="small text-muted mb-2">@(dish.MoTa ?? "Món đặc sản nhà hàng")</span>
-                                    <div class="d-flex flex-column gap-1 mt-auto">
-                                        @foreach (var size in dish.Sizes)
-                                        {
-                                            <button type="button" class="btn btn-sm btn-outline-primary d-flex justify-content-between gap-1 btn-add-dish" data-dish-id="@dish.Id" data-dish-name="@dish.TenMon" data-size-id="@size.Id" data-size-name="@size.TenSize" data-price="@size.GiaBan.ToString(System.Globalization.CultureInfo.InvariantCulture)"><span>@size.TenSize</span><strong>@size.GiaBan.ToString("N0") đ +</strong></button>
-                                        }
+                            <div class="dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
+                                <div class="card h-100 shadow-none pos-dish-card" title="Bấm vào thẻ để thêm @dish.TenMon vào giỏ">
+                                    <div class="card-body p-2 d-flex flex-column">
+                                        <div class="pos-dish-thumb">
+                                            @if (!string.IsNullOrWhiteSpace(dish.HinhAnh))
+                                            {
+                                                <img src="@dish.HinhAnh" alt="@dish.TenMon" loading="lazy" />
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-egg-fried" aria-hidden="true"></i>
+                                            }
+                                        </div>
+                                        <strong class="small text-dark">@dish.TenMon</strong>
+                                        <div class="pos-dish-sizes d-flex flex-column gap-1 mt-auto pt-1">
+                                            @foreach (var size in dish.Sizes)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary d-flex justify-content-between gap-1 btn-add-dish" data-dish-id="@dish.Id" data-dish-name="@dish.TenMon" data-size-id="@size.Id" data-size-name="@size.TenSize" data-price="@size.GiaBan.ToString(System.Globalization.CultureInfo.InvariantCulture)"><span>@size.TenSize</span><strong>@size.GiaBan.ToString("N0") đ +</strong></button>
+                                            }
+                                        </div>
                                     </div>
-                                </div></div>
+                                </div>
                             </div>
                         }
                     </div>
                     <p id="pos-no-results" class="small text-muted mt-3" hidden>Không tìm thấy món phù hợp.</p>
-                </div></div>
-            </div>
-            <div class="col-12 col-md-5 col-xl-4">
-                <div class="card border-0 shadow-sm pos-cart">
-                    <div class="card-header bg-white p-3"><div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">Món gọi thêm (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div></div>
-                    <div class="card-body p-2" id="cart-container"><div id="empty-cart-message" class="text-center py-4 text-muted small">Chưa có món. Chọn size ở thực đơn để thêm.</div><div id="cart-items-list" class="d-flex flex-column gap-2"></div></div>
+                </div>
+            </section>
+
+            <!-- Phân vùng 3: Cột phải - Bàn đang phục vụ (kèm món đã order) & Giỏ order -->
+            <aside class="pos-zone pos-order" aria-label="Bàn đang phục vụ và giỏ order">
+                <div class="card pos-table-panel">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h2 class="h6 mb-0"><i class="bi bi-people me-1"></i>@(isDineIn ? "Bàn đang phục vụ" : "Đơn đang phục vụ")</h2>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">@ViewBag.MaHoaDon</span>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="pos-current-target-static">
+                            <strong class="text-primary">Đang phục vụ: @servingLabel</strong>
+                            <span class="small text-muted d-block">@(isDineIn ? "Tại bàn" : servingLabel)@(string.IsNullOrWhiteSpace(Model.ExistingCustomerLabel) ? "" : $" · {Model.ExistingCustomerLabel}")</span>
+                        </div>
+                        <div class="pos-section-label mt-2 d-flex justify-content-between align-items-center gap-2">
+                            <span><i class="bi bi-lock-fill me-1"></i>Món đã order (@Model.ExistingQuantity phần) — đã gửi bếp</span>
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Khóa — không sửa/xóa</span>
+                        </div>
+                        <div class="pos-locked-block" data-locked="true">
+                            @if (Model.ExistingItems.Count == 0)
+                            {
+                                <p class="small text-muted mb-0">Đơn chưa có món nào.</p>
+                            }
+                            else
+                            {
+                                <ul class="pos-existing-list list-unstyled mb-1">
+                                    @foreach (var line in Model.ExistingItems)
+                                    {
+                                        <li>
+                                            <span class="fw-semibold">@line.SoLuong × @line.TenMon</span>
+                                            <span class="text-muted small">@line.TenSize · @line.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                                            <span class="ms-auto">@line.ThanhTien.ToString("N0") đ</span>
+                                            <span class="badge @StatusClass(line.TrangThai)">@StatusLabel(line.TrangThai)</span>
+                                        </li>
+                                    }
+                                </ul>
+                                <div class="d-flex justify-content-between small border-top pt-1 mb-1">
+                                    <span class="text-muted">Tổng món đã order</span>
+                                    <strong>@Model.ExistingTotal.ToString("N0") đ</strong>
+                                </div>
+                            }
+                        </div>
+                        <a asp-action="Details" asp-route-id="@ViewBag.HoaDonId" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-receipt me-1"></i>Xem chi tiết đơn hàng</a>
+                    </div>
+                </div>
+
+                <div class="card pos-cart">
+                    <div class="card-header bg-white p-3"><div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0"><i class="bi bi-basket me-1"></i>Món gọi thêm (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div></div>
+                    <div class="card-body p-2" id="cart-container">
+                        <div class="pos-section-label d-flex justify-content-between align-items-center gap-2">
+                            <span><i class="bi bi-plus-circle me-1"></i>Món gọi thêm (chưa gửi bếp)</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Chỉ thêm mới</span>
+                        </div>
+                        <p class="small text-muted mb-2">Món đã order ở trên đã khóa và không thể sửa/xóa; chỉ chọn thêm món mới ở đây rồi bấm “Gửi bếp”.</p>
+                        <div id="empty-cart-message" class="text-center py-3 text-muted small">Chưa có món. Bấm vào thẻ món hoặc size ở cột giữa để thêm ngay vào giỏ.</div>
+                        <div id="cart-items-list" class="d-flex flex-column gap-2"></div>
+                    </div>
                     <div class="card-footer bg-light p-3">
                         <div class="d-flex justify-content-between small mb-1"><span>Số lượng thêm</span><strong id="cart-total-qty">0 phần</strong></div>
                         <div class="d-flex justify-content-between mb-2"><strong>Tiền thêm</strong><strong class="text-danger" id="cart-total-amount">0 đ</strong></div>
-                        <button type="submit" id="btn-submit-order" class="btn btn-primary w-100 fw-bold" disabled>✓ Gửi món thêm vào bếp</button>
+                        <button type="submit" id="btn-submit-order" class="btn btn-primary w-100 fw-bold" disabled>✓ Gửi bếp — món gọi thêm</button>
                     </div>
                 </div>
-            </div>
+            </aside>
         </div>
         <script type="application/json" id="pos-initial-items">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items))</script>
     </form>

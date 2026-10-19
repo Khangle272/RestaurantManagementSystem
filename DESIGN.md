@@ -253,6 +253,9 @@ Toàn bộ các trang quản trị Web (gồm trang Quản lý Thực đơn và 
 * Giá bán niêm yết (Chữ to màu đỏ thương hiệu `#E11D48`, định dạng tiền tệ).
 
 
+* Không hiển thị mô tả thành phần/nguyên liệu chi tiết trên màn hình nhân viên — thông tin này chỉ dành cho khách hàng trên app/tablet (xem thêm Mục 11.4).
+
+
 * Nút gạt nhanh (Toggle Switch): Bật/Tắt trạng thái phục vụ tức thời.
 
 
@@ -579,3 +582,42 @@ Giao diện KDS được tối ưu để đầu bếp quan sát rõ nét từ kh
   + **Xóa hoàn toàn** Mã đơn hàng (`MaHoaDon` / `Order ID #12345`).
   + **Xóa hoàn toàn** Đơn giá và Giá tiền (`VNĐ`).
   + Bếp chỉ tập trung vào: Bàn nào - Ngày giờ nào - Nấu món gì - Size gì - Số lượng bao nhiêu đĩa - Ghi chú chế biến ra sao.
+
+### 11. ĐẶC TẢ GIAO DIỆN: MÀN HÌNH POS GỌI MÓN — BỎ POPUP & BỐ CỤC 3 CỘT (W9)
+
+Áp dụng cho hai màn hình nhân viên của phân hệ POS–đơn hàng: **Ghi nhận gọi món** (`Views/DonHang/Create.cshtml`) và **Gọi thêm món** (`Views/DonHang/AddDishes.cshtml`). Phạm vi là Web Desktop; trang thực đơn/giỏ phía khách giữ nguyên. Tuân thủ Design Tokens tại Mục 1 và Layout Shell tại Mục 2.
+
+#### 11.1. Gỡ bỏ popup chọn món (Task 1.1)
+- Bấm chọn món **không mở bất kỳ Modal Popup/Dialog nào**. Mỗi thẻ món hiển thị sẵn các nút size kèm giá bán; bấm vào size là món vào giỏ ngay, chọn lại cùng size thì cộng dồn số lượng (tối đa 999 phần/dòng).
+- Phản hồi thao tác nằm ngay trong màn hình: số món trên tiêu đề giỏ, từng dòng món có nút tăng/giảm/xóa và ô ghi chú chế biến, số lượng và tạm tính ở chân giỏ. Dòng mô tả dưới tiêu đề trang nói rõ “màn hình gọi món không dùng hộp thoại bật lên”.
+- Chọn “Tại bàn” nhưng chưa chọn bàn: thao tác thêm món bị chặn bằng cảnh báo ngay trong vùng chọn bàn (`#table-validation-error`) và tự cuộn tới khu vực cần chọn, vẫn không bật dialog.
+
+#### 11.2. Bố cục cố định 3 phân vùng (Task 1.2)
+```
++------------------+-----------------------------+-----------------------------------+
+| (1) DANH MỤC     | (2) DANH SÁCH MÓN           | (3) BÀN ĐANG PHỤC VỤ & GIỎ ORDER  |
+| Tab dọc + đếm món| Lưới thẻ món + ô tìm kiếm   | Thẻ bàn -> món đã order -> giỏ    |
++------------------+-----------------------------+-----------------------------------+
+```
+- **Phân vùng 1 — Cột trái, Danh mục:** danh sách nút tab dọc `[data-pos-category]` gồm “Tất cả món” và từng danh mục kèm số món; danh mục chưa có món bị vô hiệu hóa. Chọn danh mục lọc ngay lưới món ở cột giữa, kết hợp ô tìm theo tên. Màn hình hẹp (<992px) chuyển thành dải nút ngang.
+- **Phân vùng 2 — Cột giữa, Danh sách món:** lưới thẻ món auto-fill (tối thiểu 9.5rem/thẻ) chỉ gồm **ảnh nhỏ, tên món và các nút size + giá** — không hiển thị mô tả thành phần/nguyên liệu; món chưa có ảnh dùng biểu tượng thay thế; không có kết quả tìm hiện thông báo. Bấm vào bất kỳ vị trí nào trên thẻ món cũng thêm ngay size mặc định (size đầu tiên) vào giỏ; các nút size vẫn cho chọn size cụ thể (xem 11.4).
+- **Phân vùng 3 — Cột phải, Bàn đang phục vụ & Giỏ order:**
+  + Thẻ bàn đang phục vụ hiển thị mã bàn, khu vực/tầng, tên khách và badge “N phần đã order”. Khối loại đơn (Tại bàn/Mang đi/Giao hàng) nằm trên danh sách bàn; sau khi chọn bàn khối này thu gọn lại và mở bằng nút “Đổi bàn” (giữ hành vi tối ưu diện tích đã có).
+  + Chọn bàn hiện ngay “Món đã order của bàn (đã gửi bếp)”: từng dòng số lượng × tên món, size, giờ gọi (UTC+7), thành tiền và badge trạng thái chế biến, kèm tổng và mã hóa đơn đang mở của lượt bàn. Mục này ở trạng thái **khóa** — nhãn “Khóa — không sửa/xóa”, không có nút sửa/xóa nào (xem 11.4).
+  + Giỏ order món mới nằm dưới cùng: mỗi dòng đủ **tên món, size, số lượng (Tăng/Giảm), đơn giá, thành tiền và nút Xóa**; dòng vừa thêm nháy sáng để bám mắt. Chân giỏ có số lượng, tạm tính, ghi chú đơn và nút gửi; “Xóa tất cả” làm trống giỏ. Tiêu đề giỏ hiển thị dòng “Đang phục vụ: [Tên Bàn]” theo bàn/loại đơn đang chọn.
+- **Trang Gọi thêm món** dùng cùng bố cục: dòng “Đang phục vụ: [Tên Bàn]” cố định theo hóa đơn; danh sách “Món đã order — đã gửi bếp” khóa hoàn toàn kèm badge trạng thái chế biến: `Chờ nấu`, `Đang nấu`, `Sẵn sàng`, `Đã phục vụ`, `Đã hủy`; giỏ được tách thành mục riêng **“Món gọi thêm (chưa gửi bếp)”** chỉ cho chọn thêm món mới, nút gửi là “Gửi bếp — món gọi thêm”.
+- **Desktop (≥992px):** workspace cố định theo chiều cao `calc(100dvh - 5.5rem)` với 3 cột `minmax(11rem,13rem) | 1fr | minmax(20rem,25rem)`; từng vùng tự cuộn bên trong. Danh sách bàn giới hạn 16dvh và danh sách món đã order cuộn riêng 11dvh để ưu tiên chiều cao cho giỏ order; chữ/nút trong giỏ lớn hơn (tên món `.95rem`, nút số lượng ≥ `2.4rem`, tạm tính `1.1rem`). **<992px** xếp dọc 3 vùng; **<768px** chân giỏ ghim đáy để thao tác nhanh trên màn hình nhỏ.
+
+#### 11.3. Ràng buộc tương thích
+- Giữ nguyên các id/hợp đồng mà JavaScript và kiểm thử đang dùng (`selected-table-id`, `selected-booking-id`, `dish-search`, `dish-category`, `cart-*`, `btn-submit-order`, `[data-table-id]`, `.btn-add-dish`, `#section-dinein`, `#pos-order-config`…). Phần mới dùng `[data-pos-category]`, `[data-table-order]`, `[data-locked]`, `.pos-dish-card`, `#dish-grid`, `#pos-existing-empty`.
+- Mã JavaScript tra cứu phần tử mới có phòng vệ khi phần tử thiếu (trang Gọi thêm món không có danh sách bàn; môi trường DOM-stub không có lưới thẻ) và không phụ thuộc Bootstrap.
+- `tests/Management.SmokeTests/StaffPosUiSmoke.cjs` khóa hợp đồng vùng 3 cột – tab danh mục – panel món đã order – thêm nhanh từ thẻ món – chi tiết dòng giỏ; `OrderSmoke` khóa thêm các dấu hiệu giao diện “Đang phục vụ:”, “Khóa — không sửa/xóa”, “Món gọi thêm” ngoài luồng tạo đơn/gọi thêm.
+
+#### 11.4. Tinh gọn thông tin món, chọn nhanh & khóa món đã gửi bếp (Task 2.1–3.4)
+- **Rút gọn thông tin món (2.1):** thẻ món ở cả hai màn hình POS chỉ còn **tên món, ảnh nhỏ, size và giá tiền**. Danh sách quản lý món (`Views/MonAn/Index.cshtml`) bỏ đoạn mô tả, giữ ảnh, tên, danh mục/trạng thái, giá và số size.
+- **Ẩn mô tả nguyên liệu khỏi màn hình nhân viên (2.2):** mô tả thành phần chi tiết (`MoTa`) không còn xuất hiện ở lưới POS và danh sách quản lý món. Trường này vẫn sửa được trong form món ăn với nhãn “Mô tả món — chỉ hiển thị cho khách hàng trên app/tablet” và chỉ hiển thị cho khách ở `Home`/`_MenuCard.cshtml`.
+- **Chọn món nhanh bằng click cả thẻ (2.3):** bấm bất kỳ vị trí nào trên thẻ món (ngoài nút size) sẽ thêm ngay size mặc định — size đầu tiên theo giá — vào giỏ ở cột phải; thẻ đổi con trỏ và sáng viền khi rê chuột, nút size đầu tiên được làm nổi để biết size sẽ thêm. Món vừa thêm nháy sáng trong giỏ (`pos-item-flash`). Không mở popup; chưa chọn bàn ở chế độ “Tại bàn” thì thao tác vẫn bị chặn bằng `#table-validation-error` như bấm nút size.
+- **Dòng ngữ cảnh “Đang phục vụ: [Tên Bàn]” (3.1):** tiêu đề giỏ order ở màn tạo đơn luôn hiển thị dòng này (`#order-target-display`) và tự cập nhật theo bàn/loại đơn; trang Gọi thêm món hiển thị cố định theo hóa đơn (bàn hoặc Mang đi/Giao hàng) kèm khách.
+- **Chi tiết dòng trong giỏ (3.2):** mỗi dòng gồm tên món + badge size, “Đơn giá”, bộ “Số lượng” với nút Tăng/Giảm, “Thành tiền” và nút “Xóa”; dòng mới nháy sáng.
+- **Khóa món đã gửi bếp (3.3):** mục “Món đã order của bàn (đã gửi bếp)” ở màn tạo đơn và “Món đã order — đã gửi bếp” ở màn gọi thêm đều mang nhãn “Khóa — không sửa/xóa”, badge trạng thái chế biến và **không có nút sửa/xóa**; nhân viên chỉ thao tác trên mục “Món đang chọn cho đơn mới” / “Món gọi thêm”.
+- **Tách mục “Món gọi thêm” (3.4):** giỏ của trang Gọi thêm món là mục riêng “Món gọi thêm (chưa gửi bếp)” (`#cart-items-list`), chỉ cho chọn thêm món mới; nút gửi là “Gửi bếp — món gọi thêm”. Mọi món đã order nằm ở mục khóa phía trên.

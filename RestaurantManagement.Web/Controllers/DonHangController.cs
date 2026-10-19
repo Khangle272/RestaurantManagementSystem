@@ -185,7 +185,10 @@ public class DonHangController(
     public async Task<IActionResult> AddDishes(int id)
     {
         ViewData["ActiveMenu"] = "DonHang";
-        var invoice = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == id);
+        var invoice = await db.HoaDon.AsNoTracking()
+            .Include(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn)
+            .Include(x => x.ChiTiet)
+            .SingleOrDefaultAsync(x => x.Id == id);
         if (invoice == null) return NotFound();
         if (invoice.TrangThai is TrangThaiHoaDon.DaThanhToan or TrangThaiHoaDon.DaHuy)
         {
@@ -194,6 +197,26 @@ public class DonHangController(
         }
 
         var prep = await orderService.PrepareCreateViewModelAsync();
+        prep.LoaiDonHang = invoice.LoaiDonHang;
+        prep.DatBanId = invoice.DatBanId;
+        prep.ExistingInvoiceCode = invoice.MaHoaDon;
+        prep.ExistingTableLabel = invoice.DatBan is { Ban.Count: > 0 } booking
+            ? string.Join(", ", booking.Ban.Select(x => x.BanAn.MaBan))
+            : null;
+        prep.ExistingCustomerLabel = invoice.DatBan?.HoTenLienHe ?? invoice.TenNguoiNhan;
+        prep.ExistingItems = invoice.ChiTiet
+            .Where(x => x.TrangThai != TrangThaiCheBien.DaHuy)
+            .OrderBy(x => x.ThoiDiemGoi).ThenBy(x => x.Id)
+            .Select(x => new TableOrderLineItem
+            {
+                TenMon = x.TenMonLucBan,
+                TenSize = string.IsNullOrWhiteSpace(x.TenSizeLucBan) ? "Mặc định" : x.TenSizeLucBan,
+                SoLuong = x.SoLuong,
+                DonGia = x.DonGia,
+                TrangThai = x.TrangThai,
+                ThoiDiemGoi = x.ThoiDiemGoi
+            })
+            .ToList();
         ViewBag.HoaDonId = invoice.Id;
         ViewBag.MaHoaDon = invoice.MaHoaDon;
         return View(prep);

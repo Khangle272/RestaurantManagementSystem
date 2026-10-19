@@ -28,12 +28,17 @@
         dishId: Number(button.dataset.dishId), sizeId: Number(button.dataset.sizeId),
         dishName: button.dataset.dishName, sizeName: button.dataset.sizeName, price: Number(button.dataset.price)
     }]));
+    const categoryInput = byId('dish-category');
+    const categoryButtons = Array.from(form.querySelectorAll('[data-pos-category]'));
+    const existingPanels = Array.from(form.querySelectorAll('[data-table-order]'));
+    const existingEmpty = byId('pos-existing-empty');
     const storagePrefix = `pos-draft:${form.dataset.draftUser || 'session'}:`;
     const carts = new Map();
     const orderNotes = new Map();
     let cart = [];
     let scope = '';
     let sentDraft = null;
+    let flashSizeId = null;
     const currency = value => `${value.toLocaleString('vi-VN')} đ`;
     const getScope = () => isCreate
         ? selectedType() === 'TaiBan' ? `table:${tableId.value || 'none'}:booking:${bookingId.value || 'none'}` : `mode:${selectedType()}`
@@ -86,12 +91,16 @@
         cart.forEach((item, index) => {
             quantity += item.qty;
             total += item.qty * item.price;
-            const card = node('div', 'card border p-2 bg-white shadow-none');
-            const header = node('div', 'd-flex justify-content-between gap-2');
+            const card = node('div', 'card pos-cart-line border p-2 bg-white shadow-none');
+            // Thẻ món vừa được bấm thêm sẽ nháy sáng để nhân viên thấy nó “nhảy” vào giỏ.
+            if (flashSizeId !== null && item.sizeId === flashSizeId) card.classList.add('pos-item-flash');
+            const header = node('div', 'd-flex justify-content-between align-items-start gap-2');
             const title = node('div', 'pos-item-title');
-            title.append(node('div', 'fw-bold small text-dark', item.dishName), node('span', 'badge bg-secondary-subtle text-secondary me-1', item.sizeName), node('span', 'small text-muted', currency(item.price)));
-            header.append(title, actionButton('×', `Bỏ ${item.dishName}`, () => { cart = cart.filter(candidate => candidate !== item); renderCart(); }, 'btn btn-sm btn-link text-danger p-0 align-self-start'));
-            const row = node('div', 'd-flex justify-content-between align-items-center my-2');
+            title.append(node('div', 'fw-bold text-dark', item.dishName), node('span', 'badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1', item.sizeName));
+            header.append(title, actionButton('Xóa', `Xóa ${item.dishName} khỏi giỏ`, () => { cart = cart.filter(candidate => candidate !== item); renderCart(); }, 'btn btn-sm btn-outline-danger pos-line-remove'));
+            const info = node('div', 'd-flex justify-content-between text-muted small mt-1 gap-2');
+            info.append(node('span', '', `Đơn giá: ${currency(item.price)}`), node('span', 'fw-semibold text-dark text-end', `Thành tiền: ${currency(item.qty * item.price)}`));
+            const row = node('div', 'd-flex align-items-center gap-2 my-2');
             const quantities = node('div', 'btn-group btn-group-sm');
             quantities.setAttribute('role', 'group');
             quantities.setAttribute('aria-label', `Số lượng ${item.dishName}`);
@@ -100,8 +109,11 @@
                 if (item.qty <= 0) cart = cart.filter(candidate => candidate !== item);
                 renderCart();
             };
-            quantities.append(actionButton('−', 'Giảm số lượng', () => changeQuantity(-1)), node('span', 'btn btn-outline-secondary disabled fw-bold', String(item.qty)), actionButton('+', 'Tăng số lượng', () => changeQuantity(1)));
-            row.append(quantities, node('strong', 'small', currency(item.qty * item.price)));
+            quantities.append(
+                actionButton('−', `Giảm số lượng ${item.dishName}`, () => changeQuantity(-1), 'btn btn-sm btn-outline-secondary'),
+                node('span', 'btn btn-outline-secondary disabled fw-bold pos-line-qty', String(item.qty)),
+                actionButton('+', `Tăng số lượng ${item.dishName}`, () => changeQuantity(1), 'btn btn-sm btn-outline-secondary'));
+            row.append(node('span', 'small text-muted text-nowrap', 'Số lượng'), quantities);
             const note = node('input', 'form-control form-control-sm');
             note.type = 'text';
             note.name = `Items[${index}].YeuCauCheBien`;
@@ -110,7 +122,7 @@
             note.placeholder = 'Ghi chú chế biến: ít cay, không hành...';
             note.setAttribute('aria-label', `Ghi chú chế biến ${item.dishName}`);
             note.addEventListener('input', () => { item.note = note.value; saveDraft(); });
-            card.append(header, row, note);
+            card.append(header, info, row, note);
             for (const [name, value] of Object.entries({ MonAnId: item.dishId, MonAnSizeId: item.sizeId, SoLuong: item.qty })) {
                 const hidden = node('input');
                 hidden.type = 'hidden';
@@ -120,6 +132,7 @@
             }
             list.append(card);
         });
+        flashSizeId = null;
         byId('cart-item-count').textContent = String(cart.length);
         byId('cart-total-qty').textContent = `${quantity} phần`;
         byId('cart-total-amount').textContent = currency(total);
@@ -136,10 +149,11 @@
         if (!isCreate) return;
         const type = selectedType();
         const selected = tableButtons.find(button => button.dataset.tableId === tableId.value);
-        const target = type === 'TaiBan' ? selected ? `Tại bàn ${selected.dataset.tableCode}` : 'Chưa chọn bàn'
-            : type === 'MangDi' ? 'Mang đi' : 'Giao hàng';
+        const target = type !== 'TaiBan'
+            ? (type === 'MangDi' ? 'Mang đi' : 'Giao hàng')
+            : selected ? selected.dataset.tableCode : 'Chưa chọn bàn';
         byId('order-target-display').querySelector('span').textContent = target;
-        byId('pos-current-table').textContent = target;
+        byId('pos-current-table').textContent = `Đang phục vụ: ${target}`;
         byId('section-dinein').classList.toggle('d-none', type !== 'TaiBan');
         byId('section-external').classList.toggle('d-none', type === 'TaiBan');
         byId('delivery-address-group').classList.toggle('d-none', type !== 'GiaoHang');
@@ -153,6 +167,7 @@
             button.setAttribute('aria-pressed', String(active));
         });
         collapseConfiguration(type === 'TaiBan' && !!selected);
+        updateExistingOrder();
     }
     if (isCreate) {
         const selected = tableButtons.find(button => button.dataset.tableId === tableId.value);
@@ -172,21 +187,36 @@
         });
         updateTarget();
     }
-    menuButtons.forEach(button => button.addEventListener('click', () => {
+    function addMenuItem(button) {
         if (isCreate && selectedType() === 'TaiBan' && !tableId.value) {
             byId('table-validation-error').classList.remove('d-none');
             byId('pos-order-config').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             return;
         }
         const item = menu.get(Number(button.dataset.sizeId));
+        if (!item) return;
         const current = cart.find(candidate => candidate.sizeId === item.sizeId);
         if (current) current.qty = Math.min(999, current.qty + 1);
         else cart.push({ ...item, qty: 1, note: '' });
+        flashSizeId = item.sizeId;
         renderCart();
-    }));
+    }
+    menuButtons.forEach(button => button.addEventListener('click', () => addMenuItem(button)));
+    // Bấm vào cả thẻ món cũng thêm nhanh size mặc định (size đầu tiên) vào giỏ bên phải — không mở hộp thoại.
+    const dishGrid = byId('dish-grid');
+    if (dishGrid && typeof dishGrid.addEventListener === 'function') {
+        dishGrid.addEventListener('click', event => {
+            const target = event.target;
+            if (!target || typeof target.closest !== 'function') return;
+            if (target.closest('.btn-add-dish')) return;
+            const card = target.closest('.pos-dish-card');
+            const button = card && typeof card.querySelector === 'function' ? card.querySelector('.btn-add-dish') : null;
+            if (button) addMenuItem(button);
+        });
+    }
     byId('pos-clear-cart').addEventListener('click', () => { cart = []; renderCart(); });
     function filterMenu() {
-        const category = byId('dish-category').value;
+        const category = categoryInput ? categoryInput.value : 'all';
         const search = byId('dish-search').value.toLocaleLowerCase('vi-VN').trim();
         let count = 0;
         form.querySelectorAll('.dish-card-item').forEach(item => {
@@ -194,6 +224,28 @@
             if (!item.hidden) count++;
         });
         byId('pos-no-results').hidden = count > 0 || !menu.size;
+    }
+    function selectCategory(categoryId) {
+        if (categoryInput) categoryInput.value = categoryId;
+        categoryButtons.forEach(candidate => {
+            const active = candidate.dataset.posCategory === categoryId;
+            candidate.classList.toggle('active', active);
+            candidate.setAttribute('aria-selected', String(active));
+        });
+        filterMenu();
+    }
+    categoryButtons.forEach(button => button.addEventListener('click', () => selectCategory(button.dataset.posCategory)));
+    // Column "Bàn đang phục vụ": show the dishes already ordered on the open bill of the selected table.
+    function updateExistingOrder() {
+        if (!existingPanels.length && !existingEmpty) return;
+        const selected = isCreate ? tableId.value : '';
+        let matched = false;
+        existingPanels.forEach(panel => {
+            const active = !!selected && panel.dataset.tableOrder === selected;
+            panel.hidden = !active;
+            matched = matched || active;
+        });
+        if (existingEmpty) existingEmpty.hidden = matched;
     }
     byId('dish-category').addEventListener('change', filterMenu);
     byId('dish-search').addEventListener('input', filterMenu);
