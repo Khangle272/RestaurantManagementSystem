@@ -2,12 +2,9 @@
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
     <File Path="DESIGN.md" />
-    <File Path="prompt.md" />
     <File Path="README.md" />
-    <File Path="TODO.md" />
   </Folder>
   <Project Path="RestaurantManagement.API/RestaurantManagement.API.csproj" />
   <Project Path="RestaurantManagement.Mobile/RestaurantManagement.Mobile.csproj" />
-  <Project Path="RestaurantManagement.Shared/RestaurantManagement.Shared.csproj" />
   <Project Path="RestaurantManagement.Web/RestaurantManagement.Web.csproj" />
 </Solution>

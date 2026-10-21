@@ -99,9 +99,14 @@ INSERT @Recipes VALUES
 (N'Cơm nấm chay',N'Gạo',150),
 (N'Cơm nấm chay',N'Nấm rơm',100),
 (N'Cơm nấm chay',N'Đậu phụ',100);
-INSERT DinhMucMon(MonAnId,NguyenLieuId,SoLuong)
-SELECT m.Id,n.Id,r.SoLuong FROM @Recipes r JOIN MonAn m ON m.TenMon=r.Mon JOIN NguyenLieu n ON n.TenNguyenLieu=r.NguyenLieu
-WHERE NOT EXISTS(SELECT 1 FROM DinhMucMon WITH(UPDLOCK,HOLDLOCK) WHERE MonAnId=m.Id AND NguyenLieuId=n.Id);
+INSERT DinhMucMon(MonAnId,MaKichCo,NguyenLieuId,SoLuong,LaNguyenLieuPhu)
+SELECT m.Id,s.Id,n.Id,r.SoLuong,0
+FROM @Recipes r
+JOIN MonAn m ON m.TenMon=r.Mon
+JOIN MonAnSize s ON s.MonAnId=m.Id AND s.TenSize=N'Mặc định'
+JOIN NguyenLieu n ON n.TenNguyenLieu=r.NguyenLieu
+WHERE NOT EXISTS(SELECT 1 FROM DinhMucMon WITH(UPDLOCK,HOLDLOCK)
+    WHERE MonAnId=m.Id AND MaKichCo=s.Id AND NguyenLieuId=n.Id);
 INSERT ChiTietCombo(ComboId,MonAnId,SoLuong)
 SELECT c.Id,m.Id,v.SoLuong FROM (VALUES
 (N'Combo sum vầy',N'Gà nướng mật ong',1),(N'Combo sum vầy',N'Mì xào bò',1),(N'Combo sum vầy',N'Salad gà',1),(N'Combo sum vầy',N'Trà chanh',4),

@@ -14,7 +14,7 @@ public static class SampleDataImport
         await connection.OpenAsync();
         try
         {
-            foreach (var name in new[] { "PopulateCrudData.sql", "PopulateRestaurantData.sql" })
+            foreach (var name in new[] { "PopulateCrudData.sql", "PopulateRestaurantData.sql", "PopulateIngredientStock.sql" })
             {
                 var sql = await File.ReadAllTextAsync(Path.Combine(scripts, name));
                 await using var command = connection.CreateCommand();
@@ -42,7 +42,9 @@ public static class SampleDataImport
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
         {
             var path = Path.Combine(directory.FullName, "RestaurantManagement.API", "Scripts");
-            if (File.Exists(Path.Combine(path, "PopulateCrudData.sql")) && File.Exists(Path.Combine(path, "PopulateRestaurantData.sql")))
+            if (File.Exists(Path.Combine(path, "PopulateCrudData.sql"))
+                && File.Exists(Path.Combine(path, "PopulateRestaurantData.sql"))
+                && File.Exists(Path.Combine(path, "PopulateIngredientStock.sql")))
                 return path;
         }
         throw new DirectoryNotFoundException("Không tìm thấy RestaurantManagement.API/Scripts trong workspace.");

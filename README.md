@@ -31,10 +31,11 @@ Connection string mẫu dùng `.\SQLEXPRESS`; sửa tên instance/database cho �
 Bộ dữ liệu tự soạn bao gồm thực đơn/size/công thức/combo, khách hàng, đặt bàn,
 món đặt trước, hóa đơn/chi tiết, nhà cung cấp, nhập/xuất kho, khuyến mãi/voucher và đánh giá.
 Script dùng transaction, kiểm tra tổng hóa đơn và lượng xuất theo lô; chạy lại không tạo trùng.
+`PopulateIngredientStock.sql` tạo ba phiếu nhập minh họa cho 15 nguyên liệu, cập nhật tồn kho và đơn giá tham khảo theo đúng chứng từ; chạy lại không cộng tồn hai lần.
 Script ghi tài khoản `admin.mau@example.test` và năm nhân viên NV004/NV005/NV006/NV008/NV012. Mỗi nhân viên có đúng một vai trò ứng dụng: `ThuNgan`, `TiepTan`, `BoiBan`, `Bep` hoặc `Kho`. Trên database mới, sáu tài khoản nội bộ được tạo ở trạng thái hoạt động với mật khẩu riêng đã băm bằng ASP.NET Identity; đăng nhập sau khi nạp SQL. Script giữ nguyên mật khẩu của tài khoản đã hoạt động; không tạo lại vị trí Thực đơn/Danh mục riêng. Với tài khoản mẫu bị khóa do SQL cũ, chỉ kích hoạt khi đúng hồ sơ/quyền và chưa có mật khẩu.
 Bảng đăng nhập ngoài, token và claim không được chèn dữ liệu giả; chúng dành cho chức năng xác thực.
 
-Để nạp cả hai script theo đúng thứ tự bằng ứng dụng (môi trường Development), chạy:
+Để nạp cả ba script theo đúng thứ tự bằng ứng dụng (môi trường Development), chạy:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
@@ -44,7 +45,7 @@ dotnet run --project RestaurantManagement.Web -- --import-sql-data
 
 Lệnh có thể chạy lại; mỗi script chỉ bổ sung bản ghi còn thiếu. Sáu tài khoản nội bộ mẫu có thể đăng nhập ngay sau khi nạp; bộ demo đủ cả khách ở mục 4 của nhật ký.
 
-Nếu thích dùng SSMS: tạo `RestaurantDB`, chọn database đó và chạy lần lượt `InitialSchema.sql`, `PopulateCrudData.sql`, `PopulateRestaurantData.sql`. Sau đó chạy Web bằng:
+Nếu thích dùng SSMS: tạo `RestaurantDB`, chọn database đó và chạy lần lượt `InitialSchema.sql`, `PopulateCrudData.sql`, `PopulateRestaurantData.sql`, `PopulateIngredientStock.sql`. Sau đó chạy Web bằng:
 
 ```powershell
 dotnet run --project RestaurantManagement.Web --launch-profile http
