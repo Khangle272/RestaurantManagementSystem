@@ -23,6 +23,7 @@
     const bookingId = byId('selected-booking-id');
     const selectedType = () => form.querySelector('input[name="LoaiDonHang"]:checked')?.value || 'TaiBan';
     const tableButtons = Array.from(form.querySelectorAll('[data-table-id]'));
+    const areaFilter = byId('pos-area-filter');
     const menuButtons = Array.from(form.querySelectorAll('.btn-add-dish'));
     const menu = new Map(menuButtons.map(button => [Number(button.dataset.sizeId), {
         dishId: Number(button.dataset.dishId), sizeId: Number(button.dataset.sizeId),
@@ -30,8 +31,11 @@
     }]));
     const categoryInput = byId('dish-category');
     const categoryButtons = Array.from(form.querySelectorAll('[data-pos-category]'));
+    const posLayout = form.querySelector('.pos-layout');
+    const dishesSection = form.querySelector('.pos-dishes');
     const existingPanels = Array.from(form.querySelectorAll('[data-table-order]'));
     const existingEmpty = byId('pos-existing-empty');
+    const existingSection = byId('pos-existing-section');
     const storagePrefix = `pos-draft:${form.dataset.draftUser || 'session'}:`;
     const carts = new Map();
     const orderNotes = new Map();
@@ -133,13 +137,24 @@
             }
             list.append(card);
         });
-        // Giỏ đã cuộn khỏi tầm nhìn: kéo dòng vừa thêm vào khung để phản hồi thao tác luôn thấy được.
-        if (flashCard && typeof flashCard.scrollIntoView === 'function') flashCard.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        // Chỉ cuộn khung giỏ: scrollIntoView toàn trang sẽ đẩy thực đơn khỏi tầm mắt sau mỗi món.
+        const cartScroller = byId('cart-container');
+        if (flashCard && cartScroller && typeof flashCard.getBoundingClientRect === 'function' && typeof cartScroller.getBoundingClientRect === 'function') {
+            const cardBox = flashCard.getBoundingClientRect();
+            const cartBox = cartScroller.getBoundingClientRect();
+            const margin = 8;
+            const overflow = cardBox.top < cartBox.top + margin
+                ? cardBox.top - cartBox.top - margin
+                : cardBox.bottom > cartBox.bottom - margin
+                    ? cardBox.bottom - cartBox.bottom + margin
+                    : 0;
+            if (overflow) cartScroller.scrollTop += overflow;
+        }
         flashSizeId = null;
         byId('cart-item-count').textContent = String(cart.length);
         byId('cart-total-qty').textContent = `${quantity} phần`;
         byId('cart-total-amount').textContent = currency(total);
-        byId('btn-submit-order').disabled = !cart.length || form.dataset.ajaxPending === 'true';
+        byId('btn-submit-order').disabled = !cart.length || form.dataset.ajaxPending === 'true' || form.dataset.invoiceInactive === 'true';
         saveDraft();
     }
     function collapseConfiguration(collapse) {
@@ -159,7 +174,12 @@
         byId('pos-current-table').textContent = `Đang phục vụ: ${target}`;
         byId('section-dinein').classList.toggle('d-none', type !== 'TaiBan');
         byId('section-external').classList.toggle('d-none', type === 'TaiBan');
+        if (existingSection) existingSection.hidden = type !== 'TaiBan';
         byId('delivery-address-group').classList.toggle('d-none', type !== 'GiaoHang');
+        const menuReady = type !== 'TaiBan' || !!selected;
+        form.classList.toggle('pos-menu-collapsed', !menuReady);
+        if (posLayout) posLayout.classList.toggle('pos-menu-collapsed', !menuReady);
+        byId('pos-menu-placeholder').hidden = menuReady;
         ['TenNguoiNhan', 'SoDienThoaiNhan'].forEach(name => { form.elements[name].required = type !== 'TaiBan'; });
         form.elements.DiaChiGiaoHang.required = type === 'GiaoHang';
         tableButtons.forEach(button => {
@@ -169,9 +189,17 @@
             button.classList.toggle('text-primary', active);
             button.setAttribute('aria-pressed', String(active));
         });
+        filterTablesByArea();
         collapseConfiguration(type === 'TaiBan' && !!selected);
         updateExistingOrder();
     }
+    function filterTablesByArea() {
+        if (!areaFilter) return;
+        tableButtons.forEach(button => {
+            button.hidden = areaFilter.value !== 'all' && button.dataset.tableArea !== areaFilter.value;
+        });
+    }
+    areaFilter?.addEventListener('change', filterTablesByArea);
     if (isCreate) {
         const selected = tableButtons.find(button => button.dataset.tableId === tableId.value);
         if (selected) bookingId.value = selected.dataset.bookingId || '';
@@ -218,6 +246,17 @@
         });
     }
     byId('pos-clear-cart').addEventListener('click', () => { cart = []; renderCart(); });
+    function setMenuOpen(open) {
+        if (!dishesSection || !posLayout) return;
+        dishesSection.hidden = !open;
+        posLayout.classList.toggle('pos-menu-open', open);
+        if (open) return;
+        if (categoryInput) categoryInput.value = '';
+        categoryButtons.forEach(button => {
+            button.classList.remove('active');
+            button.setAttribute('aria-selected', 'false');
+        });
+    }
     function filterMenu() {
         const category = categoryInput ? categoryInput.value : 'all';
         const search = byId('dish-search').value.toLocaleLowerCase('vi-VN').trim();
@@ -236,8 +275,93 @@
             candidate.setAttribute('aria-selected', String(active));
         });
         filterMenu();
+        setMenuOpen(true);
     }
     categoryButtons.forEach(button => button.addEventListener('click', () => selectCategory(button.dataset.posCategory)));
+    byId('pos-close-menu')?.addEventListener('click', () => setMenuOpen(false));
+
+    const liveUrl = form.dataset.liveUrl;
+    const orderStatus = [
+        ['Chờ nấu', 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'],
+        ['Đang nấu', 'bg-info-subtle text-info-emphasis border border-info-subtle'],
+        ['Sẵn sàng', 'bg-success-subtle text-success-emphasis border border-success-subtle'],
+        ['Đã phục vụ', 'bg-light text-success border border-success-subtle'],
+        ['Đã hủy', 'bg-danger-subtle text-danger border border-danger-subtle']
+    ];
+    const appendText = (parent, tag, className, text) => {
+        const child = document.createElement(tag);
+        if (className) child.className = className;
+        child.textContent = text;
+        parent.append(child);
+        return child;
+    };
+    function refreshLockedPanel(panel, order) {
+        if (!panel) return;
+        panel.replaceChildren();
+        if (!order?.lines?.length) {
+            appendText(panel, 'p', 'small text-muted mb-1', 'Đơn chưa có món nào.');
+            return;
+        }
+        const list = document.createElement('ul');
+        list.className = 'pos-existing-list list-unstyled mb-1';
+        let total = 0;
+        let quantity = 0;
+        order.lines.forEach(line => {
+            const item = document.createElement('li');
+            appendText(item, 'span', 'fw-semibold', `${line.quantity} × ${line.name}`);
+            appendText(item, 'span', 'text-muted small', `${line.size} · ${line.time}`);
+            if (line.note) appendText(item, 'span', 'text-muted small', `Ghi chú: ${line.note}`);
+            appendText(item, 'span', 'ms-auto', `${Number(line.total).toLocaleString('vi-VN')} đ`);
+            const [label, badge] = orderStatus[line.status] || orderStatus[4];
+            appendText(item, 'span', `badge ${badge}`, label);
+            list.append(item);
+            total += Number(line.total) || 0;
+            quantity += Number(line.quantity) || 0;
+        });
+        panel.append(list);
+        const summary = document.createElement('div');
+        summary.className = 'd-flex justify-content-between small border-top pt-1 mb-1';
+        appendText(summary, 'span', 'text-muted', `Đã order ${quantity} phần${order.invoiceCode ? ` · ${order.invoiceCode}` : ''}`);
+        appendText(summary, 'strong', '', `${total.toLocaleString('vi-VN')} đ`);
+        panel.append(summary);
+    }
+    async function refreshLiveOrders() {
+        if (!liveUrl || document.visibilityState !== 'visible' || form.dataset.ajaxPending === 'true') return;
+        try {
+            const response = await fetch(liveUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data.active === false) {
+                form.dataset.invoiceInactive = 'true';
+                let notice = form.querySelector('[data-live-order-warning]');
+                if (!notice) {
+                    notice = document.createElement('div');
+                    notice.dataset.liveOrderWarning = '';
+                    notice.className = 'alert alert-warning mb-2';
+                    notice.setAttribute('role', 'status');
+                    form.prepend(notice);
+                }
+                notice.textContent = data.message || 'Hóa đơn đã thay đổi trạng thái. Tải lại để tiếp tục.';
+                byId('btn-submit-order').disabled = true;
+                return;
+            }
+            form.dataset.invoiceInactive = 'false';
+            const orders = data.orders || [];
+            if (isCreate) {
+                existingPanels.forEach(panel => {
+                    const tableOrder = orders.find(item => String(item.tableId) === panel.dataset.tableOrder);
+                    if (tableOrder) refreshLockedPanel(panel, tableOrder);
+                });
+            } else {
+                refreshLockedPanel(form.querySelector('[data-live-invoice-order]'), orders[0]);
+            }
+            byId('btn-submit-order').disabled = !cart.length || form.dataset.ajaxPending === 'true';
+        } catch { /* Keep the last confirmed state visible while the connection is unavailable. */ }
+    }
+    if (liveUrl) {
+        window.setInterval(refreshLiveOrders, 5000);
+        refreshLiveOrders();
+    }
     // Column "Bàn đang phục vụ": show the dishes already ordered on the open bill of the selected table.
     function updateExistingOrder() {
         if (!existingPanels.length && !existingEmpty) return;

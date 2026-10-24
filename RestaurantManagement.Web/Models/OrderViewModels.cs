@@ -64,7 +64,10 @@ public class BanAnCardItem
     public DateTimeOffset? GioNhan { get; set; }
 
     // Dishes already ordered on the open bill of this table (POS column "Bàn đang phục vụ").
+    public int? HoaDonIdDangMo { get; set; }
     public string? MaHoaDonDangMo { get; set; }
+    public bool NhieuHoaDonDangMo { get; set; }
+    public bool NhieuLuotDangPhucVu { get; set; }
     public List<TableOrderLineItem> OrderedItems { get; set; } = [];
     public int OrderedQuantity => OrderedItems.Sum(x => x.SoLuong);
     public decimal OrderedTotal => OrderedItems.Sum(x => x.ThanhTien);
@@ -76,6 +79,7 @@ public class TableOrderLineItem
     public string TenSize { get; set; } = "";
     public int SoLuong { get; set; }
     public decimal DonGia { get; set; }
+    public string? YeuCauCheBien { get; set; }
     public TrangThaiCheBien TrangThai { get; set; }
     public DateTimeOffset ThoiDiemGoi { get; set; }
     public decimal ThanhTien => SoLuong * DonGia;

@@ -200,8 +200,12 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
         var dishIds = await MenuRules.Available(db).Select(x => x.Id).ToListAsync();
         if (lines.Any(x => !sizes.Any(s => s.Id == x.MonAnSizeId && s.MonAnId == x.MonAnId) || !dishIds.Contains(x.MonAnId)))
             return "Món đặt trước đã tạm hết hoặc ngừng phục vụ. Liên hệ khách để thay món trước khi gửi bếp.";
-        var bill = await db.HoaDon.Include(x => x.ChiTiet).Where(x => x.DatBanId == booking.Id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
-            .OrderBy(x => x.Id).FirstOrDefaultAsync();
+        var activeBills = await db.HoaDon.Include(x => x.ChiTiet)
+            .Where(x => x.DatBanId == booking.Id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+            .OrderBy(x => x.ThoiDiemLap).ToListAsync();
+        if (activeBills.Count > 1)
+            return "Lượt đặt bàn đang có nhiều hóa đơn chưa thanh toán. Hãy đối soát trước khi gửi món đặt trước xuống bếp.";
+        var bill = activeBills.SingleOrDefault();
         if (bill is null)
         {
             bill = new HoaDon { MaHoaDon = TableService.NewCode("HD"), DatBanId = booking.Id,
@@ -215,7 +219,7 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
             bill.ChiTiet.Add(new ChiTietHoaDon { MonDatTruocId = line.Id, MonAnId = line.MonAnId,
                 MonAnSizeId = line.MonAnSizeId, TenMonLucBan = line.TenMonLucDat, TenSizeLucBan = line.TenSizeLucDat,
                 DonGia = line.DonGiaThoaThuan, SoLuong = line.SoLuong, YeuCauCheBien = line.YeuCauCheBien,
-                ChiTietComboSnapshot = line.ChiTietComboSnapshot, ThoiDiemGoi = now, TrangThai = TrangThaiCheBien.ChoCheBien });
+                ChiTietComboSnapshot = line.ChiTietComboSnapshot, ThoiDiemGoi = now, TrangThai = TrangThaiCheBien.DangCheBien });
         }
         bill.TongTienHang = bill.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).Sum(x => x.DonGia * x.SoLuong);
         db.Entry(booking).Property("ChuanBiTruoc").IsModified = true;

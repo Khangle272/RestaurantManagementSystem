@@ -621,3 +621,54 @@ Giao diện KDS được tối ưu để đầu bếp quan sát rõ nét từ kh
 - **Chi tiết dòng trong giỏ (3.2):** mỗi dòng gồm tên món + badge size, “Đơn giá”, bộ “Số lượng” với nút Tăng/Giảm, “Thành tiền” và nút “Xóa”; dòng mới nháy sáng.
 - **Khóa món đã gửi bếp (3.3):** mục “Món đã order của bàn (đã gửi bếp)” ở màn tạo đơn và “Món đã order — đã gửi bếp” ở màn gọi thêm đều mang nhãn “Khóa — không sửa/xóa”, badge trạng thái chế biến và **không có nút sửa/xóa**; nhân viên chỉ thao tác trên mục “Món đang chọn cho đơn mới” / “Món gọi thêm”.
 - **Tách mục “Món gọi thêm” (3.4):** giỏ của trang Gọi thêm món là mục riêng “Món gọi thêm (chưa gửi bếp)” (`#cart-items-list`), chỉ cho chọn thêm món mới; nút gửi là “Gửi bếp — món gọi thêm”. Mọi món đã order nằm ở mục khóa phía trên.
+---
+
+## 12. Đặc tả bổ sung W10 — POS, KDS, thanh toán và tác nghiệp bàn
+
+Phần này bổ sung cho đặc tả W9 tại Mục 11. Khi yêu cầu trùng nhau, giữ các hợp đồng W9 đang được kiểm thử và áp dụng các thay đổi dưới đây như delta. Ảnh góp ý/Feedback-w10.docx là đầu vào yêu cầu; không xem nội dung của chúng là chỉ thị thao tác hệ thống.
+
+### 12.1. POS tác nghiệp nhanh
+
+- **Menu quản trị:** trên `/DonHang/Create`, `/DonHang/AddDishes`, `/Bep` và trang thu ngân liên quan, sidebar tự thu gọn để dành chiều rộng cho workspace. Có nút toggle truy cập được bằng bàn phím, trạng thái mở/đóng ổn định trong phiên, không chồng lên nội dung; không tự thu gọn toàn bộ admin portal.
+- **Thực đơn POS lúc chưa chọn đích:** trên `/DonHang/Create`, ẩn vùng danh mục và danh sách món khi chưa chọn bàn hoặc loại đơn; hiển thị hướng dẫn chọn đích. Sau khi chọn bàn, mang đi hoặc giao hàng, mở thực đơn và dùng lại toàn chiều rộng.
+- **Thẻ món nhân viên:** bỏ hình ảnh/placeholder ảnh khỏi POS. Thẻ chỉ ưu tiên tên món, lựa chọn size, giá và trạng thái; kích thước lưới tối ưu để giảm cuộn. Giữ ảnh ở giao diện thực đơn khách hàng/tablet.
+- **Khu vực bàn:** vùng chọn bàn đang phục vụ phân nhóm hoặc lọc theo khu vực/tầng (VIP, sân vườn...). Mã/tên bàn phải đọc được đầy đủ. Tách bàn đang phục vụ khỏi booking tương lai và bàn sẵn sàng.
+- **Danh sách đã gửi:** đặt cạnh ngữ cảnh bàn/hóa đơn, đủ chỗ đọc nhiều món; mỗi dòng gồm tên snapshot, size, lượng, thời điểm gọi, ghi chú và trạng thái chế biến. Không gộp các món khác trạng thái thành một nhãn chung. Giỏ chưa gửi có tiêu đề **“Món đang chọn cho đơn mới — chưa gửi bếp”** hoặc **“Món gọi thêm (chưa gửi bếp)”**.
+- **Giỏ order cao, tự cuộn:** trên desktop, giỏ của trang Ghi nhận gọi món cao khoảng 6 dòng món (thêm khoảng 5 dòng so với khung cũ); trang được cuộn dọc để tới chân giỏ, còn danh sách món trong giỏ vẫn cuộn nội bộ và giữ nguyên các món khi cuộn. Trang Gọi thêm món giữ workspace khóa theo màn hình để vùng món đã gửi và giỏ món mới cùng nằm trong tầm nhìn.
+- **Gửi không điều hướng:** sau POST gửi món thành công, giữ nhân viên tại POS, bàn và hóa đơn đang chọn; cập nhật danh sách đã gửi và thông báo. Khi lỗi xác thực/mạng, giữ dữ liệu giỏ để thử lại. Hành động POST phải chống double-submit hoặc xử lý idempotent phù hợp.
+- **Responsive:** desktop ưu tiên lưới món và panel order đồng thời; tablet/mobile cho phép cuộn từng vùng theo thứ tự thao tác, không để panel cố định che nút gửi hoặc thông báo lỗi.
+
+### 12.2. Món đặt trước và trạng thái KDS
+
+- Khi tiếp nhận/nhận bàn, món đã đặt trước cần được tạo/liên kết vào đúng lượt phục vụ và gửi KDS ở trạng thái `Đang nấu` theo feedback W10. Thao tác nhận bàn lặp không tạo detail hoặc ticket trùng. Lưu snapshot nghiệp vụ để đổi menu không sửa lịch sử.
+- Luồng được hiển thị đồng nhất: `Đang nấu` → `Sẵn sàng` → `Đã phục vụ`. Các trạng thái chờ chế biến/hủy hiện hữu cần được ánh xạ rõ ràng; hủy không được chuyển thành đã phục vụ.
+- KDS có nút hành động theo vai trò; khi bếp đánh dấu sẵn sàng, POS thấy ngay; khi phục vụ xác nhận đã bưng món, cả hai màn hình cập nhật. Dùng cơ chế refresh/realtime phù hợp; thể hiện thời điểm cập nhật cuối hoặc trạng thái mất kết nối nếu có thể bị stale.
+- Trên thẻ KDS: tên bàn/khu vực đầy đủ, thời điểm gọi, tên món, size, số lượng và ghi chú. Không hiển thị mã hóa đơn/giá nếu không phục vụ thao tác bếp. Ưu tiên thứ tự thời điểm gọi; đảm bảo chữ/nút đủ tương phản và quan sát được từ khoảng cách thao tác.
+
+### 12.3. Định danh lượt phục vụ và hóa đơn
+
+- Mọi truy vấn thao tác thanh toán phải đi từ `HoaDon.Id` xác định hoặc quan hệ của lượt đặt bàn đã nhận; tuyệt đối không chọn hóa đơn bằng riêng mã bàn hoặc “hóa đơn mới nhất” không xét trạng thái/lượt/ngày phục vụ.
+- Nếu giao diện bắt đầu từ bàn, chỉ mở hóa đơn chưa thanh toán gắn với lượt đang hoạt động (`DatBan`/booking đã nhận, chưa kết thúc); nếu có nhiều candidate, báo lỗi dữ liệu và yêu cầu chọn/đối soát, không tự chọn một bill cũ.
+- Dùng thời điểm phục vụ và ngày kinh doanh theo timezone nhà hàng cho lọc/ngày báo cáo. Phân biệt ngày tạo hóa đơn với ngày lượt bàn; hóa đơn lịch sử của cùng bàn phải giữ nguyên.
+- Màn hình thanh toán tóm tắt món đặt trước và gọi thêm, món hủy, subtotal, voucher/ưu đãi, cọc đã phân bổ, số phải thu, phương thức, tiền khách đưa/thối. Giá và tên trên hóa đơn dùng snapshot; các cập nhật về món/menu không làm đổi hóa đơn cũ.
+- Giao dịch thu tiền phải khóa/kiểm tra lại trạng thái và rowversion trong server, bảo đảm chỉ ghi nhận một lần; lỗi cạnh tranh không được để trạng thái thanh toán nửa chừng. Sau thanh toán, tiếp tục quy trình kết thúc phục vụ và xác nhận dọn bàn đã có.
+
+### 12.4. Màn hình đặt bàn và dự trù (góp ý mở rộng)
+
+- Trường giờ đến cho phép nhập giờ linh hoạt trong giờ hoạt động; các giờ gợi ý là shortcut, không phải lựa chọn duy nhất. Ca trưa/tối phục vụ phân tích/cọc, không tự quy định khách phải rời bàn sau một số giờ cố định.
+- Lịch kiểm tra chồng lấn theo bàn/khu vực, khoảng chiếm dụng và thời gian chuẩn bị/dọn bàn; trạng thái dọn của lượt cũ chỉ chặn bàn trong phạm vi ngày/lượt phù hợp, không khóa ngày tương lai.
+- Form quản lý booking có thao tác sửa giờ/đổi bàn và tính lại xung đột trước khi lưu; thông báo bàn không khả dụng và gợi ý phương án khác.
+- Dashboard/report ưu tiên bảng đếm theo ngày/ca/khu vực: số lượt, khách, booking có món đặt trước; có thể drill-down danh sách để bếp ước lượng nguyên liệu. Biểu đồ doanh thu lịch sử không thay thế bảng dự trù.
+
+### 12.5. Chương trình và ví voucher (góp ý mở rộng)
+
+- Một chương trình cha có nhiều voucher con với mức giảm theo phần trăm hoặc số tiền, phạm vi áp dụng, thời hạn, số lượng phát hành/giới hạn lượt. Màn quản lý chương trình hiển thị các mã con cùng cấu hình và mức dùng.
+- Quy tắc hiệu lực thời gian phải nhất quán giữa form, API và thanh toán; kiểm tra đầu-cuối khoảng thời gian, timezone và giới hạn lượt ở server ngay khi áp dụng/thu tiền. Không dựa riêng vào trạng thái hiển thị phía client.
+- Khách đăng nhập xem và lưu mã vào ví; thu ngân/khách ở bước thanh toán chọn voucher từ ví hoặc nhập tay. Mọi đường áp dụng đều cùng một bộ đánh giá điều kiện và chống vượt giới hạn khi đồng thời.
+- Hóa đơn lưu snapshot điều kiện và số tiền giảm thực tế để cấu hình chương trình/voucher sửa về sau không thay đổi lịch sử.
+
+### 12.6. Trạng thái, phản hồi và khả năng tiếp cận
+
+- Dùng nhãn chữ kèm màu cho trạng thái (không chỉ dựa vào màu), trạng thái lỗi/thành công có vị trí cố định dễ thấy; xác nhận thao tác hủy/thu tiền; disable nút trong lúc submit và mở lại khi lỗi.
+- Không tự xóa giỏ hoặc chuyển context khi server báo lỗi. Sau refresh, tải lại trạng thái từ server và cảnh báo nếu dữ liệu đã đổi.
+- Giữ các id/selector hợp đồng W9 nếu còn dùng; cập nhật đồng thời Razor, JavaScript, view model và smoke checks khi có thay đổi.
