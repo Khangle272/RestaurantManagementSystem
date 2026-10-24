@@ -274,7 +274,7 @@ dotnet run --project RestaurantManagement.Web -- --remove-retired-menu-roles
   5. Thao tác Bồi bàn / Quản trị xác nhận món đã mang ra bàn (`SanSang` → `DaPhucVu`), giải quyết điều kiện tiên quyết để giải phóng bàn trong `TableService`.
   6. Thao tác hủy món (`ChoCheBien` → `DaHuy`) khi khách đổi ý trước khi nấu, tự động điều chỉnh giảm tổng tiền hàng của hóa đơn tương ứng.
   7. Thanh toán đa hình thức:
-     - Chuyển khoản ngân hàng VietQR: sinh mã QR chuẩn VietQR (MBBank 999988889999), lưu mã đối soát giao dịch `MaGiaoDich`.
+     - Chuyển khoản ngân hàng VietQR: hiển thị ảnh QR VietQR tĩnh (MBBank 999917860000 — LA VAN NAM), lưu mã đối soát giao dịch `MaGiaoDich`.
      - Quẹt thẻ POS: lưu thông tin loại thẻ, 4 số cuối thẻ và mã chuẩn chi POS.
      - Tiền mặt: tính chính xác số tiền khách đưa, tiền thừa thối lại và chiết khấu.
   8. Xuất và in hóa đơn đẹp mắt, chuẩn hóa print CSS cho khổ giấy in nhiệt K80 và khổ A5.
@@ -518,3 +518,17 @@ Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ
 - **Chưa chụp lại màn hình trình duyệt** sau các thay đổi 2.1–3.4; trước demo nên rà `/DonHang/Create` và `/DonHang/AddDishes` ở desktop 1280px + khung hẹp 390px (mô phỏng click thẻ món, kiểm tra nháy sáng trong giỏ, nhãn khóa ở cột phải). Chưa kiểm tải lớn.
 - Giới hạn đã biết: bấm cả thẻ món luôn thêm size đầu tiên (size rẻ nhất theo giá) — nhóm có thể yêu cầu đổi thành size đang chọn gần nhất nếu cần. Mục 12 (bản ghi trước) mô tả lưới món “có mô tả tối đa 2 dòng” — nay bỏ theo 2.1/2.2.
 - Trạng thái bàn giao: thay đổi 1.1–3.4 đang ở **working tree trên `master`, chưa commit/push** (đứng sau `aaab2ec`); `RestaurantManagement.Web/appsettings.json` có chỉnh máy cục bộ (`Server=.\SQLEXPRESS`) không thuộc phạm vi hai việc này — không đưa vào commit nếu nhóm không muốn.
+# Cập nhật nhánh POS/KDS/Thanh toán — 24/10/2026
+
+- POS: tự thu gọn sidebar ở trang tác nghiệp, ẩn danh mục/thực đơn trước khi chọn đích, bỏ ảnh món, lọc bàn theo khu vực, hiển thị trạng thái/thời điểm/ghi chú món đã gửi và giữ trang gọi món sau khi gọi thêm.
+- KDS: món đặt trước được phát hành ở trạng thái `DangCheBien`; màn hình KDS và POS làm mới trạng thái định kỳ, đồng thời POS từ chối chọn ngẫu nhiên khi bàn có nhiều lượt phục vụ hoặc lượt bàn có nhiều hóa đơn đang mở.
+- Thanh toán: lịch sử đặt bàn/quản lý bàn chọn hóa đơn mở duy nhất theo booking đang phục vụ; hóa đơn cũ dùng thời điểm thanh toán/lập. Luồng thanh toán hiện hữu đã dùng ID hóa đơn, transaction Serializable và RowVersion.
+- Demo: thêm `RestaurantManagement.API/Scripts/SeedPosKdsPaymentDemo.sql`, đăng ký trong import Development và hướng dẫn chạy/mã tra cứu trong README. Đã nạp trên `RestaurantDB`; chạy lần hai cho cùng đúng hai mã, không nhân đôi.
+- Kiểm chứng: `dotnet build RestaurantManagementSystem.slnx --no-restore` thành công, 0 lỗi; SQL Server trả `HD-POSDEMO-01` tổng 428.000đ, không voucher và `HD-POSDEMO-02` tổng 856.000đ, giảm 50.000đ với voucher. Có hai cảnh báo NU1902/NU1903 hiện hữu về `System.Security.Cryptography.Pkcs` 9.0.11. Chưa chạy test suite hoặc nghiệm thu giao diện end-to-end.
+
+# Sửa UX giỏ order POS — 25/10/2026
+
+- **Hết tự cuộn trang khi thêm món:** `renderCart()` chỉ cuộn `#cart-container` vừa đủ để lộ dòng vừa thêm, không còn `scrollIntoView` kéo cả trang xuống; thực đơn và cột danh mục giữ nguyên vị trí sau mỗi lần chạm món.
+- **Workspace không dài thêm:** desktop lấp đầy chiều cao còn lại của màn hình (`100dvh` trừ header/topbar) thay vì đoán chiều cao cố định; hàng grid dùng `minmax(0, 1fr)` nên cột giỏ tự co và cuộn bên trong, đầu/đuôi giỏ (nút gửi) luôn hiển thị. Áp dụng chung cho `/DonHang/Create` và `/DonHang/AddDishes`; màn gọi thêm giới hạn panel bàn ở 42% và cho danh sách đã gửi cuộn riêng.
+- Kiểm chứng: `StaffPosUiSmoke.cjs` đạt (có assert chỉ cuộn khung giỏ, `scrollTop > 0`); QA tĩnh bằng Chrome CDP ở 1447×900 và 1280×800 cho cả hai màn: `scrollY` luôn 0, chiều cao trang bằng viewport, chân giỏ nằm trong khung nhìn.
+- Giới hạn: chưa đăng nhập được app thật (không có mật khẩu tài khoản demo) nên QA dùng HTML tĩnh với CSS/JS thật; chưa chụp lại mobile/tablet sau thay đổi. `DESIGN.md` §12.1 đã cập nhật theo hành vi mới.

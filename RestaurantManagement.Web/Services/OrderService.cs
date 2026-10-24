@@ -29,20 +29,20 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         var openInvoices = await db.HoaDon.AsNoTracking()
             .Include(x => x.ChiTiet)
             .Where(x => x.DatBanId != null && bookingIds.Contains(x.DatBanId.Value)
-                && x.TrangThai != TrangThaiHoaDon.DaHuy && x.TrangThai != TrangThaiHoaDon.DaThanhToan)
+                && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
             .OrderByDescending(x => x.ThoiDiemLap)
             .ToListAsync();
 
         return occupiedTables.Select(t =>
         {
-            var b = bookings.Where(x => x.BanAnId == t.Id)
-                .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan)
-                .Select(x => x.DatBan)
-                .FirstOrDefault();
+            var matchingBookings = bookings.Where(x => x.BanAnId == t.Id)
+                .Select(x => x.DatBan).DistinctBy(x => x.Id).ToList();
+            var b = matchingBookings.Count == 1 ? matchingBookings[0] : null;
 
-            var openInvoice = b is null
-                ? null
-                : openInvoices.FirstOrDefault(x => x.DatBanId == b.Id);
+            var matchingInvoices = b is null
+                ? []
+                : openInvoices.Where(x => x.DatBanId == b.Id).ToList();
+            var openInvoice = matchingInvoices.Count == 1 ? matchingInvoices[0] : null;
 
             return new BanAnCardItem
             {
@@ -55,7 +55,10 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 KhachHang = b?.HoTenLienHe,
                 SoKhach = (b?.SoNguoiLon ?? 0) + (b?.SoTreEm ?? 0),
                 GioNhan = b?.ThoiDiemNhanBan,
+                HoaDonIdDangMo = openInvoice?.Id,
                 MaHoaDonDangMo = openInvoice?.MaHoaDon,
+                NhieuHoaDonDangMo = matchingInvoices.Count > 1,
+                NhieuLuotDangPhucVu = matchingBookings.Count > 1,
                 OrderedItems = openInvoice is null
                     ? []
                     : openInvoice.ChiTiet
@@ -73,6 +76,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         TenSize = string.IsNullOrWhiteSpace(detail.TenSizeLucBan) ? "Mặc định" : detail.TenSizeLucBan,
         SoLuong = detail.SoLuong,
         DonGia = detail.DonGia,
+        YeuCauCheBien = detail.YeuCauCheBien,
         TrangThai = detail.TrangThai,
         ThoiDiemGoi = detail.ThoiDiemGoi
     };
@@ -155,22 +159,28 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 if (table == null || table.TrangThai != TrangThaiBan.DangPhucVu)
                     return ("Bàn đã chọn không ở trạng thái đang phục vụ.", null);
 
-                var booking = await db.ChiTietDatBan
-                    .Include(x => x.DatBan)
-                    .Where(x => x.BanAnId == model.BanAnId.Value
-                        && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
-                        && x.DatBan.ThoiDiemKetThuc == null)
-                    .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan)
-                    .Select(x => x.DatBan)
-                    .FirstOrDefaultAsync();
+                var activeBookings = await db.DatBan
+                    .Where(x => x.Ban.Any(link => link.BanAnId == model.BanAnId.Value)
+                        && x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc == null)
+                    .OrderByDescending(x => x.ThoiDiemNhanBan)
+                    .Take(2)
+                    .ToListAsync();
 
+                if (activeBookings.Count > 1)
+                    return ("Bàn đang gắn với nhiều lượt phục vụ. Vui lòng đối soát sơ đồ bàn trước khi gọi món.", null);
+                var booking = activeBookings.SingleOrDefault();
                 if (booking == null)
                     return ("Không tìm thấy thông tin lượt khách đang phục vụ tại bàn này.", null);
 
                 // Find active unpaid bill for this table booking
-                var activeBill = await db.HoaDon
+                var activeBills = await db.HoaDon
                     .Include(x => x.ChiTiet)
-                    .FirstOrDefaultAsync(x => x.DatBanId == booking.Id && x.TrangThai != TrangThaiHoaDon.DaHuy && x.TrangThai != TrangThaiHoaDon.DaThanhToan);
+                    .Where(x => x.DatBanId == booking.Id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                    .OrderBy(x => x.ThoiDiemLap)
+                    .ToListAsync();
+                if (activeBills.Count > 1)
+                    return ("Lượt bàn đang có nhiều hóa đơn chưa thanh toán. Vui lòng đối soát trước khi gọi món.", null);
+                var activeBill = activeBills.SingleOrDefault();
 
                 if (activeBill == null)
                 {
@@ -317,8 +327,11 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         {
             var bill = await db.HoaDon.Include(x => x.ChiTiet).SingleOrDefaultAsync(x => x.Id == hoaDonId);
             if (bill == null) return ("Hóa đơn không tồn tại.", null);
-            if (bill.TrangThai is TrangThaiHoaDon.DaThanhToan or TrangThaiHoaDon.DaHuy)
+            if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
                 return ("Hóa đơn đã thanh toán hoặc đã hủy, không thể gọi thêm món.", null);
+            if (bill.DatBanId is int bookingId && await db.HoaDon.AnyAsync(x => x.DatBanId == bookingId
+                && x.Id != bill.Id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan))
+                return ("Lượt bàn đang có nhiều hóa đơn chưa thanh toán. Vui lòng đối soát trước khi gọi thêm món.", null);
 
             var sizeIds = items.Select(x => x.MonAnSizeId).Distinct().ToList();
             var availableMenu = MenuRules.Available(db);
@@ -523,8 +536,6 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 && (last4.Length != 4 || last4.Any(c => c < '0' || c > '9')))
                 return "Vui lòng nhập đúng 4 số cuối của thẻ.";
             var reference = string.IsNullOrWhiteSpace(form.MaGiaoDich) ? null : form.MaGiaoDich.Trim();
-            if (form.PhuongThuc != PhuongThucThanhToan.TienMat && reference is null)
-                return "Vui lòng nhập mã giao dịch/tham chiếu thanh toán.";
             var transactionReference = form.PhuongThuc == PhuongThucThanhToan.TienMat ? null : reference;
             if (form.PhuongThuc == PhuongThucThanhToan.The)
             {

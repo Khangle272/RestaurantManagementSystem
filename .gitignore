@@ -485,8 +485,7 @@ $RECYCLE.BIN/
 templates_stitch/
 
 # Local Configuration files
-prompt.md
-TODO.md
+agent/
 
 # Runtime QR uploads are local configuration, not source code
 RestaurantManagement.Web/App_Data/

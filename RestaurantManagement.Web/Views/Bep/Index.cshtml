@@ -27,7 +27,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div>
             <h1 class="h3 mb-1">Màn hình Bếp (KDS) & Điều phối món</h1>
-            <p class="text-muted mb-0">Theo dõi thứ tự gọi món (FIFO), chế biến theo size và điều phối phục vụ ra bàn.</p>
+            <p class="text-muted mb-0">Theo dõi thứ tự gọi món (FIFO), chế biến theo size và điều phối phục vụ ra bàn. <span id="kds-live-status" role="status">Tự cập nhật trạng thái.</span></p>
         </div>
         <div class="btn-group" role="group">
             <a asp-action="Index" asp-route-filter="active" class="btn btn-sm @(currentFilter == "active" ? "btn-primary" : "btn-outline-primary")">
@@ -118,3 +118,29 @@
         </div>
     }
 </div>
+
+<script type="application/json" id="kds-state">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => new { x.Id, Status = (int)x.TrangThai, x.ThoiDiemGoi }), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))</script>
+
+@section Scripts {
+    <script>
+        (() => {
+            const state = document.getElementById('kds-state');
+            const status = document.getElementById('kds-live-status');
+            if (!state || !status) return;
+            let current = JSON.stringify(JSON.parse(state.textContent));
+            const url = '@Html.Raw(Url.Action("Snapshot", new { filter = currentFilter }))';
+            window.setInterval(async () => {
+                if (document.visibilityState !== 'visible' || document.querySelector('form[aria-busy="true"]')) return;
+                try {
+                    const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                    if (!response.ok) throw new Error('snapshot');
+                    const next = JSON.stringify(await response.json());
+                    if (next !== current) window.location.reload();
+                    else status.textContent = `Đã đồng bộ lúc ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}.`;
+                } catch {
+                    status.textContent = 'Mất kết nối cập nhật. Trạng thái có thể chưa mới nhất.';
+                }
+            }, 5000);
+        })();
+    </script>
+}

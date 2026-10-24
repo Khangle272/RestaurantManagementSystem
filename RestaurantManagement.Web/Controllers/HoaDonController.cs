@@ -8,11 +8,13 @@ using RestaurantManagement.Web.Security;
 
 namespace RestaurantManagement.Web.Controllers;
 
-[Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+[Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan + "," + AppRoles.BoiBan)]
 public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users, RestaurantManagement.Web.Services.OrderService orderService, RestaurantManagement.Web.Services.IPromotionService promotionService) : Controller
 {
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     public async Task<IActionResult> Index(bool daThanhToan = false)
     {
+        ViewData["AutoCollapseSidebar"] = true;
         var query = db.HoaDon.AsNoTracking();
         query = daThanhToan
             ? query.Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan)
@@ -25,6 +27,7 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
 
     public async Task<IActionResult> Details(int id)
     {
+        ViewData["AutoCollapseSidebar"] = true;
         var invoice = await db.HoaDon.AsSplitQuery()
             .Include(x => x.ChiTiet).ThenInclude(x => x.MonAnSize)
             .Include(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn)
@@ -75,7 +78,7 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan + "," + AppRoles.BoiBan)]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmCash(int id, string? rowVersion, string? bookingRowVersion)
     {
@@ -116,7 +119,7 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan + "," + AppRoles.BoiBan)]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ThanhToan(RestaurantManagement.Web.Models.PaymentFormModel form)
     {

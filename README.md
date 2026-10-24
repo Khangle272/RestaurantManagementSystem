@@ -32,10 +32,11 @@ Bộ dữ liệu tự soạn bao gồm thực đơn/size/công thức/combo, kh�
 món đặt trước, hóa đơn/chi tiết, nhà cung cấp, nhập/xuất kho, khuyến mãi/voucher và đánh giá.
 Script dùng transaction, kiểm tra tổng hóa đơn và lượng xuất theo lô; chạy lại không tạo trùng.
 `PopulateIngredientStock.sql` tạo ba phiếu nhập minh họa cho 15 nguyên liệu, cập nhật tồn kho và đơn giá tham khảo theo đúng chứng từ; chạy lại không cộng tồn hai lần.
+`SeedPosKdsPaymentDemo.sql` thêm hai hóa đơn đang mở để minh họa thanh toán thường và thanh toán có voucher; chạy sau các script trên, không tự chạy khi khởi động ứng dụng.
 Script ghi tài khoản `admin.mau@example.test` và năm nhân viên NV004/NV005/NV006/NV008/NV012. Mỗi nhân viên có đúng một vai trò ứng dụng: `ThuNgan`, `TiepTan`, `BoiBan`, `Bep` hoặc `Kho`. Trên database mới, sáu tài khoản nội bộ được tạo ở trạng thái hoạt động với mật khẩu riêng đã băm bằng ASP.NET Identity; đăng nhập sau khi nạp SQL. Script giữ nguyên mật khẩu của tài khoản đã hoạt động; không tạo lại vị trí Thực đơn/Danh mục riêng. Với tài khoản mẫu bị khóa do SQL cũ, chỉ kích hoạt khi đúng hồ sơ/quyền và chưa có mật khẩu.
 Bảng đăng nhập ngoài, token và claim không được chèn dữ liệu giả; chúng dành cho chức năng xác thực.
 
-Để nạp cả ba script theo đúng thứ tự bằng ứng dụng (môi trường Development), chạy:
+Để nạp các script theo đúng thứ tự bằng ứng dụng (môi trường Development), chạy:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
@@ -43,9 +44,9 @@ $env:ConnectionStrings__DefaultConnection = 'Server=.\SQLEXPRESS;Database=Restau
 dotnet run --project RestaurantManagement.Web -- --import-sql-data
 ```
 
-Lệnh có thể chạy lại; mỗi script chỉ bổ sung bản ghi còn thiếu. Sáu tài khoản nội bộ mẫu có thể đăng nhập ngay sau khi nạp; bộ demo đủ cả khách ở mục 4 của nhật ký.
+Lệnh có thể chạy lại; mỗi script chỉ bổ sung bản ghi còn thiếu. Sáu tài khoản nội bộ mẫu có thể đăng nhập ngay sau khi nạp; bộ demo đủ cả khách ở mục 4 của nhật ký. Hóa đơn POS/KDS tra cứu theo mã `HD-POSDEMO-01` (không voucher) và `HD-POSDEMO-02` (voucher `POSKDS-DEMO10`).
 
-Nếu thích dùng SSMS: tạo `RestaurantDB`, chọn database đó và chạy lần lượt `InitialSchema.sql`, `PopulateCrudData.sql`, `PopulateRestaurantData.sql`, `PopulateIngredientStock.sql`. Sau đó chạy Web bằng:
+Nếu thích dùng SSMS: tạo `RestaurantDB`, chọn database đó và chạy lần lượt `InitialSchema.sql`, `PopulateCrudData.sql`, `PopulateRestaurantData.sql`, `PopulateIngredientStock.sql`, `SeedPosKdsPaymentDemo.sql`. Sau đó chạy Web bằng:
 
 ```powershell
 dotnet run --project RestaurantManagement.Web --launch-profile http
@@ -103,7 +104,7 @@ Màn hình POS gọi món và quản lý đơn hàng tại `/DonHang`:
 
 Thanh toán đa hình thức tại `/HoaDon/Details/{id}`:
 - **Tiền mặt**: Nhập số tiền khách đưa, tự động tính tiền thối lại và kiểm tra đủ tiền thanh toán.
-- **Chuyển khoản ngân hàng (VietQR)**: Sinh mã QR động chuẩn Napas/VietQR (MBBank 999988889999) kèm nội dung chuyển khoản tự động và lưu mã giao dịch ngân hàng.
+- **Chuyển khoản ngân hàng (VietQR)**: Hiển thị ảnh QR VietQR tĩnh của nhà hàng (MBBank 999917860000 — LA VAN NAM) kèm số tiền và nội dung chuyển khoản, lưu mã giao dịch ngân hàng.
 - **Quẹt thẻ POS**: Lưu thông tin loại thẻ (Visa, MasterCard, JCB, Napas), 4 số cuối và mã chuẩn chi giao dịch.
 - Tự động khấu trừ tiền cọc đặt bàn và áp dụng mã giảm giá voucher; in hóa đơn tức thì chuẩn định dạng in nhiệt K80 và khổ A5.
 

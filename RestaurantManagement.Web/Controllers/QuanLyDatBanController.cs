@@ -80,7 +80,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             DanhSachBanTrong = await GetBanAnSelectOptionsAsync(),
             DanhSachDatBan = rawList.Select(x =>
             {
-                var invoice = x.HoaDon.OrderByDescending(h => h.Id).FirstOrDefault();
+                var invoice = ResolveBookingInvoice(x);
                 var daThanhToan = invoice?.TrangThai == TrangThaiHoaDon.DaThanhToan;
                 var isCompleted = x.TrangThai == TrangThaiDatBan.DaNhanBan && x.ThoiDiemKetThuc.HasValue;
 
@@ -166,6 +166,19 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     {
         int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var accountId);
         return Db.NhanVien.Where(x => x.TaiKhoanId == accountId && x.DangLamViec).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+    }
+
+    private static HoaDon? ResolveBookingInvoice(DatBan booking)
+    {
+        if (booking.TrangThai == TrangThaiDatBan.DaNhanBan && booking.ThoiDiemKetThuc is null)
+        {
+            var open = booking.HoaDon.Where(x => x.TrangThai == TrangThaiHoaDon.ChuaThanhToan).Take(2).ToList();
+            if (open.Count == 1) return open[0];
+            if (open.Count > 1) return null;
+            return booking.HoaDon.Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan)
+                .OrderByDescending(x => x.ThoiDiemThanhToan ?? x.ThoiDiemLap).FirstOrDefault();
+        }
+        return booking.HoaDon.OrderByDescending(x => x.ThoiDiemThanhToan ?? x.ThoiDiemLap).FirstOrDefault();
     }
 
     [HttpGet]

@@ -29,8 +29,8 @@
     var paymentAmount = unpaid && ViewBag.PaymentAmount is decimal due ? due : Model.TongThanhToan;
     var availableDeposit = ViewBag.AvailableDeposit is decimal available ? available : 0;
     var invariant = System.Globalization.CultureInfo.InvariantCulture;
-    var vietQrAmount = paymentAmount.ToString("0.##", invariant);
-    var qrUrl = $"https://img.vietqr.io/image/MB-999988889999-compact2.png?amount={vietQrAmount}&addInfo={Uri.EscapeDataString(Model.MaHoaDon)}&accountName=NHA%20HANG%20AM%20THUC%20SEN";
+    var canCollect = User.IsInRole("Admin") || User.IsInRole("ThuNgan") || User.IsInRole("BoiBan");
+    var canSeeInvoiceList = User.IsInRole("Admin") || User.IsInRole("ThuNgan");
 }
 <style media="print">
     .admin-sidebar, .admin-topbar, .no-print, nav, header, footer { display: none !important; }
@@ -44,7 +44,10 @@
 
 <div class="no-print mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div class="d-flex gap-2">
-        <a asp-action="Index" class="btn btn-outline-secondary">Quay lại danh sách</a>
+        @if (canSeeInvoiceList)
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">Quay lại danh sách</a>
+        }
         <a asp-controller="DonHang" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-primary">Xem đơn hàng</a>
     </div>
     <div class="d-flex gap-2">
@@ -270,7 +273,7 @@
     }
 
     <!-- MODULE THANH TOÁN ĐA HÌNH THỨC (NO-PRINT) -->
-    @if ((User.IsInRole("Admin") || User.IsInRole("ThuNgan")) && unpaid && paymentAmount == 0)
+    @if (canCollect && unpaid && paymentAmount == 0)
     {
         <form asp-action="ThanhToan" method="post" class="card p-4 no-print mb-4">
             @Html.AntiForgeryToken()
@@ -285,7 +288,7 @@
             <button type="submit" class="btn btn-success">Hoàn tất hóa đơn 0 đ</button>
         </form>
     }
-    @if ((User.IsInRole("Admin") || User.IsInRole("ThuNgan")) && unpaid && paymentAmount > 0)
+    @if (canCollect && unpaid && paymentAmount > 0)
     {
         <div class="card border-0 shadow-sm no-print mb-4">
             <div class="card-header bg-primary text-white py-3">
@@ -384,7 +387,7 @@
                             <div class="row g-3 align-items-center">
                                 <div class="col-12 col-md-5 text-center">
                                     <div class="p-2 border rounded bg-white shadow-sm d-inline-block">
-                                        <img src="@qrUrl" alt="VietQR Mã thanh toán" class="img-fluid rounded" style="max-height: 250px;" />
+                                        <img src="~/images/payment-qr-mbbank.jpg" alt="VietQR Mã thanh toán MBBank" class="img-fluid rounded" style="max-height: 320px;" />
                                     </div>
                                     <div class="small text-muted mt-2">Quét mã bằng ứng dụng ngân hàng; thu ngân kiểm tra tiền đã nhận trước khi xác nhận.</div>
                                 </div>
@@ -396,10 +399,10 @@
                                             <div class="col-7 fw-bold">MBBank (Ngân hàng Quân Đội)</div>
 
                                             <div class="col-5 text-muted">Số tài khoản:</div>
-                                            <div class="col-7 fw-bold fs-6 text-primary">999988889999</div>
+                                            <div class="col-7 fw-bold fs-6 text-primary">999917860000</div>
 
                                             <div class="col-5 text-muted">Chủ tài khoản:</div>
-                                            <div class="col-7 fw-bold">NHA HANG AM THUC SEN</div>
+                                            <div class="col-7 fw-bold">LA VAN NAM</div>
 
                                             <div class="col-5 text-muted">Số tiền cần thanh toán:</div>
                                             <div class="col-7 fw-bold fs-5 text-danger">@paymentAmount.ToString("N0") đ</div>
@@ -458,8 +461,8 @@
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label small fw-semibold">Mã chuẩn chi / Trace No. máy POS (*):</label>
-                                        <input type="text" name="MaGiaoDich" class="form-control" placeholder="Ví dụ: POS-987654" required />
+                                        <label class="form-label small fw-semibold">Mã chuẩn chi / Trace No. máy POS (nếu có):</label>
+                                        <input type="text" name="MaGiaoDich" class="form-control" placeholder="Ví dụ: POS-987654" />
                                     </div>
                                 </div>
 

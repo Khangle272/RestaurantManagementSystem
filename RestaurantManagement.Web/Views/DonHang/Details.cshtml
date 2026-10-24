@@ -5,6 +5,7 @@
     ViewData["Title"] = "Đơn hàng " + Model.MaHoaDon;
     var tables = Model.DatBan == null ? "-" : string.Join(", ", Model.DatBan.Ban.Select(x => x.BanAn.MaBan));
     var activeItems = Model.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).ToList();
+    var canPay = User.IsInRole("Admin") || User.IsInRole("ThuNgan") || User.IsInRole("BoiBan");
 
     var typeBadge = Model.LoaiDonHang switch
     {
@@ -50,15 +51,21 @@
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Gọi thêm món
                 </a>
-                <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success d-inline-flex align-items-center gap-1 shadow-sm">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    Thanh toán đa hình thức
+                @if (canPay)
+                {
+                    <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success d-inline-flex align-items-center gap-1 shadow-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Thanh toán đa hình thức
+                    </a>
+                }
+            }
+            @if (canPay)
+            {
+                <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-dark d-inline-flex align-items-center gap-1">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    In hóa đơn
                 </a>
             }
-            <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-dark d-inline-flex align-items-center gap-1">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                In hóa đơn
-            </a>
         </div>
     </div>
 
@@ -265,11 +272,15 @@
                             }
                         </div>
                     }
-                    else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                    else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && canPay)
                     {
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
                             💳 Thanh toán ngay (Tiền mặt / QR / Thẻ)
                         </a>
+                    }
+                    else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                    {
+                        <div class="alert alert-light border small mb-0 text-center">Thu ngân hoặc bồi bàn thanh toán hóa đơn này.</div>
                     }
                 </div>
             </div>

@@ -262,6 +262,12 @@ public static class OrderSmoke
         var orderDetailView = await Get(waiter, $"/DonHang/Details/{tableBill.Id}");
         var orderDetailText = WebUtility.HtmlDecode(orderDetailView);
         check(orderDetailText.Contains("Đã xong (Sẵn sàng)"), "Waiter sees ready dish on order details");
+        check(WebUtility.HtmlDecode(await Get(waiter, $"/HoaDon/Details/{tableBill.Id}")).Contains("Xử lý thanh toán đa hình thức"),
+            "Waiter can open the invoice payment page");
+        var deniedInvoiceList = await waiter.GetAsync("/HoaDon");
+        check(deniedInvoiceList.StatusCode == HttpStatusCode.Forbidden
+            || (deniedInvoiceList.StatusCode == HttpStatusCode.Redirect && deniedInvoiceList.Headers.Location?.OriginalString.Contains("/Account/Denied") == true),
+            "Waiter cannot browse the full invoice list");
 
         using (var deniedServe = await cook.PostAsync("/Bep/CapNhat", new FormUrlEncodedContent(new Dictionary<string, string>
         {

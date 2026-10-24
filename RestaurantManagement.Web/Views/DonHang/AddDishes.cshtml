@@ -35,7 +35,7 @@
         <a asp-action="Details" asp-route-id="@ViewBag.HoaDonId" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại đơn</a>
     </div>
 
-    <form asp-action="AddDishes" asp-route-id="@ViewBag.HoaDonId" method="post" id="add-dishes-form" data-ajax-form="true" data-pos-form="add" data-invoice-id="@ViewBag.HoaDonId" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value">
+    <form asp-action="AddDishes" asp-route-id="@ViewBag.HoaDonId" method="post" id="add-dishes-form" data-ajax-form="true" data-pos-form="add" data-invoice-id="@ViewBag.HoaDonId" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value" data-live-url="@Url.Action("LiveOrderStatus", new { id = ViewBag.HoaDonId })">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="All" class="text-danger" role="alert"></div>
 
@@ -81,16 +81,6 @@
                             <div class="dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
                                 <div class="card h-100 shadow-none pos-dish-card" title="Bấm vào thẻ để thêm @dish.TenMon vào giỏ">
                                     <div class="card-body p-2 d-flex flex-column">
-                                        <div class="pos-dish-thumb">
-                                            @if (!string.IsNullOrWhiteSpace(dish.HinhAnh))
-                                            {
-                                                <img src="@dish.HinhAnh" alt="@dish.TenMon" loading="lazy" />
-                                            }
-                                            else
-                                            {
-                                                <i class="bi bi-egg-fried" aria-hidden="true"></i>
-                                            }
-                                        </div>
                                         <strong class="small text-dark">@dish.TenMon</strong>
                                         <div class="pos-dish-sizes d-flex flex-column gap-1 mt-auto pt-1">
                                             @foreach (var size in dish.Sizes)
@@ -123,7 +113,7 @@
                             <span><i class="bi bi-lock-fill me-1"></i>Món đã order (@Model.ExistingQuantity phần) — đã gửi bếp</span>
                             <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Khóa — không sửa/xóa</span>
                         </div>
-                        <div class="pos-locked-block" data-locked="true">
+                        <div class="pos-locked-block" data-live-invoice-order="true" data-locked="true">
                             @if (Model.ExistingItems.Count == 0)
                             {
                                 <p class="small text-muted mb-0">Đơn chưa có món nào.</p>
@@ -136,6 +126,7 @@
                                         <li>
                                             <span class="fw-semibold">@line.SoLuong × @line.TenMon</span>
                                             <span class="text-muted small">@line.TenSize · @line.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                                            @if (!string.IsNullOrWhiteSpace(line.YeuCauCheBien)) { <span class="text-muted small">Ghi chú: @line.YeuCauCheBien</span> }
                                             <span class="ms-auto">@line.ThanhTien.ToString("N0") đ</span>
                                             <span class="badge @StatusClass(line.TrangThai)">@StatusLabel(line.TrangThai)</span>
                                         </li>

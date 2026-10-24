@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="~/css/management-ui.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+    <body class="@((ViewData["AutoCollapseSidebar"] as bool? == true) ? "sidebar-collapsed" : "")" data-operational-workspace="@((ViewData["AutoCollapseSidebar"] as bool? == true).ToString().ToLowerInvariant())">
     <aside class="admin-sidebar" id="admin-sidebar">
         <div class="admin-sidebar-header d-flex align-items-center justify-content-between gap-3">
             <h4 class="mb-0 fw-bold text-nowrap"><i class="bi bi-shop me-2"></i><span class="admin-brand-text">Quản lý nhà hàng</span></h4>
@@ -52,7 +52,10 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         (function() {
-            var isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+            var operational = document.body.dataset.operationalWorkspace === 'true';
+            var isCollapsed = operational
+                ? sessionStorage.getItem('operational_sidebar_state') !== 'expanded'
+                : localStorage.getItem('sidebar_collapsed') === 'true';
             if (isCollapsed) {
                 document.body.classList.add('sidebar-collapsed');
             }
@@ -61,7 +64,11 @@
                 btn.addEventListener('click', function() {
                     document.body.classList.toggle('sidebar-collapsed');
                     var collapsed = document.body.classList.contains('sidebar-collapsed');
-                    localStorage.setItem('sidebar_collapsed', collapsed ? 'true' : 'false');
+                    if (operational) {
+                        sessionStorage.setItem('operational_sidebar_state', collapsed ? 'collapsed' : 'expanded');
+                    } else {
+                        localStorage.setItem('sidebar_collapsed', collapsed ? 'true' : 'false');
+                    }
                 });
             }
         })();
