@@ -20,15 +20,19 @@ public class TableBoardViewModel
     public string SlotId { get; set; } = "now";
     public bool IsLive { get; set; }
     public List<DatBan> Requests { get; set; } = [];
+    public List<ServiceReview> PendingServices { get; set; } = [];
     public bool CanAssign => Booking is not null && Booking.GioKetThucDuKien > DateTimeOffset.UtcNow
         && Booking.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan;
 }
 public class TableCard
 {
     public BanAn Table { get; set; } = null!;
+    public TrangThaiBan DisplayStatus { get; set; }
     public string Version { get; set; } = "";
     public DatBan? Occupant { get; set; }
     public string OccupantVersion { get; set; } = "";
+    public bool NeedsInspection { get; set; }
+    public string? Attention { get; set; }
     public List<DatBan> Conflicts { get; set; } = [];
     public List<DatBan> ScheduledBookings { get; set; } = [];
     public bool CanChoose { get; set; }
@@ -36,16 +40,18 @@ public class TableCard
     public bool IsSelected { get; set; }
     public string? UnavailableReason { get; set; }
 }
+public record ServiceReview(DatBan Booking, string Version);
 public class ReceptionBookingViewModel
 {
     [Required, StringLength(120)] public string HoTen { get; set; } = "";
     [Required, RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.")]
     public string SoDienThoai { get; set; } = "";
-    public DateTime GioDen { get; set; } = Services.TableService.VietnamNow.AddMinutes(5);
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
+    public DateTime GioDen { get; set; } = Services.ReservationSchedule.NextArrival(Services.TableService.VietnamNow);
     public bool DatTheoCa { get; set; }
     public DateOnly? NgayDat { get; set; }
     [Range(1, 50)] public int SoNguoi { get; set; } = 2;
-    [Range(60, Services.TableService.MaxDiningHours * 60, ErrorMessage = "Thời lượng từ 60 đến 180 phút. Bữa ăn cần đủ thời gian, không xếp khách sát lịch kế tiếp.")]
+    // Compatibility with old form payloads; W10 does not use a per-party countdown.
     public int SoPhut { get; set; } = 120;
     public int? KhuVucId { get; set; }
     [StringLength(1000)] public string? GhiChu { get; set; }

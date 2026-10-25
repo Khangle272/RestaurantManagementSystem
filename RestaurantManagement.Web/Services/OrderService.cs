@@ -18,11 +18,9 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             .ToListAsync();
 
         var tableIds = occupiedTables.Select(x => x.Id).ToArray();
-        var bookings = await db.ChiTietDatBan.AsNoTracking()
+        var bookings = await TableService.CurrentServices(db).AsNoTracking()
             .Include(x => x.DatBan)
-            .Where(x => tableIds.Contains(x.BanAnId)
-                && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
-                && x.DatBan.ThoiDiemKetThuc == null)
+            .Where(x => tableIds.Contains(x.BanAnId))
             .ToListAsync();
 
         var bookingIds = bookings.Select(x => x.DatBanId).Distinct().ToList();
@@ -33,7 +31,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             .OrderByDescending(x => x.ThoiDiemLap)
             .ToListAsync();
 
-        return occupiedTables.Select(t =>
+        return occupiedTables.Where(t => bookings.Any(x => x.BanAnId == t.Id)).Select(t =>
         {
             var matchingBookings = bookings.Where(x => x.BanAnId == t.Id)
                 .Select(x => x.DatBan).DistinctBy(x => x.Id).ToList();
@@ -564,6 +562,11 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
             invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
             await db.SaveChangesAsync();
+            if (invoice.DatBanId is int finishedBookingId)
+            {
+                await TableService.ReleasePaidWithinTransaction(db, finishedBookingId);
+                await db.SaveChangesAsync();
+            }
             await tx.CommitAsync();
             return null;
         }

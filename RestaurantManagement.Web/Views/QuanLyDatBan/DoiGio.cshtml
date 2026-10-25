@@ -1,0 +1,12 @@
+@model BookingRescheduleViewModel
+@using RestaurantManagement.Web.Services
+<h2 class="h5">Đổi giờ đặt bàn @Model.Code · @Model.Customer</h2>
+<p class="text-muted">Chọn giờ tự do trong giờ phục vụ @ReservationSchedule.ServiceHours, bao gồm buổi chiều. Hệ thống kiểm tra lại bàn trong ca mới; tiền cọc và món đã chọn giữ nguyên.</p>
+<form id="reschedule-booking" asp-action="DoiGio" method="post" data-ajax-form="true">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
+    <input asp-for="Code" type="hidden" /><input asp-for="Customer" type="hidden" />
+    <label asp-for="GioDen" class="form-label">Giờ đến mới</label><input asp-for="GioDen" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control mb-3" required />
+    <label asp-for="LyDo" class="form-label">Lý do đổi giờ</label><input asp-for="LyDo" class="form-control mb-3" maxlength="200" required />
+    <button type="submit" class="btn btn-success">Lưu giờ mới</button>
+</form>

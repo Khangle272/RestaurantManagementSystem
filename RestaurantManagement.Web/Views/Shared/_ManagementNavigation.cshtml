@@ -31,6 +31,7 @@
         ("Quản lý Kho", "NhaCungCap", "Index", "Nhà cung cấp", warehouse),
         ("Quản lý Kho", "NguyenLieu", "Index", "Danh mục nguyên liệu", warehouse),
         ("Báo cáo & Thống kê", "BaoCao", "Index", "Tổng quan kinh doanh", admin),
+        ("Báo cáo & Thống kê", "ThongKeDatBan", "Index", "Đặt bàn & dự trù nguyên liệu", reception || warehouse || User.IsInRole("Bep")),
         ("Báo cáo & Thống kê", "BaoCao", "DoanhThu", "Báo cáo doanh thu", admin),
         ("Báo cáo & Thống kê", "BaoCao", "MonBanChay", "Món ăn bán chạy", admin),
         ("Báo cáo & Thống kê", "BaoCao", "TonKho", "Tồn kho tổng hợp", admin || warehouse),

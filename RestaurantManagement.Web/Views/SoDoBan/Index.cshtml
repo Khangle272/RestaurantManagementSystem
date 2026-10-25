@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = "Sơ đồ bàn"; var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan"); }
 @section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
 <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-    <div><p class="small text-success fw-semibold mb-1">KHU VỰC PHỤC VỤ</p><h1 class="h3 mb-1">Sơ đồ bàn</h1><p class="text-muted mb-0">Theo dõi bàn hiện tại và xếp lịch theo khu vực, tầng.</p><p class="small text-muted mb-0">Sau 3 tiếng từ lúc nhận bàn, lượt đã thanh toán, xử lý xong cọc và món sẽ tự chuyển Cần dọn. Chỉ Dọn xong mới trở lại Sẵn sàng.</p></div>
+    <div><p class="small text-success fw-semibold mb-1">KHU VỰC PHỤC VỤ</p><h1 class="h3 mb-1">Sơ đồ bàn</h1><p class="text-muted mb-0">Phục vụ liên tục @ReservationSchedule.ServiceHours. Chia ca quản lý trước 17h và từ 17h; mỗi bàn nhận một lượt mỗi ca.</p><p class="small text-muted mb-0">Xác nhận hoàn tất là xác nhận khách đã dùng xong và bàn sẵn sàng. Không có bước chờ dọn riêng; quá 3 tiếng chỉ nhắc kiểm tra.</p></div>
     <div class="d-flex gap-2 flex-wrap">
         @if (User.IsInRole("Admin") || User.IsInRole("TiepTan")) {
             <a asp-controller="QuanLyDatBan" asp-action="Create" class="btn btn-success">Đặt bàn cho khách</a>
@@ -54,7 +54,7 @@
     </aside>
 }
 <section class="booking-board-panel" aria-label="Sơ đồ bàn và lịch đặt">
-    <p class="small text-muted mb-3">@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ca, không phải trạng thái bàn ngay lúc này") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.Until.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy"). @if (Model.CheckUntil > Model.Until) { <span>Bàn có lịch trước chỉ mở lại khi kết thúc và dọn xong; hệ thống kiểm tra khả năng trùng đến @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy").</span> } Bàn chưa dọn chưa thể nhận khách.</p>
+    <p class="small text-muted mb-3">@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ngày và ca") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy"). Lịch xét đúng ngày đang xem; khi nhận khách, bàn phải được xác nhận sẵn sàng.</p>
     <div id="assignment-warning" class="alert alert-warning" role="alert" tabindex="-1" hidden></div>
     <div id="table-board" data-poll="@(Model.Booking is null ? "true" : "false")"><partial name="_Board" model="Model" /></div>
 </section>

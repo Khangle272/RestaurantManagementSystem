@@ -11,12 +11,17 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
 {
     public const int MaxDiningHours = 3;
     public static DateTimeOffset ServingDeadline(DatBan booking) => (booking.ThoiDiemNhanBan ?? booking.GioDen).AddHours(MaxDiningHours);
-    public static DateTimeOffset BlockingUntil(DatBan booking) =>
-        booking.GioKetThucDuKien > ServingDeadline(booking) ? booking.GioKetThucDuKien : ServingDeadline(booking);
+    public static DateTimeOffset BlockingUntil(DatBan booking) => ReservationSchedule.Window(booking.GioDen).Until;
     public static bool ReadyForSchedule(BanAn table, DateTimeOffset arrival) => table.TrangThai == TrangThaiBan.SanSang
         || DateOnly.FromDateTime(arrival.ToOffset(TimeSpan.FromHours(7)).DateTime) > DateOnly.FromDateTime(VietnamNow);
     public static DateTimeOffset VietnamTime(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.FromHours(7));
     public static DateTime VietnamNow => DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).DateTime;
+    public static IQueryable<ChiTietDatBan> CurrentServices(RestaurantDbContext db)
+    {
+        var today = VietnamTime(VietnamNow.Date); var tomorrow = today.AddDays(1);
+        return db.ChiTietDatBan.Where(x => x.DatBan.GioDen >= today && x.DatBan.GioDen < tomorrow
+            && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null);
+    }
     public static string NewCode(string prefix) => prefix + "-" + Guid.NewGuid().ToString("N")[..20].ToUpperInvariant();
 
     public static async Task<string> NewBookingCode(RestaurantDbContext db)
@@ -36,29 +41,38 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
             || (x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc && (!x.DatBan.CocTuDong
                 || x.DatBan.HanThanhToanCoc > now || x.DatBan.ThoiDiemBaoChuyenKhoan != null
                 || x.DatBan.TienCocDaNop > x.DatBan.TienCocDaHoan + x.DatBan.TienCocDaGiu))
-            || (x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null));
+            || x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan);
     }
 
-    public IQueryable<ChiTietDatBan> OverlappingBookings(DateTimeOffset from, DateTimeOffset until, int? exclude = null) =>
-        BlockingBookings().Where(x => (!exclude.HasValue || x.DatBanId != exclude.Value)
-            && x.DatBan.GioDen < until && (x.DatBan.GioKetThucDuKien > from
-                || (x.DatBan.ThoiDiemNhanBan ?? x.DatBan.GioDen).AddHours(MaxDiningHours) > from));
+    public IQueryable<ChiTietDatBan> OverlappingBookings(DateTimeOffset from, DateTimeOffset until, int? exclude = null)
+    {
+        var window = ReservationSchedule.Window(from);
+        var dayStart = VietnamTime(from.ToOffset(TimeSpan.FromHours(7)).Date);
+        return BlockingBookings().Where(x => (!exclude.HasValue || x.DatBanId != exclude.Value)
+            && x.DatBan.GioDen >= dayStart && x.DatBan.GioDen < window.Until && x.DatBan.GioKetThucDuKien > window.From);
+    }
+
+    public async Task<List<int>> PhysicalBusyTables(DateTimeOffset arrival, int? exclude = null)
+    {
+        var day = arrival.ToOffset(TimeSpan.FromHours(7)).Date;
+        if (day != VietnamNow.Date) return [];
+        var start = VietnamTime(day); var end = start.AddDays(1);
+        var busy = await db.ChiTietDatBan.Where(x => (!exclude.HasValue || x.DatBanId != exclude.Value) && x.DatBan.GioDen >= start && x.DatBan.GioDen < end
+            && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
+            && (x.DatBan.ThoiDiemKetThuc == null || x.BanAn.TrangThai == TrangThaiBan.CanDon))
+            .Select(x => x.BanAnId).Distinct().ToListAsync();
+        // Physical flags require staff confirmation today, but never block a future calendar date.
+        busy.AddRange(await db.BanAn.Where(t => (t.TrangThai == TrangThaiBan.DangPhucVu || t.TrangThai == TrangThaiBan.CanDon)
+            && (!exclude.HasValue || !db.ChiTietDatBan.Any(x => x.BanAnId == t.Id && x.DatBanId == exclude.Value
+                && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan && x.DatBan.ThoiDiemKetThuc == null)))
+            .Select(t => t.Id).ToListAsync());
+        return busy;
+    }
 
     public static List<BanAn>? PickTables(IEnumerable<BanAn> available, int guests)
     {
         var single = available.Where(x => x.SoChoNgoi >= guests).OrderBy(x => x.SoChoNgoi).ThenBy(x => x.Id).FirstOrDefault();
-        if (single is not null) return [single];
-        foreach (var group in available.GroupBy(x => x.KhuVucId).OrderBy(x => x.Key))
-        {
-            var selection = new List<BanAn>();
-            foreach (var table in group.OrderByDescending(x => x.SoChoNgoi).ThenBy(x => x.Id))
-            {
-                selection.Add(table);
-                if (selection.Sum(x => x.SoChoNgoi) >= guests) break;
-            }
-            if (selection.Count <= 20 && selection.Sum(x => x.SoChoNgoi) >= guests) return selection;
-        }
-        return null;
+        return single is null ? null : [single];
     }
 
     public async Task<bool> HasCapacity(DateTimeOffset from, DateTimeOffset until, int guests, int? areaId, bool vip)
@@ -66,13 +80,13 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var candidates = await db.BanAn.AsNoTracking().Where(x => x.KhuVuc.DangSuDung
             && x.TrangThai != TrangThaiBan.NgungSuDung && (!areaId.HasValue || x.KhuVucId == areaId)
             && x.KhuVuc.LaPhongVip == vip).ToListAsync();
-        var busy = await OverlappingBookings(from, from.AddHours(MaxDiningHours) > until ? from.AddHours(MaxDiningHours) : until)
+        var busy = await OverlappingBookings(from, until)
             .Select(x => x.BanAnId).Distinct().ToListAsync();
-        return PickTables(candidates.Where(x => !busy.Contains(x.Id)
-            && ReadyForSchedule(x, from)), guests) is not null;
+        busy.AddRange(await PhysicalBusyTables(from));
+        return PickTables(candidates.Where(x => !busy.Contains(x.Id)), guests) is not null;
     }
 
-    public async Task<(string? Error, List<DiningSlotAvailability> Slots)> AvailableSlots(DateOnly day, int guests, int? areaId)
+    public async Task<(string? Error, List<DiningSlotAvailability> Slots)> AvailableSlots(DateOnly day, int guests, int? areaId, int leadMinutes = 30, DateTime? preferredArrival = null)
     {
         var today = DateOnly.FromDateTime(VietnamNow);
         if (day < today || day > today.AddDays(180) || guests is < 1 or > 50)
@@ -80,16 +94,28 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var area = areaId.HasValue ? await db.KhuVuc.AsNoTracking().SingleOrDefaultAsync(x => x.Id == areaId && x.DangSuDung) : null;
         if (areaId.HasValue && area is null) return ("Khu vực không còn sử dụng.", []);
         var result = new List<DiningSlotAvailability>();
-        foreach (var slot in ReservationSchedule.Slots)
+        var now = VietnamNow;
+        if (preferredArrival.HasValue && DateOnly.FromDateTime(preferredArrival.Value) != day) return ("Ngày đặt và giờ đến chưa khớp.", []);
+        foreach (var arrival in ReservationSchedule.QuickArrivals(day, now, leadMinutes))
         {
-            var arrival = slot.Arrival(day);
-            var error = ReservationSchedule.Validate(arrival, VietnamNow);
-            var available = error is null && await HasCapacity(VietnamTime(arrival), ReservationSchedule.EndOf(arrival),
-                guests, areaId, area?.LaPhongVip == true);
-            result.Add(new(slot.Id, slot.Label, arrival.ToString("yyyy-MM-ddTHH:mm"), available,
-                error ?? (available ? "Còn bàn phù hợp" : "Không còn đủ bàn phù hợp")));
+            var time = TimeOnly.FromDateTime(arrival);
+            var slot = ReservationSchedule.Match(arrival)!;
+            if (ReservationSchedule.Validate(arrival, now, leadMinutes) is not null) continue;
+            var available = await HasCapacity(VietnamTime(arrival), ReservationSchedule.EndOf(arrival), guests, areaId, area?.LaPhongVip == true);
+            result.Add(new(slot.Id, slot.Name + " · " + time.ToString("HH:mm"), arrival.ToString("yyyy-MM-ddTHH:mm"), available,
+                available ? "Giờ sớm nhất có thể nhận trong ca này; có thể tự chọn giờ khác." : "Ca này không còn đủ bàn phù hợp với số khách/khu vực."));
         }
-        return (null, result);
+        return (null, result.OrderBy(x => x.Value).ToList());
+    }
+
+    public async Task<(bool Available, string Message)> CheckAvailability(DateTime arrival, int guests, int? areaId, int leadMinutes = 30)
+    {
+        if (guests is < 1 or > 50) return (false, "Chọn từ 1 đến 50 khách.");
+        if (ReservationSchedule.Validate(arrival, VietnamNow, leadMinutes) is { } error) return (false, error);
+        var area = areaId.HasValue ? await db.KhuVuc.SingleOrDefaultAsync(x => x.Id == areaId && x.DangSuDung) : null;
+        if (areaId.HasValue && area is null) return (false, "Khu vực không còn sử dụng.");
+        var available = await HasCapacity(VietnamTime(arrival), ReservationSchedule.EndOf(arrival), guests, areaId, area?.LaPhongVip == true);
+        return (available, available ? "Còn bàn phù hợp trong ca. Hệ thống kiểm tra lại khi lưu." : "Không còn bàn phù hợp trong ca này. Chọn ngày, ca hoặc khu vực khác.");
     }
 
     // Caller owns the serializable transaction; reserve before asking the customer for money.
@@ -102,7 +128,8 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var busy = await OverlappingBookings(booking.GioDen, BlockingUntil(booking), booking.Id)
             .Where(x => candidates.Contains(x.BanAnId))
             .Select(x => x.BanAnId).Distinct().ToListAsync();
-        var available = tables.Where(x => !busy.Contains(x.Id) && ReadyForSchedule(x, booking.GioDen));
+        busy.AddRange(await PhysicalBusyTables(booking.GioDen, booking.Id));
+        var available = tables.Where(x => !busy.Contains(x.Id));
         var guests = booking.SoNguoiLon + booking.SoTreEm;
         var chosen = PickTables(available, guests);
         if (chosen is null) return "Khung giờ/khu vực này không còn đủ bàn phù hợp. Chọn giờ hoặc khu vực khác; bạn chưa phải thanh toán.";
@@ -148,7 +175,7 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
     public Task<string?> Assign(int id, int[] ids, string? version, int? staffId) => Run(async () =>
     {
         ids = ids.Distinct().ToArray();
-        if (ids.Length is 0 or > 20) return "Chọn từ 1 đến 20 bàn để xếp cho khách.";
+        if (ids.Length != 1) return "Chọn đúng một bàn đủ chỗ cho khách. Chọn bàn mới sẽ thay bàn cũ.";
         var tables = await LockTables(ids);
         var booking = await db.DatBan.Include(x => x.Ban).SingleOrDefaultAsync(x => x.Id == id);
         if (booking is null || !SameVersion(booking, version)) return "Yêu cầu đã thay đổi. Vui lòng mở lại.";
@@ -158,16 +185,16 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         if (booking.GioKetThucDuKien <= DateTimeOffset.UtcNow) return "Yêu cầu đã quá giờ kết thúc dự kiến.";
         if (tables.Count != ids.Length || tables.Any(x => !x.KhuVuc.DangSuDung || x.TrangThai == TrangThaiBan.NgungSuDung))
             return "Có bàn hoặc khu vực đã ngừng sử dụng.";
-        if (tables.Select(x => x.KhuVucId).Distinct().Count() != 1) return "Bàn ghép phải thuộc cùng một khu vực.";
-        if (tables.Sum(x => x.SoChoNgoi) < booking.SoNguoiLon + booking.SoTreEm) return "Các bàn đã chọn không đủ chỗ cho khách.";
+        if (tables[0].SoChoNgoi < booking.SoNguoiLon + booking.SoTreEm) return "Bàn đã chọn không đủ chỗ cho khách.";
         if (booking.YeuCauVip && tables.Any(x => !x.KhuVuc.LaPhongVip)) return "Yêu cầu phòng VIP cần được xếp vào khu vực VIP.";
         if (!booking.YeuCauVip && tables.Any(x => x.KhuVuc.LaPhongVip)) return "Khách chưa yêu cầu VIP. Thống nhất yêu cầu với khách trước khi chọn khu vực VIP.";
-        if (tables.Any(x => !ReadyForSchedule(x, booking.GioDen)))
+        var physicallyBusy = await PhysicalBusyTables(booking.GioDen, id);
+        if (tables.Any(x => physicallyBusy.Contains(x.Id)))
             return "Bàn đang phục vụ hoặc chưa dọn trong ngày này. Chọn bàn sẵn sàng hoặc chờ dọn xong.";
         var conflict = await OverlappingBookings(booking.GioDen, BlockingUntil(booking), id)
             .Where(x => ids.Contains(x.BanAnId)).OrderBy(x => x.DatBan.GioDen).Select(x => x.DatBan).FirstOrDefaultAsync();
         if (conflict is not null)
-            return $"Bàn đã có lịch {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm}–{conflict.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)):HH:mm}, giữ bàn tối đa đến {BlockingUntil(conflict).ToOffset(TimeSpan.FromHours(7)):HH:mm} hoặc khi phục vụ và dọn xong. Chọn bàn khác.";
+            return $"Bàn đã có lượt trong ca {ReservationSchedule.Match(conflict.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime)?.Label}. Mỗi bàn chỉ nhận một lượt mỗi ca; chọn bàn khác.";
         var removed = booking.Ban.Where(x => !ids.Contains(x.BanAnId)).ToList();
         db.ChiTietDatBan.RemoveRange(removed);
         foreach (var tableId in ids.Where(x => !booking.Ban.Any(b => b.BanAnId == x)))
@@ -177,6 +204,31 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
             || booking.TienCocDaNop - booking.TienCocDaHoan - booking.TienCocDaGiu < booking.TienCocYeuCau)
             ? TrangThaiDatBan.ChoCoc : TrangThaiDatBan.DaXacNhan;
         booking.NhanVienTiepNhanId = staffId;
+        return null;
+    });
+
+    public Task<string?> Reschedule(int id, string? version, DateTime arrival, string reason, int? staffId) => Run(async () =>
+    {
+        if (ReservationSchedule.Validate(arrival, VietnamNow) is { } invalid) return invalid;
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 200) return "Nhập lý do đổi giờ, tối đa 200 ký tự.";
+        var ids = await db.ChiTietDatBan.Where(x => x.DatBanId == id).Select(x => x.BanAnId).ToArrayAsync();
+        var selected = await LockTables(ids);
+        var booking = await db.DatBan.SingleOrDefaultAsync(x => x.Id == id);
+        if (booking is null || !SameVersion(booking, version)) return "Yêu cầu đã thay đổi; mở lại để đổi giờ.";
+        if (booking.TrangThai is not (TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan)
+            || ReservationDepositPolicy.Expired(booking)) return "Chỉ đổi giờ lịch chưa nhận bàn và còn hiệu lực giữ chỗ.";
+        if (await db.ChiTietHoaDon.AnyAsync(x => x.HoaDon.DatBanId == id && x.TrangThai != TrangThaiCheBien.ChoCheBien && x.TrangThai != TrangThaiCheBien.DaHuy))
+            return "Món đã bắt đầu chế biến; phối hợp với bếp trước khi đổi lịch.";
+        var from = VietnamTime(arrival); var until = ReservationSchedule.EndOf(arrival);
+        if (await OverlappingBookings(from, until, id).AnyAsync(x => ids.Contains(x.BanAnId)))
+            return "Bàn đang xếp đã có lượt trong ca mới. Xếp lại bàn hoặc chọn ngày/ca khác.";
+        var busy = await PhysicalBusyTables(from, id);
+        if (selected.Any(x => x.TrangThai == TrangThaiBan.NgungSuDung || !x.KhuVuc.DangSuDung || busy.Contains(x.Id)))
+            return "Bàn đang xếp chưa sẵn sàng cho giờ mới; chọn bàn khác trước khi đổi giờ.";
+        var audit = $"\nĐổi giờ {booking.GioDen.ToOffset(TimeSpan.FromHours(7)):dd/MM HH:mm} → {arrival:dd/MM HH:mm}; {staffId?.ToString() ?? "Admin"}: {reason.Trim()}";
+        if ((booking.YeuCau?.Length ?? 0) + audit.Length > 1000) return "Ghi chú lịch đã đầy; rút gọn trước khi thêm lý do đổi giờ.";
+        booking.YeuCau = (booking.YeuCau ?? "") + audit;
+        booking.GioDen = from; booking.GioKetThucDuKien = until;
         return null;
     });
 
@@ -193,7 +245,11 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
             return "Chưa nhận đủ cọc đã thỏa thuận; đối chiếu cọc trước khi nhận khách.";
         if (booking.GioDen > DateTimeOffset.UtcNow.AddMinutes(30) || booking.GioKetThucDuKien <= DateTimeOffset.UtcNow)
             return "Chưa đến giờ nhận bàn hoặc lịch đã hết hạn. Điều chỉnh lịch trước khi nhận khách.";
-        if (tables.Any(x => !x.KhuVuc.DangSuDung || x.TrangThai != TrangThaiBan.SanSang)) return "Bàn chưa sẵn sàng; hãy dọn bàn hoặc xếp bàn khác.";
+        if (await OverlappingBookings(booking.GioDen, booking.GioKetThucDuKien, id).AnyAsync(x => ids.Contains(x.BanAnId)))
+            return "Bàn đang có lịch khác trong cùng ca. Kiểm tra và xếp lại bàn trước khi nhận khách.";
+        var physicallyBusy = await PhysicalBusyTables(booking.GioDen, id);
+        if (tables.Any(x => !x.KhuVuc.DangSuDung || x.TrangThai == TrangThaiBan.NgungSuDung || physicallyBusy.Contains(x.Id)))
+            return "Bàn chưa sẵn sàng; hãy dọn bàn hoặc xếp bàn khác.";
         booking.TrangThai = TrangThaiDatBan.DaNhanBan;
         booking.ThoiDiemNhanBan = DateTimeOffset.UtcNow;
         booking.NhanVienTiepNhanId = staffId;
@@ -266,39 +322,77 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
 
     public Task<string?> ChangeTable(int id, string? version, bool clean) => Run(async () =>
     {
-        var bookingId = await db.ChiTietDatBan.Where(x => x.BanAnId == id && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
-            && x.DatBan.ThoiDiemKetThuc == null).OrderByDescending(x => x.DatBan.ThoiDiemNhanBan).Select(x => (int?)x.DatBanId).FirstOrDefaultAsync();
-        var ids = !clean && bookingId is int b ? await db.ChiTietDatBan.Where(x => x.DatBanId == b).Select(x => x.BanAnId).ToArrayAsync() : [id];
+        var bookingId = await db.ChiTietDatBan.Where(x => x.BanAnId == id && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan)
+            .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan ?? x.DatBan.GioDen).ThenByDescending(x => x.DatBanId)
+            .Select(x => (int?)x.DatBanId).FirstOrDefaultAsync();
+        var ids = bookingId is int b ? await db.ChiTietDatBan.Where(x => x.DatBanId == b).Select(x => x.BanAnId).ToArrayAsync() : [id];
         var tables = await LockTables(ids);
         var selected = tables.SingleOrDefault(x => x.Id == id);
         if (selected is null || !SameVersion(selected, version)) return "Bàn đã thay đổi. Vui lòng tải lại sơ đồ.";
-        if (clean)
+        if (selected.TrangThai is not (TrangThaiBan.CanDon or TrangThaiBan.DangPhucVu)) return "Bàn đã sẵn sàng hoặc ngừng sử dụng. Vui lòng tải lại sơ đồ.";
+        if (bookingId is int activeId)
         {
-            if (selected.TrangThai != TrangThaiBan.CanDon) return "Chỉ xác nhận dọn xong cho bàn đang cần dọn.";
-            selected.TrangThai = TrangThaiBan.SanSang;
-            return null;
+            var booking = await db.DatBan.SingleAsync(x => x.Id == activeId);
+            if (booking.ThoiDiemKetThuc is null) return await FinishWithinTransaction(db, booking, tables);
+            if (await CompletionError(db, booking) is { } error) return error;
         }
-        if (tables.Any(x => x.TrangThai != TrangThaiBan.DangPhucVu)) return "Chỉ kết thúc phục vụ bàn đang có khách.";
-        if (bookingId is null) return "Chưa xác định được lượt khách của bàn. Quản lý cần kiểm tra dữ liệu trước khi giải phóng.";
-        var booking = await db.DatBan.SingleAsync(x => x.Id == bookingId);
-        return await FinishWithinTransaction(booking, tables);
+        // Legacy dirty/orphan flags are cleared only by an explicit staff confirmation, never by elapsed time.
+        if (!clean) return "Hãy kiểm tra bàn đã trống, sẵn sàng rồi xác nhận hoàn tất.";
+        selected.TrangThai = TrangThaiBan.SanSang;
+        return null;
     });
 
-    public Task<string?> CloseOverdue(int id) => Run(async () =>
+    public Task<string?> CompleteService(int id, string? version) => Run(async () =>
     {
         var ids = await db.ChiTietDatBan.Where(x => x.DatBanId == id).Select(x => x.BanAnId).ToArrayAsync();
         var tables = await LockTables(ids);
         var booking = await db.DatBan.SingleOrDefaultAsync(x => x.Id == id);
-        if (booking is null || booking.TrangThai != TrangThaiDatBan.DaNhanBan || booking.ThoiDiemKetThuc is not null) return null;
-        if (ServingDeadline(booking) > DateTimeOffset.UtcNow) return "Chưa đủ 3 tiếng từ lúc nhận bàn.";
-        if (tables.Count == 0 || tables.Any(x => x.TrangThai != TrangThaiBan.DangPhucVu)) return "Trạng thái bàn không khớp lượt phục vụ; cần kiểm tra.";
-        return await FinishWithinTransaction(booking, tables);
+        if (booking is null || !SameVersion(booking, version)) return "Lượt khách đã thay đổi. Vui lòng tải lại sơ đồ.";
+        return await FinishWithinTransaction(db, booking, tables);
     });
 
-    private async Task<string?> FinishWithinTransaction(DatBan booking, List<BanAn> tables)
+    public Task<string?> CloseOverdue(int id) => Task.FromResult<string?>("Quá 3 tiếng chỉ nhắc kiểm tra; nhân viên xác nhận hoàn tất bàn sau khi xử lý đủ tiền, món và cọc.");
+
+    public Task<string?> CompletePaidService(int id) => Run(async () => { await ReleasePaidWithinTransaction(db, id); return null; });
+
+    public static async Task ReleasePaidWithinTransaction(RestaurantDbContext db, int id)
+    {
+        var ids = await db.ChiTietDatBan.Where(x => x.DatBanId == id).Select(x => x.BanAnId).ToArrayAsync();
+        var tables = new List<BanAn>();
+        foreach (var tableId in ids.Order())
+        {
+            var table = await db.BanAn.FromSqlInterpolated($"SELECT * FROM [BanAn] WITH (UPDLOCK,HOLDLOCK) WHERE [Id]={tableId}").SingleAsync();
+            tables.Add(table);
+        }
+        var booking = await db.DatBan.SingleOrDefaultAsync(x => x.Id == id);
+        if (booking is null || booking.TrangThai != TrangThaiDatBan.DaNhanBan || booking.ThoiDiemKetThuc is not null) return;
+        if (!await db.HoaDon.AnyAsync(x => x.DatBanId == id && x.TrangThai == TrangThaiHoaDon.DaThanhToan)) return;
+        if (tables.Count == 0) return;
+        await FinishWithinTransaction(db, booking, tables);
+    }
+
+    private static async Task<string?> FinishWithinTransaction(RestaurantDbContext db, DatBan booking, List<BanAn> tables)
     {
         if (booking.TrangThai != TrangThaiDatBan.DaNhanBan || booking.ThoiDiemKetThuc is not null)
             return "Lượt phục vụ đã thay đổi. Vui lòng tải lại sơ đồ.";
+        if (await CompletionError(db, booking) is { } error) return error;
+        var bills = await db.HoaDon.Where(x => x.DatBanId == booking.Id).ToListAsync();
+        foreach (var bill in bills.Where(x => x.TrangThai is not (TrangThaiHoaDon.DaThanhToan or TrangThaiHoaDon.DaHuy))) bill.TrangThai = TrangThaiHoaDon.DaHuy;
+        booking.ThoiDiemKetThuc = DateTimeOffset.UtcNow;
+        foreach (var table in tables)
+        {
+            // Resolving old paperwork must never release a newer party on the same physical table.
+            var newer = await db.ChiTietDatBan.AnyAsync(x => x.BanAnId == table.Id && x.DatBanId != booking.Id
+                && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
+                && ((x.DatBan.ThoiDiemNhanBan ?? x.DatBan.GioDen) > (booking.ThoiDiemNhanBan ?? booking.GioDen)
+                    || ((x.DatBan.ThoiDiemNhanBan ?? x.DatBan.GioDen) == (booking.ThoiDiemNhanBan ?? booking.GioDen) && x.DatBanId > booking.Id)));
+            if (!newer && table.TrangThai != TrangThaiBan.NgungSuDung) table.TrangThai = TrangThaiBan.SanSang;
+        }
+        return null;
+    }
+
+    private static async Task<string?> CompletionError(RestaurantDbContext db, DatBan booking)
+    {
         var bills = await db.HoaDon.Include(x => x.ChiTiet).Where(x => x.DatBanId == booking.Id).ToListAsync();
         if (bills.Any(x => x.TrangThai is not (TrangThaiHoaDon.DaThanhToan or TrangThaiHoaDon.DaHuy)
             && (x.ChiTiet.Count > 0 || x.TongTienHang > 0 || x.TienCocDaTru > 0))) return "Còn hóa đơn chưa thanh toán. Không thể kết thúc bàn.";
@@ -307,9 +401,6 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var unallocatedDeposit = booking.TienCocDaNop - booking.TienCocDaHoan - booking.TienCocDaGiu
             - bills.Where(x => x.TrangThai != TrangThaiHoaDon.DaHuy).Sum(x => x.TienCocDaTru);
         if (unallocatedDeposit > 0) return "Còn tiền cọc chưa đối trừ hoặc hoàn/giữ. Thu ngân cần xử lý trước khi kết thúc bàn.";
-        foreach (var bill in bills.Where(x => x.TrangThai is not (TrangThaiHoaDon.DaThanhToan or TrangThaiHoaDon.DaHuy))) bill.TrangThai = TrangThaiHoaDon.DaHuy;
-        booking.ThoiDiemKetThuc = DateTimeOffset.UtcNow;
-        foreach (var table in tables) table.TrangThai = TrangThaiBan.CanDon;
         return null;
     }
 }

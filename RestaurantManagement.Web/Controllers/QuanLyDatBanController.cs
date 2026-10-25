@@ -162,6 +162,27 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> DoiGio(int id, bool dialog = false)
+    {
+        var booking = await Db.DatBan.SingleOrDefaultAsync(x => x.Id == id);
+        if (booking is null) return NotFound();
+        var model = new BookingRescheduleViewModel { Id = id, Code = booking.MaDatBan, Customer = booking.HoTenLienHe,
+            GioDen = booking.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime, RowVersion = VersionOf(booking) };
+        return dialog ? PartialView("DoiGio", model) : View(model);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DoiGio(BookingRescheduleViewModel model)
+    {
+        var error = ModelState.IsValid ? await tables.Reschedule(model.Id, model.RowVersion, model.GioDen, model.LyDo, await StaffId()) : "Điền giờ đến và lý do hợp lệ.";
+        if (Request.Headers.XRequestedWith == "XMLHttpRequest") return error is null
+            ? Json(new { ok = true, message = "Đã đổi giờ. Mã đặt bàn, món và khoản cọc được giữ nguyên." })
+            : StatusCode(409, new { ok = false, message = error });
+        if (error is not null) { ModelState.AddModelError("", error); return View(model); }
+        TempData["SuccessMessage"] = "Đã cập nhật giờ đến."; return RedirectToAction(nameof(Index));
+    }
+
     private Task<int?> StaffId()
     {
         int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var accountId);
@@ -201,10 +222,9 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     {
         model.Areas = await Db.KhuVuc.Where(x => x.DangSuDung).ToListAsync();
         var arrival = TableService.VietnamTime(model.GioDen);
-        var until = arrival.AddMinutes(model.SoPhut);
-        if (model.DatTheoCa || arrival > DateTimeOffset.UtcNow.AddMinutes(30))
+        var until = arrival.AddMinutes(1);
         {
-            if (ReservationSchedule.Validate(model.GioDen, TableService.VietnamNow) is { } scheduleError)
+            if (ReservationSchedule.Validate(model.GioDen, TableService.VietnamNow, -15) is { } scheduleError)
                 ModelState.AddModelError(nameof(model.GioDen), scheduleError);
             else until = ReservationSchedule.EndOf(model.GioDen);
             if (model.NgayDat.HasValue && model.NgayDat != DateOnly.FromDateTime(model.GioDen))

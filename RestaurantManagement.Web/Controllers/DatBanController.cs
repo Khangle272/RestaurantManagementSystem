@@ -21,11 +21,14 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
     private bool IsAjax => Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
     [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> KhungGio(DateOnly ngay, int soNguoi = 2, int? maKhuVuc = null)
+    public async Task<IActionResult> KhungGio(DateOnly ngay, int soNguoi = 2, int? maKhuVuc = null, DateTime? gioDen = null)
     {
         if (!ModelState.IsValid) return BadRequest(new { message = "Ngày hoặc số khách không hợp lệ." });
-        var result = await tables.AvailableSlots(ngay, soNguoi, maKhuVuc);
-        return result.Error is { } error ? BadRequest(new { message = error }) : Json(new { slots = result.Slots });
+        var result = await tables.AvailableSlots(ngay, soNguoi, maKhuVuc, preferredArrival: gioDen);
+        if (result.Error is { } error) return BadRequest(new { message = error });
+        var selected = gioDen.HasValue ? await tables.CheckAvailability(gioDen.Value, soNguoi, maKhuVuc)
+            : (Available: false, Message: "Chọn một ca gợi ý hoặc tự nhập giờ muốn đến.");
+        return Json(new { slots = result.Slots, available = selected.Available, message = selected.Message });
     }
     // GET /DatBan
     [HttpGet]

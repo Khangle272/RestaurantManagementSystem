@@ -21,6 +21,7 @@ public class DatBanCreateVM : IValidatableObject
     public string? Email { get; set; }
 
     [Required(ErrorMessage = "Vui lòng chọn thời gian đến.")]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
     [Display(Name = "Thời gian đến")]
     public DateTime ThoiGianDen { get; set; } = Services.ReservationSchedule.NextArrival(Services.TableService.VietnamNow);
     public DateOnly? NgayDat { get; set; }
@@ -46,7 +47,7 @@ public class DatBanCreateVM : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (NgayDat.HasValue && NgayDat.Value != DateOnly.FromDateTime(ThoiGianDen))
-            yield return new ValidationResult("Ngày và ca chưa khớp. Vui lòng chọn lại ca.", [nameof(ThoiGianDen)]);
+            yield return new ValidationResult("Ngày đặt và giờ đến chưa khớp. Vui lòng chọn lại ngày/giờ.", [nameof(ThoiGianDen)]);
         if (Services.ReservationSchedule.Validate(ThoiGianDen, Services.TableService.VietnamNow) is { } error)
             yield return new ValidationResult(error, [nameof(ThoiGianDen)]);
     }

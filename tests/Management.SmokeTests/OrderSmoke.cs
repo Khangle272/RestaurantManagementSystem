@@ -404,8 +404,11 @@ public static class OrderSmoke
             LoaiDonHang = LoaiDonHang.TaiBan, BanAnId = table.Id,
             Items = [new() { MonAnId = dish.Id, MonAnSizeId = sizeS.Id, SoLuong = 1 }]
         }, tableBill.NhanVienId);
-        check(followupOrder.Error is null, "A paid booking can create a follow-up bill");
-        var followupBill = await db.HoaDon.Include(x => x.ChiTiet).SingleAsync(x => x.Id == followupOrder.HoaDonId);
+        check(followupOrder.Error is not null, "A paid and completed table session cannot silently open a follow-up bill");
+        var zeroValueOrder = await orders.CreateOrderAsync(new() { LoaiDonHang = LoaiDonHang.MangDi, TenNguoiNhan = "Khách kiểm tra bill 0", SoDienThoaiNhan = "0901234567",
+            Items = [new() { MonAnId = dish.Id, MonAnSizeId = sizeS.Id, SoLuong = 1 }] }, tableBill.NhanVienId);
+        check(zeroValueOrder.Error is null, "A separate takeaway order remains available for zero-value completion checks");
+        var followupBill = await db.HoaDon.Include(x => x.ChiTiet).SingleAsync(x => x.Id == zeroValueOrder.HoaDonId);
         check(await orders.AvailableDepositAsync(booking.Id, followupBill.Id) == 0, "Consumed deposit cannot be reused by a later bill");
         var followupPage = await Get(cashier, $"/HoaDon/Details/{followupBill.Id}");
         check(WebUtility.HtmlDecode(followupPage).Contains("amount=65000"), "Second bill QR has no already consumed deposit");
@@ -428,12 +431,12 @@ public static class OrderSmoke
         // Table has all dishes served or cancelled, and bill is paid!
         var tableService = new TableService(db, new PreorderService(db, new OrderService(db)));
         var endError = await tableService.ChangeTable(table.Id, await Version(table), clean: false);
-        check(endError == null, "Table service allows ending session now that dishes are served and bill is paid");
+        check(endError != null, "Payment already ended the session; it cannot be ended a second time");
         await db.Entry(table).ReloadAsync();
-        check(table.TrangThai == TrangThaiBan.CanDon, "Table transitioned to CanDon (cleaning needed)");
+        check(table.TrangThai == TrangThaiBan.SanSang, "Final payment completes the party and returns the table ready without a cleaning stage");
 
         var cleanError = await tableService.ChangeTable(table.Id, await Version(table), clean: true);
-        check(cleanError == null, "Table service marks table ready after cleaning");
+        check(cleanError != null, "Repeated completion is rejected rather than starting another cleaning step");
         await db.Entry(table).ReloadAsync();
         check(table.TrangThai == TrangThaiBan.SanSang, "Table returned to SanSang status");
 

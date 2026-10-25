@@ -37,7 +37,7 @@ builder.Services.ConfigureApplicationCookie(options =>
         var path = context.Request.Path.Value ?? "";
         var management = new[] { "/admin", "/MonAn", "/DanhMuc", "/NhanVien", "/TaiKhoanNhanVien", "/CauHinhQr",
             "/NguyenLieu", "/BanAn", "/QuanLyDatBan", "/DatTruoc", "/HoaDon", "/DonHang", "/Bep", "/TaiKhoanKhachHang", "/SoDoBan", "/KhuVuc", "/Staff", "/Account/ResetPassword",
-            "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap", "/KhuyenMai", "/Voucher", "/BaoCao" };
+            "/Kho", "/NhapKho", "/XuatKho", "/ThanhLy", "/NhaCungCap", "/KhuyenMai", "/Voucher", "/BaoCao", "/ThongKeDatBan" };
         var login = management.Any(x => path.Equals(x, StringComparison.OrdinalIgnoreCase)
             || path.StartsWith(x + "/", StringComparison.OrdinalIgnoreCase)) ? "/admin" : "/Account/Login";
         context.Response.Redirect(login + "?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
@@ -51,6 +51,7 @@ builder.Services.AddAuthorizationBuilder()
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.ReservationPlanningService>();
 builder.Services.AddSingleton<RestaurantManagement.Web.Services.PaymentQrStore>();
 builder.Services.AddHostedService<RestaurantManagement.Web.Services.TableExpiryWorker>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
@@ -81,6 +82,15 @@ if (args.Contains("--import-sql-data", StringComparer.OrdinalIgnoreCase))
         throw new InvalidOperationException("Chỉ được nạp dữ liệu mẫu trong môi trường Development.");
     await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
     await SampleDataImport.RunAsync(app.Services);
+    return;
+}
+
+if (args.Contains("--init-week10-demo", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Chỉ tạo dữ liệu W10 trong Development.");
+    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
+    using var scope = app.Services.CreateScope();
+    await RestaurantManagement.Web.Services.Week10DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>());
     return;
 }
 

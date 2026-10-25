@@ -273,6 +273,9 @@
     }
 
     <!-- MODULE THANH TOÁN ĐA HÌNH THỨC (NO-PRINT) -->
+    @if (unpaid && Model.DatBanId is not null && (User.IsInRole("Admin") || User.IsInRole("ThuNgan"))) {
+        <p class="alert alert-info no-print">Đây là xác nhận thanh toán cuối bữa. Khi toàn bộ hóa đơn, món và tiền cọc của lượt khách đã được xử lý, hệ thống hoàn tất lượt và đưa bàn về Sẵn sàng, không có bước chờ dọn riêng. Nhân viên kiểm tra khách đã dùng xong và bàn sẵn sàng trước khi xác nhận.</p>
+    }
     @if (canCollect && unpaid && paymentAmount == 0)
     {
         <form asp-action="ThanhToan" method="post" class="card p-4 no-print mb-4">

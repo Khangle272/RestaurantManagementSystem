@@ -10,14 +10,14 @@
         const updateSelection = () => {
             const selected = choices().filter(input => input.checked && !input.disabled);
             const seats = selected.reduce((total, input) => total + Number(input.dataset.seats), 0);
-            const sameArea = new Set(selected.map(input => input.dataset.area)).size <= 1;
-            summary.textContent = selected.length ? `Đã chọn ${selected.length} bàn · ${seats} chỗ cho ${assignment.dataset.guests} khách${sameArea ? '' : ' · Cần chọn cùng khu vực'}` : 'Chọn bàn trên sơ đồ để xác nhận.';
-            assignment.querySelector('button[type="submit"], button:not([type])').disabled = !selected.length || !sameArea || seats < Number(assignment.dataset.guests);
+            summary.textContent = selected.length === 1 ? `Đã chọn 1 bàn · ${seats} chỗ cho ${assignment.dataset.guests} khách. Chọn bàn khác sẽ thay bàn này.` : 'Chọn một bàn trên sơ đồ để xác nhận.';
+            assignment.querySelector('button[type="submit"], button:not([type])').disabled = selected.length !== 1 || seats < Number(assignment.dataset.guests);
             for (const input of choices()) input.closest('.table-card').classList.toggle('is-selected', input.checked);
         };
         board.addEventListener('change', updateSelection);
         root.querySelector('#choose-suggestion')?.addEventListener('click', () => {
-            for (const input of choices()) input.checked = !input.disabled && input.dataset.suggested === 'true';
+            const suggested = choices().find(input => !input.disabled && input.dataset.suggested === 'true');
+            for (const input of choices()) input.checked = input === suggested;
             updateSelection();
             choices().find(input => input.checked)?.closest('.table-card').scrollIntoView({behavior:'smooth',block:'center'});
         });
@@ -25,6 +25,9 @@
     }
     }
     initialize();
+    document.addEventListener('submit', e => {
+        if (e.target.matches('[data-complete-service]') && !window.confirm('Xác nhận khách đã dùng xong và bàn đã trống, sẵn sàng? Hệ thống sẽ kiểm tra tiền, món và cọc trước khi hoàn tất.')) e.preventDefault();
+    });
     document.addEventListener('booking:loaded', e => initialize(e.target));
     document.addEventListener('click', e => {
         const button = e.target.closest('[data-table-warning]');
