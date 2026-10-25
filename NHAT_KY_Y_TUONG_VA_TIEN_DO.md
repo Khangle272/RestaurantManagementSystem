@@ -532,3 +532,17 @@ Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ
 - **Workspace không dài thêm:** desktop lấp đầy chiều cao còn lại của màn hình (`100dvh` trừ header/topbar) thay vì đoán chiều cao cố định; hàng grid dùng `minmax(0, 1fr)` nên cột giỏ tự co và cuộn bên trong, đầu/đuôi giỏ (nút gửi) luôn hiển thị. Áp dụng chung cho `/DonHang/Create` và `/DonHang/AddDishes`; màn gọi thêm giới hạn panel bàn ở 42% và cho danh sách đã gửi cuộn riêng.
 - Kiểm chứng: `StaffPosUiSmoke.cjs` đạt (có assert chỉ cuộn khung giỏ, `scrollTop > 0`); QA tĩnh bằng Chrome CDP ở 1447×900 và 1280×800 cho cả hai màn: `scrollY` luôn 0, chiều cao trang bằng viewport, chân giỏ nằm trong khung nhìn.
 - Giới hạn: chưa đăng nhập được app thật (không có mật khẩu tài khoản demo) nên QA dùng HTML tĩnh với CSS/JS thật; chưa chụp lại mobile/tablet sau thay đổi. `DESIGN.md` §12.1 đã cập nhật theo hành vi mới.
+
+## Cải thiện trang chủ khách hàng — 25/10/2026
+
+- Làm mới phần giới thiệu với tông kem – xanh đậm, tiêu đề serif, ảnh bữa ăn và nút khám phá/đặt bàn rõ ràng hơn.
+- Tinh chỉnh thẻ món, giá, nút chọn món, danh mục và khối đặt bàn; CSS riêng trong `home.css`, giới hạn vào `.home-page` để không đổi giao diện trang khác. Bổ sung section Styles tùy chọn trong layout.
+- Thêm tìm kiếm tức thời theo tên món trong danh mục đang xem, hỗ trợ tiếng Việt có/không dấu, số kết quả, trạng thái không tìm thấy và nút xóa. Không có JavaScript vẫn xem thực đơn và lọc danh mục được.
+- Bố cục responsive, nút tối thiểu 44px, focus bàn phím và thông báo số kết quả cho trình đọc màn hình.
+- Kiểm chứng: build Web thành công (0 lỗi/cảnh báo); kiểm tra JS tìm kiếm có dấu/không dấu, không có kết quả, xóa tìm kiếm, thực đơn trống đạt; `customer-cart.check.cjs` đạt; `git diff --check` đạt. Chưa kiểm tra trực quan trên trình duyệt hoặc database thật trong lượt này.
+
+### Sửa font tiếng Việt trang chủ — 25/10/2026
+
+- Thay font Georgia/Times New Roman ở tiêu đề và chú thích ảnh bằng Segoe UI/Arial/system-ui để xử lý hiện tượng dấu tiếng Việt tách khỏi chữ trong ảnh phản hồi.
+- Bỏ chữ nghiêng ở tiêu đề, trả khoảng cách ký tự về bình thường, tăng chiều cao dòng và giảm cỡ tiêu đề trên desktop/mobile.
+- Kiểm tra `git diff --check` đạt; chưa xác nhận trực quan trên trình duyệt của người dùng.
