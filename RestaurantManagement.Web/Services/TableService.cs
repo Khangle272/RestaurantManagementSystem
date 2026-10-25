@@ -259,16 +259,23 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         {
             var releaseError = await preorders.ReleaseWithinTransaction(booking, employeeId);
             if (releaseError is not null) return releaseError;
-            if (!db.HoaDon.Local.Any(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy)
-                && !await db.HoaDon.AnyAsync(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy))
+            var localOpenBills = db.HoaDon.Local
+                .Where(x => x.DatBanId == id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan).ToList();
+            var storedOpenBillIds = await db.HoaDon.AsNoTracking()
+                .Where(x => x.DatBanId == id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                .Select(x => x.Id).ToListAsync();
+            var openBillCount = localOpenBills.Count + storedOpenBillIds.Count(idInDb => localOpenBills.All(x => x.Id != idInDb));
+            if (openBillCount > 1)
+                return "Lượt bàn đang có nhiều hóa đơn chưa thanh toán. Hãy đối soát hóa đơn trước khi nhận khách.";
+            if (openBillCount == 0)
                 db.HoaDon.Add(new HoaDon { MaHoaDon = NewCode("HD"), DatBanId = id, KhachHangId = booking.KhachHangId,
                     NhanVienId = employeeId, ThoiDiemLap = DateTimeOffset.UtcNow, TrangThai = TrangThaiHoaDon.ChuaThanhToan });
 
             await db.SaveChangesAsync();
 
-            var bill = db.HoaDon.Local.FirstOrDefault(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy)
-                ?? await db.HoaDon.Where(x => x.DatBanId == id && x.TrangThai != TrangThaiHoaDon.DaHuy)
-                    .OrderByDescending(x => x.Id).FirstOrDefaultAsync();
+            var bill = db.HoaDon.Local.FirstOrDefault(x => x.DatBanId == id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                ?? await db.HoaDon.Where(x => x.DatBanId == id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                    .OrderBy(x => x.ThoiDiemLap).FirstOrDefaultAsync();
             if (bill is not null && khoService is not null)
                 await khoService.DeductInventoryForBookingPreOrdersAsync(id, bill.Id, employeeId);
         }

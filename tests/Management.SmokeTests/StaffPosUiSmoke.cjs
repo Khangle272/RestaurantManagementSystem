@@ -15,6 +15,7 @@ class Element {
         this.textContent = '';
         this.hidden = false;
         this.disabled = false;
+        this.scrollTop = 0;
         const tokens = new Set();
         this.classList = {
             add: (...values) => values.forEach(value => tokens.add(value)),
@@ -41,6 +42,7 @@ class Element {
     click() { this.dispatchEvent({ type: 'click' }); }
     focus() {}
     scrollIntoView() {}
+    getBoundingClientRect() { return this.rect || { top: 1000, bottom: 1100, left: 0, right: 200 }; }
 }
 const clientEvent = (type, detail = {}) => ({
     type, detail, defaultPrevented: false,
@@ -52,7 +54,8 @@ function checkStaffPos() {
     const form = new Element('form');
     form.dataset = { posForm: 'create', draftUser: '123' };
     const ids = {};
-    for (const id of ['selected-table-id', 'selected-booking-id', 'pos-order-config', 'pos-current-target', 'pos-current-table', 'pos-change-target', 'order-target-display', 'section-dinein', 'section-external', 'delivery-address-group', 'table-validation-error', 'cart-items-list', 'empty-cart-message', 'cart-item-count', 'cart-total-qty', 'cart-total-amount', 'btn-submit-order', 'pos-clear-cart', 'dish-category', 'dish-search', 'dish-grid', 'pos-no-results', 'pos-initial-items', 'pos-existing-empty']) ids[id] = new Element();
+    for (const id of ['selected-table-id', 'selected-booking-id', 'pos-order-config', 'pos-current-target', 'pos-current-table', 'pos-change-target', 'pos-menu-placeholder', 'order-target-display', 'section-dinein', 'section-external', 'delivery-address-group', 'table-validation-error', 'cart-container', 'cart-items-list', 'empty-cart-message', 'cart-item-count', 'cart-total-qty', 'cart-total-amount', 'btn-submit-order', 'pos-clear-cart', 'pos-close-menu', 'dish-category', 'dish-search', 'dish-grid', 'pos-no-results', 'pos-initial-items', 'pos-existing-empty']) ids[id] = new Element();
+    ids['cart-container'].rect = { top: 100, bottom: 400, left: 0, right: 400 };
     ids['selected-table-id'].value = '1';
     ids['dish-category'].value = 'all';
     ids['pos-initial-items'].textContent = '[]';
@@ -76,11 +79,17 @@ function checkStaffPos() {
     });
     const menuButton = new Element('button');
     menuButton.dataset = { dishId: '7', sizeId: '9', dishName: 'Món " <img src=x onerror=alert(1)>', sizeName: 'Size " L', price: '10000.5' };
+    const dishesSection = Object.assign(new Element('section'), { hidden: true });
+    const posLayout = new Element('div');
     form.elements = {
         GhiChuDonHang: Object.assign(new Element('input'), { value: 'Ghi chú A' }),
         TenNguoiNhan: new Element('input'), SoDienThoaiNhan: new Element('input'), DiaChiGiaoHang: new Element('input')
     };
-    form.querySelector = query => query.startsWith('#') ? ids[query.slice(1)] : query.includes(':checked') ? radios.find(radio => radio.checked) : form.children.find(node => node.dataset.ajaxFeedback !== undefined) || null;
+    form.querySelector = query => query === '.pos-dishes' ? dishesSection
+        : query === '.pos-layout' ? posLayout
+        : query.startsWith('#') ? ids[query.slice(1)]
+        : query.includes(':checked') ? radios.find(radio => radio.checked)
+        : form.children.find(node => node.dataset.ajaxFeedback !== undefined) || null;
     form.querySelectorAll = query => query === '[data-table-id]' ? tables
         : query === '.btn-add-dish' ? [menuButton]
         : query === '[data-pos-category]' ? categories
@@ -104,10 +113,18 @@ function checkStaffPos() {
     assert.equal(ids['dish-category'].value, '5');
     assert.equal(categories[1].classList.contains('active'), true);
     assert.equal(categories[0].classList.contains('active'), false);
+    // Danh sách món chỉ mở khi bấm danh mục và đóng được để nhường chỗ cho giỏ order.
+    assert.equal(dishesSection.hidden, false);
+    assert.equal(posLayout.classList.contains('pos-menu-open'), true);
+    ids['pos-close-menu'].click();
+    assert.equal(dishesSection.hidden, true);
+    assert.equal(posLayout.classList.contains('pos-menu-open'), false);
     categories[0].click();
     assert.equal(ids['dish-category'].value, 'all');
     menuButton.click();
     assert.equal(count(), 1);
+    // Thêm món chỉ cuộn khung giỏ, không cuộn trang đẩy thực đơn khỏi tầm mắt.
+    assert(ids['cart-container'].scrollTop > 0, 'Adding a dish scrolls the cart panel only.');
     const nodes = flatten(ids['cart-items-list']);
     assert(nodes.some(node => node.textContent === menuButton.dataset.dishName));
     assert(!nodes.some(node => node.tagName === 'img'));
@@ -156,7 +173,7 @@ function checkStaffPos() {
     dishCard.querySelector = () => menuButton;
     ids['dish-grid'].dispatchEvent({ type: 'click', target: { closest: query => query === '.pos-dish-card' ? dishCard : null } });
     assert.equal(count(), 2);
-    console.log('PASS staff POS: category column, served-table order recap, one-tap dish add without modal, quick add from dish card, cart line details (size/quantity/unit price/line total/remove), booking, table collapse/change, isolated drafts, quoted note binding, DOM escaping, safe storage, failure preservation, unsent additions.');
+    console.log('PASS staff POS: category column, served-table order recap, one-tap dish add without modal, cart-only scroll (page stays put), quick add from dish card, cart line details (size/quantity/unit price/line total/remove), booking, table collapse/change, isolated drafts, quoted note binding, DOM escaping, safe storage, failure preservation, unsent additions.');
 }
 
 async function checkAjax() {

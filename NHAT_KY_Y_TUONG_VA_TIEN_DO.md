@@ -274,7 +274,7 @@ dotnet run --project RestaurantManagement.Web -- --remove-retired-menu-roles
   5. Thao tác Bồi bàn / Quản trị xác nhận món đã mang ra bàn (`SanSang` → `DaPhucVu`), giải quyết điều kiện tiên quyết để giải phóng bàn trong `TableService`.
   6. Thao tác hủy món (`ChoCheBien` → `DaHuy`) khi khách đổi ý trước khi nấu, tự động điều chỉnh giảm tổng tiền hàng của hóa đơn tương ứng.
   7. Thanh toán đa hình thức:
-     - Chuyển khoản ngân hàng VietQR: sinh mã QR chuẩn VietQR (MBBank 999988889999), lưu mã đối soát giao dịch `MaGiaoDich`.
+     - Chuyển khoản ngân hàng VietQR: hiển thị ảnh QR VietQR tĩnh (MBBank 999917860000 — LA VAN NAM), lưu mã đối soát giao dịch `MaGiaoDich`.
      - Quẹt thẻ POS: lưu thông tin loại thẻ, 4 số cuối thẻ và mã chuẩn chi POS.
      - Tiền mặt: tính chính xác số tiền khách đưa, tiền thừa thối lại và chiết khấu.
   8. Xuất và in hóa đơn đẹp mắt, chuẩn hóa print CSS cho khổ giấy in nhiệt K80 và khổ A5.
@@ -740,3 +740,32 @@ Kết quả bản bàn giao mục 18: **99 kiểm tra riêng W10 HTTP/database �
 Mốc bàn giao này phát hành trên nhánh **`member1-week10`**, không merge `master`; xem lịch sử nhánh để lấy đúng commit. Không gửi dữ liệu SQL test hoặc database preview lên Git. Không đưa mật khẩu/tài khoản ngân hàng thật vào phần cấu hình mới.
 
 **Giới hạn chứng cứ:** chưa có kiểm thử bấm trình duyệt cuối cho bản mục 18; kiểm thử script bằng DOM giả lập không thay thế browser E2E. Người nhận vẫn cần bấm các kịch bản ở mục F, đặc biệt hiển thị hai ca cùng bàn, thao tác hai cửa sổ đồng thời và nhận bàn–bếp–thanh toán sau khi merge code của Người 2. Chưa tích hợp thanh toán thật, chưa đối chiếu code chưa merge của các thành viên khác. Không dùng các số kiểm chứng ở mục cũ để kết luận phiên bản sau merge đã đạt.
+
+# Cập nhật nhánh POS/KDS/Thanh toán — 24/10/2026
+
+- POS: tự thu gọn sidebar ở trang tác nghiệp, ẩn danh mục/thực đơn trước khi chọn đích, bỏ ảnh món, lọc bàn theo khu vực, hiển thị trạng thái/thời điểm/ghi chú món đã gửi và giữ trang gọi món sau khi gọi thêm.
+- KDS: món đặt trước được phát hành ở trạng thái `DangCheBien`; màn hình KDS và POS làm mới trạng thái định kỳ, đồng thời POS từ chối chọn ngẫu nhiên khi bàn có nhiều lượt phục vụ hoặc lượt bàn có nhiều hóa đơn đang mở.
+- Thanh toán: lịch sử đặt bàn/quản lý bàn chọn hóa đơn mở duy nhất theo booking đang phục vụ; hóa đơn cũ dùng thời điểm thanh toán/lập. Luồng thanh toán hiện hữu đã dùng ID hóa đơn, transaction Serializable và RowVersion.
+- Demo: thêm `RestaurantManagement.API/Scripts/SeedPosKdsPaymentDemo.sql`, đăng ký trong import Development và hướng dẫn chạy/mã tra cứu trong README. Đã nạp trên `RestaurantDB`; chạy lần hai cho cùng đúng hai mã, không nhân đôi.
+- Kiểm chứng: `dotnet build RestaurantManagementSystem.slnx --no-restore` thành công, 0 lỗi; SQL Server trả `HD-POSDEMO-01` tổng 428.000đ, không voucher và `HD-POSDEMO-02` tổng 856.000đ, giảm 50.000đ với voucher. Có hai cảnh báo NU1902/NU1903 hiện hữu về `System.Security.Cryptography.Pkcs` 9.0.11. Chưa chạy test suite hoặc nghiệm thu giao diện end-to-end.
+
+# Sửa UX giỏ order POS — 25/10/2026
+
+- **Hết tự cuộn trang khi thêm món:** `renderCart()` chỉ cuộn `#cart-container` vừa đủ để lộ dòng vừa thêm, không còn `scrollIntoView` kéo cả trang xuống; thực đơn và cột danh mục giữ nguyên vị trí sau mỗi lần chạm món.
+- **Workspace không dài thêm:** desktop lấp đầy chiều cao còn lại của màn hình (`100dvh` trừ header/topbar) thay vì đoán chiều cao cố định; hàng grid dùng `minmax(0, 1fr)` nên cột giỏ tự co và cuộn bên trong, đầu/đuôi giỏ (nút gửi) luôn hiển thị. Áp dụng chung cho `/DonHang/Create` và `/DonHang/AddDishes`; màn gọi thêm giới hạn panel bàn ở 42% và cho danh sách đã gửi cuộn riêng.
+- Kiểm chứng: `StaffPosUiSmoke.cjs` đạt (có assert chỉ cuộn khung giỏ, `scrollTop > 0`); QA tĩnh bằng Chrome CDP ở 1447×900 và 1280×800 cho cả hai màn: `scrollY` luôn 0, chiều cao trang bằng viewport, chân giỏ nằm trong khung nhìn.
+- Giới hạn: chưa đăng nhập được app thật (không có mật khẩu tài khoản demo) nên QA dùng HTML tĩnh với CSS/JS thật; chưa chụp lại mobile/tablet sau thay đổi. `DESIGN.md` §12.1 đã cập nhật theo hành vi mới.
+
+## Cải thiện trang chủ khách hàng — 25/10/2026
+
+- Làm mới phần giới thiệu với tông kem – xanh đậm, tiêu đề serif, ảnh bữa ăn và nút khám phá/đặt bàn rõ ràng hơn.
+- Tinh chỉnh thẻ món, giá, nút chọn món, danh mục và khối đặt bàn; CSS riêng trong `home.css`, giới hạn vào `.home-page` để không đổi giao diện trang khác. Bổ sung section Styles tùy chọn trong layout.
+- Thêm tìm kiếm tức thời theo tên món trong danh mục đang xem, hỗ trợ tiếng Việt có/không dấu, số kết quả, trạng thái không tìm thấy và nút xóa. Không có JavaScript vẫn xem thực đơn và lọc danh mục được.
+- Bố cục responsive, nút tối thiểu 44px, focus bàn phím và thông báo số kết quả cho trình đọc màn hình.
+- Kiểm chứng: build Web thành công (0 lỗi/cảnh báo); kiểm tra JS tìm kiếm có dấu/không dấu, không có kết quả, xóa tìm kiếm, thực đơn trống đạt; `customer-cart.check.cjs` đạt; `git diff --check` đạt. Chưa kiểm tra trực quan trên trình duyệt hoặc database thật trong lượt này.
+
+### Sửa font tiếng Việt trang chủ — 25/10/2026
+
+- Thay font Georgia/Times New Roman ở tiêu đề và chú thích ảnh bằng Segoe UI/Arial/system-ui để xử lý hiện tượng dấu tiếng Việt tách khỏi chữ trong ảnh phản hồi.
+- Bỏ chữ nghiêng ở tiêu đề, trả khoảng cách ký tự về bình thường, tăng chiều cao dòng và giảm cỡ tiêu đề trên desktop/mobile.
+- Kiểm tra `git diff --check` đạt; chưa xác nhận trực quan trên trình duyệt của người dùng.

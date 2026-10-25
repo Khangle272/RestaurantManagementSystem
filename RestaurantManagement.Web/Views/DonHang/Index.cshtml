@@ -3,6 +3,7 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Quản lý đơn hàng";
+    var canPay = User.IsInRole("Admin") || User.IsInRole("ThuNgan") || User.IsInRole("BoiBan");
 }
 
 <div class="container-fluid py-4">
@@ -186,9 +187,12 @@
                                     <a asp-action="AddDishes" asp-route-id="@order.Id" class="btn btn-outline-secondary" title="Gọi thêm món vào đơn">
                                         + Món
                                     </a>
-                                    <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@order.Id" class="btn btn-success" title="Thanh toán đơn hàng">
-                                        Thu tiền
-                                    </a>
+                                    @if (canPay)
+                                    {
+                                        <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@order.Id" class="btn btn-success" title="Thanh toán đơn hàng">
+                                            Thu tiền
+                                        </a>
+                                    }
                                 }
                             </div>
                         </td>

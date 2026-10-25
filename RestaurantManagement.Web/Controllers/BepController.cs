@@ -21,6 +21,7 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
     public async Task<IActionResult> Index(string? filter = "active")
     {
         ViewData["ActiveMenu"] = "Bep";
+        ViewData["AutoCollapseSidebar"] = true;
         ViewBag.Filter = filter;
 
         var query = db.ChiTietHoaDon.AsNoTracking()
@@ -89,6 +90,27 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
         var error = await orders.UpdateDishStatusAsync(id, trangThai, isWaiterOrAdmin: serving);
         if (error is not null) return BadRequest(error);
         return RedirectToAction(nameof(Index), new { filter });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Snapshot(string? filter = "active")
+    {
+        var query = db.ChiTietHoaDon.AsNoTracking()
+            .Where(x => x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
+                && (x.HoaDon.DatBan == null || x.HoaDon.DatBan.TrangThai != TrangThaiDatBan.DaHuy));
+        query = filter switch
+        {
+            "ready" => query.Where(x => x.TrangThai == TrangThaiCheBien.SanSang),
+            "all" => query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien
+                || x.TrangThai == TrangThaiCheBien.DangCheBien || x.TrangThai == TrangThaiCheBien.SanSang),
+            _ => query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien || x.TrangThai == TrangThaiCheBien.DangCheBien)
+        };
+        // TrangThai lưu dạng nvarchar: cast sau khi đã tải về, không để EF dịch thành CAST(... AS int) trong SQL.
+        var rows = await query.OrderBy(x => x.ThoiDiemGoi).ThenBy(x => x.Id).Take(150)
+            .Select(x => new { x.Id, x.TrangThai, x.ThoiDiemGoi })
+            .ToListAsync();
+        var snapshot = rows.Select(x => new { x.Id, Status = (int)x.TrangThai, x.ThoiDiemGoi });
+        return Json(snapshot);
     }
 }
 

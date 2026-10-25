@@ -295,7 +295,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
 
         model.DanhSachDatBan = list.Select(d =>
         {
-            var activeInvoice = d.HoaDon.OrderByDescending(h => h.Id).FirstOrDefault();
+            var activeInvoice = ResolveBookingInvoice(d);
             var daThanhToan = activeInvoice?.TrangThai == TrangThaiHoaDon.DaThanhToan;
             var isCompleted = d.ThoiDiemKetThuc.HasValue || d.TrangThai == TrangThaiDatBan.DaNhanBan && daThanhToan;
 
@@ -383,7 +383,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             return RedirectToAction(nameof(LichSu));
         }
 
-        var hoaDon = datBan.HoaDon.OrderByDescending(h => h.Id).FirstOrDefault();
+        var hoaDon = datBan.HoaDon.Where(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan)
+            .OrderByDescending(h => h.ThoiDiemThanhToan ?? h.ThoiDiemLap).FirstOrDefault();
         var daThanhToan = hoaDon?.TrangThai == TrangThaiHoaDon.DaThanhToan;
         var isCompleted = datBan.TrangThai == TrangThaiDatBan.DaNhanBan && daThanhToan;
 
@@ -426,7 +427,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             return RedirectToAction(nameof(LichSu));
         }
 
-        var hoaDon = datBan.HoaDon.OrderByDescending(h => h.Id).FirstOrDefault();
+        var hoaDon = datBan.HoaDon.Where(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan)
+            .OrderByDescending(h => h.ThoiDiemThanhToan ?? h.ThoiDiemLap).FirstOrDefault();
         if (hoaDon == null || hoaDon.TrangThai != TrangThaiHoaDon.DaThanhToan || datBan.TrangThai != TrangThaiDatBan.DaNhanBan)
         {
             TempData["ErrorMessage"] = "Không tìm thấy hóa đơn tương ứng.";
@@ -488,4 +490,17 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             .OrderBy(x => x.TenKhuVuc)
             .Select(x => new SelectListItem(x.TenKhuVuc + (x.LaPhongVip ? " (Phòng VIP)" : ""), x.Id.ToString()))
             .ToListAsync();
+
+    private static HoaDon? ResolveBookingInvoice(DatBan booking)
+    {
+        if (booking.TrangThai == TrangThaiDatBan.DaNhanBan && booking.ThoiDiemKetThuc is null)
+        {
+            var openInvoices = booking.HoaDon.Where(x => x.TrangThai == TrangThaiHoaDon.ChuaThanhToan).ToList();
+            if (openInvoices.Count == 1) return openInvoices[0];
+            if (openInvoices.Count > 1) return null;
+            return booking.HoaDon.Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan)
+                .OrderByDescending(x => x.ThoiDiemThanhToan ?? x.ThoiDiemLap).FirstOrDefault();
+        }
+        return booking.HoaDon.OrderByDescending(x => x.ThoiDiemThanhToan ?? x.ThoiDiemLap).FirstOrDefault();
+    }
 }

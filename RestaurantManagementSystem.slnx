@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
+    <File Path="agent/Feedback-w10.docx" />
+    <File Path="agent/prompt.md" />
+    <File Path="agent/qrmbb.jpg" />
+    <File Path="agent/TODO.md" />
     <File Path="DESIGN.md" />
     <File Path="README.md" />
   </Folder>

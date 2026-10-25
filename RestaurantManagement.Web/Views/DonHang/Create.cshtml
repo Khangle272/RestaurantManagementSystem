@@ -4,6 +4,7 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Ghi nhận gọi món";
     var dishCountByCategory = Model.MenuDishes.GroupBy(x => x.DanhMucId).ToDictionary(x => x.Key, x => x.Count());
+    var tableAreas = Model.OccupiedTables.Select(x => x.TenKhuVuc).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
     string StatusLabel(TrangThaiCheBien status) => status switch
     {
         TrangThaiCheBien.ChoCheBien => "Chờ nấu",
@@ -22,30 +23,98 @@
     };
 }
 
-<div class="container-fluid pos-page">
+<div class="container-fluid pos-page pos-page-create">
     <div class="pos-page-header">
         <div>
             <h1 class="h4 mb-1">Ghi nhận gọi món</h1>
-            <p class="text-muted small mb-0">Bấm vào thẻ món (hoặc chọn size) để món vào giỏ ngay bên phải — màn hình gọi món không dùng hộp thoại bật lên.</p>
+            <p class="text-muted small mb-0">Chọn danh mục để mở danh sách món, bấm vào thẻ món (hoặc size) để thêm vào giỏ. Giỏ order hiển thị món khách đã gọi và món đang chọn.</p>
         </div>
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-ul me-1"></i>Danh sách đơn</a>
     </div>
 
-    <form asp-action="Create" method="post" id="order-form" data-ajax-form="true" data-pos-form="create" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value">
+    <form asp-action="Create" method="post" id="order-form" data-ajax-form="true" data-pos-form="create" data-draft-user="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value" data-live-url="@Url.Action("LiveOrderStatus")">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="All" class="text-danger" role="alert"></div>
         <input type="hidden" asp-for="BanAnId" id="selected-table-id" />
         <input type="hidden" asp-for="DatBanId" id="selected-booking-id" />
+        <div id="pos-menu-placeholder" class="alert alert-info mb-2" role="status" hidden>Chọn bàn đang phục vụ hoặc loại đơn mang đi/giao hàng để mở danh mục và thực đơn.</div>
 
-        <div class="pos-layout">
+        <!-- Hàng ngang trên cùng: chọn nhanh bàn đang phục vụ -->
+        <section class="card pos-table-panel pos-tables mb-2" aria-label="Bàn đang phục vụ">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h2 class="h6 mb-0"><i class="bi bi-people me-1"></i>Bàn đang phục vụ</h2>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">@Model.OccupiedTables.Count bàn</span>
+            </div>
+            <div class="card-body p-2">
+                <div id="pos-current-target" class="d-flex justify-content-between align-items-center gap-2 pb-1" hidden>
+                    <strong id="pos-current-table" class="text-primary"></strong>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="pos-change-target" aria-controls="pos-order-config" aria-expanded="false">Đổi bàn</button>
+                </div>
+                <div id="pos-order-config">
+                    <div class="btn-group w-100 mb-2" role="group" aria-label="Loại đơn hàng">
+                        <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-dinein" value="TaiBan" autocomplete="off" />
+                        <label class="btn btn-outline-primary btn-sm" for="type-dinein">Tại bàn</label>
+                        <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-takeaway" value="MangDi" autocomplete="off" />
+                        <label class="btn btn-outline-primary btn-sm" for="type-takeaway">Mang đi</label>
+                        <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-delivery" value="GiaoHang" autocomplete="off" />
+                        <label class="btn btn-outline-primary btn-sm" for="type-delivery">Giao hàng</label>
+                    </div>
+                    <div id="section-external" class="@(Model.LoaiDonHang != LoaiDonHang.TaiBan ? "" : "d-none")">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4"><label asp-for="TenNguoiNhan" class="form-label small">Tên người nhận (*)</label><input asp-for="TenNguoiNhan" class="form-control form-control-sm" maxlength="120" /><span asp-validation-for="TenNguoiNhan" class="text-danger small"></span></div>
+                            <div class="col-12 col-md-4"><label asp-for="SoDienThoaiNhan" class="form-label small">Số điện thoại (*)</label><input asp-for="SoDienThoaiNhan" type="tel" class="form-control form-control-sm" maxlength="20" /><span asp-validation-for="SoDienThoaiNhan" class="text-danger small"></span></div>
+                            <div class="col-12 col-md-4 @(Model.LoaiDonHang == LoaiDonHang.GiaoHang ? "" : "d-none")" id="delivery-address-group"><label asp-for="DiaChiGiaoHang" class="form-label small">Địa chỉ giao hàng (*)</label><input asp-for="DiaChiGiaoHang" class="form-control form-control-sm" maxlength="300" /><span asp-validation-for="DiaChiGiaoHang" class="text-danger small"></span></div>
+                        </div>
+                    </div>
+                    <div id="section-dinein" class="@(Model.LoaiDonHang == LoaiDonHang.TaiBan ? "" : "d-none")">
+                        @if (Model.OccupiedTables.Count == 0)
+                        {
+                            <div class="alert alert-warning small mb-0">Chưa có bàn đang phục vụ. <a asp-controller="SoDoBan" asp-action="Index" class="alert-link">Nhận khách ở sơ đồ bàn</a>, hoặc chọn đơn mang đi.</div>
+                        }
+                        @if (tableAreas.Count > 1)
+                        {
+                            <label for="pos-area-filter" class="form-label small mb-1">Lọc bàn theo khu vực</label>
+                            <select id="pos-area-filter" class="form-select form-select-sm mb-2 w-auto">
+                                <option value="all">Tất cả khu vực (@Model.OccupiedTables.Count)</option>
+                                @foreach (var area in tableAreas)
+                                {
+                                    <option value="@area">@area (@Model.OccupiedTables.Count(x => x.TenKhuVuc == area))</option>
+                                }
+                            </select>
+                        }
+                        <div class="pos-table-picker">
+                            @foreach (var table in Model.OccupiedTables)
+                            {
+                                <button type="button" class="table-select-card @(Model.BanAnId == table.Id ? "border-primary bg-primary-subtle text-primary" : "")" data-table-id="@table.Id" data-booking-id="@table.DatBanId" data-table-code="@table.MaBan" data-table-area="@table.TenKhuVuc" aria-pressed="@(Model.BanAnId == table.Id ? "true" : "false")">
+                                    <span class="fw-bold">@table.MaBan</span>
+                                    <span class="small text-muted text-truncate">@table.TenKhuVuc · T@(table.Tang)</span>
+                                    @if (!string.IsNullOrWhiteSpace(table.KhachHang)) { <span class="small text-truncate" title="@table.KhachHang">@table.KhachHang</span> }
+                                    @if (table.OrderedQuantity > 0)
+                                    {
+                                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">@table.OrderedQuantity phần đã order</span>
+                                    }
+                                    @if (table.NhieuHoaDonDangMo || table.NhieuLuotDangPhucVu)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger-emphasis">Cần đối soát lượt bàn/hóa đơn</span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                        <div id="table-validation-error" class="text-danger small mt-2 d-none">Vui lòng chọn một bàn đang phục vụ.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="pos-layout pos-focus-cart">
             <!-- Phân vùng 1: Cột trái - Danh mục món ăn -->
             <aside class="pos-zone pos-categories card" aria-label="Danh mục món ăn">
                 <div class="card-header bg-white">
                     <h2 class="h6 mb-0"><i class="bi bi-grid-3x3-gap me-1"></i>Danh mục</h2>
                 </div>
                 <div class="pos-category-list" role="tablist" aria-orientation="vertical">
-                    <input type="hidden" id="dish-category" value="all" />
-                    <button type="button" class="pos-category-btn active" data-pos-category="all" role="tab" aria-selected="true">
+                    <input type="hidden" id="dish-category" value="" />
+                    <button type="button" class="pos-category-btn" data-pos-category="all" role="tab" aria-selected="false">
                         <span class="pos-category-name">Tất cả món</span><span class="pos-category-count">@Model.MenuDishes.Count</span>
                     </button>
                     @foreach (var category in Model.Categories)
@@ -59,13 +128,16 @@
             </aside>
 
             <!-- Phân vùng 2: Cột giữa - Danh sách món thuộc danh mục đang chọn -->
-            <section class="pos-zone pos-dishes card" aria-label="Danh sách món ăn">
+            <section class="pos-zone pos-dishes card" aria-label="Danh sách món ăn" hidden>
                 <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center">
                     <h2 class="h6 mb-0"><i class="bi bi-journal-richtext me-1"></i>Danh sách món</h2>
-                    <div class="pos-dish-search">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                        <label class="visually-hidden" for="dish-search">Tìm món ăn</label>
-                        <input type="search" id="dish-search" class="form-control form-control-sm" placeholder="Tìm món ăn..." autocomplete="off" />
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="pos-dish-search">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <label class="visually-hidden" for="dish-search">Tìm món ăn</label>
+                            <input type="search" id="dish-search" class="form-control form-control-sm" placeholder="Tìm món ăn..." autocomplete="off" />
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="pos-close-menu" aria-label="Ẩn danh sách món"><i class="bi bi-x-lg"></i></button>
                     </div>
                 </div>
                 <div class="card-body p-2 pos-dish-scroll">
@@ -79,16 +151,6 @@
                             <div class="dish-card-item" data-category="@dish.DanhMucId" data-name="@dish.TenMon.ToLowerInvariant()">
                                 <div class="card h-100 shadow-none pos-dish-card" title="Bấm vào thẻ để thêm @dish.TenMon vào giỏ">
                                     <div class="card-body p-2 d-flex flex-column">
-                                        <div class="pos-dish-thumb">
-                                            @if (!string.IsNullOrWhiteSpace(dish.HinhAnh))
-                                            {
-                                                <img src="@dish.HinhAnh" alt="@dish.TenMon" loading="lazy" />
-                                            }
-                                            else
-                                            {
-                                                <i class="bi bi-egg-fried" aria-hidden="true"></i>
-                                            }
-                                        </div>
                                         <strong class="small text-dark">@dish.TenMon</strong>
                                         <div class="pos-dish-sizes d-flex flex-column gap-1 mt-auto pt-1">
                                             @foreach (var size in dish.Sizes)
@@ -105,65 +167,15 @@
                 </div>
             </section>
 
-            <!-- Phân vùng 3: Cột phải - Bàn đang phục vụ (kèm món đã order) & Giỏ order -->
-            <aside class="pos-zone pos-order" aria-label="Bàn đang phục vụ và giỏ order">
-                <div class="card pos-table-panel">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h2 class="h6 mb-0"><i class="bi bi-people me-1"></i>Bàn đang phục vụ</h2>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">@Model.OccupiedTables.Count bàn</span>
-                    </div>
-                    <div class="card-body p-2">
-                        <div id="pos-current-target" class="d-flex justify-content-between align-items-center gap-2 pb-1" hidden>
-                            <strong id="pos-current-table" class="text-primary"></strong>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="pos-change-target" aria-controls="pos-order-config" aria-expanded="false">Đổi bàn</button>
-                        </div>
-                        <div id="pos-order-config">
-                            <div class="btn-group w-100 mb-2" role="group" aria-label="Loại đơn hàng">
-                                <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-dinein" value="TaiBan" autocomplete="off" />
-                                <label class="btn btn-outline-primary btn-sm" for="type-dinein">Tại bàn</label>
-                                <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-takeaway" value="MangDi" autocomplete="off" />
-                                <label class="btn btn-outline-primary btn-sm" for="type-takeaway">Mang đi</label>
-                                <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-delivery" value="GiaoHang" autocomplete="off" />
-                                <label class="btn btn-outline-primary btn-sm" for="type-delivery">Giao hàng</label>
-                            </div>
-                            <div id="section-external" class="@(Model.LoaiDonHang != LoaiDonHang.TaiBan ? "" : "d-none")">
-                                <div class="row g-2">
-                                    <div class="col-12"><label asp-for="TenNguoiNhan" class="form-label small">Tên người nhận (*)</label><input asp-for="TenNguoiNhan" class="form-control form-control-sm" maxlength="120" /><span asp-validation-for="TenNguoiNhan" class="text-danger small"></span></div>
-                                    <div class="col-12"><label asp-for="SoDienThoaiNhan" class="form-label small">Số điện thoại (*)</label><input asp-for="SoDienThoaiNhan" type="tel" class="form-control form-control-sm" maxlength="20" /><span asp-validation-for="SoDienThoaiNhan" class="text-danger small"></span></div>
-                                    <div class="col-12 @(Model.LoaiDonHang == LoaiDonHang.GiaoHang ? "" : "d-none")" id="delivery-address-group"><label asp-for="DiaChiGiaoHang" class="form-label small">Địa chỉ giao hàng (*)</label><input asp-for="DiaChiGiaoHang" class="form-control form-control-sm" maxlength="300" /><span asp-validation-for="DiaChiGiaoHang" class="text-danger small"></span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="section-dinein" class="@(Model.LoaiDonHang == LoaiDonHang.TaiBan ? "" : "d-none")">
-                            @if (Model.OccupiedTables.Count == 0)
-                            {
-                                <div class="alert alert-warning small mb-0">Chưa có bàn đang phục vụ. <a asp-controller="SoDoBan" asp-action="Index" class="alert-link">Nhận khách ở sơ đồ bàn</a>, hoặc chọn đơn mang đi.</div>
-                            }
-                            <div class="pos-table-picker">
-                                @foreach (var table in Model.OccupiedTables)
-                                {
-                                    <button type="button" class="table-select-card @(Model.BanAnId == table.Id ? "border-primary bg-primary-subtle text-primary" : "")" data-table-id="@table.Id" data-booking-id="@table.DatBanId" data-table-code="@table.MaBan" aria-pressed="@(Model.BanAnId == table.Id ? "true" : "false")">
-                                        <span class="fw-bold">@table.MaBan</span>
-                                        <span class="small text-muted text-truncate">@table.TenKhuVuc · T@(table.Tang)</span>
-                                        @if (!string.IsNullOrWhiteSpace(table.KhachHang)) { <span class="small text-truncate" title="@table.KhachHang">@table.KhachHang</span> }
-                                        @if (table.OrderedQuantity > 0)
-                                        {
-                                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">@table.OrderedQuantity phần đã order</span>
-                                        }
-                                    </button>
-                                }
-                            </div>
-                            <div id="table-validation-error" class="text-danger small mt-2 d-none">Vui lòng chọn một bàn đang phục vụ.</div>
-                        </div>
-                    </div>
-                </div>
-
+            <!-- Phân vùng 3: Cột phải - Giỏ order (trọng tâm thao tác) -->
+            <aside class="pos-zone pos-order" aria-label="Giỏ order">
                 <div class="card pos-cart">
                     <div class="card-header bg-white p-3">
                         <div class="d-flex justify-content-between align-items-center"><h2 class="h6 mb-0"><i class="bi bi-basket me-1"></i>Giỏ order (<span id="cart-item-count">0</span>)</h2><button type="button" class="btn btn-sm btn-link text-danger p-0" id="pos-clear-cart">Xóa tất cả</button></div>
                         <div class="small text-muted mt-1" id="order-target-display">Đang phục vụ: <span class="fw-bold text-primary">Chưa chọn bàn</span></div>
                     </div>
                     <div class="card-body p-2" id="cart-container">
+                        <div id="pos-existing-section">
                         <div class="pos-section-label d-flex justify-content-between align-items-center gap-2">
                             <span><i class="bi bi-lock-fill me-1"></i>Món đã order của bàn (đã gửi bếp)</span>
                             <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Khóa — không sửa/xóa</span>
@@ -171,7 +183,7 @@
                         <div id="pos-existing-empty" class="small text-muted fst-italic">Chọn bàn đang phục vụ để xem các món đã gọi trước đó.</div>
                         @foreach (var table in Model.OccupiedTables)
                         {
-                            <div class="pos-table-existing" data-table-order="@table.Id" data-locked="true" hidden>
+                            <div class="pos-table-existing" data-table-order="@table.Id" data-live-invoice-id="@table.HoaDonIdDangMo" data-locked="true" hidden>
                                 @if (table.OrderedItems.Count == 0)
                                 {
                                     <p class="small text-muted mb-1">Bàn này chưa gọi món.</p>
@@ -184,6 +196,7 @@
                                             <li>
                                                 <span class="fw-semibold">@line.SoLuong × @line.TenMon</span>
                                                 <span class="text-muted small">@line.TenSize · @line.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                                                @if (!string.IsNullOrWhiteSpace(line.YeuCauCheBien)) { <span class="text-muted small">Ghi chú: @line.YeuCauCheBien</span> }
                                                 <span class="ms-auto">@line.ThanhTien.ToString("N0") đ</span>
                                                 <span class="badge @StatusClass(line.TrangThai)">@StatusLabel(line.TrangThai)</span>
                                             </li>
@@ -197,6 +210,7 @@
                             </div>
                         }
                         <hr class="my-2" />
+                        </div>
                         <div class="pos-section-label">Món đang chọn cho đơn mới (chưa gửi bếp)</div>
                         <div id="empty-cart-message" class="text-center py-3 text-muted small">Chưa có món. Bấm vào thẻ món hoặc size ở cột giữa để thêm ngay vào giỏ.</div>
                         <div id="cart-items-list" class="d-flex flex-column gap-2"></div>
