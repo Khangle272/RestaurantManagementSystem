@@ -30,11 +30,12 @@
         } finally { clearTimeout(timeout); if (pending === controller) content.removeAttribute('aria-busy'); }
     }
     document.addEventListener('click', e => {
-        const link = e.target.closest('[data-assign-booking]');
+        const link = e.target.closest('[data-assign-booking], [data-reschedule-booking]');
         if (!link) return;
         e.preventDefault();
         content.replaceChildren();
         content.textContent = 'Đang tải sơ đồ đúng ngày và ca của khách…';
+        document.getElementById('assignment-modal-title').textContent = link.hasAttribute('data-reschedule-booking') ? 'Đổi giờ đặt bàn' : 'Xếp bàn cho yêu cầu đặt chỗ';
         const url = new URL(link.href); url.searchParams.set('dialog', 'true');
         const preferred = new URL(location.href).searchParams.get('preferredTableId');
         if (preferred && /^\d+$/.test(preferred)) url.searchParams.set('preferredTableId', preferred);
@@ -53,7 +54,7 @@
         if (content.getAttribute('aria-busy') === 'true') e.preventDefault();
     });
     content.addEventListener('ajax:success', e => {
-        if (e.target.id !== 'assign-booking') return;
+        if (!['assign-booking', 'reschedule-booking'].includes(e.target.id)) return;
         e.preventDefault();
         bootstrap.Modal.getInstance(modal)?.hide();
         feedback.hidden = false; feedback.textContent = e.detail.data.message;

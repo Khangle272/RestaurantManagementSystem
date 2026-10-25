@@ -518,3 +518,225 @@ Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ
 - **Chưa chụp lại màn hình trình duyệt** sau các thay đổi 2.1–3.4; trước demo nên rà `/DonHang/Create` và `/DonHang/AddDishes` ở desktop 1280px + khung hẹp 390px (mô phỏng click thẻ món, kiểm tra nháy sáng trong giỏ, nhãn khóa ở cột phải). Chưa kiểm tải lớn.
 - Giới hạn đã biết: bấm cả thẻ món luôn thêm size đầu tiên (size rẻ nhất theo giá) — nhóm có thể yêu cầu đổi thành size đang chọn gần nhất nếu cần. Mục 12 (bản ghi trước) mô tả lưới món “có mô tả tối đa 2 dòng” — nay bỏ theo 2.1/2.2.
 - Trạng thái bàn giao: thay đổi 1.1–3.4 đang ở **working tree trên `master`, chưa commit/push** (đứng sau `aaab2ec`); `RestaurantManagement.Web/appsettings.json` có chỉnh máy cục bộ (`Server=.\SQLEXPRESS`) không thuộc phạm vi hai việc này — không đưa vào commit nếu nhóm không muốn.
+
+## 14. Tuần 10 — Người 1: Đặt bàn, sơ đồ bàn và dự trù nguyên liệu (22/10/2026)
+
+### Chuẩn áp dụng và phân công mới
+
+- Xuất phát từ `origin/master` **2a4c6e0** (PR #22), checkout riêng `RestaurantManagementSystem_member1_week10`, nhánh `member1-week10`. Hai ảnh phân công/W10 ngày 22/10 là yêu cầu mới. Mục 11–13 được giữ nguyên làm lịch sử; **quy tắc ba ca cố định, giới hạn phục vụ ba tiếng và cho nhận lại cùng bàn trong ca ở các mục cũ đã được thay thế bên dưới**.
+- **Người 1 (phần này):** giờ đến linh hoạt; hai ca hoạt động; chống trùng bàn theo ngày/ca và tình trạng thực tế; đổi giờ từ quản trị/tiếp tân; kết thúc/dọn bàn đúng vòng đời; thống kê số bàn/khách và dự trù nguyên liệu theo món–size; dữ liệu SQL cho demo.
+- **Người 2:** POS auto-collapse và bố cục bàn/món theo khu vực; bỏ ảnh món ở màn hình nhân viên; phân biệt món đã gửi bếp với giỏ gọi thêm; gửi bếp tại chỗ; đồng bộ Đang nấu/Sẵn sàng/Đã phục vụ với KDS; hóa đơn đúng lượt/ngày, đủ món đặt trước và gọi thêm; hai bill mẫu có/không voucher. Điểm tích hợp của Người 1 là nhận bàn/gọi release món và kết thúc lượt sau thanh toán, không thay giao diện POS/KDS của Người 2.
+- **Người 3:** chương trình khuyến mãi cha chứa nhiều voucher con; thời hạn, số lượng và điều kiện mã; ví mã đã thu thập; tra cứu khách, đơn hàng và tích điểm. Không đưa logic voucher mới vào mã đặt bàn.
+
+### Quy tắc giờ và chống trùng — đọc trước khi sửa tiếp
+
+1. Chọn **ca trưa 11:00–15:00** và **ca tối 17:00–22:00** theo khoảng cho phép trong feedback. Khách tự nhập giờ đến, ví dụ 18:45; nút giờ chỉ là gợi ý, không phải danh sách giờ được phép duy nhất. Không nhận lúc đúng giờ đóng ca. Đặt online trước tối thiểu 30 phút, tối đa 180 ngày; tiếp tân được nhập giờ thực tế, cho phép lệch quá khứ tối đa 15 phút. `ReservationSchedule` là nguồn chung cho form khách, tiếp tân, API dự báo, sơ đồ và báo cáo.
+2. `GioDen` là giờ khách hẹn; `GioKetThucDuKien` của lịch mới là giờ đóng ca. **Không phải thời điểm tự đuổi khách/đóng lượt.** `TableService` so cả ngày và ca khi giữ/xếp bàn. Một bàn đã có lượt xác nhận/đã nhận (kể cả lượt đã kết thúc) không nhận lượt thứ hai trong cùng ca. Hủy hợp lệ hoặc hết hạn giữ cọc không có nghĩa vụ tiền sẽ giải phóng lịch; không lách quy tắc bằng cách đổi 18:00 thành 20:30 trên cùng bàn.
+3. Bàn đang có khách hoặc cần dọn trong ngày vẫn khóa thao tác nhận/xếp khách đến trong ngày, kể cả ca sau. Khi hết bàn phù hợp thì báo không còn chỗ; không ghi chồng lịch. Sau khi đã kết thúc và dọn xong, bàn có thể phục vụ **ca khác**; bộ đếm một lượt/ca không bị reset bởi thao tác dọn.
+4. Tình trạng vật lý phải gắn với lượt phục vụ đúng ngày. `PhysicalBusyTables` và sơ đồ chỉ đọc lượt của ngày đang xét; cờ `CanDon`/`DangPhucVu` còn sót từ ngày cũ không khóa ngày mới. Không xóa hoặc tự thanh toán hóa đơn cũ để làm bàn trống; lịch sử và nghĩa vụ tiền cũ vẫn giữ để đối chiếu. Lịch cũ ngoài giờ hoạt động được xử lý thận trọng theo ngày, nên tiếp tân cần đổi lại giờ khi sử dụng.
+5. Kiểm tra dự báo chỉ là tham khảo; POST giữ/xếp/đổi/nhận bàn kiểm tra lại trong transaction SQL Serializable với khóa bàn và RowVersion. Hai người cùng chọn một bàn trong một ca chỉ một thao tác được lưu. Sơ đồ hiển thị lý do khóa và dùng cùng truy vấn với server, không chỉ disable checkbox ở giao diện.
+
+### Đổi giờ và vòng đời bàn
+
+- Danh sách có nút **Đổi giờ** mở ngay trong popup đang có, không chuyển trang. Chọn giờ/ngày mới và nhập lý do; server kiểm tra ca, bàn đã xếp, phiên bản và trạng thái. Chỉ đổi lịch còn hiệu lực, chưa nhận bàn; món đã bắt đầu chế biến cần phối hợp với bếp trước. Ca mới đã có lượt khác thì từ chối và giữ nguyên lịch cũ. Lý do và giờ trước/sau được thêm vào ghi chú.
+- Đổi giờ giữ nguyên `DatBanId`, mã đặt bàn, món, giá đã thỏa thuận và các giao dịch cọc. **Không gia hạn hạn chuyển cọc, không tự xác nhận tiền và không tự tạo khoản cọc mới.** Nhóm vẫn dùng cơ chế giữ chỗ/cọc một tiếng hiện có, tách biệt thời lượng dùng bữa.
+- Loại bỏ việc worker tự kết thúc vì đã ngồi 2–3 tiếng. Sau thanh toán, `OrderService` gọi quy tắc hoàn tất chung trong cùng transaction. Chỉ khi các bill đã xử lý, món đã phục vụ/hủy và cọc đã phân bổ/hoàn/giữ xong thì đánh dấu kết thúc và chuyển bàn **Cần dọn**. Worker chỉ bổ sung hoàn tất lượt đã trả tiền (không đếm tiếng) và xử lý hết hạn cọc. Nhân viên xác nhận **Dọn xong** mới chuyển **Sẵn sàng**. Không mở bill mới âm thầm cho lượt đã thanh toán/kết thúc.
+
+### Thống kê và định mức
+
+- Trang mới `/ThongKeDatBan`, menu **Đặt bàn & dự trù nguyên liệu** cho Admin/Tiếp tân/Bếp/Kho. Lọc ngày/khoảng ngày (tối đa 31 ngày), cả tuần, ca trưa/tối và VIP/bàn thường. Thống kê số lịch, lượt bàn (bàn ghép tính đủ số bàn) và khách; lịch chờ được tách khỏi số chắc chắn. Trang này không có biểu đồ doanh thu. Các báo cáo tài chính hiện hữu vẫn thuộc nghiệp vụ chung, không bị xóa.
+- Dự trù chỉ lấy món đặt trước của lịch **đã xác nhận, chưa nhận bàn**: định mức đúng `MonAnSizeId` × số phần. Lượt đã nhận đi qua xuất kho chế biến, không cộng lại vào nhu cầu mua/chuẩn bị tương lai. Hiển thị tồn hiện tại và phần thiếu trong cùng đơn vị g/ml/cái, không tự đổi đơn vị hoặc xuất kho.
+- Lịch chưa chọn món được đếm rõ, không suy ra nguyên liệu từ số khách. Món/size/combos thiếu định mức được cảnh báo và chưa cộng vào tổng, không lấy công thức của size khác làm số thật. Combo cần định mức riêng theo size combo để báo cáo này tính được; schema thành phần combo hiện chưa lưu size từng món con, nên không đoán cấu phần. Đây là điểm Người 2/nhóm cần đối chiếu khi nối xuất kho combo.
+
+### SQL demo và cách chạy
+
+- Lệnh `--init-week10-demo` chỉ cho Development, gọi chủ động, không tự tạo lịch mỗi lần web khởi động. Tái dùng `DbSeeder` đang có trên master (hai món gỏi thực tế, đủ ba size và định mức, cùng nguyên liệu/đơn vị nhất quán); không tạo bộ công thức thứ hai. Hai bàn `W10-01`, `W10-02` ở **Sảnh đặt bàn W10** có một lịch trưa và một lịch tối, kèm món đặt trước để kiểm báo cáo.
+- Giờ demo bám lúc chạy: ca còn thời gian lấy giờ tới gần nhất sau ít nhất 30 phút; ca đã qua chuyển sang ngày sau. Danh sách hiển thị ngày cụ thể. Chạy lại cùng ngày/ca không nhân đôi, không mở lại lịch đã đổi/hủy/phục vụ; xung đột dữ liệu hiện có thì báo lỗi thay vì chèn đè.
+- PowerShell trong checkout W10: đặt `ASPNETCORE_ENVIRONMENT=Development`, `AuthBootstrap__DemoPassword` bằng mật khẩu demo của nhóm, cấu hình `ConnectionStrings__DefaultConnection` trỏ database SQL Server thử; chạy `dotnet run --project RestaurantManagement.Web -- --init-week10-demo`, sau đó chạy web bình thường. Không chạy lệnh seed lên dữ liệu vận hành thật.
+
+### Điểm tích hợp phải giữ
+
+- Người 2 chọn lượt bằng **DatBanId + ngày phục vụ**, không chỉ lấy bill bất kỳ theo mã bàn hoặc cờ vật lý toàn cục. `ThoiDiemKetThuc != null` là lượt đã xong, không tiếp tục thêm món/bill. Thanh toán trả tiền thành công và kết thúc vật lý là hai điều kiện liên quan; nếu còn món/cọc chưa xử lý thì cảnh báo và hoàn tất sau, không bỏ các kiểm tra an toàn để mở bàn.
+- Người 3 có thể đổi cơ cấu voucher nhưng phải giữ giá/cọc của lịch và tiền đã đối trừ, không tính lại tiền cũ từ dữ liệu khuyến mãi hiện hành. Báo cáo dự trù không dùng doanh thu làm căn cứ định lượng.
+- Không đổi schema hoặc migration cho phần Người 1. README và các ghi chú trước được giữ. Các kiểm tra W8/W9 đòi giờ cố định hoặc tự đóng sau ba tiếng được giữ trong source để tra lịch sử, nhưng bộ hồi quy hiện hành dùng `Week10BookingSmoke` thay thế các ca đối nghịch đó; các nhóm kiểm tra phân quyền, món, đơn hàng, cọc, QR, kho và khuyến mãi vẫn chạy.
+
+### Kiểm chứng và trạng thái bản W10
+
+- Hồi quy toàn dự án: **857 kiểm tra HTTP/database đạt**. Sau hai bảo vệ cuối (ngày thống kê ngoài phạm vi và cờ Cần dọn không được vượt qua bill chưa thanh toán), bộ W10 riêng đạt **59 kiểm tra**. Không cộng hai con số thành tổng mới. Số lượng kiểm tra không so trực tiếp với W9 vì chính sách giờ cố định/tự kết thúc và bill gọi thêm sau thanh toán đã được thay thế theo feedback mới; kiểm tra bill 0 đồng, cọc không tái dùng, phân quyền và chống thanh toán lặp vẫn được giữ.
+- Kiểm tra có: nhập 18:45 trực tiếp; ngoài giờ bị từ chối; mỗi bàn một lượt/ca kể cả đã dọn; bàn khác nhận được; tranh bàn cùng ca chỉ một bên thành công; đổi giờ và RowVersion; đổi thất bại giữ lịch cũ; đổi lịch không đổi hạn cọc; ngày cũ không chặn ngày khác; dự trù đúng size và số phần; thiếu định mức chỉ cảnh báo; lịch đã qua chỉ tính thống kê lịch sử, không sinh nhu cầu mua mới; hóa đơn đã trả tiền/món xong chuyển Cần dọn, sau đó nhân viên dọn mới Sẵn sàng. Bàn có cờ vật lý nhưng không có lịch sử nào được khóa thận trọng trong hôm nay để nhân viên kiểm tra, không dùng cờ không có ngày đó để khóa lịch tương lai.
+- Kiểm chứng trình duyệt thật: form tiếp tân nhận giờ **18:45** ngoài danh sách gợi ý, lưu về danh sách và tự mở popup xếp bàn; chọn gợi ý/lưu AJAX cập nhật số đếm; popup đổi giờ sửa **11:30 → 12:15** không đổi URL danh sách; trang thống kê từ SQL hiện nhu cầu g/ml theo món đặt trước. Bản xem thử dùng database riêng `RestaurantMember1Week10Preview_2019493aae614d599ada085b5bfa12a8` tại `https://localhost:7296`, không sửa database của nhóm. Trên bản xem thử có thêm một lịch `Khách hẹn giờ linh hoạt` ngày 23/10 lúc 18:45 do kiểm tra UI.
+- Biên dịch thành công, không lỗi; cú pháp hai script và `git diff --check` đạt. Cảnh báo NU1902/NU1903 ở `System.Security.Cryptography.Pkcs 9.0.11` có sẵn trên master vẫn còn, chưa nâng dependency chung trong phạm vi này. Chưa kiểm tải lớn hay ngân hàng thật. Khi rebuild trên Windows cần dừng đúng tiến trình preview đang giữ DLL rồi mở lại trên cùng database, không tạo database khác làm mất ngữ cảnh đang test.
+- Chạy từ gốc checkout: `dotnet run --project tests/Management.SmokeTests -- --week10-only` để kiểm riêng, bỏ `--week10-only` để chạy hồi quy toàn phần; đặt `CRUD_TEST_SQL_SERVER=(localdb)\MSSQLLocalDB` nếu dùng LocalDB. Alias `--slots-only` cũ nay chạy bộ W10, không áp lại chính sách W9. Các database GUID của kiểm tra tự động đã được dọn sau chạy.
+- Trạng thái bàn giao tại lúc viết: nhánh **local `member1-week10`**, nền master `2a4c6e0`; chưa commit/push/merge bản W10. Các trạng thái Git ở mục 11–13 là lịch sử của các bản trước, không dùng chúng để kết luận bản W10 đã công bố.
+
+## 15. Bổ sung Người 1 — Hoàn tất bàn một bước, chống treo lượt cũ (23/10/2026)
+
+### Yêu cầu đã chốt lại với người phụ trách
+
+- Mốc 3 tiếng ban đầu sinh ra để tránh quên kết thúc bàn khi demo, không phải giới hạn thời gian khách ăn. Feedback W10 không cho tự kết thúc/đuổi khách khi hết số tiếng. Giữ mục đích chống quên bằng nhắc kiểm tra sau 3 tiếng và danh sách lượt cũ cần xử lý, không tự tạo bằng chứng đã thanh toán.
+- Người phụ trách yêu cầu **không thêm bước Chờ dọn/Dọn xong riêng**: xác nhận hoàn tất bàn đồng nghĩa nhân viên đã kiểm tra khách dùng xong và bàn sẵn sàng. Quy trình này thay thế đoạn chuyển **Cần dọn → Dọn xong** tại mục 14; không xóa ghi chú lịch sử.
+
+### Quy trình hiện hành
+
+1. Đặt bàn/xếp bàn theo ngày và ca → nhận bàn → đang phục vụ. Giờ đến tự do trong giờ hoạt động, mỗi bàn một lượt mỗi ca vẫn giữ theo feedback W10.
+2. Nhân viên xác nhận thanh toán **cuối bữa**: nếu toàn bộ hóa đơn đã thanh toán/hủy, các món đã phục vụ/hủy và cọc đã đối trừ/hoàn/giữ đủ thì kết thúc lượt, chuyển thẳng các bàn của lượt khách về **Sẵn sàng**. Giao diện thu ngân ghi rõ ý nghĩa xác nhận này. Thanh toán chưa đủ điều kiện không tự kết thúc bàn.
+3. Nút **Xác nhận hoàn tất bàn** trên sơ đồ dùng cùng quy tắc tiền/món/cọc. Có hộp xác nhận khách đã dùng xong, bàn trống và sẵn sàng; không phát sinh trạng thái chờ dọn mới. Lượt trống không có tiền/món phải xử lý vẫn có thể hoàn tất thủ công; không tự hoàn tất chỉ vì hết giờ.
+4. Quá 3 tiếng: thẻ đang phục vụ hiện nhắc kiểm tra, giữ nguyên lượt khách. Không tự hủy món, tự thanh toán, tự hoàn/giữ cọc hay tự chuyển bàn sẵn sàng theo đồng hồ.
+5. Trạng thái vật lý cũ `CanDon` hoặc không xác định được khách hôm nay: hiện **Chờ xác nhận hoàn tất** cùng hướng dẫn kiểm tra bàn, không tiếp tục ghi “đang dọn” qua nhiều ngày. Nhân viên xác nhận ngay trên sơ đồ; nếu còn bill/món/cọc chưa xử lý thì báo lý do và giữ hồ sơ.
+6. Lượt đã nhận từ ngày trước nhưng chưa kết thúc: hiển thị khu **Lượt cũ chưa xác nhận hoàn tất**, có mã, khách, ngày, bàn, link hóa đơn và nút xử lý đúng lượt. Tối đa 50 lượt cũ nhất của khu vực đang lọc. Không lẫn chúng vào khách đang phục vụ hôm nay. Worker chỉ đối soát các lượt có hóa đơn đã trả tiền và đạt đủ điều kiện; không tự giải quyết khoản nợ hoặc lượt không có bằng chứng thanh toán.
+7. Lịch ngày tương lai không bị cờ vật lý cũ khóa. Khi nhận khách hôm nay, cờ bàn chưa sẵn sàng phải được nhân viên kiểm tra/xác nhận; không âm thầm bỏ qua. Lịch và trạng thái thực tế là hai lớp kiểm tra riêng.
+8. Xử lý hồ sơ cũ chỉ giải phóng bàn còn thuộc lượt đó; nếu bàn đã có lượt nhận mới hơn thì giữ nguyên lượt mới. Dữ liệu thanh toán/cọc và lịch sử không bị xóa. Bàn ngừng sử dụng không bị mở lại.
+
+### Điểm nối POS và trách nhiệm nhóm
+
+- Đã bổ sung truy vấn dùng chung `TableService.CurrentServices`: POS chỉ liệt kê/chọn lượt **đúng ngày Việt Nam hôm nay, đã nhận, chưa kết thúc**. Cờ bàn Đang phục vụ nhưng chỉ có hồ sơ ngày cũ không còn được gọi thêm món. Cả danh sách bàn và nhánh ghi đơn tại bàn đều dùng quy tắc này, không chỉ sửa chữ hiển thị.
+- Người 2 vẫn phụ trách thiết kế POS/KDS, đồng bộ trạng thái món và hóa đơn. Thay đổi ở đây chỉ nối quy tắc ngày/lượt khách và hoàn tất bàn, không thay giao diện gọi món của Người 2. Khi ghép nhánh cần giữ các kiểm tra này, không quay lại tìm hóa đơn chỉ theo mã bàn.
+- Giữ enum `CanDon` và tham số `clean` để tương thích dữ liệu/form cũ; luồng mới không sinh trạng thái `CanDon`. Không đổi schema, migration, README, Mobile hoặc chính sách voucher.
+
+### Kiểm chứng và giới hạn
+
+- Bộ W10 riêng: **73 kiểm tra HTTP/database đạt**. Hồi quy toàn dự án sau thay đổi: **873 kiểm tra HTTP/database đạt**. Đây là hai lần chạy, không cộng số lượng. Database kiểm thử GUID riêng đã tự dọn, không sử dụng database nhóm.
+- Các tình huống mới gồm: nhắc 4 tiếng mà không đóng lượt chưa trả tiền; thanh toán xong về Sẵn sàng không cần dọn lần nữa; thao tác lặp bị từ chối; lượt cũ còn nợ không được xóa; hoàn tất lượt cũ ghép nhiều bàn qua endpoint; dữ liệu Cần dọn cũ được nhân viên xác nhận; cờ cũ không khóa ngày tương lai; POS loại lượt ngày cũ; đối soát hóa đơn cũ không giải phóng bàn đang có khách mới.
+- Biên dịch không lỗi, kiểm tra cú pháp `tables.js` và `git diff --check` đạt. Cảnh báo dependency NU1902/NU1903 đã ghi ở mục 14 vẫn còn, không nâng dependency ngoài phạm vi.
+- Trình duyệt tại `https://localhost:7296/SoDoBan` đã hiển thị hướng dẫn quy trình mới trên database preview cũ. Thao tác nhận bàn bằng trình duyệt bị công cụ điều khiển ngắt ở bước click/hộp xác nhận, nên không tính là bằng chứng E2E trình duyệt nhận–hoàn tất thành công. Endpoint và trạng thái SQL của luồng hoàn tất đã được kiểm thử HTTP/database như trên; ảnh giao diện lưu ngoài repo ở `review-tests/week10-completion.jpg`.
+- Chưa kiểm tải lớn, nhiều máy cùng ca hay ngân hàng thật. Bản W10 vẫn local trên `member1-week10`, chưa commit/push/merge; giữ quyền merge cho thành viên nhóm.
+
+## 16. Sửa lại cách hiểu feedback W9–W10 về giờ gợi ý và giờ phục vụ (23/10/2026)
+
+### Đối chiếu feedback, không lấy test cũ làm đặc tả
+
+- W9: cô yêu cầu bớt khung giờ gợi ý, còn khoảng **2–3 khung**. W10: khách được tự chọn giờ đến; các giờ có sẵn chỉ để chọn nhanh, không phải các giờ duy nhất được đặt.
+- Bản mục 14 đã làm sai hai điểm: hiển thị tám nút gợi ý và suy diễn khoảng 15–17h là đóng cửa từ cách chia ca. Các kiểm thử trước đó từng khẳng định 16h phải bị từ chối cũng sai theo cách hiểu này; không dùng kết quả “PASS” đó để kết luận đã đúng feedback.
+- Thiết lập hiện tại giữ mốc bắt đầu 11h và đóng cửa 22h từ nền hiện có, nhưng **phục vụ liên tục 11:00–22:00, không nghỉ 15–17h**. Đây là thiết lập của bài, không khẳng định mọi nhà hàng đều hoạt động theo giờ này. `IsOpen` kiểm tra giờ phục vụ riêng; ca `trua` 11–17h và `toi` 17–22h chỉ chia ngày để kiểm lịch/cọc/thống kê. Không có khoảng giờ chiều bị bỏ khỏi cả hai ca.
+
+### Thay đổi đồng bộ
+
+- Khách thấy tối đa ba gợi ý, ngày tương lai thường là 12:00, 18:00 và 19:30. Khách vẫn được nhập 12:15, **16:00**, 16:15, 18:45… Không buộc khách chọn một trong ba nút.
+- Gợi ý cho hôm nay loại giờ đã qua hoặc không đủ thời gian đặt trước. Nếu các giờ thường dùng đã qua, bổ sung giờ gần nhất phù hợp, vẫn tối đa ba nút. Ví dụ lúc 20:06, khách đặt trước 30 phút thì gợi ý 20:45 / 21:15 / 21:45, không hiện tám nút mờ đã hết thời gian. Cuối ngày có thể ít hơn ba hoặc không còn gợi ý; thông báo rõ, không tạo giờ sau đóng cửa.
+- Nút gợi ý chọn được khi còn bàn; giờ hết bàn được ghi ngay trên nút và có lý do hỗ trợ đọc màn hình. Nút đang chọn được đánh dấu. Khi đang kiểm tra lại thì bỏ các gợi ý cũ để tránh bấm nhầm dữ liệu cũ; giữ nguyên thông tin liên hệ/ghi chú đang nhập.
+- API khách, API tiếp tân, tạo lịch, đổi giờ, xếp bàn, chia ca sơ đồ và thống kê dùng chung quy tắc. Tiếp tân dùng chính sách giờ nhận khách thực tế (không áp nhầm điều kiện khách phải đặt trước 30 phút cho các nút gợi ý).
+- Cập nhật nội dung form khách/tiếp tân/popup đổi giờ/sơ đồ, tránh giao diện nói tự do nhưng máy chủ vẫn chặn 16h. Sửa nhãn “Giờ đến tự chọn” trỏ đúng ô nhập. Không đổi schema, quyền truy cập hay chính sách một lượt mỗi ca trong lần sửa này.
+- Bỏ câu giao diện cũ “giữ bàn tối đa 15 phút sau giờ hẹn”: code hiện không tự thực thi cam kết đó. Thay bằng hướng dẫn đến đúng giờ và liên hệ nhà hàng nếu cần đổi/đến muộn. **Hạn thanh toán cọc 60 phút là chính sách riêng, không bị đổi thành 15 phút**, vẫn giữ đúng phần cọc trước đó.
+
+### Kiểm chứng
+
+- Hồi quy toàn dự án: **883 kiểm tra HTTP/database đạt**. Sau sửa nhãn HTML cuối, bộ W10 riêng vẫn đạt **83 kiểm tra**; không cộng hai số này. Biên dịch không lỗi; cú pháp script và `git diff --check` đạt. Cảnh báo dependency cũ vẫn như mục 14–15.
+- Kiểm tra mới không còn coi 16h là ngoài giờ: xác thực miền giờ liên tục; endpoint trả còn bàn lúc 16h; POST thật tạo lịch 16h vẫn yêu cầu đối soát cọc; đổi lịch sang 16:15 được chấp nhận; 10:59 và 22:00 vẫn bị từ chối theo giờ phục vụ đã nêu. Có kiểm tra gợi ý tối đa ba, trường hợp 20:06, cuối ngày, ngày khác và tiếp tân gần giờ hiện tại.
+- Trình duyệt thật trên database preview riêng: ngày 24/10 hiển thị đúng 12:00 / 18:00 / 19:30; bấm 18:00 đổi đúng ô giờ; nhập riêng 16:00 báo còn bàn và giữ tên đang điền; sau bản biên dịch cuối đã kiểm lại bằng nhãn ô giờ. Không gửi lịch mẫu qua trình duyệt và không chuyển tiền thật trong lần kiểm giao diện này.
+- Ảnh giao diện ngoài repo: `review-tests/week10-time-feedback.jpg`; web chạy lại tại `https://localhost:7296/DatBan?cart=new`. Người kiểm tra cần tải lại trang để lấy script mới. Nhánh vẫn local `member1-week10`, chưa commit/push/merge.
+
+## 17. Hoàn thiện gợi ý theo giờ khách mong muốn — tham khảo đặt bàn thực tế (25/10/2026)
+
+### Nguồn tham khảo và giới hạn áp dụng
+
+- [Form đặt bàn chính thức Pizza 4P’s](https://booking.pizza4ps.com/?adult=2&getLatLng=hn): khách chọn nhà hàng, số người, ngày, thời gian rồi tìm bàn. Chỉ đối chiếu cấu trúc form công khai, không tạo đặt bàn thật hay suy diễn giờ trống thực tế của họ.
+- [Hướng dẫn PasGo](https://www.pasgo.vn/lam-cach-nao-de-dat-cho-qua-ung-dung-pasgo): nhu cầu đặt chỗ gồm số khách, ngày giờ đến, kiểu chỗ/khu vực và thông tin liên hệ; nhà hàng phản hồi tiếp nhận/từ chối.
+- [Tài liệu OpenTable](https://docs.opentable.com/): tìm availability theo ngày/giờ, số khách, loại bàn và cửa sổ thời gian quanh giờ tìm kiếm; tài liệu API có bước thời gian 15 phút. Áp dụng nguyên tắc tìm quanh giờ mong muốn, **không tích hợp API bên ngoài**, không sao chép toàn bộ chính sách vận hành của họ.
+- Giới hạn tối đa **3 nút** là để bám feedback W9–W10 của cô. Phạm vi tìm **±1 tiếng** và bước gợi ý **15 phút** là lựa chọn thiết kế cụ thể của bài để kết quả gọn/gần giờ mong muốn; không khẳng định đây là chuẩn bắt buộc của mọi nhà hàng. Giờ tự nhập không bị ép vào bước 15 phút.
+
+### Quy trình hiện hành thay cho gợi ý cố định ở mục 16
+
+1. Khách chọn ngày, số người, khu vực (nếu có) và giờ mong muốn. Khi chưa nhập giờ khác, giữ giờ gần nhất hợp lệ hiện có của form; không có ba mốc ưu tiên cố định 12h/18h/19h30 nữa.
+2. API lấy **chính giờ mong muốn** làm tâm tìm kiếm, lọc giờ còn trong thời gian phục vụ, đúng ngày và đủ thời gian đặt trước. Ưu tiên giờ khách nhập nguyên giá trị; ví dụ 16:07 không bị làm tròn thành 16:00/16:15.
+3. Kiểm tra sức chứa/bàn trống theo đúng số khách, khu vực, lịch và ca quản lý; chỉ trả tối đa ba giờ **còn bàn** gần nhất trong cửa sổ ±1 tiếng. Không hiển thị giờ hết bàn thành gợi ý có thể đặt và không lấy giờ xa khác bữa để lấp cho đủ ba nút.
+4. Ví dụ khách chọn 16:00 và các thời điểm lân cận còn bàn: trả 15:45 / 16:00 / 16:15. Khách chọn 18:00 thì tìm quanh 18:00, không quay lại các mốc mặc định theo bữa ăn. Danh sách hiển thị theo thứ tự giờ để dễ đọc.
+5. Nếu quanh giờ mong muốn không còn chỗ thì thông báo đúng phạm vi tìm; khách có thể đổi giờ/ngày/số khách/khu vực. Khách vẫn được nhập giờ khác bất kỳ trong giờ phục vụ; máy chủ kiểm tra độc lập khi gửi yêu cầu và khi xếp bàn, không coi nút gợi ý là giữ chỗ.
+6. Bấm một nút cập nhật ô giờ và kiểm tra lại bằng AJAX, giữ các thông tin khách đang nhập. API khách và API tiếp tân đều nhận giờ đang chọn để sinh gợi ý; giữ khác biệt giữa yêu cầu khách đặt trước 30 phút và giờ tiếp nhận trực tiếp của nhân viên.
+
+### Phạm vi sửa và kiểm chứng
+
+- Thay thuật toán chọn giờ ở `ReservationSchedule` và `TableService`; truyền giờ mong muốn qua hai controller; cập nhật diễn giải form khách/tiếp tân và thông báo khi không tìm được giờ gần đó. Không đổi chính sách giờ phục vụ 11–22h, một lượt bàn mỗi ca, hạn cọc, schema, README, Mobile hay quy trình thanh toán.
+- Sức chứa hiện được quản lý theo ca nên một lần tìm chỉ cần kiểm tra mỗi ca một lần; nếu sau này đổi sang quay vòng bàn theo khoảng thời gian, phải bỏ cache theo ca và kiểm tra từng thời điểm. Giới hạn này được ghi ngay ở code để người nối tiếp không hiểu nhầm.
+- **89 kiểm tra W10 HTTP/database đạt; 889 kiểm tra hồi quy toàn dự án đạt**, là hai lần chạy riêng, không cộng số lượng. Có kiểm tra ba giờ gần 16h, giữ nguyên 16:07, loại ca hết bàn, không trả giờ xa ngoài cửa sổ để lấp kết quả, sức chứa theo số người, ngày/giờ không khớp, API trả đúng giờ quanh 16h và các luồng tạo/đổi lịch/cọc hiện có.
+- Biên dịch không lỗi, cú pháp script và `git diff --check` đạt. Vẫn còn sáu cảnh báo dependency có sẵn; chưa nâng package chung ngoài phạm vi.
+- Chưa có bằng chứng kiểm thử bấm giao diện của **bản mục 17**: công cụ trình duyệt gặp lỗi kết nối rồi bị chặn khi truy cập tab trang lỗi cũ, nên dừng thao tác thay vì vượt chặn. Không dùng ảnh kiểm thử mục 16 làm bằng chứng cho thuật toán mới. Bản preview đã chạy lại tại `https://localhost:7296/DatBan?cart=new`, dùng database preview riêng; người kiểm tra mở lại/tải mới trang và tạo lịch mới theo ngày hiện tại.
+- Nhánh vẫn local `member1-week10`, chưa commit/push/merge. Không gửi yêu cầu đặt bàn tới nhà hàng bên ngoài, không chuyển tiền thật và không sửa database của nhóm trong lần kiểm thử này.
+
+## 18. Bàn giao Người 1 W10 — quy trình hiện hành và các luồng AI phải kiểm tra (25/10/2026)
+
+### Đọc mục này trước khi tiếp tục
+
+Đây là kết luận mới nhất sau khi người dùng xem giao diện và góp ý lại. Các mục 14–17 giữ nguyên để biết lịch sử, **không dùng ý tưởng cũ ở mục 16–17 làm đặc tả hiện hành**. Đặc biệt: không còn ba giờ cố định, không còn ba giờ tìm quanh giờ đã nhập, không chọn nhiều bàn trong một lần xếp mới, không tự kết thúc phục vụ sau ba tiếng và không bắt nhân viên qua bước “đang dọn” riêng.
+
+Phạm vi theo **phân công W10**, không phải số thành viên của W8/W9:
+
+- Người 1 (nhánh này): đặt bàn, xếp bàn, sơ đồ, đổi giờ, vòng đời lượt khách/bàn và thống kê đặt bàn để dự trù nguyên liệu.
+- Người 2: POS/gọi món, gửi bếp, KDS, đơn hàng và thanh toán. Những điểm nối tối thiểu với vòng đời bàn có sửa trong nhánh này được chỉ rõ bên dưới; không coi là đã làm xong toàn bộ phần Người 2.
+- Người 3: chương trình khuyến mãi–voucher và quản lý khách hàng. Việc sửa quyền/hồ sơ nhân viên cần thống nhất người phụ trách phân quyền hiện có, không tự suy ra vì số thành viên đã đổi qua các tuần.
+- Không dựng app mobile, không đổi schema/migration, không thêm package, không sửa README chung. Đây là bản web; chưa tuyên bố hoàn thành mobile.
+
+### A. Khách chọn ngày/giờ như thế nào?
+
+Khách chọn ngày, số người và khu vực mong muốn. Trên form có tối đa hai nút chọn nhanh, mỗi ca còn nhận khách một nút. Nút này giúp chọn từ đầu; ô giờ của khách lúc mới mở form để trống, không âm thầm chọn hộ khách. Bấm nút thì điền giờ, hoặc bỏ qua nút để nhập giờ muốn đến.
+
+Giờ gợi ý tính theo **giờ Việt Nam từ máy chủ, ngày đang đặt và khả năng còn một bàn đủ chỗ**. Ví dụ đang 20:06 thì đặt online cần trước ít nhất 30 phút: chỉ còn gợi ý ca tối lúc 20:45; không gợi ý giờ trưa đã qua. Nếu chọn ngày mai thì có hai lựa chọn sớm nhất là ca trưa 11:00 và ca tối 17:00. Đây là giờ bắt đầu có thể chọn nhanh, không có nghĩa mọi người phải đến đúng hai giờ đó. Nhập 16:07 hoặc 18:30 vẫn được nếu hợp lệ và còn bàn. Mốc gợi ý làm tròn 15 phút chỉ để dễ bấm; giờ tự nhập không bị làm tròn.
+
+Nhà hàng phục vụ liên tục **11:00 đến trước 22:00**, không có khoảng ngừng phục vụ lúc 16:00. Hai ca 11–17h và 17–22h là cách quản lý lượt bàn trong bài. Không dùng hai ca này để khóa các giờ tự nhập thành giờ cố định. Chính sách giữ **một lượt đặt/bàn/ca** vẫn được giữ; nếu nhóm muốn quay vòng bàn nhiều lượt trong cùng ca thì đó là thay đổi nghiệp vụ khác, phải sửa đồng bộ kiểm tra trùng, dự báo chỗ trống và thống kê.
+
+Ca hết bàn được ghi “Hết bàn” và không bấm được. Thay đổi số khách/khu vực/ngày thì kiểm tra lại bằng AJAX, giữ tên/SĐT/ghi chú đang điền. Giờ đã qua, chưa đủ 30 phút đặt trước, ngoài giờ mở cửa hoặc quá 180 ngày được báo ngay cạnh ô nhập; máy chủ vẫn kiểm tra lại khi gửi. Tiếp tân tiếp nhận khách thực tế dùng quy tắc riêng: cho ghi nhận gần thời điểm hiện tại, không áp nhầm yêu cầu đặt online trước 30 phút; không cho nhập lùi quá 15 phút. Form không có giờ gửi lên phải bị từ chối, không lấy giờ mặc định trong model để tạo lịch hộ khách.
+
+Các nguồn tham khảo form đặt bàn ở mục 17 giúp đối chiếu cách chọn ngày/giờ/số khách. **Cách chọn nhanh theo hai ca là lựa chọn của bài này**, không khẳng định đó là chuẩn chung của các nhà hàng.
+
+### B. Xếp một bàn và xem ai đã đặt để tránh trùng
+
+Tiếp tân/Admin mở “Xếp bàn” ngay trong popup danh sách yêu cầu; không chuyển sang trang khác. Bên cạnh sơ đồ phải đọc rõ tên khách, SĐT, số người, ngày giờ, yêu cầu khu vực/VIP và cọc.
+
+Mỗi yêu cầu xếp mới chỉ chọn **một bàn đủ chỗ**. Chọn bàn B thì nút bàn A tự bỏ, dùng cùng một nhóm radio. Máy chủ từ chối gửi nhiều ID, kể cả sửa request thủ công. Kiểm tra còn chỗ và tự giữ bàn online cũng dùng đúng quy tắc này: không cộng hai bàn 4 chỗ rồi báo đủ cho 8 khách trong khi giao diện chỉ cho chọn một bàn. Khi không có một bàn đủ lớn thì chọn khu vực/ngày/ca khác hoặc trao đổi với nhà hàng; hiện không cung cấp ghép bàn mới.
+
+Ngay trên từng bàn hiện **lịch của ngày đang xem**: mã lịch, tên khách, số người và giờ. Không nhồi toàn bộ lịch các ngày sau lên thẻ bàn; đổi ngày xem để kiểm tra ngày khác. Lịch đang sửa được ghi “Bàn của lịch này”/“Lịch đang xếp”, không đỏ như lịch người khác. Lịch khác cùng ca khóa bàn và ghi lý do; bàn thiếu chỗ, ngừng sử dụng, sai VIP hoặc đang có khách chưa hoàn tất cũng không chọn được. Bấm bàn bị khóa có thông báo giải thích.
+
+Ví dụ bàn A đã có khách lúc 18:00 thì lịch 19:30 cùng ca tối phải chọn bàn B, không xếp đè A. Hôm sau không bị khóa bởi lịch hôm trước. Khi bấm xác nhận, giao dịch và phiên bản dữ liệu kiểm tra lại; hai nhân viên mở popup trước đó không được cùng giữ một bàn. Không coi màu xanh trên một popup cũ là bằng chứng đã giữ bàn thành công.
+
+Lịch ghép nhiều bàn **đã tồn tại từ phiên bản cũ** vẫn giữ dữ liệu và được xử lý hoàn tất an toàn; không tự xóa lịch sử hoặc sửa hóa đơn cũ. Nếu nhân viên chủ động xếp lại lịch cũ thì áp dụng lựa chọn một bàn mới đủ chỗ.
+
+### C. Đổi giờ, nhận bàn, kết thúc và lịch cũ
+
+Đổi giờ ở quản trị phải giữ nguyên mã lịch, món đã chọn, tiền cọc và hạn thanh toán; ghi lý do đổi. Nếu giờ mới đụng lịch/bàn không sẵn sàng, hoặc món đã bắt đầu chế biến, báo rõ và giữ nguyên lịch cũ. Dữ liệu đã có người sửa thì yêu cầu tải lại, không ghi đè âm thầm.
+
+Khi nhận khách: chỉ nhận đúng lịch phù hợp ngày/giờ và điều kiện cọc, không nhận lịch ngày mai như đang phục vụ hôm nay. Món đặt trước chưa gửi bếp không đồng nghĩa đã nấu. Điểm giao với gửi bếp/POS phải được Người 2 kiểm tra theo mục E.
+
+**Ba tiếng là mốc nhắc nhân viên kiểm tra, không phải lệnh tự đuổi khách, tự thanh toán hay tự giải phóng bàn.** Nhân viên xác nhận khách dùng xong/bàn sẵn sàng. Khi thanh toán cuối bữa và toàn bộ món, hóa đơn, cọc đã được xử lý, hệ thống kết thúc lượt và đưa bàn về “Sẵn sàng” trực tiếp; không sinh thêm trạng thái “đang dọn” kéo dài nhiều ngày. Chưa trả tiền hoặc còn món/cọc chưa xử lý thì không cho nút hoàn tất làm biến mất nghĩa vụ đó.
+
+Lượt cũ qua ngày chưa kết thúc hiện ở nhóm “Lượt cũ chưa xác nhận hoàn tất” để xử lý, không giả làm khách đang ngồi hôm nay và không khóa toàn bộ ngày tương lai. Cờ bàn cũ/không rõ lượt khách hôm nay vẫn cần nhân viên kiểm tra trực tiếp; không tự coi món/nợ/cọc cũ đã xong. Nếu cùng bàn đang phục vụ khách mới, xử lý giấy tờ của lượt cũ không được giải phóng nhầm bàn của khách mới.
+
+Điểm nối đã sửa trong phần chung: `OrderService` chỉ lấy lượt khách của đúng ngày đang phục vụ; sau thanh toán gọi kiểm tra hoàn tất lượt trong cùng giao dịch. `TableExpiryWorker` không đóng bàn do quá giờ, chỉ hòa giải lượt đã đủ điều kiện thanh toán; `HoaDon/Details` giải thích xác nhận cuối bữa. Khi Người 2 merge phần thanh toán, **phải giữ các điểm nối này hoặc thay bằng cơ chế tương đương có kiểm thử**, không xóa vì tưởng là code thừa của Người 1.
+
+Hạn cọc 60 phút khác hoàn toàn mốc nhắc ba tiếng. Lịch chưa báo chuyển và chưa nhận tiền quá hạn mới được tự hủy theo chính sách có sẵn. **Khách đã bấm báo chuyển khoản phải chờ nhân viên đối chiếu**, không tự hủy và nuốt tiền chỉ vì đồng hồ hết 60 phút. Nhóm cần theo dõi hàng đợi đối chiếu này, tránh bỏ quên khi demo.
+
+### D. Thống kê để dự trù nguyên liệu, không phải biểu đồ doanh thu
+
+Mục “Dự trù nguyên liệu” (`/ThongKeDatBan`) lọc ngày/tuần, ca và VIP. Đếm lịch, lượt bàn, số khách; tách lịch đang chờ và lịch chưa chọn món. Chỉ tính nhu cầu mua/chuẩn bị thêm từ món đặt trước của lịch đã xác nhận, còn sắp tới và chưa nhận khách. Lấy **đúng định mức của size được chọn × số lượng**, không mượn công thức size khác. Đây là bảng dự kiến, không phải thao tác trừ kho.
+
+Món/combo thiếu định mức riêng phải được cảnh báo và chưa cộng phần chưa biết; không bịa số nguyên liệu cho báo cáo đẹp. Khi Người 2 thay đổi chuyển món sang hóa đơn/trừ kho, cần test lại để lịch đã nhận khách không bị cộng vào nhu cầu chuẩn bị một lần nữa.
+
+### E. Bàn giao ngoài phạm vi Người 1 — vấn đề nào, ai kiểm tra, kết quả mong muốn
+
+1. **Dropdown “Nhân viên phụ trách phiếu gọi món” đang lẫn Bếp/Kho/Thu ngân.** Đây là code có sẵn trong `Controllers/DatTruocController.cs` (danh sách mọi nhân viên còn làm việc), không phải lựa chọn người phục vụ bàn vừa thêm. `Views/DatBan/ChiTiet.cshtml` chỉ hiện dropdown cho Admin chưa gắn hồ sơ nhân viên; tài khoản có hồ sơ dùng chính nhân viên đăng nhập. Bàn giao Người 2 luồng gửi bếp, phối hợp người quản lý hồ sơ/quyền: xác định rõ đây là người ghi nhận gửi bếp hay người phục vụ bàn; nhãn phải đúng nghĩa. Nếu là người gửi bếp, chỉ cho chọn nhân viên đang làm việc và đủ quyền, kiểm tra **cả máy chủ**, không chỉ lọc giao diện. Hiện `PreorderService` mới kiểm tra tồn tại/đang làm việc; không coi quyền người được chọn đã được sửa trong nhánh này.
+2. **Món đặt trước và gọi thêm — Người 2.** Test nhận bàn có món trước: tạo/gắn đúng phiếu vào cùng lượt khách, gửi bếp đúng một lần, chọn đúng size/ghi chú; món đã gửi phải khóa sửa ở POS, món mới nằm riêng cho đến khi gửi. Nhấn gửi hai lần hoặc tải lại không được tạo trùng/trừ kho lần hai. Đối chiếu trạng thái Đang nấu → Sẵn sàng → Đã phục vụ giữa bếp và POS. Đây là phần cần Người 2 xác nhận, không dùng việc “test đặt bàn đã pass” làm chứng cứ KDS/realtime đã xong.
+3. **Hóa đơn cuối bữa — Người 2.** Một mã bàn được dùng qua nhiều ngày không đủ để tìm hóa đơn. Phải gắn đúng `DatBanId`/lượt phục vụ hôm nay, gom đúng món trước + gọi thêm, cấn cọc đúng một lần; không lấy hóa đơn hôm trước và không kết thúc khách khác trên cùng bàn. Test còn món/chưa trả đủ/hủy hóa đơn/nhấn thanh toán lại, rồi test thanh toán đủ thì bàn Sẵn sàng trực tiếp. Thanh toán chuyển khoản thật/ngân hàng tự đối soát chưa được chứng minh bởi QR mẫu hoặc nút khách báo đã chuyển.
+4. **Voucher và khách hàng — Người 3.** Kiểm tra chương trình cha có nhiều voucher con, ngày hiệu lực theo giờ Việt Nam, số lượt phát hành/sử dụng, mã phần trăm/số tiền và mã khách đã thu thập. Khi Người 2 áp voucher vào hóa đơn có cọc phải thống nhất thứ tự tính và chặn giảm/trừ cọc lặp. Chưa triển khai các thay đổi voucher mới trong nhánh Người 1.
+5. **Định mức/menu dùng cho dự trù — người đang quản lý thực đơn/kho.** Cung cấp công thức đủ từng size và cấu phần combo; thống nhất combo tính theo món thành phần hay định mức trực tiếp. Trước khi thống nhất, giữ cảnh báo thiếu dữ liệu; không sao chép size khác ngầm. Giá/định mức mới phải test lại giỏ món → cọc → dự trù → gửi bếp; không sửa số tiền lịch cũ đã chốt một cách âm thầm.
+
+### F. Kịch bản kiểm tra quan trọng — AI và người nhận code phải chạy theo luồng
+
+- **Khách:** mở form mới → chưa có giờ tự chọn; chọn hôm nay xem ca đã qua không còn gợi ý; chọn ngày mai xem hai ca; bấm gợi ý điền đúng giờ; tự nhập 16:07 vẫn được; nhập giờ quá khứ/10:59/22:00 phải có thông báo. Đổi ngày/số khách/khu vực giữ thông tin liên hệ. Gửi request thiếu giờ hoặc giả mạo giờ không được tạo lịch/cọc.
+- **Xếp bàn:** tạo lịch 4 người → chỉ chọn một bàn ít nhất 4 chỗ; đổi A sang B thì A bỏ tích; lịch người khác cùng ca khóa chọn và hiện lý do; bàn đang sửa được nhận diện riêng. Mở hai phiên cùng xếp một bàn: chỉ một phiên thắng, phiên còn lại được yêu cầu kiểm tra lại. Không có bàn đơn đủ lớn thì không báo còn chỗ nhờ cộng nhiều bàn nhỏ.
+- **Lịch theo ngày:** bàn A có lịch trưa và tối cùng ngày thì thấy đủ hai lịch, nhưng chỉ ca đang xếp bị chặn. Đổi sang ngày khác không mang khóa của ngày trước sang. Dữ liệu “đang dọn/đang phục vụ” nhiều ngày phải vào luồng kiểm tra lượt cũ, không biến thành bận mãi ở mọi ngày.
+- **Đổi giờ:** đổi sang 18:30 hoặc 16:07 hợp lệ giữ mã/món/cọc/hạn; đổi vào lịch trùng bị từ chối và giờ cũ không mất; người khác sửa trước thì phiên cũ không ghi đè. Món đã nấu phải xử lý với bếp, không tự đổi ngày bữa ăn.
+- **Cọc:** chưa chọn món và có món kiểm tra đúng chính sách tiền đang dùng; QR chỉ là hướng dẫn, báo đã chuyển không tự ghi nhận đủ cọc; đối chiếu đúng mới xác nhận. Hết 60 phút không báo chuyển/không tiền thì hủy; đã báo chuyển cần nhân viên xử lý, không tự xóa.
+- **Cuối bữa:** còn nợ/cọc/món chưa xong thì chưa hoàn tất. Đủ điều kiện thì thanh toán/xác nhận cuối bữa đưa bàn về Sẵn sàng, không thêm bước dọn. Phục vụ quá ba tiếng chỉ nhắc, không tự đóng. Giải quyết lượt cũ không được đổi bàn của lượt mới sang trống.
+- **Dự trù:** lịch sắp tới đã xác nhận có hai món khác size → tính từng công thức đúng số lượng; thiếu định mức báo thiếu; chưa nhận khách mới tính nhu cầu sắp tới; đã nhận khách không tính chuẩn bị/trừ kho lại. Khách thường không truy cập được thông tin đặt bàn của người khác hay báo cáo nội bộ.
+
+### G. File định vị và cách kiểm chứng
+
+Luật giờ: `Services/ReservationSchedule.cs`; sức chứa/trùng/xếp/đổi/hoàn tất: `Services/TableService.cs`; popup/lịch ngày: `Controllers/SoDoBanController.cs`, `Views/SoDoBan/_Board.cshtml`, `_BookingContext.cshtml`, `wwwroot/js/tables.js`. Form khách/tiếp tân và báo lỗi ngay: `Views/DatBan/Index.cshtml`, `Views/QuanLyDatBan/Create.cshtml`, `wwwroot/js/reservation-slots.js`, hai endpoint `KhungGio`. Dự trù: `ReservationPlanningService`, `ThongKeDatBanController`, `Views/ThongKeDatBan/Index.cshtml`. Dữ liệu demo: `Week10DemoSetup`, lệnh `--init-week10-demo` chỉ trong Development.
+
+Kiểm thử SQL: chạy `dotnet run --project tests/Management.SmokeTests -- --week10-only`, rồi chạy lại không có tham số để hồi quy toàn bộ bộ test hiện hành; cấu hình `CRUD_TEST_SQL_SERVER` cho SQL test riêng. Kiểm thử phản hồi ô giờ: `node tests/Management.SmokeTests/reservation-slots.test.cjs`. Bộ SQL tự tạo/xóa database test tạm, không phải bằng chứng đã kiểm dữ liệu production.
+
+Hai file test cũ `TableSmoke.cs`/`BookingSlotSmoke.cs` vẫn giữ để đối chiếu lịch sử W9 nhưng không chạy trong bộ mặc định vì có giả định trái W10 (giờ cố định/ghép bàn/tự đóng). Bộ W10 thay thế kiểm tra các quy tắc mới; không lấy số test của bộ cũ cộng vào kết quả mới.
+
+Kết quả bản bàn giao mục 18: **99 kiểm tra riêng W10 HTTP/database đạt; 899 kiểm tra hồi quy HTTP/database đạt** (hai lần chạy, không cộng lại). Có kiểm tra đổi bàn thay liên kết cũ, từ chối request nhiều bàn, một bàn đủ chỗ thay vì cộng bàn nhỏ, radio trên popup, gợi ý hai ca không chạy theo giờ đã nhập, nhập riêng 16:07 và request thiếu giờ. Biên dịch không lỗi, còn 6 cảnh báo dependency có sẵn (NU1902/NU1903, `System.Security.Cryptography.Pkcs 9.0.11`); không nâng package chung ngoài phạm vi. Kiểm tra cú pháp hai script và tự kiểm phản hồi giờ bằng `reservation-slots.test.cjs` đạt; `git diff --check` sạch ngoài lời nhắc Git về LF/CRLF.
+
+Mốc bàn giao này phát hành trên nhánh **`member1-week10`**, không merge `master`; xem lịch sử nhánh để lấy đúng commit. Không gửi dữ liệu SQL test hoặc database preview lên Git. Không đưa mật khẩu/tài khoản ngân hàng thật vào phần cấu hình mới.
+
+**Giới hạn chứng cứ:** chưa có kiểm thử bấm trình duyệt cuối cho bản mục 18; kiểm thử script bằng DOM giả lập không thay thế browser E2E. Người nhận vẫn cần bấm các kịch bản ở mục F, đặc biệt hiển thị hai ca cùng bàn, thao tác hai cửa sổ đồng thời và nhận bàn–bếp–thanh toán sau khi merge code của Người 2. Chưa tích hợp thanh toán thật, chưa đối chiếu code chưa merge của các thành viên khác. Không dùng các số kiểm chứng ở mục cũ để kết luận phiên bản sau merge đã đạt.

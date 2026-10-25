@@ -71,13 +71,13 @@ try
         ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
 
-    if (args.Contains("--slots-only"))
+    if (args.Contains("--week10-only") || args.Contains("--slots-only"))
     {
         await InitDemoAccounts();
-        await using var slotDb = new RestaurantDbContext(options);
-        await DbSeeder.SeedAsync(slotDb);
-        await BookingSlotSmoke.Run(slotDb, client, NewClient, Hidden, Check);
-        Console.WriteLine($"PASS: {checks} fixed-slot booking HTTP/database checks.");
+        await using var week10Db = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(week10Db);
+        await Week10BookingSmoke.Run(week10Db, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} week-ten booking HTTP/database checks.");
         return;
     }
 
@@ -550,13 +550,11 @@ try
     }
 
     await MenuSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
-    await TableSmoke.Run(db, client, NewClient, Hidden, Check);
-    await BookingSlotSmoke.Run(db, client, NewClient, Hidden, Check);
+    // W10 replaces the contradictory fixed-slot/countdown tests; those files remain as historical feedback references.
+    await Week10BookingSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.OrderSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PreorderSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.ReservationDepositSmoke.Run(db, client, NewClient, Hidden, Check);
-    await Management.SmokeTests.Week8DemoSmoke.Run(db, client, Check);
-    await Management.SmokeTests.TableExpirySmoke.Run(db, client, Check);
     await InventorySmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PaymentQrSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PromotionSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);

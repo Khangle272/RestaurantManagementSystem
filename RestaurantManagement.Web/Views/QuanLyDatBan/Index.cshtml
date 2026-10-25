@@ -200,6 +200,7 @@
                                         <!-- Nút Xếp bàn (Cho Chờ xác nhận hoặc muốn đổi bàn) -->
                                         @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Chờ cọc" || item.TrangThai == "Đã xác nhận")
                                         {
+                                            <a asp-action="DoiGio" asp-route-id="@item.MaDatBan" data-reschedule-booking="@item.MaDatBan" class="btn btn-sm btn-outline-primary">Đổi giờ</a>
                                             <a asp-controller="SoDoBan" asp-action="Index" asp-route-datBanId="@item.MaDatBan" data-assign-booking="@item.MaDatBan" class="btn btn-sm btn-primary fw-semibold" title="Duyệt và xếp bàn">
                                                 <i class="bi bi-table me-1"></i>Xếp bàn
                                             </a>

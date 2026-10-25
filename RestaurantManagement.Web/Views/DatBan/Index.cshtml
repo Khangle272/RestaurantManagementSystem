@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-slot-url="@Url.Action("KhungGio")">
+        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-slot-url="@Url.Action("KhungGio")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="30" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")">
             @Html.AntiForgeryToken()
             <input type="hidden" name="RequestId" value="@Model.RequestId" />
             <div data-cart-inputs></div>
@@ -60,16 +60,16 @@
                                 <label for="booking-day" class="form-label fw-semibold">Ngày đặt bàn</label>
                                 <input id="booking-day" name="NgayDat" type="date" required class="form-control mb-3"
                                     value="@Model.ThoiGianDen.ToString("yyyy-MM-dd")" min="@TableService.VietnamNow.ToString("yyyy-MM-dd")" max="@TableService.VietnamNow.AddDays(180).ToString("yyyy-MM-dd")" />
-                                <label asp-for="ThoiGianDen" class="form-label fw-semibold">Ca đặt bàn</label>
-                                <select asp-for="ThoiGianDen" id="inputThoiGianDen" class="form-select" required>
-                                    @foreach (var slot in ReservationSchedule.Slots) {
-                                        var start = slot.Arrival(DateOnly.FromDateTime(Model.ThoiGianDen));
-                                        <option value="@start.ToString("yyyy-MM-ddTHH:mm")" selected="@(start == Model.ThoiGianDen)" disabled="@(ReservationSchedule.Validate(start, TableService.VietnamNow) is not null)">@slot.Label</option>
-                                    }
-                                </select>
+                                <p class="form-label fw-semibold mb-1">Chọn nhanh theo ca (không bắt buộc)</p>
+                                <div data-time-suggestions class="d-flex flex-wrap gap-2 mb-2" aria-label="Ca còn nhận khách"></div>
+                                <p class="small text-muted mb-2">Mỗi ca gợi ý một giờ sớm nhất còn nhận được theo thời gian hiện tại, số khách và khu vực. Bấm để điền giờ, hoặc tự nhập giờ khác bên dưới.</p>
+                                <label for="inputThoiGianDen" class="form-label fw-semibold">Giờ đến tự chọn</label>
+                                <input asp-for="ThoiGianDen" id="inputThoiGianDen" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" value="@(Context.Request.Method == "GET" ? "" : Model.ThoiGianDen.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" required />
+                                <p class="small text-muted mt-2 mb-1">Phục vụ liên tục @ReservationSchedule.ServiceHours; đặt trước ít nhất 30 phút. Ca chỉ dùng quản lý lượt bàn, không giới hạn giờ tự chọn.</p>
+                                <p data-time-error class="small text-danger mb-1" role="alert" hidden></p>
                                 <span asp-validation-for="ThoiGianDen" class="text-danger small"></span>
-                                <p id="slot-status" class="form-text" role="status" aria-live="polite">Đặt trước ít nhất 30 phút. Nhà hàng kiểm tra lại bàn trước khi giữ chỗ.</p>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" data-recheck-slots>Kiểm tra lại ca</button>
+                                <p id="slot-status" class="form-text" role="status" aria-live="polite">Đang kiểm tra bàn theo ngày, giờ và số khách đã chọn…</p>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-recheck-slots>Kiểm tra bàn trống</button>
                             </div>
 
                             <!-- Số lượng khách -->
@@ -168,7 +168,7 @@
                                 <div class="d-flex">
                                     <i class="bi bi-shield-exclamation text-warning fs-4 me-2"></i>
                                     <div class="small text-secondary">
-                                        <strong>Chính sách giữ bàn:</strong> Bàn đặt sẽ được giữ tối đa <strong>15 phút</strong> sau giờ hẹn. Nếu quý khách đến muộn hơn, vui lòng gọi hotline nhà hàng để được hỗ trợ.
+                                        <strong>Thời gian nhận bàn:</strong> Vui lòng đến đúng giờ hẹn. Nếu đến muộn hoặc muốn đổi giờ, hãy liên hệ nhà hàng để được kiểm tra và điều chỉnh lịch. Thời hạn thanh toán cọc được thông báo riêng khi gửi yêu cầu.
                                     </div>
                                 </div>
                             </div>

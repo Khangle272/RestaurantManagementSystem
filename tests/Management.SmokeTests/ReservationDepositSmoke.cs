@@ -118,7 +118,7 @@ public static class ReservationDepositSmoke
             && booking.ThoiDiemBaoChuyenKhoan == null && await db.GiaoDichCoc.CountAsync(x => x.DatBanId == id) == 1,
             "Cashier confirmation needs no bank transaction code; repeated confirmation records one receipt");
         check(await db.GiaoDichCoc.AnyAsync(x => x.DatBanId == id && x.MaThamChieu == null), "No transaction code is invented when the cashier simply verifies receipt");
-        check(booking.GioKetThucDuKien == booking.GioDen.AddHours(2), "New online reservation holds its fixed two-hour slot, separate from the serving watchdog");
+        check(booking.GioKetThucDuKien == ReservationSchedule.EndOf(booking.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime), "Online reservation ends at shift closing time without a dining countdown");
         check(!internalPage.Contains("confirmed-bank-ref"), "Cashier form does not ask for a bank transaction code");
         await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, new(receipt) { ["RequestId"] = Guid.NewGuid().ToString() }, HttpStatusCode.BadRequest);
         var add = new Dictionary<string, string> { ["RowVersion"] = Version(booking), ["RequestId"] = Guid.NewGuid().ToString(),

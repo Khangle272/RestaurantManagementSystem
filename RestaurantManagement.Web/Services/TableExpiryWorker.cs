@@ -18,9 +18,9 @@ public sealed class TableExpiryWorker(IServiceScopeFactory scopes, ILogger<Table
                 using (var scope = scopes.CreateScope())
                 {
                     var db = scope.ServiceProvider.GetRequiredService<RestaurantDbContext>();
-                    var cutoff = DateTimeOffset.UtcNow.AddHours(-TableService.MaxDiningHours);
                     ids = await db.DatBan.AsNoTracking().Where(x => x.TrangThai == TrangThaiDatBan.DaNhanBan
-                        && x.ThoiDiemKetThuc == null && (x.ThoiDiemNhanBan ?? x.GioDen) <= cutoff)
+                        && x.ThoiDiemKetThuc == null
+                        && x.HoaDon.Any(b => b.TrangThai == TrangThaiHoaDon.DaThanhToan))
                         .Select(x => x.Id).ToListAsync(stoppingToken);
                     expiredHolds = await db.DatBan.AsNoTracking().Where(x => x.CocTuDong && x.TrangThai == TrangThaiDatBan.ChoCoc
                         && x.HanThanhToanCoc <= DateTimeOffset.UtcNow && x.ThoiDiemBaoChuyenKhoan == null && x.TienCocDaNop == 0)
@@ -30,7 +30,7 @@ public sealed class TableExpiryWorker(IServiceScopeFactory scopes, ILogger<Table
                 {
                     if (stoppingToken.IsCancellationRequested) return;
                     using var scope = scopes.CreateScope();
-                    await scope.ServiceProvider.GetRequiredService<TableService>().CloseOverdue(id);
+                    await scope.ServiceProvider.GetRequiredService<TableService>().CompletePaidService(id);
                 }
                 foreach (var id in expiredHolds)
                 {

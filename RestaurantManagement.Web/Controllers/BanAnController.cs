@@ -70,7 +70,7 @@ public class BanAnController(RestaurantDbContext context) : ManagementController
         var originalArea = entity.KhuVucId;
         await ValidateAsync(model, id, originalArea);
         if (entity.TrangThai is TrangThaiBan.DangPhucVu or TrangThaiBan.CanDon)
-            ModelState.AddModelError("", "Bàn đang phục vụ hoặc cần dọn. Hoàn tất trên sơ đồ bàn trước khi sửa cấu hình.");
+            ModelState.AddModelError("", "Bàn đang phục vụ hoặc chưa xác nhận hoàn tất. Hoàn tất trên sơ đồ bàn trước khi sửa cấu hình.");
         if (await Db.ChiTietDatBan.AnyAsync(x => x.BanAnId == id && (x.DatBan.TrangThai == TrangThaiDatBan.DaXacNhan || x.DatBan.TrangThai == TrangThaiDatBan.ChoCoc)
             && x.DatBan.GioKetThucDuKien > DateTimeOffset.UtcNow)
             && (model.KhuVucId != entity.KhuVucId || model.SoChoNgoi != entity.SoChoNgoi || model.TrangThai != entity.TrangThai))

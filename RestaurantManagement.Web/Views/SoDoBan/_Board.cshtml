@@ -1,17 +1,42 @@
 @model TableBoardViewModel
 @using RestaurantManagement.API.Models
 @using RestaurantManagement.Web.Services
+@if (Model.IsLive && Model.PendingServices.Count > 0) {
+    <section class="alert alert-warning" aria-label="Lượt khách cũ cần xử lý">
+        <h2 class="h6">Lượt cũ chưa xác nhận hoàn tất</h2>
+        <p class="small">Các lượt này không phải khách đang dùng bàn hôm nay và không khóa lịch ngày tương lai. Xử lý tiền/món/cọc rồi xác nhận hoàn tất. Hiển thị tối đa 50 lượt cũ nhất trong khu vực đang lọc.</p>
+        @foreach (var review in Model.PendingServices) {
+            var old = review.Booking;
+            <div class="border-top pt-2 mb-2" data-service-review="@old.Id">
+                <strong>@old.MaDatBan · @old.HoTenLienHe</strong>
+                <div class="small">@old.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") · @string.Join(", ", old.Ban.Select(x => x.BanAn.MaBan))</div>
+                <div class="d-flex gap-2 flex-wrap mt-1">
+                    @foreach (var bill in old.HoaDon.Where(x => x.TrangThai != TrangThaiHoaDon.DaHuy)) {
+                        <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-secondary">Hóa đơn @bill.MaHoaDon</a>
+                    }
+                    @if (User.IsInRole("Admin") || User.IsInRole("BoiBan")) {
+                        <form asp-action="HoanTatLuot" asp-controller="SoDoBan" method="post" data-complete-service>
+                            <input type="hidden" name="id" value="@old.Id" /><input type="hidden" name="rowVersion" value="@review.Version" />
+                            <button type="submit" class="btn btn-sm btn-outline-success">Xác nhận hoàn tất lượt cũ</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+}
 @foreach (var group in Model.Tables.GroupBy(x => x.Table.KhuVucId)) {
     var area = group.First().Table.KhuVuc;
     <section class="mb-4"><div class="d-flex justify-content-between mb-3"><h2 class="h5 mb-0">@area.TenKhuVuc <span class="small text-muted">· @(area.Tang == 0 ? "Tầng trệt" : $"Tầng {area.Tang}") @(area.LaPhongVip ? "· VIP" : "")</span></h2><span class="small text-muted">@group.Count() bàn</span></div>
     <div class="table-grid">
     @foreach (var card in group) {
         var table = card.Table;
-        var label = table.TrangThai switch { TrangThaiBan.SanSang => "Sẵn sàng", TrangThaiBan.DangPhucVu => "Đang phục vụ", TrangThaiBan.CanDon => "Cần dọn", _ => "Ngừng sử dụng" };
-        var css = table.TrangThai switch { TrangThaiBan.SanSang => "ready", TrangThaiBan.DangPhucVu => "occupied", TrangThaiBan.CanDon => "cleaning", _ => "inactive" };
+        var label = card.NeedsInspection || card.DisplayStatus == TrangThaiBan.CanDon ? "Chờ xác nhận hoàn tất" : card.DisplayStatus switch { TrangThaiBan.SanSang => "Sẵn sàng", TrangThaiBan.DangPhucVu => "Đang phục vụ", _ => "Ngừng sử dụng" };
+        var css = card.DisplayStatus switch { TrangThaiBan.SanSang => "ready", TrangThaiBan.DangPhucVu => "occupied", TrangThaiBan.CanDon => "cleaning", _ => "inactive" };
         if (!Model.IsLive && table.TrangThai != TrangThaiBan.NgungSuDung && area.DangSuDung) {
             var bookedInSlot = card.ScheduledBookings.Any(x => x.GioDen < Model.Until && x.GioKetThucDuKien > Model.From);
-            label = bookedInSlot ? "Đã đặt trong ca" : card.UnavailableReason is not null ? "Chưa thể xếp ca này" : "Trống trong ca";
+            var ownBooking = Model.Booking is not null && card.ScheduledBookings.Any(x => x.Id == Model.Booking.Id);
+            label = ownBooking ? "Bàn của lịch này" : bookedInSlot ? "Đã đặt trong ca" : card.UnavailableReason is not null ? "Chưa thể xếp ca này" : "Trống trong ca";
             css = card.UnavailableReason is not null ? "occupied" : "ready";
         }
         if (!area.DangSuDung) { label = "Khu vực ngừng sử dụng"; css = "inactive"; }
@@ -21,31 +46,32 @@
         </h3><span class="table-status">@label</span></div>
             <p class="small text-muted mt-2 mb-2">@table.SoChoNgoi chỗ ngồi @(!area.DangSuDung ? "· Khu vực đã ngừng" : "")</p>
             @if (card.UnavailableReason is not null) { <p id="table-blocked-note-@table.Id" class="small text-danger mb-2">@card.UnavailableReason</p> }
+            @if (card.NeedsInspection) { <p class="small text-warning-emphasis">Trạng thái cũ hoặc chưa có lượt khách hôm nay. Kiểm tra bàn đã trống, sẵn sàng rồi xác nhận hoàn tất; không tự coi khoản nợ cũ là đã thanh toán.</p> }
+            @if (card.Attention is not null) { <p class="small text-danger" role="status">@card.Attention</p> }
             @if (card.Occupant is { } guest) {
-                var deadline = TableService.ServingDeadline(guest);
-                <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") · Mốc 3 tiếng: @deadline.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span></p>
-                @if (deadline <= DateTimeOffset.UtcNow) { <p class="small text-danger fw-semibold">Đã quá 3 tiếng. Kiểm tra thanh toán, tiền cọc và món còn chờ để kết thúc bàn.</p> }
+                <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM"). Nhân viên kết thúc lượt sau khi khách dùng bữa xong; không tự đóng theo số tiếng.</span></p>
             }
             @if (card.ScheduledBookings.Count > 0) { <div class="table-bookings small"><strong>Lịch ngày @Model.ScheduleDay.ToString("dd/MM/yyyy")</strong>
                 @foreach (var scheduled in card.ScheduledBookings) {
-                    var overlaps = scheduled.GioDen < Model.CheckUntil && TableService.BlockingUntil(scheduled) > Model.From;
-                    <div class="@(overlaps ? "fw-semibold text-danger" : "text-muted")">@scheduled.MaDatBan · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") – @scheduled.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM") @(overlaps ? "· Trong khung kiểm tra" : "")</div>
+                    var own = scheduled.Id == Model.Booking?.Id;
+                    var overlaps = card.Conflicts.Any(x => x.Id == scheduled.Id);
+                    <div class="@(own ? "text-success" : overlaps ? "fw-semibold text-danger" : "text-muted")">@scheduled.MaDatBan · @scheduled.HoTenLienHe · @(scheduled.SoNguoiLon + scheduled.SoTreEm) khách · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm") – @scheduled.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm") @(own ? "· Lịch đang xếp" : overlaps ? "· Trùng ca đang xếp" : "")</div>
                 }
             </div> }
             @if (card.IsSuggested) { <span class="small text-success fw-semibold mb-2">Gợi ý · đủ chỗ, không trùng lịch</span> }
             @if (Model.CanAssign && reception) {
-                <label class="table-select small"><input class="form-check-input me-2" type="checkbox" name="banAnIds" value="@table.Id" form="assign-booking"
+                <label class="table-select small"><input class="form-check-input me-2" type="radio" name="banAnIds" value="@table.Id" form="assign-booking"
                     data-seats="@table.SoChoNgoi" data-area="@table.KhuVucId" data-suggested="@(card.IsSuggested ? "true" : "false")" checked="@card.IsSelected" disabled="@(!card.CanChoose)" />Chọn bàn này</label>
                 @if (!card.CanChoose) { <button type="button" class="btn btn-sm btn-outline-secondary" data-table-warning="@(card.UnavailableReason ?? "Yêu cầu không còn được xếp bàn.")">Vì sao không chọn được?</button> }
-            } else if (Model.Booking is null && Model.IsLive && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (table.TrangThai == TrangThaiBan.CanDon || table.TrangThai == TrangThaiBan.DangPhucVu)) {
+            } else if (Model.Booking is null && Model.IsLive && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (card.DisplayStatus == TrangThaiBan.CanDon || card.DisplayStatus == TrangThaiBan.DangPhucVu)) {
                 <div class="mt-auto pt-2 d-flex flex-column gap-1">
-                @if (table.TrangThai == TrangThaiBan.DangPhucVu) {
+                @if (card.DisplayStatus == TrangThaiBan.DangPhucVu && !card.NeedsInspection) {
                     <a asp-controller="DonHang" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-primary w-100">Gọi món / Order</a>
                 }
-                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100">
+                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100" data-complete-service>
                     <input type="hidden" name="id" value="@table.Id" /><input type="hidden" name="rowVersion" value="@card.Version" />
-                    <input type="hidden" name="clean" value="@(table.TrangThai == TrangThaiBan.CanDon ? "true" : "false")" />
-                    <button class="btn btn-sm btn-outline-success w-100" type="submit">@(table.TrangThai == TrangThaiBan.CanDon ? "Dọn xong" : "Kết thúc phục vụ")</button>
+                    <input type="hidden" name="clean" value="true" />
+                    <button class="btn btn-sm btn-outline-success w-100" type="submit">Xác nhận hoàn tất bàn</button>
                 </form>
                 </div>
             }

@@ -18,11 +18,9 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             .ToListAsync();
 
         var tableIds = occupiedTables.Select(x => x.Id).ToArray();
-        var bookings = await db.ChiTietDatBan.AsNoTracking()
+        var bookings = await TableService.CurrentServices(db).AsNoTracking()
             .Include(x => x.DatBan)
-            .Where(x => tableIds.Contains(x.BanAnId)
-                && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
-                && x.DatBan.ThoiDiemKetThuc == null)
+            .Where(x => tableIds.Contains(x.BanAnId))
             .ToListAsync();
 
         var bookingIds = bookings.Select(x => x.DatBanId).Distinct().ToList();
@@ -33,7 +31,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             .OrderByDescending(x => x.ThoiDiemLap)
             .ToListAsync();
 
-        return occupiedTables.Select(t =>
+        return occupiedTables.Where(t => bookings.Any(x => x.BanAnId == t.Id)).Select(t =>
         {
             var b = bookings.Where(x => x.BanAnId == t.Id)
                 .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan)
@@ -155,11 +153,9 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 if (table == null || table.TrangThai != TrangThaiBan.DangPhucVu)
                     return ("Bàn đã chọn không ở trạng thái đang phục vụ.", null);
 
-                var booking = await db.ChiTietDatBan
+                var booking = await TableService.CurrentServices(db)
                     .Include(x => x.DatBan)
-                    .Where(x => x.BanAnId == model.BanAnId.Value
-                        && x.DatBan.TrangThai == TrangThaiDatBan.DaNhanBan
-                        && x.DatBan.ThoiDiemKetThuc == null)
+                    .Where(x => x.BanAnId == model.BanAnId.Value)
                     .OrderByDescending(x => x.DatBan.ThoiDiemNhanBan)
                     .Select(x => x.DatBan)
                     .FirstOrDefaultAsync();
@@ -553,6 +549,11 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
             invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
             await db.SaveChangesAsync();
+            if (invoice.DatBanId is int finishedBookingId)
+            {
+                await TableService.ReleasePaidWithinTransaction(db, finishedBookingId);
+                await db.SaveChangesAsync();
+            }
             await tx.CommitAsync();
             return null;
         }
