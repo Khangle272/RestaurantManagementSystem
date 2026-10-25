@@ -1,0 +1,89 @@
+.home-page {
+  --home-cream: #f3eddf;
+  --home-heading-font: "Segoe UI", Arial, system-ui, sans-serif;
+  padding-top: 6px;
+}
+.home-page .restaurant-hero {
+  grid-template-columns: 1fr 1fr;
+  min-height: 590px;
+  border-radius: 24px;
+  background: var(--home-cream);
+  color: var(--forest-deep);
+}
+.home-page .restaurant-hero-copy { padding: clamp(28px, 4.5vw, 64px); }
+.home-page .restaurant-hero .eyebrow { color: #516246; font-size: .68rem; letter-spacing: .13em; }
+.home-page .restaurant-hero h1 {
+  font-family: var(--home-heading-font);
+  font-size: clamp(2.4rem, 3.8vw, 4rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: normal;
+}
+.home-page .restaurant-hero h1 em { color: #68784e; font-weight: 600; font-style: normal; }
+.home-page .restaurant-hero-copy > p { color: #586354; font-size: 1rem; line-height: 1.8; }
+.home-page .hero-actions .btn-restaurant { background: var(--forest); border-color: var(--forest); color: #fff; }
+.home-page .hero-actions .btn-restaurant:hover { background: #2b563d; }
+.home-page .btn-hero-outline { color: var(--forest); border-color: #a5b19b; }
+.home-page .hero-actions .btn { border-radius: 999px; padding-inline: 23px; font-size: .9rem; }
+.home-page .hero-footnote { color: #626e59; align-items: center; font-size: .76rem; line-height: 1.8; }
+.hero-footnote-icon { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border: 1px solid #cdd1bf; border-radius: 50%; font-size: 1.15rem; }
+.home-page .hero-footnote strong { color: #43533e; font-weight: 600; }
+.home-page .restaurant-hero-media { margin: 14px 14px 14px 0; border-radius: 16px; min-height: 0; }
+.home-page .restaurant-hero-media > img { position: absolute; inset: 0; }
+.home-page .hero-media-caption { left: 24px; right: auto; bottom: 24px; padding: 22px 26px; border-radius: 14px; }
+.home-page .hero-media-caption strong { font-family: var(--home-heading-font); font-size: 1.4rem; font-weight: 600; line-height: 1.45; letter-spacing: normal; }
+.home-page .hero-media-caption span { font-size: .6rem; margin-bottom: 8px; }
+.home-page .restaurant-intro-line { padding: 30px 0; margin-bottom: 58px; justify-content: space-between; gap: 24px; }
+.home-page .restaurant-intro-line > span { flex: 1; justify-content: center; gap: 16px; }
+.home-page .restaurant-intro-line > span + span { border-left: 1px solid var(--line); }
+.home-page .restaurant-intro-line > span > span { display: flex; flex-direction: column; align-items: start; gap: 4px; }
+.home-page .restaurant-intro-line i { font-size: 1.65rem; }
+.home-page .restaurant-intro-line strong { font-size: .86rem; font-weight: 700; }
+.home-page .restaurant-intro-line small { color: var(--muted); font-size: .76rem; font-weight: 400; }
+.home-page .section-heading h2, .home-page .booking-banner h2 { font-family: var(--home-heading-font); font-weight: 700; line-height: 1.35; letter-spacing: normal; }
+.section-description { color: var(--muted); margin: 12px 0 0; font-size: .94rem; }
+.home-page .section-count { padding: 8px 14px; border-radius: 999px; background: #e7eddf; color: var(--forest); }
+.home-page .menu-section { padding: 32px; border: 1px solid #e2e6db; border-radius: 24px; background: #f0f3eb; }
+.home-page .menu-card { border-radius: 18px; border-color: #e2e7dc; display: flex; flex-direction: column; }
+.home-page .menu-card-body { display: flex; flex-direction: column; flex: 1; padding: 22px; }
+.home-page .menu-card-body > p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.home-page .menu-card-footer { margin-top: auto; flex-wrap: wrap; }
+.home-page .menu-card-footer strong { color: #28583c; }
+.home-page .menu-card-footer .btn { min-height: 44px; padding: 9px 14px; border-radius: 999px; font-size: .8rem; }
+.home-page .menu-card-image { aspect-ratio: 1.45; }
+.home-page .category-list { gap: 8px; }
+.home-page .category-list a { display: inline-flex; align-items: center; min-height: 44px; border-radius: 999px; background: #fff; }
+.home-page .category-list a.selected, .home-page .category-list a:hover { background: var(--forest); }
+.menu-search { display: flex; align-items: center; gap: 12px; max-width: 500px; margin-bottom: 20px; padding: 0 16px; border: 1px solid #cbd5c5; border-radius: 12px; background: #fff; }
+.menu-search:focus-within { border-color: var(--forest); outline: 3px solid #b8d98566; }
+.menu-search label { color: #687b61; }
+.menu-search input { width: 100%; min-width: 0; padding: 14px 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: .9rem; }
+.home-page [hidden] { display: none !important; }
+.home-page a:focus-visible, .home-page button:focus-visible { outline: 3px solid #7a9952; outline-offset: 4px; }
+.home-page .offer-card { border-radius: 16px; background: #f3eddf; border-color: #e6dcc6; }
+.home-page .offer-icon { background: #e5ddc8; border-radius: 50%; }
+.home-page .booking-banner { padding: 48px; border-radius: 24px; background: radial-gradient(ellipse at top right, #36583c, var(--forest-deep) 75%); }
+.home-page .booking-banner .btn { border-radius: 999px; }
+@media (max-width: 1000px) {
+  .home-page .restaurant-hero { min-height: 530px; }
+  .home-page .restaurant-hero-copy { padding: 32px; }
+  .home-page .restaurant-intro-line small { max-width: 180px; }
+}
+@media (max-width: 760px) {
+  .home-page .restaurant-hero { grid-template-columns: 1fr; }
+  .home-page .restaurant-hero h1 { max-width: 530px; font-size: clamp(2.2rem, 6vw, 3.2rem); }
+  .home-page .restaurant-hero-media { min-height: 320px; margin: 0 12px 12px; }
+  .home-page .restaurant-intro-line { flex-direction: column; align-items: stretch; gap: 20px; padding: 26px 12px; margin-bottom: 38px; }
+  .home-page .restaurant-intro-line > span { justify-content: start; }
+  .home-page .restaurant-intro-line > span + span { border-left: 0; }
+  .home-page .restaurant-intro-line small { max-width: none; }
+  .home-page .menu-section { padding: 22px 16px; }
+  .home-page .section-heading { flex-wrap: wrap; gap: 14px; }
+  .home-page .booking-banner { padding: 30px; }
+}
+@media (max-width: 400px) {
+  .home-page .restaurant-hero-copy { padding: 28px 22px; }
+  .home-page .hero-actions { flex-direction: column; }
+  .home-page .restaurant-hero h1 { font-size: 2rem; }
+  .home-page .restaurant-hero-media { min-height: 260px; }
+}
