@@ -203,6 +203,27 @@
             <div class="card-body p-3">
                 @if (unpaid)
                 {
+                @if (ViewBag.Customer is RestaurantManagement.API.Models.KhachHang customer)
+                {
+                    <p class="small">Khách hàng: <strong>@customer.HoTen · @customer.SoDienThoai</strong></p>
+                }
+                else if (!Model.VoucherId.HasValue)
+                {
+                    <form asp-action="SetCustomer" method="post" class="d-flex gap-2 mb-3">
+                        <input type="hidden" name="id" value="@Model.Id" /><input type="hidden" name="rowVersion" value="@ViewBag.RowVersion" />
+                        <input name="phone" class="form-control" placeholder="SĐT hồ sơ khách để dùng ví và tích điểm" aria-label="Số điện thoại khách hàng" required />
+                        <button type="submit" class="btn btn-outline-primary text-nowrap">Gắn khách hàng</button>
+                    </form>
+                }
+                @if (ViewBag.CustomerWallet is List<RestaurantManagement.Web.Services.CustomerVoucherItem> wallet && wallet.Any(x => x.CoTheDung))
+                {
+                    <form asp-action="ApplyVoucher" method="post" class="d-flex gap-2 mb-3">
+                        <input type="hidden" name="id" value="@Model.Id" /><input type="hidden" name="rowVersion" value="@ViewBag.RowVersion" />
+                        <select name="voucherCode" class="form-select" aria-label="Chọn mã trong ví khách hàng">
+                            @foreach (var v in wallet.Where(x => x.CoTheDung)) { <option value="@v.Ma">@v.Ma · @v.UuDai</option> }
+                        </select><button type="submit" class="btn btn-outline-primary text-nowrap">Dùng mã trong ví</button>
+                    </form>
+                }
                 <form asp-action="ApplyVoucher" method="post" class="row g-2 align-items-center mb-3">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />

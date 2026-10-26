@@ -35,6 +35,9 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
     public DbSet<KhuyenMai> KhuyenMai => Set<KhuyenMai>();
     public DbSet<KhuyenMaiMon> KhuyenMaiMon => Set<KhuyenMaiMon>();
     public DbSet<Voucher> Voucher => Set<Voucher>();
+    public DbSet<VoucherMon> VoucherMon => Set<VoucherMon>();
+    public DbSet<VoucherKhachHang> VoucherKhachHang => Set<VoucherKhachHang>();
+    public DbSet<LichSuTichDiem> LichSuTichDiem => Set<LichSuTichDiem>();
     public DbSet<DanhGia> DanhGia => Set<DanhGia>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -102,6 +105,14 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<ChiTietPhieuXuat>().HasOne(x => x.LoNhap).WithMany().HasForeignKey(x => x.ChiTietPhieuNhapId);
         b.Entity<KhuyenMaiMon>().HasKey(x => new { x.KhuyenMaiId, x.MonAnId });
         b.Entity<Voucher>().HasIndex(x => x.Ma).IsUnique();
+        b.Entity<Voucher>().HasOne(x => x.KhuyenMai).WithMany(x => x.Vouchers).HasForeignKey(x => x.KhuyenMaiId);
+        b.Entity<VoucherMon>().HasKey(x => new { x.VoucherId, x.MonAnId });
+        b.Entity<VoucherMon>().HasOne(x => x.Voucher).WithMany(x => x.MonApDung).HasForeignKey(x => x.VoucherId);
+        b.Entity<VoucherKhachHang>().HasKey(x => new { x.KhachHangId, x.VoucherId });
+        b.Entity<VoucherKhachHang>().HasIndex(x => x.VoucherId);
+        b.Entity<LichSuTichDiem>().HasIndex(x => x.HoaDonId).IsUnique();
+        b.Entity<LichSuTichDiem>().HasIndex(x => new { x.KhachHangId, x.ThoiDiem });
+        b.Entity<HoaDon>().HasIndex(x => new { x.KhachHangId, x.ThoiDiemLap });
         b.Entity<DanhGia>().HasOne(x => x.HoaDon).WithMany().HasForeignKey(x => x.HoaDonId);
         b.Entity<DanhGia>().HasOne(x => x.ChiTietHoaDon).WithMany()
             .HasForeignKey(x => new { x.ChiTietHoaDonId, x.HoaDonId }).HasPrincipalKey(x => new { x.Id, x.HoaDonId });
@@ -129,7 +140,10 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<ChiTietPhieuXuat>(b, "SoLuong", "[SoLuong]>0");
         Check<ChiTietPhieuThanhLy>(b, "LuongGia", "[SoLuong]>0 AND [DonGiaVon]>=0");
         Check<KhuyenMai>(b, "DieuKien", "[KetThuc]>[BatDau] AND [GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND [ThuTuApDung]>=0");
-        Check<Voucher>(b, "Luot", "[GioiHanTongLuot]>0");
+        Check<KhuyenMai>(b, "PhatHanh", "[GioiHanPhatHanh] IS NULL OR [GioiHanPhatHanh]>0");
+        Check<Voucher>(b, "Luot", "[GioiHanTongLuot] IS NULL OR [GioiHanTongLuot]>0");
+        Check<Voucher>(b, "DieuKien", "([BatDau] IS NULL OR [KetThuc] IS NULL OR [KetThuc]>=[BatDau]) AND ([GiaTri] IS NULL OR ([GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100))) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND ([GioiHanPhatHanh] IS NULL OR [GioiHanPhatHanh]>0)");
+        Check<LichSuTichDiem>(b, "Diem", "[SoDiem]>=0 AND [SoTienTinhDiem]>=0");
         Check<DanhGia>(b, "Diem", "[Diem] BETWEEN 1 AND 5");
 
         // Common SQL representation, enum domains and optimistic concurrency.
@@ -148,10 +162,11 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
                     bool quantity = p.Name is "SoLuong" or "NguongCanhBao" or "SoLuongTon" or "HeSoTyLe";
                     b.Entity(entity.ClrType).Property(p.Name).HasPrecision(18, quantity ? 6 : 2);
                 }
-                if (p.ClrType.IsEnum)
+                var enumType = Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType;
+                if (enumType.IsEnum)
                 {
                     b.Entity(entity.ClrType).Property(p.Name).HasConversion<string>().HasMaxLength(40);
-                    var values = string.Join(",", Enum.GetNames(p.ClrType).Select(x => $"'{x}'"));
+                    var values = string.Join(",", Enum.GetNames(enumType).Select(x => $"'{x}'"));
                     b.Entity(entity.ClrType).ToTable(t => t.HasCheckConstraint($"CK_{entity.ClrType.Name}_{p.Name}_Enum", $"[{p.Name}] IN ({values})"));
                 }
             }

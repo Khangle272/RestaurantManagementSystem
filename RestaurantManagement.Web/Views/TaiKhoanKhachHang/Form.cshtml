@@ -1,0 +1,11 @@
+@model RestaurantManagement.Web.Models.CustomerProfileForm
+@{ ViewData["Title"] = Model.Id == 0 ? "Thêm hồ sơ khách hàng" : "Sửa hồ sơ khách hàng"; }
+<h1 class="h3 mb-3">@ViewData["Title"]</h1>
+<form method="post" asp-action="@(Model.Id == 0 ? "Create" : "Edit")" class="card card-body" style="max-width:650px">
+    <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /><div asp-validation-summary="All" class="text-danger"></div>
+    <label asp-for="HoTen" class="form-label">Họ tên</label><input asp-for="HoTen" class="form-control mb-3" />
+    <label asp-for="SoDienThoai" class="form-label">Số điện thoại</label><input asp-for="SoDienThoai" class="form-control mb-3" />
+    <label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control mb-3" />
+    <div class="form-check mb-3"><input asp-for="DangSuDung" class="form-check-input" /><label asp-for="DangSuDung" class="form-check-label">Đang hoạt động</label></div>
+    <div><button type="submit" class="btn btn-primary">Lưu hồ sơ</button> <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a></div>
+</form>

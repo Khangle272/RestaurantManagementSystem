@@ -1,0 +1,24 @@
+@model RestaurantManagement.Web.Models.CustomerHistoryViewModel
+@using RestaurantManagement.API.Models
+@using RestaurantManagement.Web.Services
+@{ ViewData["Title"] = Model.IsAdmin ? $"Khách hàng · {Model.Customer.HoTen}" : "Đơn hàng & tích điểm của tôi"; }
+<div class="d-flex justify-content-between gap-2 mb-3"><div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted">@Model.Customer.HoTen · @Model.Customer.SoDienThoai</p></div>
+@if (Model.IsAdmin) { <a asp-action="Index" class="btn btn-outline-secondary align-self-start">Danh sách khách hàng</a> }
+else { <a asp-action="Vouchers" asp-route-wallet="true" class="btn btn-outline-primary align-self-start">Ví voucher</a> }</div>
+<div class="row g-3 mb-4"><div class="col-sm-6"><div class="card card-body"><span class="text-muted">Điểm tích lũy</span><strong class="fs-3">@Model.Balance.ToString("N0") điểm</strong></div></div><div class="col-sm-6"><div class="card card-body"><span class="text-muted">Tổng mua hàng đã thanh toán</span><strong class="fs-3">@Model.TotalSpent.ToString("N0") đ</strong></div></div></div>
+<h2 class="h5">Đơn hàng & lịch sử mua hàng</h2>
+<form method="get" class="d-flex gap-2 mb-3"><input type="hidden" name="id" value="@Model.Customer.Id" /><select name="status" class="form-select" style="max-width:300px" aria-label="Trạng thái đơn hàng"><option value="">Tất cả trạng thái</option>@foreach (var status in Enum.GetValues<TrangThaiHoaDon>()) { <option value="@status" selected="@(Model.Status == status)">@CustomerHistoryService.PaymentStatus(status)</option> }</select><button type="submit" class="btn btn-outline-primary">Lọc đơn hàng</button></form>
+<div class="card table-responsive mb-3"><table class="table align-middle mb-0"><thead><tr><th>Đơn hàng</th><th>Thanh toán</th><th>Tiến độ món</th><th>Tiền mua sau giảm</th><th></th></tr></thead><tbody>
+@if (Model.Orders.Count == 0) { <tr><td colspan="5" class="text-center py-4 text-muted">Chưa có đơn hàng phù hợp.</td></tr> }
+@foreach (var bill in Model.Orders) {
+    <tr><td><strong>@bill.MaHoaDon</strong><small class="d-block">@bill.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") · @bill.LoaiDonHang</small></td><td>@CustomerHistoryService.PaymentStatus(bill.TrangThai)</td>
+    <td>@foreach (var group in bill.ChiTiet.GroupBy(x => x.TrangThai)) { <span class="d-block small">@CustomerHistoryService.DishStatus(group.Key): @group.Sum(x => x.SoLuong)</span> }</td><td>@((bill.TongTienHang - bill.TienGiam).ToString("N0")) đ</td><td><a asp-controller="@(Model.IsAdmin ? "HoaDon" : "KhachHang")" asp-action="@(Model.IsAdmin ? "Details" : "Order")" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-primary">Xem đơn</a></td></tr>
+}
+</tbody></table></div>
+<div class="d-flex gap-2 align-items-center mb-4"><span>Trang đơn hàng @Model.OrderPage / @Model.OrderPages</span>@if (Model.OrderPage > 1) { <a asp-route-id="@Model.Customer.Id" asp-route-orderPage="@(Model.OrderPage - 1)" asp-route-pointPage="@Model.PointPage" asp-route-status="@Model.Status">Trước</a> }@if (Model.OrderPage < Model.OrderPages) { <a asp-route-id="@Model.Customer.Id" asp-route-orderPage="@(Model.OrderPage + 1)" asp-route-pointPage="@Model.PointPage" asp-route-status="@Model.Status">Tiếp</a> }</div>
+<h2 class="h5">Lịch sử tích điểm</h2><p class="small text-muted">Mỗi 10.000đ tiền mua sau giảm giá được 1 điểm (làm tròn xuống), gồm phần đã trả bằng tiền cọc. Ghi điểm khi thu ngân xác nhận thanh toán. Hóa đơn cũ chưa có sổ điểm sẽ không được tự cộng lại.</p>
+<div class="card table-responsive"><table class="table mb-0"><thead><tr><th>Thời gian</th><th>Hóa đơn</th><th>Tiền tính điểm</th><th>Điểm</th><th>Nội dung</th></tr></thead><tbody>
+@if (Model.Points.Count == 0) { <tr><td colspan="5" class="text-center text-muted py-4">Chưa có giao dịch tích điểm.</td></tr> }
+@foreach (var point in Model.Points) { <tr><td>@point.ThoiDiem.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td><td>@point.HoaDon.MaHoaDon</td><td>@point.SoTienTinhDiem.ToString("N0") đ</td><td class="fw-bold text-success">+@point.SoDiem</td><td>@point.NoiDung</td></tr> }
+</tbody></table></div>
+<div class="d-flex gap-2 align-items-center mt-3"><span>Trang tích điểm @Model.PointPage / @Model.PointPages</span>@if (Model.PointPage > 1) { <a asp-route-id="@Model.Customer.Id" asp-route-orderPage="@Model.OrderPage" asp-route-pointPage="@(Model.PointPage - 1)" asp-route-status="@Model.Status">Trước</a> }@if (Model.PointPage < Model.PointPages) { <a asp-route-id="@Model.Customer.Id" asp-route-orderPage="@Model.OrderPage" asp-route-pointPage="@(Model.PointPage + 1)" asp-route-status="@Model.Status">Tiếp</a> }</div>

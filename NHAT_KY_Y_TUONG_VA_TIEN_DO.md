@@ -769,3 +769,30 @@ Mốc bàn giao này phát hành trên nhánh **`member1-week10`**, không merge
 - Thay font Georgia/Times New Roman ở tiêu đề và chú thích ảnh bằng Segoe UI/Arial/system-ui để xử lý hiện tượng dấu tiếng Việt tách khỏi chữ trong ảnh phản hồi.
 - Bỏ chữ nghiêng ở tiêu đề, trả khoảng cách ký tự về bình thường, tăng chiều cao dòng và giảm cỡ tiêu đề trên desktop/mobile.
 - Kiểm tra `git diff --check` đạt; chưa xác nhận trực quan trên trình duyệt của người dùng.
+
+## Thiết kế lại chương trình–voucher và quản lý khách hàng — 25/10/2026
+
+### Phạm vi đã triển khai
+
+- `KhuyenMai` là chương trình cha có tập `Vouchers`. Form `/KhuyenMai/Create` và `/KhuyenMai/Edit/{id}` thêm/sửa/xóa nhiều mã trong một lần lưu; mỗi mã có mức giảm %, tiền trực tiếp, phạm vi hóa đơn/món, món áp dụng, điều kiện tối thiểu, trần giảm, thời hạn và số lượng riêng. Khách nhận riêng được chọn bằng tên/SĐT. Các màn CRUD voucher riêng đã bỏ; URL cũ chuyển về chương trình.
+- Thời gian nhập là giờ Việt Nam UTC+7, độc lập múi giờ máy chủ; kiểm tra bao gồm cả hai biên. Mặc định bắt đầu từ đầu ngày Việt Nam. Chương trình và voucher phải đồng thời hoạt động, và ngày voucher nằm trong ngày chương trình.
+- Hạn vé trên cha/con để trống là không giới hạn. `VoucherInventory` đếm vé đã lưu + hóa đơn nhập mã trực tiếp chưa có vé trong ví; không đếm đôi vé được dùng. Mã gõ tay vẫn bị chặn khi hết vé. Sửa/thu thập/giữ mã dùng transaction, khóa chương trình rồi mã; phát hành cuối và lượt dùng cuối có kiểm thử đồng thời.
+- `VoucherMon` lưu món riêng của mã; `VoucherKhachHang` lưu ví với khóa duy nhất khách–mã. Một vé thu thập dùng một lần cho khách đó. Khách mở `/KhachHang/Vouchers` để thu thập, chuyển ví để xem mã; trên đơn của mình được chọn mã trong ví hoặc gõ trực tiếp. Thu ngân dùng cùng bộ đánh giá tại trang hóa đơn, giữ thứ tự ưu đãi → cấn cọc → tiền phải thu. Lịch sử giảm thực tế tiếp tục được chốt vào snapshot.
+- `/TaiKhoanKhachHang` quản lý cả hồ sơ chưa có tài khoản, thêm/sửa hồ sơ, cấp tài khoản cho hồ sơ cũ mà không tạo trùng khách, quản lý khóa đăng nhập, xem lịch sử đơn và sổ điểm. Thu ngân có thể gắn hồ sơ bằng SĐT vào hóa đơn chưa gắn khách trước khi chọn voucher. Khách tự xem đơn/tiến độ món, lịch sử mua và tích điểm; endpoint trạng thái cập nhật 15 giây kiểm tra chủ sở hữu.
+- `LichSuTichDiem` ghi trong cùng transaction thanh toán; unique `HoaDonId` ngăn cộng trùng. Quy tắc mặc định đã chọn: **10.000đ tiền mua sau giảm = 1 điểm, làm tròn xuống**, gồm phần đã thanh toán bằng cọc. Không suy đoán/cộng lại điểm hóa đơn cũ. Chưa có đổi điểm/hoàn điểm vì chưa triển khai nghiệp vụ đổi điểm/hoàn tiền.
+- App MAUI thay màn mẫu bằng WebView HTTPS cùng origin do người dùng cấu hình; dùng chung đăng nhập, ví, chọn mã và lịch sử khách của Web. Đây là luồng Web trong app, chưa có API/mobile native riêng.
+
+### Nâng cấp dữ liệu
+
+Migration `20261025134614_CampaignVoucherWalletAndCustomerPoints` sao chép cấu hình/thời hạn/món từ chương trình xuống mã cũ, giữ nguyên giới hạn lượt và hóa đơn. Cột ưu đãi cha được giữ cho chương trình tự động và script cũ; mã mới tạo từ form luôn có cấu hình riêng. Web tự áp dụng migration khi khởi động. Script `RestaurantManagement.API/Scripts/UpgradeCampaignVoucherWalletAndCustomerPoints.sql` dành cho nâng cấp thủ công từ schema W9, có kiểm tra lịch sử để chạy lại an toàn. Không chạy migration lên `RestaurantDB` thật trong lượt này; mọi kiểm thử dùng database tạm và đã tự dọn.
+
+### Kết quả kiểm chứng và giới hạn
+
+- Build solution gồm API, Web, MAUI Android và Windows thành công, 0 lỗi/cảnh báo; các sửa Web cuối cũng đã được build qua project test. Project smoke test còn hai cảnh báo NU1902/NU1903 của dependency `System.Security.Cryptography.Pkcs 9.0.11` có sẵn.
+- **135 kiểm tra khuyến mãi/thanh toán/báo cáo/ví/khách hàng đạt** (`--promotions-only`): gồm tạo ba loại mã trong một chương trình, rollback khi mã con sai, hiệu lực ngay/sát hai biên, hạn cha/con và nhập tay, hai khách tranh vé, lưu trùng, chống truy cập đơn khác, sửa/xóa mã có lịch sử, tích điểm kèm cọc, chống thanh toán/cộng điểm lặp, cấp tài khoản giữ hồ sơ cũ, migration dữ liệu cũ và chạy lại script SQL.
+- **99 kiểm tra đặt bàn W10 đạt** (`--week10-only`); **92 kiểm tra POS/gọi món/thanh toán đạt** (`--orders-only`); **77 kiểm tra tiền cọc đạt** (`--deposits-only`). Đây là các lần chạy riêng, có kiểm tra khởi động trùng nhau; không cộng thành số ca độc lập.
+- `git diff --check`, kiểm tra cú pháp hai script JS mới và `dotnet ef migrations has-pending-model-changes` đạt; snapshot khớp model.
+- Toàn bộ suite mặc định **chưa đạt**: dừng ở `Program.cs` kiểm tra cũ yêu cầu chặn đổi đơn vị nguyên liệu, trong khi `NguyenLieuController.ValidateAsync` ở cả HEAD gốc và bản hiện tại không có luật này. Không sửa nghiệp vụ nguyên liệu ngoài phạm vi.
+- Khi chạy thêm nhánh kiểm thử tác nghiệp đã phát hiện `PreorderSmoke` cũ yêu cầu chuyển món đặt trước sang `DangCheBien` lần nữa, trong khi `PreorderService` hiện hữu đã phát hành món ở trạng thái đó; kiểm tra tiếp theo cũng giả định còn một món chờ để hủy. Không đổi hành vi bếp/đặt trước để chiều theo test cũ. Bộ mặc định vẫn giữ test này; chỉ thêm các cờ chọn bộ POS/cọc riêng để xác minh độc lập.
+- Cập nhật ba assertion của `OrderSmoke` từ chuỗi `amount=` trong URL QR cũ sang giá trị `SoTienPhaiThuDuKien` thật trên form (vẫn kiểm tra chính xác 250.000đ, 30.000đ, 65.000đ), vì trang hiện dùng ảnh QR tĩnh. Không thay hành vi thanh toán/QR.
+- Chưa kiểm thử bấm trình duyệt trực quan hoặc chạy app trên thiết bị thật; build mobile không thay thế kiểm thử WebView, chứng chỉ HTTPS và cookie trên thiết bị.

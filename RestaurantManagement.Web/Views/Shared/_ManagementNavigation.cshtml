@@ -16,7 +16,6 @@
         ("Thực đơn", "MonAn", "Index", admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức", admin || User.IsInRole("Bep")),
         ("Thực đơn", "DanhMuc", "Index", "Quản lý danh mục món", admin),
         ("Khuyến mãi & Voucher", "KhuyenMai", "Index", "Chương trình khuyến mãi", admin),
-        ("Khuyến mãi & Voucher", "Voucher", "Index", "Quản lý mã Voucher", admin),
         ("Vận hành", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
         ("Vận hành", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
         ("Vận hành", "Bep", "Index", "Bếp chế biến", admin || User.IsInRole("Bep")),

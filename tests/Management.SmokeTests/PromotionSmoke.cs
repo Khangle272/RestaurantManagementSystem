@@ -90,19 +90,18 @@ public static class PromotionSmoke
         stackA.DangSuDung=false; stackB.DangSuDung=false; exclusive.DangSuDung=false; await db.SaveChangesAsync();
         check(CsvExport.Cell("=2+2")=="\"'=2+2\"" && CsvExport.Cell("a\"b")=="\"a\"\"b\"","CSV names are quoted and spreadsheet formulas neutralized");
 
-        var create=await Get("/Voucher/Create");
         var campaignForm=await Get("/KhuyenMai/Create");
-        await Post("/KhuyenMai/Create",campaignForm,new() { ["TenChuongTrinh"]="TEST-INVALID-DISH-LINK",
+        await Post("/KhuyenMai/Create",campaignForm,new() { ["TenChuongTrinh"]="TEST-INVALID-DISH-LINK",["CanVoucher"]="false",
             ["BatDau"]=now.ToString("yyyy-MM-dd"),["KetThuc"]=now.AddDays(1).ToString("yyyy-MM-dd"),["PhamVi"]="MonAn",
             ["KieuGiam"]="PhanTram",["GiaTri"]="10",["SelectedMonAnIds[0]"]="2147483647" },HttpStatusCode.OK);
         check(!await db.KhuyenMai.AnyAsync(x=>x.TenChuongTrinh=="TEST-INVALID-DISH-LINK"),"Invalid dish selection cannot leave a half-created promotion");
-        await Post("/KhuyenMai/Create",campaignForm,new() { ["TenChuongTrinh"]="TEST-INVALID-NEGATIVE",
+        await Post("/KhuyenMai/Create",campaignForm,new() { ["TenChuongTrinh"]="TEST-INVALID-NEGATIVE",["CanVoucher"]="false",
             ["BatDau"]=now.ToString("yyyy-MM-dd"),["KetThuc"]=now.AddDays(1).ToString("yyyy-MM-dd"),["PhamVi"]="HoaDon",
             ["KieuGiam"]="PhanTram",["GiaTri"]="10",["MucGiamToiDa"]="-1" },HttpStatusCode.OK);
         check(!await db.KhuyenMai.AnyAsync(x=>x.TenChuongTrinh=="TEST-INVALID-NEGATIVE"),"Negative caps rejected at the form boundary rather than by a SQL crash");
-        await Post("/Voucher/Create",create,new() { ["Ma"]="TEST-AUTO-INVALID",["KhuyenMaiId"]=auto.Id.ToString(),
-            ["GioiHanTongLuot"]="1",["DangSuDung"]="true" },HttpStatusCode.OK);
-        check(!await db.Voucher.AnyAsync(x=>x.Ma=="TEST-AUTO-INVALID"),"Server rejects voucher for an automatic/disabled promotion");
+        using (var legacyRoute=await admin.GetAsync("/Voucher/Create"))
+            check(legacyRoute.StatusCode==HttpStatusCode.Redirect && legacyRoute.Headers.Location?.OriginalString.Contains("/KhuyenMai/Create")==true,
+                "Legacy voucher creation routes into the campaign aggregate");
         var voucherPromotion=new KhuyenMai {TenChuongTrinh="TEST-VOUCHER",BatDau=now.AddDays(-1),KetThuc=now.AddDays(1),
             PhamVi=PhamViUuDai.HoaDon,KieuGiam=KieuGiam.PhanTram,GiaTri=15,CanVoucher=true,ChoPhepKetHop=true};
         var voucher=new Voucher {Ma="TEST-LAST-USE",KhuyenMai=voucherPromotion,GioiHanTongLuot=1};
@@ -123,9 +122,16 @@ public static class PromotionSmoke
         db.ChangeTracker.Clear(); var anotherProgram=new KhuyenMai {TenChuongTrinh="TEST-OTHER-PROGRAM",BatDau=now.AddDays(-1),
             KetThuc=now.AddDays(1),PhamVi=PhamViUuDai.HoaDon,KieuGiam=KieuGiam.SoTien,GiaTri=1000,CanVoucher=true};
         db.KhuyenMai.Add(anotherProgram); await db.SaveChangesAsync();
-        var edit=await Get($"/Voucher/Edit/{voucher.Id}");
-        await Post($"/Voucher/Edit/{voucher.Id}",edit,new() { ["Id"]=voucher.Id.ToString(),["RowVersion"]=hidden(edit,"RowVersion"),
-            ["Ma"]=voucher.Ma,["KhuyenMaiId"]=anotherProgram.Id.ToString(),["GioiHanTongLuot"]="1",["DangSuDung"]="true" },HttpStatusCode.OK);
+        var edit=await Get($"/KhuyenMai/Edit/{anotherProgram.Id}");
+        await Post($"/KhuyenMai/Edit/{anotherProgram.Id}",edit,new() {
+            ["Id"]=anotherProgram.Id.ToString(),["RowVersion"]=hidden(edit,"RowVersion"),
+            ["TenChuongTrinh"]=anotherProgram.TenChuongTrinh,["CanVoucher"]="true",
+            ["BatDau"]=PromotionTime.Local(anotherProgram.BatDau).ToString("yyyy-MM-ddTHH:mm:ss"),
+            ["KetThuc"]=PromotionTime.Local(anotherProgram.KetThuc).ToString("yyyy-MM-ddTHH:mm:ss"),
+            ["Vouchers[0].Id"]=voucher.Id.ToString(),["Vouchers[0].RowVersion"]=VersionEntity(await db.Voucher.SingleAsync(x=>x.Id==voucher.Id)),
+            ["Vouchers[0].Ma"]=voucher.Ma,["Vouchers[0].GiaTri"]="15",
+            ["Vouchers[0].BatDau"]=PromotionTime.Today.ToString("yyyy-MM-ddTHH:mm:ss"),
+            ["Vouchers[0].KetThuc"]=PromotionTime.Today.AddDays(1).ToString("yyyy-MM-ddTHH:mm:ss") },HttpStatusCode.OK);
         db.ChangeTracker.Clear();
         check((await db.Voucher.SingleAsync(x=>x.Id==voucher.Id)).KhuyenMaiId==voucherPromotion.Id,
             "Used/reserved voucher cannot be reassigned to another promotion");
@@ -210,13 +216,31 @@ public static class PromotionSmoke
         {
             var all=db.Database.GetMigrations().ToList(); var previous=all[^2];
             await db.GetService<IMigrator>().MigrateAsync(previous);
-            await DbSeeder.SeedAsync(db); var employeeId=await db.NhanVien.Select(x=>x.Id).FirstAsync();
+            await db.Database.ExecuteSqlRawAsync("INSERT INTO NhanVien (MaNhanVien,HoTen,SoDienThoai,ChucVu,NgayVaoLam,DangLamViec) VALUES ('MIGRATION-NV',N'Migration','0990000000','ThuNgan','2026-01-01',1)");
+            var employeeId=await db.NhanVien.Select(x=>x.Id).FirstAsync();
+            await db.Database.ExecuteSqlRawAsync("INSERT INTO KhuyenMai (TenChuongTrinh,BatDau,KetThuc,PhamVi,KieuGiam,GiaTri,MucGiamToiDa,GiaTriToiThieu,ChoPhepKetHop,ThuTuApDung,CanVoucher,DangSuDung) VALUES ('MIGRATION-CAMPAIGN','2026-10-01T00:00:00+07:00','2026-11-01T00:00:00+07:00','HoaDon','PhanTram',15,50000,100000,1,1,1,1)");
+            await db.Database.ExecuteSqlRawAsync("INSERT INTO Voucher (Ma,KhuyenMaiId,GioiHanTongLuot,DangSuDung) SELECT 'MIGRATION-VOUCHER',Id,100,1 FROM KhuyenMai WHERE TenChuongTrinh='MIGRATION-CAMPAIGN'");
+            var category=new DanhMuc {TenDanhMuc="Migration menu"};
+            var dish=new MonAn {TenMon="Migration dish",DanhMuc=category,Loai=LoaiMon.MonLe,TrangThai=TrangThaiMon.DangPhucVu};
+            db.MonAn.Add(dish);await db.SaveChangesAsync();
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO KhuyenMaiMon (KhuyenMaiId,MonAnId) SELECT Id,{dish.Id} FROM KhuyenMai WHERE TenChuongTrinh='MIGRATION-CAMPAIGN'");
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO [HoaDon] ([MaHoaDon],[ThoiDiemLap],[NhanVienId],[TrangThai],[TongTienHang],[TienGiam],[TienCocDaTru],[PhuongThucThanhToan],[TienKhachDua],[TienThoiLai],[LoaiDonHang]) VALUES ('MIGRATION-LEGACY',SYSDATETIMEOFFSET(),{employeeId},'DaThanhToan',1000000,100000,500000,'TienMat',400000,0,'TaiBan')");
+            var upgradeScript=await File.ReadAllTextAsync(Path.Combine(Directory.GetCurrentDirectory(),"RestaurantManagement.API","Scripts","UpgradeCampaignVoucherWalletAndCustomerPoints.sql"));
+            foreach(var batch in System.Text.RegularExpressions.Regex.Split(upgradeScript,@"^\s*GO\s*$",System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                if(!string.IsNullOrWhiteSpace(batch)) await db.Database.ExecuteSqlRawAsync(batch);
             await db.Database.MigrateAsync();
             var legacy=await db.HoaDon.SingleAsync(x=>x.MaHoaDon=="MIGRATION-LEGACY");
             check(legacy.UuDaiSnapshot is null && legacy.TongThanhToan==400000 && legacy.TienGiam==100000 && legacy.TienCocDaTru==500000,
                 "Additive nullable migration preserves existing invoice money and leaves unknown history null");
+            var migrated = await db.Voucher.Include(x=>x.KhuyenMai).SingleAsync(x=>x.Ma=="MIGRATION-VOUCHER");
+            check(migrated.GiaTri==15 && migrated.KieuGiam==KieuGiam.PhanTram && migrated.BatDau==migrated.KhuyenMai.BatDau
+                && migrated.KetThuc==migrated.KhuyenMai.KetThuc && migrated.MucGiamToiDa==50000 && migrated.GiaTriToiThieu==100000 && migrated.GioiHanTongLuot==100,
+                "Migration copies legacy voucher terms and Vietnam-offset dates without changing limits");
+            check(!await db.LichSuTichDiem.AnyAsync(),"Migration never invents points for historical invoices");
+            check(await db.VoucherMon.AnyAsync(x=>x.VoucherId==migrated.Id && x.MonAnId==dish.Id),"Migration preserves the legacy dish links on each child code");
             await db.Database.MigrateAsync();
+            foreach(var batch in System.Text.RegularExpressions.Regex.Split(upgradeScript,@"^\s*GO\s*$",System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                if(!string.IsNullOrWhiteSpace(batch)) await db.Database.ExecuteSqlRawAsync(batch);
             check(await db.HoaDon.CountAsync()==1,"Migration retry does not duplicate or replace legacy data");
         }
         finally { SqlConnection.ClearAllPools(); await db.Database.EnsureDeletedAsync(); }

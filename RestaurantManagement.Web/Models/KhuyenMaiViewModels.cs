@@ -48,6 +48,10 @@ public class KhuyenMaiItemViewModel
 
 public class KhuyenMaiFormViewModel
 {
+    [Range(1, 1000000)] public int? GioiHanPhatHanh { get; set; }
+    public int SoVeDaPhatHanh { get; set; }
+    public List<CustomerOption> AvailableCustomers { get; set; } = [];
+    public List<CampaignVoucherForm> Vouchers { get; set; } = [];
     public int Id { get; set; }
     public string? RowVersion { get; set; }
 
@@ -58,11 +62,11 @@ public class KhuyenMaiFormViewModel
 
     [Required(ErrorMessage = "Vui lòng chọn thời gian bắt đầu.")]
     [Display(Name = "Bắt đầu")]
-    public DateTime BatDau { get; set; } = DateTime.Today;
+    public DateTime BatDau { get; set; } = Services.PromotionTime.Today;
 
     [Required(ErrorMessage = "Vui lòng chọn thời gian kết thúc.")]
     [Display(Name = "Kết thúc")]
-    public DateTime KetThuc { get; set; } = DateTime.Today.AddMonths(1);
+    public DateTime KetThuc { get; set; } = Services.PromotionTime.Today.AddMonths(1);
 
     [Display(Name = "Phạm vi áp dụng")]
     public PhamViUuDai PhamVi { get; set; } = PhamViUuDai.HoaDon;
@@ -89,7 +93,7 @@ public class KhuyenMaiFormViewModel
     public int ThuTuApDung { get; set; } = 1;
 
     [Display(Name = "Yêu cầu mã Voucher")]
-    public bool CanVoucher { get; set; } = false;
+    public bool CanVoucher { get; set; } = true;
 
     [Display(Name = "Đang kích hoạt")]
     public bool DangSuDung { get; set; } = true;
@@ -110,67 +114,30 @@ public class MonAnSelectionItem
     public bool IsSelected { get; set; }
 }
 
-public class VoucherListViewModel
+public class CampaignVoucherForm
 {
-    public string? Search { get; set; }
-    public int? KhuyenMaiId { get; set; }
-    public string? StatusFilter { get; set; }
-    public int Page { get; set; } = 1;
-    public int TotalPages { get; set; } = 1;
-    public int TotalItems { get; set; }
-    public List<VoucherItemViewModel> Items { get; set; } = [];
-    public List<KhuyenMaiOptionItem> PromotionOptions { get; set; } = [];
-}
-
-public class KhuyenMaiOptionItem
-{
-    public int Id { get; set; }
-    public string TenChuongTrinh { get; set; } = "";
-}
-
-public class VoucherItemViewModel
-{
-    public int Id { get; set; }
-    public string Ma { get; set; } = "";
-    public int KhuyenMaiId { get; set; }
-    public string TenKhuyenMai { get; set; } = "";
-    public string UuDaiMota { get; set; } = "";
-    public int? KhachHangId { get; set; }
-    public string? TenKhachHang { get; set; }
-    public int GioiHanTongLuot { get; set; }
+    public int SoVeDaPhatHanh { get; set; }
     public int SoLuotDaDung { get; set; }
-    public bool DangSuDung { get; set; }
-    public DateTimeOffset BatDau { get; set; }
-    public DateTimeOffset KetThuc { get; set; }
-    public bool HetHan => DateTimeOffset.UtcNow > KetThuc;
-    public bool HetLuot => SoLuotDaDung >= GioiHanTongLuot;
-}
-
-public class VoucherFormViewModel
-{
     public int Id { get; set; }
     public string? RowVersion { get; set; }
-    public bool DaDuocSuDung { get; set; }
-
-    [Required(ErrorMessage = "Vui lòng nhập mã Voucher.")]
-    [MaxLength(40, ErrorMessage = "Mã Voucher không vượt quá 40 ký tự.")]
-    [RegularExpression(@"^[A-Za-z0-9_-]+$", ErrorMessage = "Mã voucher chỉ bao gồm chữ cái, số và dấu gạch nối/dưới.")]
-    [Display(Name = "Mã Voucher")]
+    public bool Xoa { get; set; }
+    [Required, MaxLength(40), RegularExpression(@"^[A-Za-z0-9_-]+$")]
     public string Ma { get; set; } = "";
-
-    [Required(ErrorMessage = "Vui lòng chọn chương trình khuyến mãi.")]
-    [Display(Name = "Chương trình khuyến mãi")]
-    public int KhuyenMaiId { get; set; }
-
-    [Display(Name = "Khách hàng áp dụng (tùy chọn)")]
+    public DateTime BatDau { get; set; } = Services.PromotionTime.Today;
+    public DateTime KetThuc { get; set; } = Services.PromotionTime.Today.AddMonths(1);
+    public PhamViUuDai PhamVi { get; set; } = PhamViUuDai.HoaDon;
+    public KieuGiam KieuGiam { get; set; } = KieuGiam.PhanTram;
+    [Range(typeof(decimal), "0.01", "100000000")]
+    public decimal GiaTri { get; set; } = 10;
+    [Range(typeof(decimal), "0.01", "100000000")]
+    public decimal? MucGiamToiDa { get; set; }
+    [Range(typeof(decimal), "0", "100000000")]
+    public decimal GiaTriToiThieu { get; set; }
+    [Range(1, 1000000)] public int? GioiHanPhatHanh { get; set; }
+    [Range(1, 1000000)] public int? GioiHanTongLuot { get; set; }
     public int? KhachHangId { get; set; }
-
-    [Range(1, 1000000, ErrorMessage = "Giới hạn tổng lượt phải từ 1 trở lên.")]
-    [Display(Name = "Giới hạn tổng lượt sử dụng")]
-    public int GioiHanTongLuot { get; set; } = 100;
-
-    [Display(Name = "Đang kích hoạt")]
     public bool DangSuDung { get; set; } = true;
-
-    public List<KhuyenMaiOptionItem> PromotionOptions { get; set; } = [];
+    public List<int> SelectedMonAnIds { get; set; } = [];
 }
+
+public record CustomerOption(int Id, string HoTen, string SoDienThoai);

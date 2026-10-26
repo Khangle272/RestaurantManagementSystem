@@ -561,6 +561,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             invoice.PhuongThucThanhToan = form.PhuongThuc;
             invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
             invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
+            CustomerHistoryService.EarnPoints(db, invoice);
             await db.SaveChangesAsync();
             if (invoice.DatBanId is int finishedBookingId)
             {
