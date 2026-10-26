@@ -28,8 +28,14 @@ namespace RestaurantManagement.Web.Controllers
             var currentPromotions = await db.KhuyenMai.AsNoTracking()
                 .Where(x => x.DangSuDung && !x.CanVoucher && x.BatDau <= now && x.KetThuc >= now)
                 .OrderBy(x => x.KetThuc).Take(3).ToListAsync();
+            var voucherOffers = await db.Voucher.AsNoTracking().Include(x => x.KhuyenMai)
+                .Where(x => x.DangSuDung && x.KhachHangId == null && x.KhuyenMai.DangSuDung && x.KhuyenMai.CanVoucher
+                    && x.KhuyenMai.BatDau <= now && x.KhuyenMai.KetThuc >= now
+                    && (x.BatDau == null || x.BatDau <= now) && (x.KetThuc == null || x.KetThuc >= now))
+                .OrderBy(x => x.KetThuc ?? x.KhuyenMai.KetThuc).Take(4).ToListAsync();
             return View(new HomeViewModel
             {
+                Vouchers = voucherOffers.Select(ToVoucherOffer).ToList(),
                 Categories = await db.DanhMuc.AsNoTracking().Where(x => x.DangSuDung)
                     .OrderBy(x => x.TenDanhMuc).ToListAsync(),
                 Menu = danhMucId is int id ? menu.Where(x => x.CategoryId == id).ToList() : menu,
@@ -97,6 +103,20 @@ namespace RestaurantManagement.Web.Controllers
                 + (item.GiaTriToiThieu > 0 ? $", từ {item.GiaTriToiThieu:N0} ₫" : "")
         };
 
+        private static PromotionViewModel ToVoucherOffer(Voucher v)
+        {
+            var p = v.KhuyenMai;
+            var value = v.GiaTri ?? p.GiaTri; var type = v.KieuGiam ?? p.KieuGiam; var scope = v.PhamVi ?? p.PhamVi;
+            var cap = v.GiaTri.HasValue ? v.MucGiamToiDa : p.MucGiamToiDa;
+            var minimum = v.GiaTri.HasValue ? v.GiaTriToiThieu : p.GiaTriToiThieu;
+            return new PromotionViewModel
+            {
+                Name = p.TenChuongTrinh, Code = v.Ma, End = v.KetThuc ?? p.KetThuc,
+                Summary = $"Giảm {value:N0}{(type == KieuGiam.PhanTram ? "%" : " ₫")} "
+                    + (scope == PhamViUuDai.MonAn ? "món áp dụng" : "hóa đơn")
+                    + (cap.HasValue ? $", tối đa {cap:N0} ₫" : "") + (minimum > 0 ? $", từ {minimum:N0} ₫" : "")
+            };
+        }
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
