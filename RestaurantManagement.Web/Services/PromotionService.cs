@@ -206,6 +206,12 @@ public class PromotionService(RestaurantDbContext db, TimeProvider? timeProvider
                         LyDoKhongDuDieuKien = "Voucher chỉ dành riêng cho khách hàng được chỉ định."
                     });
                 }
+                else if (voucher.DiemCanDoi > 0 && (!invoice.KhachHangId.HasValue
+                    || !await db.VoucherKhachHang.AnyAsync(x => x.VoucherId == voucher.Id && x.KhachHangId == invoice.KhachHangId)))
+                {
+                    result.IneligiblePromotions.Add(new IneligiblePromotionDetail {
+                        TenChuongTrinh = $"Voucher {voucher.Ma}", LyDoKhongDuDieuKien = "Khách hàng cần đổi điểm để nhận voucher này vào ví trước khi sử dụng." });
+                }
                 else if (await VoucherInventory.NoCapacityAsync(db, voucher, invoice))
                 {
                     result.IneligiblePromotions.Add(new IneligiblePromotionDetail {

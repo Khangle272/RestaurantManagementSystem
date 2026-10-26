@@ -34,10 +34,10 @@ body { -webkit-font-smoothing: antialiased; line-height: 1.5; }
 .admin-topbar { box-shadow: 0 1px 3px rgba(15, 23, 42, .05); }
 .topbar-user-link { display: inline-flex; align-items: center; gap: .6rem; text-decoration: none; color: var(--text-primary); padding: .25rem .6rem .25rem .3rem; border-radius: 9999px; transition: background .15s; }
 .topbar-user-link:hover { background: #F1F5F9; color: var(--text-heading); }
-.topbar-avatar { width: 2.1rem; height: 2.1rem; border-radius: 50%; background: var(--brand-primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
-.topbar-user-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.topbar-avatar { flex-shrink: 0; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: var(--brand-primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.topbar-user-text { display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; line-height: 1.25; min-width: 0; }
 .topbar-user-name { font-size: .85rem; font-weight: 600; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.topbar-user-text .role-label { font-size: .72rem; color: var(--text-secondary); }
+.topbar-user-text .role-label { margin-left: 0; padding: .1rem .5rem; font-size: .72rem; line-height: 1.4; color: #226231; }
 .topbar-user-text .role-label + .role-label::before { content: "· "; }
 
 /* Page header / dashboard */

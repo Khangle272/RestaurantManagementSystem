@@ -7,7 +7,7 @@ using RestaurantManagement.API.Models;
 namespace RestaurantManagement.Web.Services;
 
 public record CustomerVoucherItem(int Id, string Ma, string ChuongTrinh, string UuDai, DateTimeOffset BatDau,
-    DateTimeOffset KetThuc, bool DaLuu, bool CoTheDung, string TrangThai);
+    DateTimeOffset KetThuc, bool DaLuu, bool CoTheDung, string TrangThai, int DiemCanDoi = 0);
 
 public class CustomerVoucherService(RestaurantDbContext db, IPromotionService promotions)
 {
@@ -52,20 +52,33 @@ public class CustomerVoucherService(RestaurantDbContext db, IPromotionService pr
             var minimum = v.GiaTri.HasValue ? v.GiaTriToiThieu : p.GiaTriToiThieu;
             var description = $"Giảm {value:N0}{(type == KieuGiam.PhanTram ? "%" : "đ")} {(scope == PhamViUuDai.MonAn ? "món áp dụng" : "hóa đơn")}"
                 + (cap.HasValue ? $" · Tối đa {cap:N0}đ" : "") + (minimum > 0 ? $" · Đơn từ {minimum:N0}đ" : "");
+            var available = status == "Có thể dùng";
+            if (available && v.DiemCanDoi > 0 && !saved.Contains(v.Id)) status = "Có thể đổi điểm";
             return new CustomerVoucherItem(v.Id, v.Ma, p.TenChuongTrinh, description,
-                v.BatDau ?? p.BatDau, v.KetThuc ?? p.KetThuc, saved.Contains(v.Id), status == "Có thể dùng", status);
+                v.BatDau ?? p.BatDau, v.KetThuc ?? p.KetThuc, saved.Contains(v.Id), available, status, v.DiemCanDoi);
         }).ToList();
     }
 
-    public async Task<string?> CollectAsync(int customerId, int voucherId)
+    public Task<string?> CollectAsync(int customerId, int voucherId) => AcquireAsync(customerId, voucherId, null);
+
+    public Task<string?> RedeemAsync(int customerId, int voucherId, int expectedPoints) => AcquireAsync(customerId, voucherId, expectedPoints);
+
+    private async Task<string?> AcquireAsync(int customerId, int voucherId, int? expectedPoints)
     {
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try {
             await promotions.LockVoucherAsync(voucherId);
             var v = await db.Voucher.AsNoTracking().Include(x => x.KhuyenMai).SingleOrDefaultAsync(x => x.Id == voucherId);
             if (v is null) return "Voucher không tồn tại.";
-            if (!await db.KhachHang.AnyAsync(x => x.Id == customerId && x.DangSuDung)) return "Khách hàng không hoạt động.";
+            // Serialize all redemptions for this customer, including different campaigns.
+            var customer = await db.KhachHang.FromSqlInterpolated($"SELECT * FROM [KhachHang] WITH (UPDLOCK,HOLDLOCK) WHERE [Id]={customerId}")
+                .AsNoTracking().SingleOrDefaultAsync();
+            if (customer is null || !customer.DangSuDung) return "Khách hàng không hoạt động.";
             if (await db.VoucherKhachHang.AnyAsync(x => x.KhachHangId == customerId && x.VoucherId == voucherId)) return null;
+            if (expectedPoints.HasValue) {
+                if (v.DiemCanDoi <= 0 || expectedPoints != v.DiemCanDoi) return "Mức điểm đổi đã thay đổi. Vui lòng tải lại danh sách voucher.";
+            }
+            else if (v.DiemCanDoi > 0) return "Voucher này cần đổi điểm để nhận vào ví.";
             var now = DateTimeOffset.UtcNow; var p = v.KhuyenMai;
             if (!v.DangSuDung || !p.DangSuDung || !p.CanVoucher || !PromotionTime.IsActive(p.BatDau, p.KetThuc, now)
                 || !PromotionTime.IsActive(v.BatDau ?? p.BatDau, v.KetThuc ?? p.KetThuc, now)) return "Voucher chưa bắt đầu, đã hết hạn hoặc ngừng sử dụng.";
@@ -74,11 +87,19 @@ public class CustomerVoucherService(RestaurantDbContext db, IPromotionService pr
             if (v.GioiHanTongLuot.HasValue && await promotions.GetVoucherUsageCountAsync(v.Id) >= v.GioiHanTongLuot) return "Voucher đã hết lượt sử dụng.";
             if (v.GioiHanPhatHanh.HasValue && await VoucherInventory.IssuedAsync(db, v.Id) >= v.GioiHanPhatHanh) return "Mã đã hết vé thu thập.";
             if (p.GioiHanPhatHanh.HasValue && await VoucherInventory.ProgramIssuedAsync(db, p.Id) >= p.GioiHanPhatHanh) return "Chương trình đã hết vé thu thập.";
+            if (v.DiemCanDoi > 0) {
+                var balance = await new CustomerHistoryService(db).BalanceAsync(customerId);
+                if (balance < v.DiemCanDoi) return $"Bạn chưa đủ điểm. Cần {v.DiemCanDoi:N0} điểm, hiện có {balance:N0} điểm.";
+                db.LichSuTichDiem.Add(new LichSuTichDiem {
+                    KhachHangId = customerId, VoucherId = v.Id, SoDiem = -v.DiemCanDoi,
+                    ThoiDiem = now, NoiDung = $"Đổi điểm lấy voucher {v.Ma}"
+                });
+            }
             db.VoucherKhachHang.Add(new VoucherKhachHang { KhachHangId = customerId, VoucherId = v.Id, ThoiDiemThuThap = now });
             await db.SaveChangesAsync(); await tx.CommitAsync(); return null;
         }
         catch (Exception e) when (e is SqlException { Number: 1205 or 1222 } || e is DbUpdateException && e.GetBaseException() is SqlException { Number: 1205 or 1222 or 2601 or 2627 }) {
-            return "Có thao tác thu thập khác đang xử lý. Vui lòng tải lại ví và thử lại.";
+            return "Có thao tác thu thập / đổi điểm khác đang xử lý. Vui lòng tải lại ví và thử lại.";
         }
     }
 }

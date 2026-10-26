@@ -111,6 +111,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<VoucherKhachHang>().HasKey(x => new { x.KhachHangId, x.VoucherId });
         b.Entity<VoucherKhachHang>().HasIndex(x => x.VoucherId);
         b.Entity<LichSuTichDiem>().HasIndex(x => x.HoaDonId).IsUnique();
+        b.Entity<LichSuTichDiem>().HasIndex(x => new { x.KhachHangId, x.VoucherId }).IsUnique().HasFilter("[VoucherId] IS NOT NULL");
         b.Entity<LichSuTichDiem>().HasIndex(x => new { x.KhachHangId, x.ThoiDiem });
         b.Entity<HoaDon>().HasIndex(x => new { x.KhachHangId, x.ThoiDiemLap });
         b.Entity<DanhGia>().HasOne(x => x.HoaDon).WithMany().HasForeignKey(x => x.HoaDonId);
@@ -143,7 +144,8 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<KhuyenMai>(b, "PhatHanh", "[GioiHanPhatHanh] IS NULL OR [GioiHanPhatHanh]>0");
         Check<Voucher>(b, "Luot", "[GioiHanTongLuot] IS NULL OR [GioiHanTongLuot]>0");
         Check<Voucher>(b, "DieuKien", "([BatDau] IS NULL OR [KetThuc] IS NULL OR [KetThuc]>=[BatDau]) AND ([GiaTri] IS NULL OR ([GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100))) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND ([GioiHanPhatHanh] IS NULL OR [GioiHanPhatHanh]>0)");
-        Check<LichSuTichDiem>(b, "Diem", "[SoDiem]>=0 AND [SoTienTinhDiem]>=0");
+        Check<Voucher>(b, "DiemCanDoi", "[DiemCanDoi]>=0");
+        Check<LichSuTichDiem>(b, "Diem", "([HoaDonId] IS NOT NULL AND [VoucherId] IS NULL AND [SoDiem]>=0 AND [SoTienTinhDiem]>=0) OR ([HoaDonId] IS NULL AND [VoucherId] IS NOT NULL AND [SoDiem]<0 AND [SoTienTinhDiem]=0)");
         Check<DanhGia>(b, "Diem", "[Diem] BETWEEN 1 AND 5");
 
         // Common SQL representation, enum domains and optimistic concurrency.

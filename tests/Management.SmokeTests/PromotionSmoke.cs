@@ -214,7 +214,8 @@ public static class PromotionSmoke
         await using var db=new RestaurantDbContext(new DbContextOptionsBuilder<RestaurantDbContext>().UseSqlServer(connection.ConnectionString).Options);
         try
         {
-            var all=db.Database.GetMigrations().ToList(); var previous=all[^2];
+            var all=db.Database.GetMigrations().ToList();
+            var previous=all.TakeWhile(x=>!x.EndsWith("_CampaignVoucherWalletAndCustomerPoints",StringComparison.Ordinal)).Last();
             await db.GetService<IMigrator>().MigrateAsync(previous);
             await db.Database.ExecuteSqlRawAsync("INSERT INTO NhanVien (MaNhanVien,HoTen,SoDienThoai,ChucVu,NgayVaoLam,DangLamViec) VALUES ('MIGRATION-NV',N'Migration','0990000000','ThuNgan','2026-01-01',1)");
             var employeeId=await db.NhanVien.Select(x=>x.Id).FirstAsync();

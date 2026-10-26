@@ -462,6 +462,8 @@ public class Voucher
     public decimal? MucGiamToiDa { get; set; }
     public decimal GiaTriToiThieu { get; set; }
     public int? GioiHanPhatHanh { get; set; }
+    // 0 = thu thập miễn phí; số dương = phải đổi điểm trước khi sử dụng.
+    public int DiemCanDoi { get; set; }
     public ICollection<VoucherMon> MonApDung { get; set; } = new List<VoucherMon>();
 }
 
@@ -487,8 +489,10 @@ public class LichSuTichDiem
     public int Id { get; set; }
     public int KhachHangId { get; set; }
     public KhachHang KhachHang { get; set; } = null!;
-    public int HoaDonId { get; set; }
-    public HoaDon HoaDon { get; set; } = null!;
+    public int? HoaDonId { get; set; }
+    public HoaDon? HoaDon { get; set; }
+    public int? VoucherId { get; set; }
+    public Voucher? Voucher { get; set; }
     public int SoDiem { get; set; }
     public decimal SoTienTinhDiem { get; set; }
     public DateTimeOffset ThoiDiem { get; set; }

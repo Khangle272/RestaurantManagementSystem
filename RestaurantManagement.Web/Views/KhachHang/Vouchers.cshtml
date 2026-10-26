@@ -1,8 +1,9 @@
 @model List<RestaurantManagement.Web.Services.CustomerVoucherItem>
-@{ var wallet = (bool)ViewBag.Wallet; ViewData["Title"] = wallet ? "Ví voucher của tôi" : "Khám phá voucher"; }
+@{ var wallet = (bool)ViewBag.Wallet; var balance = (int)ViewBag.PointBalance; ViewData["Title"] = wallet ? "Ví voucher của tôi" : "Khám phá voucher"; }
 <h1 class="h3 mb-3">@ViewData["Title"]</h1>
+<div class="card card-body mb-3"><span class="text-muted">Điểm hiện có</span><strong class="fs-3">@balance.ToString("N0") điểm</strong><span class="small text-muted">Đổi điểm lấy voucher bên dưới, sau đó chọn voucher trong ví khi xem hóa đơn. Mỗi khách đổi mỗi mã một lần.</span></div>
 <div class="d-flex gap-2 mb-4"><a asp-action="Vouchers" class="btn @(wallet ? "btn-outline-primary" : "btn-primary")">Mã có thể thu thập</a><a asp-action="Vouchers" asp-route-wallet="true" class="btn @(wallet ? "btn-primary" : "btn-outline-primary")">Ví của tôi</a><a asp-action="Index" class="btn btn-outline-secondary">Đơn hàng & tích điểm</a></div>
-<p class="text-muted">Thời gian theo giờ Việt Nam. Lưu mã vào ví rồi chọn khi xem hóa đơn; bạn cũng có thể nhập trực tiếp mã giảm giá.</p>
+<p class="text-muted">Thời gian theo giờ Việt Nam. Voucher có ghi mức điểm cần được đổi vào ví trước khi dùng. Điểm đã đổi không hoàn lại khi voucher hết hạn.</p>
 @if (Model.Count == 0) { <div class="alert alert-info">@(wallet ? "Ví chưa có mã. Hãy khám phá và thu thập voucher." : "Chưa có voucher khả dụng.")</div> }
 <div class="row g-3">
 @foreach (var item in Model) {
@@ -10,7 +11,12 @@
         <p class="small text-muted mb-1">@item.ChuongTrinh</p><h2 class="h5 font-monospace">@item.Ma</h2><p class="fw-semibold">@item.UuDai</p>
         <p class="small">@item.BatDau.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") → @item.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</p>
         <p class="small text-muted">@item.TrangThai</p>
+        @if (item.DiemCanDoi > 0) { <p class="fw-semibold">Đổi bằng @item.DiemCanDoi.ToString("N0") điểm</p> }
         @if (item.DaLuu) { <span class="badge bg-success">Đã lưu vào ví</span> }
+        else if (item.CoTheDung && item.DiemCanDoi > 0) {
+            <form asp-action="Redeem" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="expectedPoints" value="@item.DiemCanDoi" /><button class="btn btn-primary" type="submit" disabled="@(balance < item.DiemCanDoi)">Đổi @item.DiemCanDoi.ToString("N0") điểm lấy voucher</button></form>
+            @if (balance < item.DiemCanDoi) { <p class="small text-muted mt-2">Cần thêm @((item.DiemCanDoi - balance).ToString("N0")) điểm để đổi.</p> }
+        }
         else if (item.CoTheDung) { <form asp-action="Collect" method="post"><input type="hidden" name="id" value="@item.Id" /><button class="btn btn-primary" type="submit">Thu thập / Lưu vào ví</button></form> }
     </div></article></div>
 }
