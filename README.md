@@ -137,3 +137,22 @@ dotnet run --project tests/Management.SmokeTests -- --deposits-only
 ```
 
 Các bộ test dùng database tạm tự tạo/xóa. Có thể đặt `CRUD_TEST_SQL_SERVER` theo instance cục bộ. Khi môi trường không cho MSBuild chạy song song, biên dịch với `-m:1 -p:BuildInParallel=false`.
+
+## Bộ demo toàn website (26/10/2026)
+
+Xem **[DEMO_WEBSITE.md](DEMO_WEBSITE.md)** để lấy tài khoản đủ 7 vai trò, mã voucher, các đơn/lịch chuẩn bị sẵn và kịch bản trình bày từng trang. Lệnh Development `--init-website-demo` nâng schema, nạp lại dữ liệu SQL còn thiếu rồi bổ sung 29 hóa đơn đã thanh toán trong 28 ngày qua và hôm nay, ví voucher, điểm, lịch cọc/đặt trước, bàn đang phục vụ, KDS và chứng từ kho. Mã theo ngày/tháng; nạp lại cùng ngày không tạo trùng, không cộng tồn/điểm lần hai và không đặt lại tiến độ đã thao tác.
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+$env:AuthBootstrap__DemoPassword = 'Demo@2026!'
+dotnet run --project RestaurantManagement.Web --no-launch-profile -- --init-website-demo
+dotnet run --project RestaurantManagement.Web --no-build --launch-profile https
+```
+
+Đăng nhập nội bộ tại `https://localhost:7167/admin`, khách tại `/Account/Login`. Các tài khoản `.demo@example.test` trong hướng dẫn dùng mật khẩu `Demo@2026!`; không đổi mật khẩu tài khoản đã có. Kiểm chứng riêng bộ dữ liệu: `dotnet run --project tests/Management.SmokeTests -- --website-demo-only` (database tạm).
+
+## Triển khai Azure
+
+Xem **[HUONG_DAN_AZURE.md](HUONG_DAN_AZURE.md)** để tạo Azure SQL Free tier + App Service Windows F1, đưa dữ liệu demo hoặc database local lên và cấu hình đúng `ConnectionStrings__DefaultConnection`. Có hướng dẫn riêng về quyền ghi ảnh/QR, HTTPS, hạn mức và tác vụ nền.
+
+Tạo gói ZIP Web bằng `./Prepare-AzurePackage.ps1`; kết quả tại `artifacts/azure/restaurant-web.zip` (Git ignore). Script chỉ đóng gói ở máy, không tạo/deploy tài nguyên Azure. Khi publish Web, cấu hình host của API được loại khỏi danh sách đóng gói để tránh lỗi NETSDK1152; assembly API vẫn đi kèm.

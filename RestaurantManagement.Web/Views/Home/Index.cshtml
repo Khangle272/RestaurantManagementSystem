@@ -1,9 +1,11 @@
-@model HomeViewModel
+﻿@model HomeViewModel
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Thực đơn & đặt bàn";
 }
 @section Styles {
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" />
     <link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
 }
 <div class="home-page">
@@ -94,6 +96,15 @@
         <div class="menu-grid" id="home-menu-grid">@foreach (var item in Model.Menu) { <partial name="_MenuCard" model="item" /> }</div>
         <div class="menu-empty" id="menu-search-empty" hidden><span class="menu-empty-icon"><i class="bi bi-search" aria-hidden="true"></i></span><h3>Chưa tìm thấy món phù hợp</h3><p>Thử tên món khác hoặc xóa từ khóa để xem lại danh mục này.</p><button type="button" class="btn btn-outline-restaurant" id="menu-search-clear">Xóa tìm kiếm</button></div>
     }
+</section>
+
+<section class="restaurant-section steps-section" aria-labelledby="steps-title">
+    <div class="section-heading"><div><p class="eyebrow">DỄ DÀNG TRONG BA BƯỚC</p><h2 id="steps-title">Từ chọn món đến bàn ăn</h2></div></div>
+    <ol class="steps-grid">
+        <li><span class="step-number">01</span><i class="bi bi-journal-richtext" aria-hidden="true"></i><h3>Chọn món</h3><p>Khám phá thực đơn và thêm món yêu thích vào giỏ.</p></li>
+        <li><span class="step-number">02</span><i class="bi bi-calendar2-check" aria-hidden="true"></i><h3>Đặt bàn</h3><p>Chọn thời gian và số khách phù hợp với cuộc hẹn.</p></li>
+        <li><span class="step-number">03</span><i class="bi bi-emoji-smile" aria-hidden="true"></i><h3>Thưởng thức</h3><p>Nhà hàng chuẩn bị sẵn bàn, bạn chỉ cần đến và tận hưởng.</p></li>
+    </ol>
 </section>
 
 @if (User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang"))

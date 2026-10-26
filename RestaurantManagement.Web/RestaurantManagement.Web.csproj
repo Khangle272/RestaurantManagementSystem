@@ -18,4 +18,13 @@
     <ProjectReference Include="..\RestaurantManagement.API\RestaurantManagement.API.csproj" />
   </ItemGroup>
 
+  <!-- Web owns host configuration. Keep the API assembly, but do not publish its
+       appsettings over the Web settings when collecting referenced project content. -->
+  <Target Name="ExcludeReferencedApiHostSettings" BeforeTargets="_HandleFileConflictsForPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '..', 'RestaurantManagement.API', 'appsettings.json'))" />
+      <ResolvedFileToPublish Remove="$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '..', 'RestaurantManagement.API', 'appsettings.Development.json'))" />
+    </ItemGroup>
+  </Target>
+
 </Project>
