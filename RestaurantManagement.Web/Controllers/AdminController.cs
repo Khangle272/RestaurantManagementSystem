@@ -61,5 +61,43 @@ public class AdminController(RestaurantDbContext db, UserManager<TaiKhoan> users
     }
 
     [Authorize(Roles = AppRoles.NhanVien), HttpGet("TrangChu")]
-    public IActionResult TrangChu() => View();
+    public async Task<IActionResult> TrangChu()
+    {
+        // Chi so tong quan chi hien cho Admin; nhan vien khac chi thay loi tat chuc nang.
+        if (!User.IsInRole(AppRoles.Admin)) return View(new DashboardViewModel());
+        var today = new DateTimeOffset(DateTime.Today);
+        var tomorrow = today.AddDays(1);
+        var paidToday = db.HoaDon.AsNoTracking()
+            .Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan && x.ThoiDiemLap >= today && x.ThoiDiemLap < tomorrow);
+        var model = new DashboardViewModel
+        {
+            ShowStats = true,
+            InvoicesToday = await paidToday.CountAsync(),
+            RevenueToday = await paidToday.SumAsync(x => (decimal?)(x.TongTienHang - x.TienGiam)) ?? 0m,
+            UnpaidInvoices = await db.HoaDon.AsNoTracking().CountAsync(x =>
+                x.TrangThai == TrangThaiHoaDon.ChuaThanhToan || x.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan),
+            PendingReservations = await db.DatBan.AsNoTracking().CountAsync(x =>
+                x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc),
+            ReservationsToday = await db.DatBan.AsNoTracking().CountAsync(x =>
+                x.GioDen >= today && x.GioDen < tomorrow
+                && (x.TrangThai == TrangThaiDatBan.DaXacNhan || x.TrangThai == TrangThaiDatBan.DaNhanBan)),
+            OccupiedTables = await db.BanAn.AsNoTracking().CountAsync(x => x.TrangThai == TrangThaiBan.DangPhucVu),
+            TotalTables = await db.BanAn.AsNoTracking().CountAsync(x => x.TrangThai != TrangThaiBan.NgungSuDung),
+            LowStockItems = await db.NguyenLieu.AsNoTracking().CountAsync(x => x.DangSuDung && x.SoLuongTon <= x.NguongCanhBao)
+        };
+        return View(model);
+    }
+}
+
+public class DashboardViewModel
+{
+    public bool ShowStats { get; set; }
+    public int InvoicesToday { get; set; }
+    public decimal RevenueToday { get; set; }
+    public int UnpaidInvoices { get; set; }
+    public int PendingReservations { get; set; }
+    public int ReservationsToday { get; set; }
+    public int OccupiedTables { get; set; }
+    public int TotalTables { get; set; }
+    public int LowStockItems { get; set; }
 }

@@ -14,9 +14,11 @@
         }
     </script>
     <link rel="stylesheet" href="~/css/management-ui.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-polish.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
     <body class="@((ViewData["AutoCollapseSidebar"] as bool? == true) ? "sidebar-collapsed" : "")" data-operational-workspace="@((ViewData["AutoCollapseSidebar"] as bool? == true).ToString().ToLowerInvariant())">
+    <a class="visually-hidden-focusable admin-skip-link" href="#admin-main-content">Bỏ qua điều hướng</a>
     <aside class="admin-sidebar" id="admin-sidebar">
         <div class="admin-sidebar-header d-flex align-items-center justify-content-between gap-3">
             <h4 class="mb-0 fw-bold text-nowrap"><i class="bi bi-shop me-2"></i><span class="admin-brand-text">Quản lý nhà hàng</span></h4>
@@ -40,9 +42,15 @@
             </button>
             <h5 class="mb-0 fw-semibold text-heading">@ViewData["Title"]</h5>
         </div>
-        <div class="ms-auto"><partial name="_RoleLabel" /></div>
+        <div class="ms-auto topbar-user">
+            @{ var userName = User.Identity?.Name ?? ""; var initial = userName.Length > 0 ? char.ToUpperInvariant(userName[0]).ToString() : "?"; }
+            <a asp-controller="Account" asp-action="Index" class="topbar-user-link" title="Thông tin cá nhân">
+                <span class="topbar-avatar" aria-hidden="true">@initial</span>
+                <span class="topbar-user-text"><span class="topbar-user-name">@userName</span><partial name="_RoleLabel" /></span>
+            </a>
+        </div>
     </header>
-    <main class="admin-main">
+    <main class="admin-main" id="admin-main-content">
         <div class="container-fluid p-0">
             <partial name="_ManagementMessages" />
             @RenderBody()
@@ -75,6 +83,7 @@
     </script>
     <script src="~/js/ajax-forms.js" asp-append-version="true"></script>
     <script src="~/js/management-ui.js" asp-append-version="true"></script>
+    <script src="~/js/admin-polish.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

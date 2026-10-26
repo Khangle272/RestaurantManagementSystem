@@ -812,10 +812,10 @@ Theo yêu cầu, đã thao tác trực tiếp trên `RestaurantDB` tại `.\SQLE
 
 Hướng dẫn tài khoản, mã, đơn/lịch và trình tự demo: **DEMO_WEBSITE.md**. Không gửi mật khẩu demo lên môi trường dùng dữ liệu thật. Log Web cục bộ nằm trong `RestaurantManagement.Web/App_Data/website-demo.*.log` (đã bị Git ignore).
 
-## Hướng dẫn Azure và gói deploy — 26/10/2026
+## Chuyển sang Cloudflare Quick Tunnel — 26/10/2026
 
-- Theo yêu cầu hướng dẫn, đã đối chiếu tài liệu Microsoft và thêm `HUONG_DAN_AZURE.md`: SQL Free tier/AutoPause, firewall, App Service Windows .NET 10/F1, đúng tên `DefaultConnection`, nạp bộ demo qua lệnh local trỏ Azure hoặc Generate Scripts để giữ nguyên DB local, ZIP deploy, HTTPS, quyền ghi upload/QR và đọc lỗi.
-- Phát hiện publish Web lỗi NETSDK1152 do project tham chiếu API kéo theo hai file appsettings trùng tên. Sửa riêng target publish Web để bỏ hai file cấu hình host từ API; không tắt kiểm tra trùng file và không loại assembly/API configuration khi publish API riêng.
-- Thêm `Prepare-AzurePackage.ps1`. Publish Release thành công; tạo `artifacts/azure/restaurant-web.zip` 38.303.206 byte, 323 entries. Đã kiểm tra ZIP có `web.config`, Web DLL, API DLL ở gốc và `appsettings.json` đúng bản Web. Entry point IIS là `dotnet .\RestaurantManagement.Web.dll`.
-- Dự án ghi ảnh vào wwwroot và QR vào App_Data: hướng dẫn dùng ZIP deploy giải nén, không bật WEBSITE_RUN_FROM_PACKAGE khiến content read-only. `TableExpiryWorker` truy vấn SQL mỗi phút khi app chạy; hướng dẫn theo dõi vCore và stop app khi không demo, không hứa hẹn quota đủ vận hành 24/7.
-- Chỉ tạo tài liệu/gói cục bộ, chưa tạo tài nguyên Azure, chưa đưa dữ liệu hay thông tin xác thực lên Azure. Các thay đổi nạp demo trước đó được giữ nguyên. `git diff --check` đạt.
+- Theo thay đổi lựa chọn của người dùng, xóa tài liệu và script đóng gói Azure, thay liên kết README bằng `HUONG_DAN_CLOUDFLARE.md`.
+- Thêm `Start-QuickTunnel.ps1`: tìm cloudflared tại thư mục dự án hoặc PATH, kiểm tra cổng Web local rồi mở Quick Tunnel tới `https://localhost:7167`. Bỏ xác minh chứng chỉ chỉ cho origin local dùng chứng chỉ phát triển; giữ cookie Secure và HTTPS của Web.
+- Web và SQL Server tiếp tục chạy trên máy; URL công khai thay đổi mỗi lần tạo tunnel. Hướng dẫn đủ hai cửa sổ chạy Web/tunnel, truy cập khách/admin/mobile, dừng chia sẻ và xử lý lỗi thường gặp.
+- Giữ sửa lỗi publish chung NETSDK1152 trong project Web: loại appsettings của API khỏi gói publish Web. Sửa này không phụ thuộc nhà cung cấp hosting.
+- Chưa tạo tài nguyên cloud hoặc tự mở tunnel công khai trong lượt dọn file này; giữ nguyên dữ liệu demo và các thay đổi giao diện đang có.
