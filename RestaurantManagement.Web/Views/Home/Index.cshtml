@@ -1,4 +1,4 @@
-﻿@model HomeViewModel
+@model HomeViewModel
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Thực đơn & đặt bàn";
@@ -48,6 +48,21 @@
     </section>
 }
 
+@if (Model.Vouchers.Count > 0)
+{
+    <section class="restaurant-section" aria-labelledby="vouchers-title">
+        <div class="section-heading"><div><p class="eyebrow">MÃ GIẢM GIÁ</p><h2 id="vouchers-title">Săn voucher</h2></div>
+            @if (User.IsInRole("KhachHang")) { <a asp-controller="KhachHang" asp-action="Vouchers">Lưu mã vào ví <i class="bi bi-arrow-right" aria-hidden="true"></i></a> }
+            else if (User.Identity?.IsAuthenticated != true) { <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="/KhachHang/Vouchers">Đăng nhập để lưu mã <i class="bi bi-arrow-right" aria-hidden="true"></i></a> }
+        </div>
+        <div class="offers-grid">
+            @foreach (var offer in Model.Vouchers)
+            {
+                <article class="offer-card"><span class="offer-icon"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span><div><strong>@offer.Code</strong><p>@offer.Summary</p><small>@offer.Name · đến @offer.End.ToLocalTime().ToString("dd/MM/yyyy")</small></div></article>
+            }
+        </div>
+    </section>
+}
 @if (Model.Featured.Count > 0)
 {
     <section class="restaurant-section" aria-labelledby="featured-title">

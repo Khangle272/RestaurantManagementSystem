@@ -140,6 +140,15 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         model.DonViTinh = model.DonViTinh?.Trim() ?? "";
         if (await Db.NguyenLieu.AnyAsync(x => x.Id != id && x.TenNguyenLieu == model.TenNguyenLieu))
             ModelState.AddModelError(nameof(model.TenNguyenLieu), "Tên nguyên liệu đã tồn tại.");
+        // Không cho đổi đơn vị khi nguyên liệu đã có công thức hoặc chứng từ để không làm sai lệch số lượng cũ.
+        if (id != 0)
+        {
+            var currentUnit = await Db.NguyenLieu.AsNoTracking().Where(x => x.Id == id)
+                .Select(x => x.DonViTinh).SingleOrDefaultAsync();
+            if (currentUnit is not null && currentUnit != model.DonViTinh && await InUseAsync(id))
+                ModelState.AddModelError(nameof(model.DonViTinh),
+                    "Không thể đổi đơn vị tính vì nguyên liệu đã có công thức hoặc chứng từ.");
+        }
     }
 
     [HttpPost, ValidateAntiForgeryToken]

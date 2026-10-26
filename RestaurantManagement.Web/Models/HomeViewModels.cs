@@ -1,4 +1,4 @@
-using RestaurantManagement.API.Models;
+﻿using RestaurantManagement.API.Models;
 
 namespace RestaurantManagement.Web.Models;
 
@@ -9,6 +9,7 @@ public class HomeViewModel
     public List<MenuItemViewModel> Menu { get; set; } = [];
     public List<DanhMuc> Categories { get; set; } = [];
     public List<PromotionViewModel> Promotions { get; set; } = [];
+    public List<PromotionViewModel> Vouchers { get; set; } = [];
     public int? CategoryId { get; set; }
 }
 
@@ -43,4 +44,6 @@ public class PromotionViewModel
     public string Name { get; set; } = "";
     public string Summary { get; set; } = "";
     public DateTimeOffset End { get; set; }
+    // Mã voucher công khai (chỉ có với chương trình dạng voucher); khách đăng nhập vào ví để lưu mã.
+    public string? Code { get; set; }
 }
