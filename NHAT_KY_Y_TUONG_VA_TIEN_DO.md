@@ -796,3 +796,26 @@ Migration `20261025134614_CampaignVoucherWalletAndCustomerPoints` sao chép cấ
 - Khi chạy thêm nhánh kiểm thử tác nghiệp đã phát hiện `PreorderSmoke` cũ yêu cầu chuyển món đặt trước sang `DangCheBien` lần nữa, trong khi `PreorderService` hiện hữu đã phát hành món ở trạng thái đó; kiểm tra tiếp theo cũng giả định còn một món chờ để hủy. Không đổi hành vi bếp/đặt trước để chiều theo test cũ. Bộ mặc định vẫn giữ test này; chỉ thêm các cờ chọn bộ POS/cọc riêng để xác minh độc lập.
 - Cập nhật ba assertion của `OrderSmoke` từ chuỗi `amount=` trong URL QR cũ sang giá trị `SoTienPhaiThuDuKien` thật trên form (vẫn kiểm tra chính xác 250.000đ, 30.000đ, 65.000đ), vì trang hiện dùng ảnh QR tĩnh. Không thay hành vi thanh toán/QR.
 - Chưa kiểm thử bấm trình duyệt trực quan hoặc chạy app trên thiết bị thật; build mobile không thay thế kiểm thử WebView, chứng chỉ HTTPS và cookie trên thiết bị.
+
+## Nạp và chuẩn bị demo toàn website — 26/10/2026
+
+Theo yêu cầu, đã thao tác trực tiếp trên `RestaurantDB` tại `.\SQLEXPRESS`, không xóa/tạo lại database và không đặt lại dữ liệu nghiệp vụ cũ. Trước khi nạp đã tạo backup COPY_ONLY/CHECKSUM tại `C:\Program Files\Microsoft SQL Server\MSSQL17.SQLEXPRESS\MSSQL\Backup\RestaurantDB_before_demo_20261026_085330.bak`; `RESTORE VERIFYONLY` xác nhận hợp lệ. Database đã ở migration mới nhất `CampaignVoucherWalletAndCustomerPoints` (13 migrations).
+
+- Chạy lại bốn script dữ liệu nền có kiểm tra tồn tại. Tạo bộ tài khoản `.demo@example.test` đủ Admin/Khách/Tiếp tân/Bồi bàn/Thu ngân/Bếp/Kho, mật khẩu demo `Demo@2026!`. Chỉ tạo tài khoản thiếu; không thay mật khẩu/quyền tài khoản đã có.
+- Thêm lệnh Development `--init-website-demo` và `WebsiteDemoSetup`. Tạo chương trình theo tháng chứa bốn mã % hóa đơn, giảm 10K/50K, % món; ví khách lưu hai mã chưa dùng. Có thêm chương trình hết hạn/sắp diễn ra.
+- Bổ sung 29 hóa đơn đã thanh toán mô phỏng cho bốn tuần và hôm nay, đủ ba phương thức; có snapshot giảm giá, đánh giá và 29 dòng tích điểm. Số tiền, điểm và xuất kho cùng được tạo trong transaction cho từng hóa đơn; không cộng điểm lại cho hóa đơn cũ.
+- Sáu bàn riêng tại “Sảnh demo website”, hai lượt đang phục vụ kèm đơn POS; một lượt có 100.000đ cọc đã ghi nhận và món đã phục vụ để demo thanh toán ngay. Có đơn mang đi/giao hàng, món chờ/đang nấu/sẵn sàng, lịch chờ xác nhận/cọc/báo chuyển/đã xác nhận/hủy/không đến và món đặt trước cho dự trù.
+- Thêm phiếu nhập đã ghi sổ đủ nguyên liệu/lô/hạn dùng, phiếu nhập nháp, phiếu xuất chế biến gắn hóa đơn, thanh lý kèm phiếu xuất tương ứng, món chờ duyệt. Chạy lại trong ngày giữ nguyên tồn, điểm, giao dịch và tiến độ đã demo; ngày khác bổ sung nhóm mới, không tự chiếm bàn đang phục vụ.
+- Kết quả dữ liệu sau nạp: 20 nhân viên, 13 tài khoản, 24 món, 29 bàn, 12 khách, 17 lịch đặt bàn, 39 hóa đơn, 7 chương trình, 7 voucher, 2 vé trong ví, 29 dòng điểm, 10 phiếu nhập, 38 phiếu xuất, 1 phiếu thanh lý. Đối chiếu các hóa đơn `WEB-` và sổ điểm: **0 sai lệch**.
+- `--website-demo-only`: **60 kiểm tra HTTP/database đạt** trên database tạm, gồm nạp hai lần, giữ tiến độ bếp, không cộng tồn/điểm hoặc giao dịch lần hai, đủ trạng thái và bốn mã đều dùng được, các màn quản trị và đăng nhập vai trò. Build Web/test đạt 0 lỗi; project test còn 2 cảnh báo dependency có sẵn. `git diff --check` đạt.
+- Đã khởi động Web ngầm ở `https://localhost:7167` và `http://localhost:5255` (HTTP chuyển HTTPS). Kiểm tra trên chính RestaurantDB: trang chủ và màn tương ứng của cả 7 tài khoản demo đều HTTP 200, phiên đăng nhập đúng vai trò. Chưa kiểm thử bấm trực quan; đây là kiểm tra HTTP và dữ liệu.
+
+Hướng dẫn tài khoản, mã, đơn/lịch và trình tự demo: **DEMO_WEBSITE.md**. Không gửi mật khẩu demo lên môi trường dùng dữ liệu thật. Log Web cục bộ nằm trong `RestaurantManagement.Web/App_Data/website-demo.*.log` (đã bị Git ignore).
+
+## Hướng dẫn Azure và gói deploy — 26/10/2026
+
+- Theo yêu cầu hướng dẫn, đã đối chiếu tài liệu Microsoft và thêm `HUONG_DAN_AZURE.md`: SQL Free tier/AutoPause, firewall, App Service Windows .NET 10/F1, đúng tên `DefaultConnection`, nạp bộ demo qua lệnh local trỏ Azure hoặc Generate Scripts để giữ nguyên DB local, ZIP deploy, HTTPS, quyền ghi upload/QR và đọc lỗi.
+- Phát hiện publish Web lỗi NETSDK1152 do project tham chiếu API kéo theo hai file appsettings trùng tên. Sửa riêng target publish Web để bỏ hai file cấu hình host từ API; không tắt kiểm tra trùng file và không loại assembly/API configuration khi publish API riêng.
+- Thêm `Prepare-AzurePackage.ps1`. Publish Release thành công; tạo `artifacts/azure/restaurant-web.zip` 38.303.206 byte, 323 entries. Đã kiểm tra ZIP có `web.config`, Web DLL, API DLL ở gốc và `appsettings.json` đúng bản Web. Entry point IIS là `dotnet .\RestaurantManagement.Web.dll`.
+- Dự án ghi ảnh vào wwwroot và QR vào App_Data: hướng dẫn dùng ZIP deploy giải nén, không bật WEBSITE_RUN_FROM_PACKAGE khiến content read-only. `TableExpiryWorker` truy vấn SQL mỗi phút khi app chạy; hướng dẫn theo dõi vCore và stop app khi không demo, không hứa hẹn quota đủ vận hành 24/7.
+- Chỉ tạo tài liệu/gói cục bộ, chưa tạo tài nguyên Azure, chưa đưa dữ liệu hay thông tin xác thực lên Azure. Các thay đổi nạp demo trước đó được giữ nguyên. `git diff --check` đạt.

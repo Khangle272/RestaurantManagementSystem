@@ -87,3 +87,68 @@
   .home-page .restaurant-hero h1 { font-size: 2rem; }
   .home-page .restaurant-hero-media { min-height: 260px; }
 }
+
+/* ===== Visual polish ===== */
+.home-page {
+  --home-gold: #b8893b;
+  --home-shadow: 0 24px 60px -24px rgba(16, 44, 33, .28);
+  --home-heading-font: "Playfair Display", Georgia, "Times New Roman", serif;
+}
+.home-page .restaurant-hero {
+  background: linear-gradient(135deg, #f7f1e3 0%, #efe6d0 100%);
+  box-shadow: var(--home-shadow);
+  border: 1px solid #e6dcc6;
+}
+.home-page .restaurant-hero h1 { letter-spacing: -.01em; line-height: 1.15; }
+.home-page .restaurant-hero h1 em { color: var(--home-gold); font-style: italic; font-weight: 600; }
+.home-page .restaurant-hero .eyebrow { color: var(--home-gold); font-weight: 700; }
+.home-page .hero-actions { gap: 12px; }
+.home-page .hero-actions .btn { padding: 13px 28px; font-weight: 600; transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
+.home-page .hero-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -10px rgba(24, 61, 45, .5); }
+.home-page .btn-hero-outline:hover { background: #fff; border-color: var(--forest); color: var(--forest); }
+.home-page .restaurant-hero-media { box-shadow: 0 20px 40px -20px rgba(16, 44, 33, .45); }
+.home-page .restaurant-hero-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(16,44,33,.55), transparent 55%); pointer-events: none; }
+.home-page .hero-media-caption { z-index: 1; background: rgba(16, 44, 33, .55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.18); }
+
+.home-page .restaurant-intro-line { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 26px 20px; box-shadow: 0 10px 30px -18px rgba(16, 44, 33, .25); }
+.home-page .restaurant-intro-line i { color: var(--forest); display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: #eef3e6; font-size: 1.4rem; }
+
+.home-page .restaurant-section { margin-bottom: 64px; }
+.home-page .section-heading { align-items: end; margin-bottom: 28px; }
+.home-page .section-heading .eyebrow { color: var(--home-gold); font-weight: 700; letter-spacing: .14em; }
+.home-page .section-heading > a { color: var(--forest); font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .2s; }
+.home-page .section-heading > a:hover { border-color: currentColor; }
+
+.home-page .menu-card { background: #fff; box-shadow: 0 2px 8px rgba(16,44,33,.05); transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+.home-page .menu-card:hover { transform: translateY(-6px); box-shadow: 0 24px 40px -20px rgba(16,44,33,.35); border-color: #cfd9c4; }
+.home-page .menu-card h3 { font-family: var(--home-heading-font); font-weight: 700; }
+.home-page .menu-card-footer strong { font-size: 1.05rem; color: var(--home-gold); }
+.home-page .menu-section { background: linear-gradient(180deg, #f4f6ee, #eef2e6); }
+.home-page .category-list a { border: 1px solid #dde4d4; font-weight: 600; transition: all .2s ease; }
+.home-page .category-list a.selected, .home-page .category-list a:hover { color: #fff; border-color: var(--forest); box-shadow: 0 8px 18px -10px rgba(24,61,45,.6); }
+
+.home-page .offer-card { box-shadow: 0 8px 22px -16px rgba(120, 90, 30, .5); transition: transform .2s ease; }
+.home-page .offer-card:hover { transform: translateY(-3px); }
+.home-page .offer-icon { color: var(--home-gold); }
+
+.steps-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: step; }
+.steps-grid li { position: relative; padding: 32px 28px; border: 1px solid var(--line); border-radius: 20px; background: #fff; transition: transform .25s ease, box-shadow .25s ease; }
+.steps-grid li:hover { transform: translateY(-4px); box-shadow: var(--home-shadow); }
+.steps-grid .step-number { position: absolute; top: 20px; right: 24px; font-family: var(--home-heading-font); font-size: 2.6rem; font-weight: 700; color: #ece3cc; line-height: 1; }
+.steps-grid i { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 18px; border-radius: 14px; background: var(--forest); color: #fff; font-size: 1.4rem; }
+.steps-grid h3 { margin: 0 0 8px; font-family: var(--home-heading-font); font-size: 1.25rem; font-weight: 700; color: var(--ink); }
+.steps-grid p { margin: 0; color: var(--muted); line-height: 1.65; }
+
+.home-page .booking-banner { position: relative; overflow: hidden; box-shadow: var(--home-shadow); }
+.home-page .booking-banner::before { content: ""; position: absolute; width: 320px; height: 320px; right: -80px; top: -120px; border-radius: 50%; background: radial-gradient(circle, rgba(184,137,59,.35), transparent 70%); pointer-events: none; }
+.home-page .booking-banner > * { position: relative; }
+.home-page .booking-banner .btn { background: var(--home-gold); border-color: var(--home-gold); color: #fff; padding: 13px 30px; font-weight: 600; transition: transform .2s ease, background .2s ease; }
+.home-page .booking-banner .btn:hover { background: #a37731; transform: translateY(-2px); }
+
+@media (max-width: 760px) {
+  .steps-grid { grid-template-columns: 1fr; }
+  .home-page .restaurant-section { margin-bottom: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-page * { transition: none !important; }
+}

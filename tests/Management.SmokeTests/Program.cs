@@ -72,6 +72,15 @@ try
         ["Email"] = adminEmail, ["Password"] = adminPassword
     }, true);
 
+    if (args.Contains("--website-demo-only"))
+    {
+        await InitDemoAccounts();
+        await using var websiteDb = new RestaurantDbContext(options);
+        await Management.SmokeTests.WebsiteDemoSmoke.Run(websiteDb, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} website demo HTTP/database checks.");
+        return;
+    }
+
     if (args.Contains("--week10-only") || args.Contains("--slots-only"))
     {
         await InitDemoAccounts();

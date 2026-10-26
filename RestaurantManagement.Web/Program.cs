@@ -64,6 +64,16 @@ builder.Services.AddScoped<RestaurantManagement.Web.Services.IBaoCaoService, Res
 
 var app = builder.Build();
 
+if (args.Contains("--init-website-demo", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Chỉ nạp dữ liệu demo website trong Development.");
+    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
+    await SampleDataImport.RunAsync(app.Services);
+    await using var scope = app.Services.CreateAsyncScope();
+    await RestaurantManagement.Web.Services.WebsiteDemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>());
+    return;
+}
+
 if (args.Contains("--init-auth", StringComparer.OrdinalIgnoreCase))
 {
     await AuthSetup.InitializeAsync(app.Services, builder.Configuration);
