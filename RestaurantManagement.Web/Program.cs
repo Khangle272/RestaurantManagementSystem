@@ -58,6 +58,8 @@ builder.Services.AddScoped<RestaurantManagement.Web.Services.OrderService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.IKhoService, RestaurantManagement.Web.Services.InventoryService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.PreorderService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.IPromotionService, RestaurantManagement.Web.Services.PromotionService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.CustomerVoucherService>();
+builder.Services.AddScoped<RestaurantManagement.Web.Services.CustomerHistoryService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.IBaoCaoService, RestaurantManagement.Web.Services.BaoCaoService>();
 
 var app = builder.Build();

@@ -1,0 +1,23 @@
+@model RestaurantManagement.Web.Models.CampaignVoucherForm
+@using RestaurantManagement.Web.Models
+@{ var dishes = (List<MonAnSelectionItem>)ViewData["Dishes"]!; }
+<div class="card card-body mb-3">
+    <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /><input asp-for="Xoa" type="hidden" class="delete-flag" />
+    <div class="d-flex justify-content-between mb-3"><h3 class="h6">@(Model.Id == 0 ? "Mã voucher mới" : Model.Ma)</h3><button type="button" class="btn btn-sm btn-outline-danger remove-voucher">Xóa mã</button></div>
+    @if (Model.Id > 0) { <p class="small text-muted">Đã phát hành / giữ trực tiếp: @Model.SoVeDaPhatHanh vé · Đã dùng / giữ trên hóa đơn: @Model.SoLuotDaDung lượt.</p> }
+    <div class="row g-3">
+        <div class="col-md-4"><label asp-for="Ma" class="form-label">Mã giảm giá</label><input asp-for="Ma" class="form-control text-uppercase" maxlength="40" placeholder="THANG10-50K" /></div>
+        <div class="col-md-4"><label asp-for="BatDau" class="form-label">Bắt đầu</label><input asp-for="BatDau" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control voucher-start" /></div>
+        <div class="col-md-4"><label asp-for="KetThuc" class="form-label">Kết thúc</label><input asp-for="KetThuc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control voucher-end" /></div>
+        <div class="col-md-3"><label asp-for="PhamVi" class="form-label">Phạm vi</label><select asp-for="PhamVi" class="form-select voucher-scope"><option value="HoaDon">Tổng hóa đơn</option><option value="MonAn">Các món được chọn</option></select></div>
+        <div class="col-md-3"><label asp-for="KieuGiam" class="form-label">Kiểu giảm</label><select asp-for="KieuGiam" class="form-select voucher-type"><option value="PhanTram">Phần trăm (%)</option><option value="SoTien">Tiền trực tiếp (đ)</option></select></div>
+        <div class="col-md-2"><label asp-for="GiaTri" class="form-label">Giá trị giảm</label><input asp-for="GiaTri" type="number" min="0.01" max="100000000" step="0.01" class="form-control" /></div>
+        <div class="col-md-2 voucher-cap"><label asp-for="MucGiamToiDa" class="form-label">Trần giảm (đ)</label><input asp-for="MucGiamToiDa" type="number" min="1" class="form-control" placeholder="Không giới hạn" /></div>
+        <div class="col-md-2"><label asp-for="GiaTriToiThieu" class="form-label">Đơn tối thiểu (đ)</label><input asp-for="GiaTriToiThieu" type="number" min="0" class="form-control" /></div>
+        <div class="col-md-4"><label asp-for="GioiHanPhatHanh" class="form-label">Số vé phát hành (ví + nhập mã)</label><input asp-for="GioiHanPhatHanh" type="number" min="1" class="form-control" placeholder="Không giới hạn" /></div>
+        <div class="col-md-4"><label asp-for="GioiHanTongLuot" class="form-label">Tổng lượt dùng/giữ trên hóa đơn</label><input asp-for="GioiHanTongLuot" type="number" min="1" class="form-control" placeholder="Không giới hạn" /></div>
+        <div class="col-md-4"><label asp-for="KhachHangId" class="form-label">Khách nhận riêng (tùy chọn)</label><select asp-for="KhachHangId" class="form-select"><option value="">Mọi khách hàng</option>@foreach (var customer in (List<CustomerOption>)ViewData["Customers"]!) { <option value="@customer.Id">@customer.HoTen · @customer.SoDienThoai</option> }</select></div>
+        <div class="col-12 voucher-dishes"><label asp-for="SelectedMonAnIds" class="form-label">Món áp dụng (giữ Ctrl để chọn nhiều)</label><select asp-for="SelectedMonAnIds" multiple class="form-select" size="5">@foreach (var dish in dishes) { <option value="@dish.Id">@dish.TenMon</option> }</select></div>
+        <div class="col-12"><div class="form-check"><input asp-for="DangSuDung" class="form-check-input" /><label asp-for="DangSuDung" class="form-check-label">Kích hoạt mã</label></div></div>
+    </div>
+</div>

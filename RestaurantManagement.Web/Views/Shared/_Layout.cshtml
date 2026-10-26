@@ -26,6 +26,8 @@
                 @if (User.IsInRole("KhachHang"))
                 {
                     <li class="nav-item"><a class="nav-link" asp-controller="DatBan" asp-action="LichSu">Lịch sử đặt bàn</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-controller="KhachHang" asp-action="Vouchers">Voucher & ví của tôi</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-controller="KhachHang" asp-action="Index">Đơn hàng & tích điểm</a></li>
                 }
                 @if (User.Identity?.IsAuthenticated == true && !User.IsInRole("KhachHang"))
                 {

@@ -1,0 +1,13 @@
+@model RestaurantManagement.Web.Models.CustomerAccountForm
+@{ ViewData["Title"] = "Cấp tài khoản khách hàng"; }
+<h1 class="h3 mb-3">Cấp tài khoản cho @Model.HoTen</h1>
+<p class="text-muted">Tài khoản được gắn vào hồ sơ hiện có, giữ nguyên đơn hàng và điểm tích lũy.</p>
+<form method="post" class="card card-body" style="max-width:650px">
+    <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <label asp-for="Email" class="form-label">Email đăng nhập</label><input asp-for="Email" class="form-control mb-3" autocomplete="off" />
+    <label asp-for="Password" class="form-label">Mật khẩu</label><input asp-for="Password" class="form-control mb-3" autocomplete="new-password" />
+    <label asp-for="ConfirmPassword" class="form-label">Nhập lại mật khẩu</label><input asp-for="ConfirmPassword" class="form-control mb-3" autocomplete="new-password" />
+    <p class="small text-muted">Mật khẩu ít nhất 8 ký tự gồm chữ hoa, chữ thường, số và ký tự đặc biệt. Khách có thể đổi mật khẩu sau khi đăng nhập.</p>
+    <div><button type="submit" class="btn btn-primary">Cấp tài khoản</button> <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a></div>
+</form>

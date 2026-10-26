@@ -46,6 +46,7 @@ using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = fa
 Task<string>? output = null;
 Task<string>? errors = null;
 var checks = 0;
+var webStarted = false;
 try
 {
     await InitAuth();
@@ -100,12 +101,34 @@ try
         return;
     }
 
+    if (args.Contains("--orders-only") || args.Contains("--deposits-only"))
+    {
+        await InitDemoAccounts();
+        await using var ordersDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(ordersDb);
+        if (args.Contains("--orders-only")) await Management.SmokeTests.OrderSmoke.Run(ordersDb, client, NewClient, Hidden, Check);
+        else await Management.SmokeTests.ReservationDepositSmoke.Run(ordersDb, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} {(args.Contains("--orders-only") ? "order" : "deposit")} HTTP/database checks.");
+        return;
+    }
+
+    if (args.Contains("--customer-promotions-only"))
+    {
+        await InitDemoAccounts();
+        await using var customerDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(customerDb);
+        await Management.SmokeTests.CustomerPromotionSmoke.Run(customerDb, client, NewClient, Hidden, Check, connection.ConnectionString);
+        Console.WriteLine($"PASS: {checks} campaign/wallet/customer HTTP/database checks.");
+        return;
+    }
+
     if (args.Contains("--promotions-only"))
     {
         await InitDemoAccounts();
         await using var promotionDb = new RestaurantDbContext(options);
         await DbSeeder.SeedAsync(promotionDb);
         await Management.SmokeTests.PromotionSmoke.Run(promotionDb, client, NewClient, Hidden, Check, connection.ConnectionString);
+        await Management.SmokeTests.CustomerPromotionSmoke.Run(promotionDb, client, NewClient, Hidden, Check, connection.ConnectionString);
         Console.WriteLine($"PASS: {checks} promotion/payment/report HTTP/database checks.");
         return;
     }
@@ -558,18 +581,19 @@ try
     await InventorySmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PaymentQrSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PromotionSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
+    await Management.SmokeTests.CustomerPromotionSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch
 {
-    if (!process.HasExited) process.Kill(entireProcessTree: true);
+    if (webStarted && !process.HasExited) process.Kill(entireProcessTree: true);
     if (output != null) Console.Error.WriteLine(await output);
     if (errors != null) Console.Error.WriteLine(await errors);
     throw;
 }
 finally
 {
-    if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); }
+    if (webStarted && !process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); }
     var qrFullPath = Path.GetFullPath(qrTestDirectory);
     var tempRoot = Path.GetFullPath(Path.GetTempPath());
     if (!qrFullPath.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase)
@@ -600,6 +624,7 @@ void Check(bool condition, string name)
 async Task StartWeb()
 {
     process.Start();
+    webStarted = true;
     output = process.StandardOutput.ReadToEndAsync();
     errors = process.StandardError.ReadToEndAsync();
     var ready = false;

@@ -55,7 +55,31 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         ViewBag.ActiveTotal = total;
         ViewBag.DepositDeduction = deposit;
         ViewBag.PaymentAmount = Math.Max(0, total - effectiveDiscount - deposit);
+        ViewBag.CustomerWallet = invoice.KhachHangId.HasValue
+            ? await new RestaurantManagement.Web.Services.CustomerVoucherService(db, promotionService).ListAsync(invoice.KhachHangId.Value, true)
+            : new List<RestaurantManagement.Web.Services.CustomerVoucherItem>();
+        ViewBag.Customer = invoice.KhachHangId.HasValue ? await db.KhachHang.AsNoTracking().SingleOrDefaultAsync(x => x.Id == invoice.KhachHangId) : null;
         return View(invoice);
+    }
+
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetCustomer(int id, string phone, string? rowVersion)
+    {
+        var bill = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == id);
+        if (bill is null) return NotFound();
+        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.KhachHangId.HasValue || bill.VoucherId.HasValue) return BadRequest();
+        var bytes = new byte[8];
+        if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, bytes, out var length) || length != 8
+            || !bytes.SequenceEqual(db.Entry(bill).Property<byte[]>("RowVersion").CurrentValue ?? [])) return Conflict("Hóa đơn đã thay đổi. Vui lòng tải lại.");
+        var customer = await db.KhachHang.SingleOrDefaultAsync(x => x.SoDienThoai == phone.Trim() && x.DangSuDung);
+        if (customer is null) TempData["Error"] = "Chưa có hồ sơ khách hàng với số điện thoại này.";
+        else {
+            bill.KhachHangId = customer.Id;
+            try { await db.SaveChangesAsync(); TempData["Success"] = "Đã gắn khách hàng để sử dụng ví voucher và tích điểm."; }
+            catch (DbUpdateConcurrencyException) { TempData["Error"] = "Hóa đơn đã thay đổi. Vui lòng tải lại."; }
+        }
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]

@@ -324,7 +324,8 @@ public static class OrderSmoke
         var deliveryPaymentText = WebUtility.HtmlDecode(deliveryPaymentPage);
         check(deliveryPaymentText.Contains("Chuyển khoản QR") && deliveryPaymentText.Contains("VietQR"),
             "Cashier views VietQR payment option on invoice page");
-        check(deliveryPaymentText.Contains("amount=250000"), "QR preview preserves existing discount and matches collection amount");
+        check(decimal.TryParse(hidden(deliveryPaymentPage,"SoTienPhaiThuDuKien"),System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.InvariantCulture,out var deliveryDue)
+            && deliveryDue==250000, "Payment preview preserves existing discount and matches collection amount");
 
         await Post(cashier, "/HoaDon/ThanhToan", deliveryPaymentPage, new()
         {
@@ -367,7 +368,8 @@ public static class OrderSmoke
         booking.TrangThaiCoc = TrangThaiCoc.DaCoc;
         await db.SaveChangesAsync();
         var tablePaymentPage = await Get(cashier, $"/HoaDon/Details/{tableBill.Id}");
-        check(WebUtility.HtmlDecode(tablePaymentPage).Contains("amount=30000"), "QR deducts only unrefunded and unretained deposit");
+        check(decimal.TryParse(hidden(tablePaymentPage,"SoTienPhaiThuDuKien"),System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.InvariantCulture,out var tableDue)
+            && tableDue==30000, "Payment preview deducts only unrefunded and unretained deposit");
         var staleBookingVersion = await Version(booking);
         booking.YeuCau = "Booking version advanced for deposit regression";
         await db.SaveChangesAsync();
@@ -411,7 +413,8 @@ public static class OrderSmoke
         var followupBill = await db.HoaDon.Include(x => x.ChiTiet).SingleAsync(x => x.Id == zeroValueOrder.HoaDonId);
         check(await orders.AvailableDepositAsync(booking.Id, followupBill.Id) == 0, "Consumed deposit cannot be reused by a later bill");
         var followupPage = await Get(cashier, $"/HoaDon/Details/{followupBill.Id}");
-        check(WebUtility.HtmlDecode(followupPage).Contains("amount=65000"), "Second bill QR has no already consumed deposit");
+        check(decimal.TryParse(hidden(followupPage,"SoTienPhaiThuDuKien"),System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.InvariantCulture,out var followupDue)
+            && followupDue==65000, "Second bill preview has no already consumed deposit");
         check(await orders.UpdateDishStatusAsync(followupBill.ChiTiet.Single().Id, TrangThaiCheBien.DaHuy, true) is null,
             "Unpaid final dish may be canceled");
         await db.Entry(followupBill).ReloadAsync();

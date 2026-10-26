@@ -1,274 +1,51 @@
 @model RestaurantManagement.Web.Models.KhuyenMaiFormViewModel
 @using RestaurantManagement.API.Models
-@{
-    var isEdit = Model.Id > 0;
-    ViewData["Title"] = isEdit ? "Chỉnh sửa khuyến mãi" : "Thêm khuyến mãi mới";
-    ViewData["ActiveMenu"] = "KhuyenMai";
-}
-
-<div class="mb-4 d-flex justify-content-between align-items-center">
-    <div>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-1">
-                <li class="breadcrumb-item"><a asp-action="Index">Quản lý Khuyến mãi</a></li>
-                <li class="breadcrumb-item active" aria-current="page">@(isEdit ? "Chỉnh sửa" : "Tạo mới")</li>
-            </ol>
-        </nav>
-        <h1 class="h3 fw-bold mb-0">@(isEdit ? $"Chỉnh sửa: {Model.TenChuongTrinh}" : "Thêm Chương trình Khuyến mãi Mới")</h1>
-    </div>
-    <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Quay lại danh sách
-    </a>
-</div>
-
-<form asp-action="@(isEdit ? "Edit" : "Create")" method="post">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="Id" />
-                    <input type="hidden" asp-for="RowVersion" />
-
-    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
-
-    <div class="row g-4">
-        <!-- Cột trái: Thông tin cấu hình chính -->
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h2 class="h6 mb-0 fw-bold text-primary"><i class="bi bi-info-circle me-1"></i> 1. Thông tin chương trình</h2>
-                </div>
-                <div class="card-body p-4">
-                    <div class="mb-3">
-                        <label asp-for="TenChuongTrinh" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
-                        <input asp-for="TenChuongTrinh" class="form-control" placeholder="Ví dụ: Giảm 15% thực đơn mùa hè, Tri ân khách hàng..." />
-                        <span asp-validation-for="TenChuongTrinh" class="text-danger small"></span>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label asp-for="BatDau" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
-                            <input asp-for="BatDau" type="date" class="form-control" />
-                            <span asp-validation-for="BatDau" class="text-danger small"></span>
-                        </div>
-                        <div class="col-sm-6">
-                            <label asp-for="KetThuc" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
-                            <input asp-for="KetThuc" type="date" class="form-control" />
-                            <span asp-validation-for="KetThuc" class="text-danger small"></span>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <label asp-for="PhamVi" class="form-label fw-semibold"></label>
-                            <select asp-for="PhamVi" class="form-select" id="selectPhamVi" onchange="toggleDishSelection()">
-                                <option value="@PhamViUuDai.HoaDon">Toàn bộ hóa đơn</option>
-                                <option value="@PhamViUuDai.MonAn">Theo món ăn / Thực đơn cụ thể</option>
-                            </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <label asp-for="KieuGiam" class="form-label fw-semibold"></label>
-                            <select asp-for="KieuGiam" class="form-select" id="selectKieuGiam" onchange="toggleKieuGiam()">
-                                <option value="@KieuGiam.PhanTram">Giảm theo phần trăm (%)</option>
-                                <option value="@KieuGiam.SoTien">Giảm số tiền cố định (VNĐ)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h2 class="h6 mb-0 fw-bold text-primary"><i class="bi bi-calculator me-1"></i> 2. Mức giảm & Điều kiện áp dụng</h2>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label asp-for="GiaTri" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
-                            <div class="input-group">
-                                <input asp-for="GiaTri" class="form-control fs-5 fw-bold text-danger" id="inputGiaTri" />
-                                <span class="input-group-text fw-bold" id="unitGiaTri">%</span>
-                            </div>
-                            <span asp-validation-for="GiaTri" class="text-danger small"></span>
-                        </div>
-
-                        <div class="col-sm-6" id="groupMucGiamToiDa">
-                            <label asp-for="MucGiamToiDa" class="form-label fw-semibold"></label>
-                            <div class="input-group">
-                                <input asp-for="MucGiamToiDa" type="number" step="1000" class="form-control" placeholder="Để trống nếu không giới hạn" />
-                                <span class="input-group-text">đ</span>
-                            </div>
-                            <div class="form-text small">Mức chặn trần số tiền được giảm tối đa.</div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="GiaTriToiThieu" class="form-label fw-semibold"></label>
-                        <div class="input-group">
-                            <input asp-for="GiaTriToiThieu" type="number" step="1000" class="form-control" placeholder="0 nếu không yêu cầu" />
-                            <span class="input-group-text">đ</span>
-                        </div>
-                        <div class="form-text small">Hóa đơn hoặc tổng tiền món ưu đãi phải đạt tối thiểu mức này mới được kích hoạt.</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h2 class="h6 mb-0 fw-bold text-primary"><i class="bi bi-diagram-3 me-1"></i> 3. Cơ chế kích hoạt đồng thời nhiều ưu đãi</h2>
-                </div>
-                <div class="card-body p-4">
-                    <div class="form-check form-switch mb-3">
-                        <input asp-for="ChoPhepKetHop" class="form-check-input" type="checkbox" id="checkKetHop" />
-                        <label asp-for="ChoPhepKetHop" class="form-check-label fw-semibold"></label>
-                        <div class="text-muted small">Nếu bật, ưu đãi này có thể áp dụng cộng dồn đồng thời với các ưu đãi khác trên cùng một hóa đơn.</div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label asp-for="ThuTuApDung" class="form-label fw-semibold"></label>
-                            <input asp-for="ThuTuApDung" type="number" min="1" max="99" class="form-control" />
-                            <div class="form-text small">Thứ tự ưu tiên khi kết hợp (số nhỏ áp dụng trước, ví dụ: 1 -> 2 -> 3).</div>
-                        </div>
-                    </div>
-
-                    <hr class="my-3" />
-
-                    <div class="form-check form-switch mb-3">
-                        <input asp-for="CanVoucher" class="form-check-input" type="checkbox" id="checkCanVoucher" />
-                        <label asp-for="CanVoucher" class="form-check-label fw-semibold"></label>
-                        <div class="text-muted small">Bật nếu ưu đãi này cần phát hành và nhập mã Voucher để sử dụng. Tắt nếu ưu đãi tự động kích hoạt khi đủ điều kiện.</div>
-                    </div>
-
-                    <div class="form-check form-switch">
-                        <input asp-for="DangSuDung" class="form-check-input" type="checkbox" />
-                        <label asp-for="DangSuDung" class="form-check-label fw-semibold"></label>
-                        <div class="text-muted small">Bật để kích hoạt chương trình khuyến mãi trong hệ thống.</div>
-                    </div>
-                </div>
-            </div>
+@using RestaurantManagement.Web.Models
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@{ ViewData["Title"] = Model.Id == 0 ? "Tạo chương trình khuyến mãi" : Model.TenChuongTrinh; ViewData["ActiveMenu"] = "KhuyenMai"; }
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">Một chương trình chứa nhiều mã với mức giảm và thời hạn riêng. Thời gian theo giờ Việt Nam (UTC+7).</p></div><a asp-action="Index" class="btn btn-outline-secondary">Danh sách</a></div>
+<form method="post" asp-action="@(Model.Id == 0 ? "Create" : "Edit")" id="campaign-form">
+    <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
+    <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+    <div class="card card-body mb-4">
+        <h2 class="h5">Thông tin chương trình</h2>
+        @if (Model.Id > 0) { <p class="small text-muted">Đã phát hành / giữ trực tiếp: @Model.SoVeDaPhatHanh vé trong toàn chương trình.</p> }
+        <div class="mb-3"><label asp-for="TenChuongTrinh" class="form-label">Tên chương trình</label><input asp-for="TenChuongTrinh" class="form-control" placeholder="Tháng 10 · Chào mừng 20/10" /></div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-4"><label asp-for="BatDau" class="form-label">Bắt đầu (giờ Việt Nam)</label><input asp-for="BatDau" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control" /></div>
+            <div class="col-md-4"><label asp-for="KetThuc" class="form-label">Kết thúc (bao gồm thời điểm này)</label><input asp-for="KetThuc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control" /></div>
+            <div class="col-md-4"><label asp-for="GioiHanPhatHanh" class="form-label">Tổng vé phát hành (ví + nhập mã)</label><input asp-for="GioiHanPhatHanh" class="form-control" type="number" min="1" placeholder="Để trống: không giới hạn" /></div>
         </div>
-
-        <!-- Cột phải: Chọn món ăn áp dụng (hiển thị khi Phạm vi = MonAn) -->
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm h-100" id="cardDishSelection">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h2 class="h6 mb-0 fw-bold text-primary"><i class="bi bi-egg-fried me-1"></i> Danh sách món áp dụng</h2>
-                    <span class="badge bg-primary rounded-pill" id="selectedDishCount">@Model.SelectedMonAnIds.Count đã chọn</span>
-                </div>
-                <div class="card-body p-3">
-                    <div id="dishAlert" class="alert alert-info py-2 small mb-3">
-                        Chỉ áp dụng khi bạn chọn phạm vi <strong>Theo món ăn / Thực đơn cụ thể</strong>.
-                    </div>
-
-                    <div class="input-group mb-3">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" id="dishSearchInput" class="form-control" placeholder="Tìm tên món ăn..." onkeyup="filterDishList()" />
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-2 small">
-                        <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" onclick="selectAllDishes(true)">Chọn tất cả</button>
-                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-danger p-0" onclick="selectAllDishes(false)">Bỏ chọn tất cả</button>
-                    </div>
-
-                    <div class="border rounded p-2 overflow-auto" style="max-height: 480px;" id="dishListContainer">
-                        @foreach (var group in Model.AvailableDishes.GroupBy(x => x.TenDanhMuc))
-                        {
-                            <div class="dish-category-group mb-3">
-                                <div class="fw-bold small text-muted text-uppercase mb-2 pb-1 border-bottom d-flex justify-content-between align-items-center">
-                                    <span>@group.Key</span>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 11px;" onclick="selectCategoryDishes(this)">Chọn nhóm</button>
-                                </div>
-                                @foreach (var dish in group)
-                                {
-                                    var isChecked = Model.SelectedMonAnIds.Contains(dish.Id);
-                                    <div class="form-check dish-item mb-1 py-1 px-4 rounded hover-bg">
-                                        <input class="form-check-input dish-checkbox" type="checkbox" name="SelectedMonAnIds" value="@dish.Id" id="dish-@dish.Id" @(isChecked ? "checked" : "") onchange="updateSelectedDishCount()" />
-                                        <label class="form-check-label d-flex justify-content-between w-100" for="dish-@dish.Id">
-                                            <span class="dish-name">@dish.TenMon</span>
-                                            <span class="text-muted small">@dish.GiaThamKhao.ToString("N0") đ</span>
-                                        </label>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
+        <div class="row g-3 mb-3"><div class="col-md-6"><label asp-for="CanVoucher" class="form-label">Cách áp dụng</label><select asp-for="CanVoucher" class="form-select"><option value="true">Phát hành nhiều mã voucher</option><option value="false">Ưu đãi tự động trên hóa đơn</option></select></div><div class="col-md-3"><label asp-for="ThuTuApDung" class="form-label">Thứ tự áp dụng</label><input asp-for="ThuTuApDung" type="number" min="0" class="form-control" /></div></div>
+        <div class="form-check"><input asp-for="ChoPhepKetHop" class="form-check-input" /><label asp-for="ChoPhepKetHop" class="form-check-label">Cho phép kết hợp với ưu đãi khác</label></div>
+        <div class="form-check"><input asp-for="DangSuDung" class="form-check-input" /><label asp-for="DangSuDung" class="form-check-label">Kích hoạt chương trình</label></div>
+    </div>
+    <div id="automatic-config" class="card card-body mb-4">
+        <h2 class="h5">Ưu đãi tự động</h2>
+        <div class="row g-3"><div class="col-md-3"><label asp-for="PhamVi" class="form-label">Phạm vi</label><select asp-for="PhamVi" class="form-select"><option value="HoaDon">Hóa đơn</option><option value="MonAn">Món ăn</option></select></div>
+        <div class="col-md-3"><label asp-for="KieuGiam" class="form-label">Kiểu giảm</label><select asp-for="KieuGiam" class="form-select"><option value="PhanTram">Phần trăm</option><option value="SoTien">Số tiền (đ)</option></select></div>
+        <div class="col-md-2"><label asp-for="GiaTri" class="form-label">Giá trị giảm</label><input asp-for="GiaTri" type="number" step="0.01" class="form-control" /></div>
+        <div class="col-md-2"><label asp-for="MucGiamToiDa" class="form-label">Trần giảm (đ)</label><input asp-for="MucGiamToiDa" type="number" class="form-control" /></div>
+        <div class="col-md-2"><label asp-for="GiaTriToiThieu" class="form-label">Đơn tối thiểu (đ)</label><input asp-for="GiaTriToiThieu" type="number" class="form-control" /></div>
+        <div class="col-12"><label asp-for="SelectedMonAnIds" class="form-label">Món áp dụng (giữ Ctrl để chọn nhiều)</label><select asp-for="SelectedMonAnIds" multiple class="form-select" size="5">@foreach (var dish in Model.AvailableDishes) { <option value="@dish.Id">@dish.TenMon</option> }</select></div></div>
+    </div>
+    <section id="voucher-config" aria-labelledby="vouchers-title">
+        <div class="d-flex justify-content-between mb-3"><div><h2 class="h4" id="vouchers-title">Các mã trong chương trình</h2><p class="text-muted">Để trống giới hạn để phát hành/sử dụng không giới hạn. Mỗi vé lưu vào ví dùng một lần cho khách đó.</p></div><button type="button" class="btn btn-outline-primary align-self-start" id="add-voucher">+ Thêm mã</button></div>
+        <div id="voucher-rows">
+        @for (var i = 0; i < Model.Vouchers.Count; i++) {
+            var data = new ViewDataDictionary<CampaignVoucherForm>(ViewData, Model.Vouchers[i]);
+            data.TemplateInfo.HtmlFieldPrefix = $"Vouchers[{i}]";
+            data["Dishes"] = Model.AvailableDishes;
+            data["Customers"] = Model.AvailableCustomers;
+            <div class="voucher-row" hidden="@Model.Vouchers[i].Xoa"><input type="hidden" name="Vouchers.Index" value="@i" />@await Html.PartialAsync("_VoucherRow", Model.Vouchers[i], data)</div>
+        }
         </div>
-    </div>
-
-    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
-        <a asp-action="Index" class="btn btn-light px-4">Hủy bỏ</a>
-        <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
-            <i class="bi bi-check-lg me-1"></i> @(isEdit ? "Lưu thay đổi" : "Tạo chương trình khuyến mãi")
-        </button>
-    </div>
+        <p class="small text-muted">Xóa mã đã được thu thập hoặc gắn hóa đơn sẽ chuyển mã sang ngừng sử dụng để giữ lịch sử.</p>
+    </section>
+    <div class="d-flex gap-2 mt-4 mb-4"><button type="submit" class="btn btn-primary">Lưu chương trình và các mã</button><a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a></div>
 </form>
-
-@section Scripts {
-<script>
-    function togglePhamVi() {
-        const phamVi = document.getElementById("selectPhamVi").value;
-        const card = document.getElementById("cardDishSelection");
-        const alertBox = document.getElementById("dishAlert");
-        if (phamVi === "@((int)PhamViUuDai.MonAn)") {
-            card.classList.remove("opacity-50");
-            card.querySelectorAll("input").forEach(i => i.disabled = false);
-            alertBox.classList.remove("d-none");
-        } else {
-            card.classList.add("opacity-50");
-            alertBox.classList.add("d-none");
-        }
-    }
-
-    function toggleKieuGiam() {
-        const kieuGiam = document.getElementById("selectKieuGiam").value;
-        const unit = document.getElementById("unitGiaTri");
-        const groupMax = document.getElementById("groupMucGiamToiDa");
-        if (kieuGiam === "@((int)KieuGiam.PhanTram)") {
-            unit.textContent = "%";
-            groupMax.style.display = "block";
-        } else {
-            unit.textContent = "đ";
-            groupMax.style.display = "none";
-        }
-    }
-
-    function updateSelectedDishCount() {
-        const checked = document.querySelectorAll(".dish-checkbox:checked").length;
-        document.getElementById("selectedDishCount").textContent = checked + " đã chọn";
-    }
-
-    function selectAllDishes(select) {
-        document.querySelectorAll(".dish-checkbox").forEach(c => c.checked = select);
-        updateSelectedDishCount();
-    }
-
-    function selectCategoryDishes(btn) {
-        const group = btn.closest(".dish-category-group");
-        const checkboxes = group.querySelectorAll(".dish-checkbox");
-        const allChecked = Array.from(checkboxes).every(c => c.checked);
-        checkboxes.forEach(c => c.checked = !allChecked);
-        updateSelectedDishCount();
-    }
-
-    function filterDishList() {
-        const search = document.getElementById("dishSearchInput").value.toLowerCase();
-        document.querySelectorAll(".dish-item").forEach(item => {
-            const name = item.querySelector(".dish-name").textContent.toLowerCase();
-            if (name.includes(search)) {
-                item.style.display = "block";
-            } else {
-                item.style.display = "none";
-            }
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        toggleKieuGiam();
-        togglePhamVi();
-        updateSelectedDishCount();
-    });
-</script>
-<style>
-    .hover-bg:hover { background-color: #f8fafc; }
-</style>
-}
+<template id="voucher-template">
+@{ var template = new CampaignVoucherForm(); var templateData = new ViewDataDictionary<CampaignVoucherForm>(ViewData, template); templateData.TemplateInfo.HtmlFieldPrefix = "Vouchers[__index__]"; templateData["Dishes"] = Model.AvailableDishes; templateData["Customers"] = Model.AvailableCustomers; }
+<div class="voucher-row"><input type="hidden" name="Vouchers.Index" value="__index__" />@await Html.PartialAsync("_VoucherRow", template, templateData)</div>
+</template>
+@section Scripts { <script src="~/js/campaign-vouchers.js" asp-append-version="true"></script> }

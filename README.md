@@ -112,3 +112,28 @@ Xem **NHAT_KY_Y_TUONG_VA_TIEN_DO.md** để biết ma trận 7 vai trò (6 nội
 Nhân viên xem trang nhà hàng được nhưng không thấy nút đặt bàn của khách. Dọn role/tài khoản mẫu cũ trên database Development bằng `--remove-retired-menu-roles` theo hướng dẫn và điều kiện bảo toàn lịch sử trong nhật ký; không tự xóa lúc khởi động.
 
 Kiểm chứng bản cập nhật ngày 03/10/2026: build **0 cảnh báo, 0 lỗi**, **PASS: 532 HTTP/database checks** trên database tạm đã dọn. Hệ thống đã hoàn thiện liên thông luồng nghiệp vụ trọn vẹn: Đặt bàn/Xếp bàn → Gọi món POS/Thêm món → KDS Bếp chế biến → Phục vụ bàn → Thanh toán đa phương thức & In bill → Kết thúc phục vụ & Dọn bàn sẵn sàng.
+
+## Chương trình – voucher và khách hàng (25/10/2026)
+
+- Admin mở `/KhuyenMai`, tạo một chương trình rồi thêm nhiều dòng mã ngay trong form. Mỗi mã có kiểu giảm %, giảm tiền trực tiếp, phạm vi hóa đơn/món, danh sách món, trần giảm, đơn tối thiểu và thời hạn riêng. Lưu chương trình và mã trong một transaction. Các đường dẫn `/Voucher` cũ chuyển về chương trình.
+- Chương trình và mã có giới hạn vé phát hành; để trống là không giới hạn. Số vé gồm các lần lưu vào ví và hóa đơn nhập mã trực tiếp chưa có vé trong ví. Mã nhập trực tiếp đang giữ/đã thanh toán vẫn chiếm vé; gỡ mã hoặc hủy hóa đơn giải phóng vé trực tiếp. Vé đã lưu trong ví vẫn được tính phát hành. Mỗi mã còn có giới hạn lượt sử dụng riêng (cũng cho phép để trống); hóa đơn chưa thanh toán giữ một lượt. Một khách lưu một vé cho mỗi mã, vé đó dùng một lần, không dùng đồng thời trên hai hóa đơn.
+- Toàn bộ form thời gian dùng **giờ Việt Nam UTC+7**, chính xác tới giây, bao gồm cả hai biên `Bắt đầu <= hiện tại <= Kết thúc`. Voucher phải nằm trong thời hạn chương trình; cả chương trình và mã đều phải hoạt động. Mặc định bắt đầu từ 00:00 hôm nay theo giờ Việt Nam để mã mới có thể dùng ngay. Khi cần kết thúc hết ngày, nhập 23:59:59 của ngày đó.
+- Khách đăng nhập qua `/Account/Login`, mở `/KhachHang/Vouchers` để thu thập hoặc `/KhachHang/Vouchers?wallet=true` để xem ví. Trong `/KhachHang/Order/{id}`, chọn mã trong ví hoặc nhập mã trực tiếp. Khách chỉ được xem/thao tác hóa đơn của mình; thu ngân xác nhận thanh toán qua luồng hiện có. Trạng thái món tự kiểm tra mỗi 15 giây khi trang đơn đang hiển thị.
+- Thu ngân mở `/HoaDon/Details/{id}` để chọn ví của khách hoặc nhập mã. Hóa đơn chưa gắn khách có thể gắn hồ sơ bằng số điện thoại trước khi chọn voucher; thao tác này chỉ áp dụng khi hóa đơn chưa thanh toán/chưa có voucher và không đổi khách đã gắn.
+- `/TaiKhoanKhachHang` quản lý toàn bộ hồ sơ, kể cả khách chưa có tài khoản; có thêm/sửa hồ sơ, cấp tài khoản cho hồ sơ cũ mà không tạo trùng khách, lịch sử đơn, trạng thái chế biến/thanh toán, tổng chi tiêu và lịch sử tích điểm. Hồ sơ có tài khoản tiếp tục dùng màn sửa tài khoản có xác nhận mật khẩu.
+- **Quy tắc điểm mặc định:** mỗi 10.000đ giá trị mua sau giảm giá được 1 điểm, làm tròn xuống; tính cả phần thanh toán bằng tiền cọc. Ghi điểm trong cùng transaction thanh toán và ràng buộc duy nhất theo hóa đơn. Không cộng lại hóa đơn cũ; chưa bổ sung đổi điểm hoặc hoàn điểm vì chưa có nghiệp vụ đổi/hoàn tiền trong phạm vi này.
+
+Web tự áp dụng migration `20261025134614_CampaignVoucherWalletAndCustomerPoints` khi khởi động. Migration sao chép thời hạn, điều kiện và danh sách món của mã cũ từ chương trình xuống voucher; giữ nguyên hóa đơn, snapshot giảm giá và giới hạn lượt cũ. Các cột ưu đãi trên chương trình được giữ để tương thích chương trình tự động và script dữ liệu cũ. Ba bảng mới: `VoucherMon`, `VoucherKhachHang`, `LichSuTichDiem`. Nếu nâng cấp thủ công từ schema W9, dùng script chạy lại an toàn `RestaurantManagement.API/Scripts/UpgradeCampaignVoucherWalletAndCustomerPoints.sql`. Script chỉ nâng cấp schema có sẵn, không thay thế `InitialSchema.sql`.
+
+Ứng dụng MAUI hiện dùng **WebView HTTPS** để chia sẻ luồng khách với Web. Mở ứng dụng, nhập địa chỉ gốc HTTPS của Web (thiết bị phải truy cập được và tin cậy chứng chỉ), bấm **Mở tài khoản khách hàng**. Đăng nhập cùng tài khoản website để thu thập mã, chọn mã, theo dõi đơn và xem điểm. Đây là giao diện Web trong app, chưa phải bộ API/mobile native riêng; không giả lập việc thanh toán thành công trên thiết bị.
+
+Kiểm thử các luồng mới và hồi quy khuyến mãi:
+
+```powershell
+dotnet run --project tests/Management.SmokeTests -- --customer-promotions-only
+dotnet run --project tests/Management.SmokeTests -- --promotions-only
+dotnet run --project tests/Management.SmokeTests -- --orders-only
+dotnet run --project tests/Management.SmokeTests -- --deposits-only
+```
+
+Các bộ test dùng database tạm tự tạo/xóa. Có thể đặt `CRUD_TEST_SQL_SERVER` theo instance cục bộ. Khi môi trường không cho MSBuild chạy song song, biên dịch với `-m:1 -p:BuildInParallel=false`.

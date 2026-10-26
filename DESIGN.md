@@ -672,3 +672,12 @@ Phần này bổ sung cho đặc tả W9 tại Mục 11. Khi yêu cầu trùng n
 - Dùng nhãn chữ kèm màu cho trạng thái (không chỉ dựa vào màu), trạng thái lỗi/thành công có vị trí cố định dễ thấy; xác nhận thao tác hủy/thu tiền; disable nút trong lúc submit và mở lại khi lỗi.
 - Không tự xóa giỏ hoặc chuyển context khi server báo lỗi. Sau refresh, tải lại trạng thái từ server và cảnh báo nếu dữ liệu đã đổi.
 - Giữ các id/selector hợp đồng W9 nếu còn dùng; cập nhật đồng thời Razor, JavaScript, view model và smoke checks khi có thay đổi.
+
+### 12.7. Triển khai chương trình–voucher và quản lý khách hàng (25/10/2026)
+
+- Form `/KhuyenMai/Edit/{id}` là aggregate editor: thông tin cha ở trên, các dòng mã con ở dưới, thêm/xóa bằng JavaScript và submit chung. Index binder ổn định khi xóa dòng, máy chủ kiểm tra quyền sở hữu mã và RowVersion của cha/con. Dòng đã có ví/hóa đơn chỉ bị ngừng sử dụng khi xóa.
+- Khuyến mãi tự động tiếp tục dùng cấu hình mức giảm ở cha để tương thích; chương trình có voucher lấy phạm vi, mức giảm, đơn tối thiểu, trần, món và thời hạn từ từng mã. Migration materialize cấu hình mã cũ, không sửa số tiền lịch sử.
+- `GioiHanPhatHanh` nullable trên cha/con là hạn số vé; `GioiHanTongLuot` nullable trên mã là hạn dùng/giữ hóa đơn. `VoucherInventory` đếm vé trong ví + hóa đơn nhập tay chưa có vé tương ứng; không đếm đôi vé lưu đã được dùng. Thu thập, sửa và áp mã dùng giao dịch Serializable với khóa chương trình rồi mã để bảo vệ hạn chung giữa các mã con.
+- Khách thấy hai tab khám phá/ví, lựa chọn mã hoặc nhập tay trên hóa đơn, và lịch sử đơn/điểm riêng. Tiến độ món cập nhật 15 giây qua endpoint kiểm tra chủ sở hữu; thanh toán vẫn do thu ngân xác nhận. Hồ sơ quản trị hỗ trợ khách có/không có tài khoản, cấp tài khoản vào hồ sơ cũ, phân trang lịch sử mua và sổ điểm độc lập.
+- Sổ điểm chỉ thêm khi thanh toán thành công, cùng transaction hóa đơn/cấn cọc. Mỗi hóa đơn tối đa một dòng. 10.000đ sau giảm = 1 điểm (làm tròn xuống), phần đã trả cọc vẫn tính là tiền mua. Không suy đoán điểm cho hóa đơn cũ.
+- App MAUI dùng WebView HTTPS cùng origin do người dùng cấu hình; dùng luồng đăng nhập/ví/đơn hàng của Web. Chỉ điều hướng trong máy chủ đã chọn, không chấp nhận HTTP hoặc URL chứa thông tin đăng nhập.

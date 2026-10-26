@@ -430,6 +430,9 @@ public class KhuyenMai
     public int ThuTuApDung { get; set; }
     public bool CanVoucher { get; set; }
     public bool DangSuDung { get; set; } = true;
+    // null = không giới hạn số vé được thu thập trong toàn chương trình.
+    public int? GioiHanPhatHanh { get; set; }
+    public ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
 }
 
 public class KhuyenMaiMon
@@ -448,8 +451,48 @@ public class Voucher
     public KhuyenMai KhuyenMai { get; set; } = null!;
     public int? KhachHangId { get; set; }
     public KhachHang? KhachHang { get; set; }
-    public int GioiHanTongLuot { get; set; }
+    public int? GioiHanTongLuot { get; set; }
     public bool DangSuDung { get; set; } = true;
+    // Nullable để tương thích các lệnh nạp dữ liệu cũ; form mới luôn ghi cấu hình riêng.
+    public DateTimeOffset? BatDau { get; set; }
+    public DateTimeOffset? KetThuc { get; set; }
+    public PhamViUuDai? PhamVi { get; set; }
+    public KieuGiam? KieuGiam { get; set; }
+    public decimal? GiaTri { get; set; }
+    public decimal? MucGiamToiDa { get; set; }
+    public decimal GiaTriToiThieu { get; set; }
+    public int? GioiHanPhatHanh { get; set; }
+    public ICollection<VoucherMon> MonApDung { get; set; } = new List<VoucherMon>();
+}
+
+public class VoucherMon
+{
+    public int VoucherId { get; set; }
+    public Voucher Voucher { get; set; } = null!;
+    public int MonAnId { get; set; }
+    public MonAn MonAn { get; set; } = null!;
+}
+
+public class VoucherKhachHang
+{
+    public int KhachHangId { get; set; }
+    public KhachHang KhachHang { get; set; } = null!;
+    public int VoucherId { get; set; }
+    public Voucher Voucher { get; set; } = null!;
+    public DateTimeOffset ThoiDiemThuThap { get; set; }
+}
+
+public class LichSuTichDiem
+{
+    public int Id { get; set; }
+    public int KhachHangId { get; set; }
+    public KhachHang KhachHang { get; set; } = null!;
+    public int HoaDonId { get; set; }
+    public HoaDon HoaDon { get; set; } = null!;
+    public int SoDiem { get; set; }
+    public decimal SoTienTinhDiem { get; set; }
+    public DateTimeOffset ThoiDiem { get; set; }
+    [MaxLength(200)] public string NoiDung { get; set; } = "";
 }
 
 public class DanhGia

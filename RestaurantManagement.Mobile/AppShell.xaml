@@ -4,10 +4,10 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:RestaurantManagement.Mobile"
-    Title="RestaurantManagement.Mobile">
+    Title="Nhà hàng">
 
     <ShellContent
-        Title="Home"
+        Title="Tài khoản khách hàng"
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
 
