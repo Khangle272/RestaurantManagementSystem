@@ -151,8 +151,8 @@ dotnet run --project RestaurantManagement.Web --no-build --launch-profile https
 
 Đăng nhập nội bộ tại `https://localhost:7167/admin`, khách tại `/Account/Login`. Các tài khoản `.demo@example.test` trong hướng dẫn dùng mật khẩu `Demo@2026!`; không đổi mật khẩu tài khoản đã có. Kiểm chứng riêng bộ dữ liệu: `dotnet run --project tests/Management.SmokeTests -- --website-demo-only` (database tạm).
 
-## Triển khai Azure
+## Chia sẻ demo qua Cloudflare Quick Tunnel
 
-Xem **[HUONG_DAN_AZURE.md](HUONG_DAN_AZURE.md)** để tạo Azure SQL Free tier + App Service Windows F1, đưa dữ liệu demo hoặc database local lên và cấu hình đúng `ConnectionStrings__DefaultConnection`. Có hướng dẫn riêng về quyền ghi ảnh/QR, HTTPS, hạn mức và tác vụ nền.
+Xem **[HUONG_DAN_CLOUDFLARE.md](HUONG_DAN_CLOUDFLARE.md)**. Chạy Web bằng `dotnet run --project RestaurantManagement.Web --launch-profile https`, rồi mở PowerShell thứ hai chạy `.\Start-QuickTunnel.ps1`. Chia sẻ URL HTTPS `trycloudflare.com` do cloudflared in ra; giữ Web, SQL Server và tunnel chạy trong suốt buổi demo.
 
-Tạo gói ZIP Web bằng `./Prepare-AzurePackage.ps1`; kết quả tại `artifacts/azure/restaurant-web.zip` (Git ignore). Script chỉ đóng gói ở máy, không tạo/deploy tài nguyên Azure. Khi publish Web, cấu hình host của API được loại khỏi danh sách đóng gói để tránh lỗi NETSDK1152; assembly API vẫn đi kèm.
+Database và ảnh/QR vẫn ở máy bạn; không cần ZIP hoặc triển khai qua GitHub. Mỗi lần tạo Quick Tunnel sẽ nhận URL mới. Tunnel dùng origin `https://localhost:7167` để tương thích chuyển hướng HTTPS và cookie đăng nhập Secure hiện có.
