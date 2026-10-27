@@ -1153,7 +1153,7 @@ namespace RestaurantManagement.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("HoaDonId")
+                    b.Property<int?>("HoaDonId")
                         .HasColumnType("int");
 
                     b.Property<int>("KhachHangId")
@@ -1179,16 +1179,26 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<DateTimeOffset>("ThoiDiem")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<int?>("VoucherId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("HoaDonId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[HoaDonId] IS NOT NULL");
+
+                    b.HasIndex("VoucherId");
 
                     b.HasIndex("KhachHangId", "ThoiDiem");
 
+                    b.HasIndex("KhachHangId", "VoucherId")
+                        .IsUnique()
+                        .HasFilter("[VoucherId] IS NOT NULL");
+
                     b.ToTable("LichSuTichDiem", null, t =>
                         {
-                            t.HasCheckConstraint("CK_LichSuTichDiem_Diem", "[SoDiem]>=0 AND [SoTienTinhDiem]>=0");
+                            t.HasCheckConstraint("CK_LichSuTichDiem_Diem", "([HoaDonId] IS NOT NULL AND [VoucherId] IS NULL AND [SoDiem]>=0 AND [SoTienTinhDiem]>=0) OR ([HoaDonId] IS NULL AND [VoucherId] IS NOT NULL AND [SoDiem]<0 AND [SoTienTinhDiem]=0)");
                         });
                 });
 
@@ -1846,6 +1856,9 @@ namespace RestaurantManagement.API.Migrations
                     b.Property<bool>("DangSuDung")
                         .HasColumnType("bit");
 
+                    b.Property<int>("DiemCanDoi")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("GiaTri")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1902,6 +1915,8 @@ namespace RestaurantManagement.API.Migrations
 
                     b.ToTable("Voucher", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Voucher_DiemCanDoi", "[DiemCanDoi]>=0");
+
                             t.HasCheckConstraint("CK_Voucher_DieuKien", "([BatDau] IS NULL OR [KetThuc] IS NULL OR [KetThuc]>=[BatDau]) AND ([GiaTri] IS NULL OR ([GiaTri]>0 AND ([KieuGiam]<>'PhanTram' OR [GiaTri]<=100))) AND [GiaTriToiThieu]>=0 AND ([MucGiamToiDa] IS NULL OR [MucGiamToiDa]>0) AND ([GioiHanPhatHanh] IS NULL OR [GioiHanPhatHanh]>0)");
 
                             t.HasCheckConstraint("CK_Voucher_KieuGiam_Enum", "[KieuGiam] IN ('PhanTram','SoTien')");
@@ -2321,8 +2336,7 @@ namespace RestaurantManagement.API.Migrations
                     b.HasOne("RestaurantManagement.API.Models.HoaDon", "HoaDon")
                         .WithMany()
                         .HasForeignKey("HoaDonId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("RestaurantManagement.API.Models.KhachHang", "KhachHang")
                         .WithMany()
@@ -2330,9 +2344,16 @@ namespace RestaurantManagement.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("RestaurantManagement.API.Models.Voucher", "Voucher")
+                        .WithMany()
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("HoaDon");
 
                     b.Navigation("KhachHang");
+
+                    b.Navigation("Voucher");
                 });
 
             modelBuilder.Entity("RestaurantManagement.API.Models.MonAn", b =>

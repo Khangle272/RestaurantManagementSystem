@@ -6,6 +6,7 @@
     <div class="d-flex justify-content-between mb-3"><h3 class="h6">@(Model.Id == 0 ? "Mã voucher mới" : Model.Ma)</h3><button type="button" class="btn btn-sm btn-outline-danger remove-voucher">Xóa mã</button></div>
     @if (Model.Id > 0) { <p class="small text-muted">Đã phát hành / giữ trực tiếp: @Model.SoVeDaPhatHanh vé · Đã dùng / giữ trên hóa đơn: @Model.SoLuotDaDung lượt.</p> }
     <div class="row g-3">
+        <div class="col-md-4"><label asp-for="DiemCanDoi" class="form-label">Điểm đổi voucher</label><input asp-for="DiemCanDoi" type="number" min="0" step="1" class="form-control" /><span asp-validation-for="DiemCanDoi" class="text-danger"></span><div class="form-text">0: thu thập miễn phí. Lớn hơn 0: khách phải đổi điểm để nhận vào ví. Mỗi khách đổi mỗi mã một lần.</div></div>
         <div class="col-md-4"><label asp-for="Ma" class="form-label">Mã giảm giá</label><input asp-for="Ma" class="form-control text-uppercase" maxlength="40" placeholder="THANG10-50K" /></div>
         <div class="col-md-4"><label asp-for="BatDau" class="form-label">Bắt đầu</label><input asp-for="BatDau" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control voucher-start" /></div>
         <div class="col-md-4"><label asp-for="KetThuc" class="form-label">Kết thúc</label><input asp-for="KetThuc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control voucher-end" /></div>

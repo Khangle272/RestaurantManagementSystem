@@ -162,6 +162,9 @@ public static class CustomerPromotionSmoke
         check((await Get(walkInClient,"/KhachHang")).Contains("CUSTOMER-WALK-IN-BILL"),"Customer can log in to the provisioned account and see their pre-existing order");
         parentLimited.DangSuDung=false;await db.SaveChangesAsync();
 
+        await LoyaltyRedemptionSmoke.Run(db, admin, customer, stranger, owner.Id, otherCustomer.Id,
+            Bill, hidden, check, connection);
+
         void AddRow(Dictionary<string,string> target,int i,string code,string scope,string type,string amount) {
             var prefix=$"Vouchers[{i}].";target[prefix+"Ma"]=code;target[prefix+"PhamVi"]=scope;target[prefix+"KieuGiam"]=type;target[prefix+"GiaTri"]=amount;
             target[prefix+"BatDau"]=Date(day);target[prefix+"KetThuc"]=Date(day.AddDays(2));target[prefix+"DangSuDung"]="true";

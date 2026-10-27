@@ -116,6 +116,8 @@ public class MonAnSelectionItem
 
 public class CampaignVoucherForm
 {
+    [Range(0, int.MaxValue, ErrorMessage = "Điểm đổi voucher phải là số nguyên không âm.")]
+    public int DiemCanDoi { get; set; }
     public int SoVeDaPhatHanh { get; set; }
     public int SoLuotDaDung { get; set; }
     public int Id { get; set; }

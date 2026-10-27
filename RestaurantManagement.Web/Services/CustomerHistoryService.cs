@@ -9,6 +9,8 @@ public class CustomerHistoryService(RestaurantDbContext db)
 {
     // Earn on the net purchase value, including the portion already paid as a deposit.
     public const decimal AmountPerPoint = 10000m;
+    public Task<int> BalanceAsync(int customerId) => db.LichSuTichDiem
+        .Where(x => x.KhachHangId == customerId).SumAsync(x => x.SoDiem);
     public static void EarnPoints(RestaurantDbContext db, HoaDon bill)
     {
         if (bill.KhachHangId is not int customerId || bill.TongTienHang <= 0) return;
@@ -33,9 +35,9 @@ public class CustomerHistoryService(RestaurantDbContext db)
         orderPage = Math.Clamp(orderPage, 1, orderPages); pointPage = Math.Clamp(pointPage, 1, pointPages);
         return new CustomerHistoryViewModel {
             Customer = customer, IsAdmin = admin, TotalSpent = spent,
-            Balance = await points.SumAsync(x => (int?)x.SoDiem) ?? 0,
+            Balance = await BalanceAsync(customerId),
             Orders = await orders.Include(x => x.ChiTiet).OrderByDescending(x => x.ThoiDiemLap).ThenByDescending(x => x.Id).Skip((orderPage - 1) * 15).Take(15).ToListAsync(),
-            Points = await points.Include(x => x.HoaDon).OrderByDescending(x => x.ThoiDiem).ThenByDescending(x => x.Id).Skip((pointPage - 1) * 15).Take(15).ToListAsync(),
+            Points = await points.Include(x => x.HoaDon).Include(x => x.Voucher).OrderByDescending(x => x.ThoiDiem).ThenByDescending(x => x.Id).Skip((pointPage - 1) * 15).Take(15).ToListAsync(),
             OrderPage = orderPage, OrderPages = orderPages, PointPage = pointPage, PointPages = pointPages, Status = status
         };
     }

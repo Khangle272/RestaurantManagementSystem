@@ -23,7 +23,8 @@ public class KhachHangController(RestaurantDbContext db, UserManager<TaiKhoan> u
     }
     public async Task<IActionResult> Vouchers(bool wallet = false) {
         var id = await CustomerId(); if (id is null) return Forbid();
-        ViewBag.Wallet = wallet; return View(await vouchers.ListAsync(id.Value, wallet));
+        ViewBag.Wallet = wallet; ViewBag.PointBalance = await history.BalanceAsync(id.Value);
+        return View(await vouchers.ListAsync(id.Value, wallet));
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Collect(int id) {
@@ -31,6 +32,13 @@ public class KhachHangController(RestaurantDbContext db, UserManager<TaiKhoan> u
         var error = await vouchers.CollectAsync(customerId.Value, id);
         TempData[error is null ? "Success" : "Error"] = error ?? "Đã lưu voucher vào ví.";
         return RedirectToAction(nameof(Vouchers), new { wallet = true });
+    }
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Redeem(int id, int expectedPoints) {
+        var customerId = await CustomerId(); if (customerId is null) return Forbid();
+        var error = await vouchers.RedeemAsync(customerId.Value, id, expectedPoints);
+        TempData[error is null ? "Success" : "Error"] = error ?? "Đã đổi điểm và nhận voucher vào ví.";
+        return RedirectToAction(nameof(Vouchers), new { wallet = error is null });
     }
     public async Task<IActionResult> Order(int id) {
         var customerId = await CustomerId(); if (customerId is null) return Forbid();

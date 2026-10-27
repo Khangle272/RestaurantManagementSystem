@@ -63,7 +63,7 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
                 MucGiamToiDa = v.GiaTri.HasValue ? v.MucGiamToiDa : p.MucGiamToiDa,
                 GiaTriToiThieu = v.GiaTri.HasValue ? v.GiaTriToiThieu : p.GiaTriToiThieu,
                 GioiHanTongLuot = v.GioiHanTongLuot, GioiHanPhatHanh = v.GioiHanPhatHanh,
-                KhachHangId = v.KhachHangId, DangSuDung = v.DangSuDung,
+                KhachHangId = v.KhachHangId, DangSuDung = v.DangSuDung, DiemCanDoi = v.DiemCanDoi,
                 SelectedMonAnIds = v.GiaTri.HasValue ? v.MonApDung.Select(m => m.MonAnId).ToList() : parentDishes
             }).ToList()
         };
@@ -128,6 +128,8 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
                     var saved = await VoucherInventory.IssuedAsync(db, old.Id);
                     if (v.GioiHanTongLuot < uses || v.GioiHanPhatHanh < saved) Error(prefix + "Ma", "Giới hạn phải đủ cho số vé đã phát hành và lượt đang dùng.");
                     if ((saved > 0 || await db.HoaDon.AnyAsync(x => x.VoucherId == old.Id)) && (old.Ma != v.Ma || old.KhachHangId != v.KhachHangId)) Error(prefix + "Ma", "Mã đã phát hành/sử dụng phải giữ nguyên mã và khách nhận.");
+                    if ((saved > 0 || await db.HoaDon.AnyAsync(x => x.VoucherId == old.Id)) && old.DiemCanDoi != v.DiemCanDoi)
+                        Error(prefix + "DiemCanDoi", "Mã đã phát hành/sử dụng phải giữ nguyên điểm đổi. Hãy tạo mã mới để đổi mức điểm.");
                 }
             }
             // Do not silently invalidate issued child periods when shortening a campaign.
@@ -161,6 +163,7 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
                 v.MucGiamToiDa = row.MucGiamToiDa; v.GiaTriToiThieu = row.GiaTriToiThieu;
                 v.GioiHanTongLuot = row.GioiHanTongLuot; v.GioiHanPhatHanh = row.GioiHanPhatHanh;
                 v.KhachHangId = row.KhachHangId; v.DangSuDung = row.DangSuDung;
+                v.DiemCanDoi = row.DiemCanDoi;
                 var wanted = row.PhamVi == PhamViUuDai.MonAn ? row.SelectedMonAnIds.Distinct().ToHashSet() : [];
                 db.VoucherMon.RemoveRange(v.MonApDung.Where(m => !wanted.Contains(m.MonAnId)));
                 foreach (var dish in wanted.Except(v.MonApDung.Select(m => m.MonAnId)).ToList()) v.MonApDung.Add(new VoucherMon { MonAnId = dish });
