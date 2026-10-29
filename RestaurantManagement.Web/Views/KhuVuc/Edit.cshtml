@@ -4,6 +4,7 @@
 <form method="post" asp-action="Edit"><input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /><div asp-validation-summary="All" class="text-danger"></div>
 <div class="mb-3"><label asp-for="TenKhuVuc" class="form-label">Tên khu vực</label><input asp-for="TenKhuVuc" class="form-control" /></div>
 <div class="mb-3"><label asp-for="Tang" class="form-label">Tầng (0 = tầng trệt)</label><input asp-for="Tang" class="form-control" type="number" min="0" max="99" /></div>
+<div class="mb-3"><label asp-for="TienCocGiuCho" class="form-label">Tiền đặt cọc giữ chỗ (đ)</label><input asp-for="TienCocGiuCho" class="form-control" type="number" min="0" step="1000" /><div class="form-text">Áp dụng khi khách chỉ đặt giữ chỗ, không đặt món trước. Có đặt món trước thì tiền đặt cọc tính theo % tổng giá trị món.</div></div>
 <div class="form-check mb-3"><input asp-for="LaPhongVip" class="form-check-input" /><label asp-for="LaPhongVip" class="form-check-label">Phòng VIP</label></div>
 <div class="form-check mb-4"><input asp-for="DangSuDung" class="form-check-input" /><label asp-for="DangSuDung" class="form-check-label">Đang sử dụng</label></div>
 <button class="btn btn-success">Lưu khu vực</button><a asp-action="Index" class="btn btn-outline-secondary ms-2">Hủy</a></form></div></section>

@@ -157,9 +157,9 @@
                                                     </button>
                                                 </form>
                                             }
-                                            @if (item.TrangThai == TrangThaiCheBien.ChoCheBien && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                                            @if (item.TrangThai is TrangThaiCheBien.ChoCheBien or TrangThaiCheBien.DangCheBien && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
                                             {
-                                                <form asp-action="CapNhatMon" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn hủy món này không?');">
+                                                <form asp-action="CapNhatMon" method="post" class="d-inline" onsubmit="return confirm('Hủy món này? Màn hình bếp sẽ báo ngay để bếp dừng chế biến.');">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="id" value="@item.Id" />
                                                     <input type="hidden" name="hoaDonId" value="@Model.Id" />
@@ -275,7 +275,7 @@
                     else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && canPay)
                     {
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
-                            💳 Thanh toán ngay (Tiền mặt / QR / Thẻ)
+                            💳 Thanh toán (Tiền mặt / Chuyển khoản)
                         </a>
                     }
                     else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)

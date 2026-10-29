@@ -24,8 +24,16 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
         return Json(new { slots = result.Slots, available = selected.Available, message = selected.Message });
     }
     [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> BanTrong(DateTime gioDen, int soNguoi = 2, int? maKhuVuc = null)
+    {
+        if (!ModelState.IsValid) return BadRequest(new { message = "Giờ đến hoặc số khách không hợp lệ." });
+        var (error, items) = await tables.TableAvailability(gioDen, soNguoi, maKhuVuc, -15);
+        return error is null ? Json(new { tables = items }) : BadRequest(new { message = error });
+    }
+
+    [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> Index(int? khuVucId, int? tang, int? datBanId, bool fragment = false,
-        int? preferredTableId = null, DateOnly? ngay = null, TimeOnly? gio = null, string? ca = null, bool dialog = false)
+        int? preferredTableId = null, DateOnly? ngay = null, TimeOnly? gio = null, string? ca = null, bool dialog = false, string? trangThai = null)
     {
         if (datBanId.HasValue && !User.IsInRole(AppRoles.Admin) && !User.IsInRole(AppRoles.TiepTan)) return Forbid();
         var booking = datBanId is int id ? await Db.DatBan.SingleOrDefaultAsync(x => x.Id == id) : null;
@@ -54,8 +62,9 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
             .OrderBy(x => x.KhuVuc.Tang).ThenBy(x => x.KhuVuc.TenKhuVuc).ThenBy(x => x.MaBan).ToListAsync();
         var tableIds = items.Select(x => x.Id).ToArray();
         var dayStart = TableService.VietnamTime(day.ToDateTime(TimeOnly.MinValue)); var dayEnd = dayStart.AddDays(1);
+        // Chỉ quét đơn của đúng ngày đang xem; lượt đã ăn xong/thanh toán/hoàn tất không hiện lại trên sơ đồ.
         var links = await tables.BlockingBookings().Include(x => x.DatBan).Where(x => tableIds.Contains(x.BanAnId)
-            && x.DatBan.GioDen >= dayStart && x.DatBan.GioDen < dayEnd)
+            && x.DatBan.GioDen >= dayStart && x.DatBan.GioDen < dayEnd && x.DatBan.ThoiDiemKetThuc == null)
             .ToListAsync();
         var conflicts = await tables.OverlappingBookings(from, until, datBanId).Where(x => tableIds.Contains(x.BanAnId)).Select(x => new { x.BanAnId, x.DatBanId }).ToListAsync();
         var physicalBusy = await tables.PhysicalBusyTables(from, datBanId);
@@ -99,6 +108,24 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
                     && x.GioDen < dayStart && x.Ban.Any(b => tableIds.Contains(b.BanAnId)))
                 .OrderBy(x => x.GioDen).Take(50).ToListAsync();
             model.PendingServices = pending.Select(x => new ServiceReview(x, VersionOf(x))).ToList();
+        }
+        model.StatusFilter = booking is not null ? "tat-ca"
+            : trangThai is "dang-phuc-vu" or "dat-truoc" or "trong" or "tat-ca" ? trangThai : "can-xu-ly";
+        if (model.StatusFilter != "tat-ca")
+        {
+            var now = DateTimeOffset.UtcNow;
+            bool Serving(TableCard c) => c.Occupant is not null || (isLive && c.DisplayStatus == TrangThaiBan.DangPhucVu);
+            bool Upcoming(TableCard c) => c.ScheduledBookings.Any(b => b.TrangThai is TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.ChoCoc
+                && b.GioKetThucDuKien > now && (isLive || (b.GioDen < model.Until && b.GioKetThucDuKien > model.From)));
+            var visible = model.Tables.Where(c => model.StatusFilter switch
+            {
+                "dang-phuc-vu" => Serving(c),
+                "dat-truoc" => Upcoming(c),
+                "trong" => !Serving(c) && !Upcoming(c) && !c.NeedsInspection && c.UnavailableReason is null,
+                _ => Serving(c) || Upcoming(c) || c.NeedsInspection
+            }).ToList();
+            model.HiddenTables = model.Tables.Count - visible.Count;
+            model.Tables = visible;
         }
         if (model.CanAssign)
         {

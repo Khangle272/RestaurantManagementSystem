@@ -38,6 +38,8 @@ public class DatBanCreateVM : IValidatableObject
     public int? MaKhuVuc { get; set; }
 
     public List<SelectListItem> KhuVucOptions { get; set; } = [];
+    // Bàn/phòng khách tự chọn trên sơ đồ.
+    public int? BanAnId { get; set; }
     public Guid? RequestId { get; set; }
     public bool ChuanBiTruoc { get; set; }
     public bool YeuCauTrangTri { get; set; }

@@ -262,7 +262,7 @@ public static class OrderSmoke
         var orderDetailView = await Get(waiter, $"/DonHang/Details/{tableBill.Id}");
         var orderDetailText = WebUtility.HtmlDecode(orderDetailView);
         check(orderDetailText.Contains("Đã xong (Sẵn sàng)"), "Waiter sees ready dish on order details");
-        check(WebUtility.HtmlDecode(await Get(waiter, $"/HoaDon/Details/{tableBill.Id}")).Contains("Xử lý thanh toán đa hình thức"),
+        check(WebUtility.HtmlDecode(await Get(waiter, $"/HoaDon/Details/{tableBill.Id}")).Contains("Thanh toán phần còn lại"),
             "Waiter can open the invoice payment page");
         var deniedInvoiceList = await waiter.GetAsync("/HoaDon");
         check(deniedInvoiceList.StatusCode == HttpStatusCode.Forbidden
@@ -322,8 +322,8 @@ public static class OrderSmoke
         check(await orders.ProcessPaymentAsync(invalidPayment, deliveryBill.NhanVienId) is not null, "Payment rejects a malformed invoice token");
         var deliveryPaymentPage = await Get(cashier, $"/HoaDon/Details/{deliveryBill.Id}");
         var deliveryPaymentText = WebUtility.HtmlDecode(deliveryPaymentPage);
-        check(deliveryPaymentText.Contains("Chuyển khoản QR") && deliveryPaymentText.Contains("VietQR"),
-            "Cashier views VietQR payment option on invoice page");
+        check(deliveryPaymentText.Contains("Chuyển khoản ngân hàng") && !deliveryPaymentText.Contains("Thẻ ngân hàng / POS"),
+            "Cashier sees only cash and bank transfer options on invoice page");
         check(decimal.TryParse(hidden(deliveryPaymentPage,"SoTienPhaiThuDuKien"),System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.InvariantCulture,out var deliveryDue)
             && deliveryDue==250000, "Payment preview preserves existing discount and matches collection amount");
 
@@ -344,22 +344,29 @@ public static class OrderSmoke
         await db.SaveChangesAsync();
         var takeawayPaymentPage = await Get(cashier, $"/HoaDon/Details/{takeawayBill.Id}");
         var takeawayPaymentText = WebUtility.HtmlDecode(takeawayPaymentPage);
-        check(takeawayPaymentText.Contains("Thẻ ngân hàng / POS"), "Cashier views POS card payment option");
+        check(!takeawayPaymentText.Contains("Thẻ ngân hàng / POS"), "POS card option is hidden until a real payment gateway exists");
 
         await Post(cashier, "/HoaDon/ThanhToan", takeawayPaymentPage, new()
         {
             ["Id"] = takeawayBill.Id.ToString(),
             ["RowVersion"] = await Version(takeawayBill),
             ["PhuongThuc"] = "The",
-            ["LoaiThe"] = "Visa",
-            ["SoThe4SoCuoi"] = "1234",
             ["MaGiaoDich"] = "POS-AUTH-888"
         });
         await db.Entry(takeawayBill).ReloadAsync();
-        check(takeawayBill.TrangThai == TrangThaiHoaDon.DaThanhToan && takeawayBill.PhuongThucThanhToan == PhuongThucThanhToan.The
-            && takeawayBill.MaGiaoDich != null && takeawayBill.MaGiaoDich.Contains("Visa") && takeawayBill.MaGiaoDich.Contains("1234"),
-            "Takeaway order paid via POS card with card details and approval code");
-        check(takeawayBill.TienGiam == 4000 && takeawayBill.TienKhachDua == 126000, "Card payment preserves existing discount");
+        check(takeawayBill.TrangThai == TrangThaiHoaDon.ChuaThanhToan, "Card payment is rejected: only cash and bank transfer are accepted");
+        await Post(cashier, "/HoaDon/ThanhToan", await Get(cashier, $"/HoaDon/Details/{takeawayBill.Id}"), new()
+        {
+            ["Id"] = takeawayBill.Id.ToString(),
+            ["RowVersion"] = await Version(takeawayBill),
+            ["PhuongThuc"] = "ChuyenKhoan",
+            ["MaGiaoDich"] = "CK-888"
+        });
+        await db.Entry(takeawayBill).ReloadAsync();
+        check(takeawayBill.TrangThai == TrangThaiHoaDon.DaThanhToan && takeawayBill.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan
+            && takeawayBill.TienGiam == 4000 && takeawayBill.TienKhachDua == 126000, "Bank transfer payment preserves existing discount");
+        check(await db.ChiTietThanhToan.AnyAsync(x => x.HoaDonId == takeawayBill.Id && x.LoaiGiaoDich == LoaiGiaoDichThanhToan.ThanhToan
+            && x.HinhThuc == PhuongThucThanhToan.ChuyenKhoan && x.SoTien == 126000), "Final payment is recorded in ChiTietThanhToan");
 
         // 11. Test Multi-Payment: Cash on Table Order with Change Calculation
         booking.TienCocDaNop = 50000;

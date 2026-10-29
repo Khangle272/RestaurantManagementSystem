@@ -63,11 +63,11 @@ public static class TableSmoke
         var arrival = TableService.VietnamNow.AddDays(4).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm");
         await Post(customer, "/DatBan", await Get(customer, "/DatBan"), new()
         { ["HoTen"] = "Khách sở hữu", ["SoDienThoai"] = "0903333444", ["ThoiGianDen"] = arrival,
-          ["SoNguoi"] = "2", ["MaKhuVuc"] = area.Id.ToString() });
+          ["SoNguoi"] = "2", ["MaKhuVuc"] = area.Id.ToString(), ["BanAnId"] = TestTables.For(db, area.Id, arrival) });
         var customerId = await db.KhachHang.Where(x => x.Email == "khach.demo@example.test").Select(x => x.Id).SingleAsync();
         var own = await db.DatBan.SingleAsync(x => x.HoTenLienHe == "Khách sở hữu");
         check(own.KhachHangId == customerId && own.KhuVucUuTienId == area.Id && own.TrangThai == TrangThaiDatBan.ChoCoc
-            && own.TienCocYeuCau == 299000m,
+            && own.TienCocYeuCau == area.TienCocGiuCho,
             "Customer booking belongs to authenticated account, stores preference and waits for the automatically calculated deposit");
         check((await Get(customer, "/DatBan/LichSu")).Contains(own.MaDatBan), "Customer sees own reservation without phone lookup");
         using (var anonymous = newClient())

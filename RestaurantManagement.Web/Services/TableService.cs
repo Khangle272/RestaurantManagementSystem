@@ -6,6 +6,8 @@ using RestaurantManagement.API.Models;
 
 namespace RestaurantManagement.Web.Services;
 
+public sealed record TableAvailabilityItem(int Id, string MaBan, int KhuVucId, string KhuVuc, bool Vip, int SoCho, string TrangThai, string GhiChu, decimal TienCoc);
+
 // Shared by the reservation queue and floor board so both enforce the same lifecycle.
 public class TableService(RestaurantDbContext db, PreorderService preorders, IKhoService? khoService = null)
 {
@@ -118,9 +120,47 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         return (available, available ? "Còn bàn phù hợp trong ca. Hệ thống kiểm tra lại khi lưu." : "Không còn bàn phù hợp trong ca này. Chọn ngày, ca hoặc khu vực khác.");
     }
 
-    // Caller owns the serializable transaction; reserve before asking the customer for money.
-    public async Task<string?> ReserveOnlineWithinTransaction(DatBan booking)
+    // Sơ đồ bàn/phòng theo ngày + ca để khách hoặc lễ tân tự chọn đúng bàn mình muốn.
+    public async Task<(string? Error, List<TableAvailabilityItem> Tables)> TableAvailability(DateTime arrival, int guests, int? areaId, int leadMinutes = 30)
     {
+        if (guests is < 1 or > 50) return ("Chọn từ 1 đến 50 khách.", []);
+        if (ReservationSchedule.Validate(arrival, VietnamNow, leadMinutes) is { } error) return (error, []);
+        var from = VietnamTime(arrival);
+        var tables = await db.BanAn.AsNoTracking().Include(x => x.KhuVuc)
+            .Where(x => x.KhuVuc.DangSuDung && x.TrangThai != TrangThaiBan.NgungSuDung && (!areaId.HasValue || x.KhuVucId == areaId))
+            .OrderBy(x => x.KhuVuc.LaPhongVip).ThenBy(x => x.KhuVuc.Tang).ThenBy(x => x.KhuVuc.TenKhuVuc).ThenBy(x => x.MaBan).ToListAsync();
+        var busy = await OverlappingBookings(from, ReservationSchedule.EndOf(arrival)).Select(x => x.BanAnId).Distinct().ToListAsync();
+        busy.AddRange(await PhysicalBusyTables(from));
+        return (null, tables.Select(t =>
+        {
+            var status = busy.Contains(t.Id) ? "da-dat" : t.SoChoNgoi < guests ? "khong-du-cho" : "trong";
+            var note = status switch { "da-dat" => "Đã kín trong ca này", "khong-du-cho" => $"Chỉ {t.SoChoNgoi} chỗ, không đủ {guests} khách", _ => "Còn trống" };
+            return new TableAvailabilityItem(t.Id, t.MaBan, t.KhuVucId, t.KhuVuc.TenKhuVuc, t.KhuVuc.LaPhongVip, t.SoChoNgoi, status, note, t.KhuVuc.TienCocGiuCho);
+        }).ToList());
+    }
+
+    // Caller owns the serializable transaction; reserve before asking the customer for money.
+    public async Task<string?> ReserveOnlineWithinTransaction(DatBan booking, int? chosenTableId = null)
+    {
+        var guestCount = booking.SoNguoiLon + booking.SoTreEm;
+        // Khách đã chọn bàn trên sơ đồ: giữ đúng bàn đó, không tự gán bàn khác.
+        if (chosenTableId is int tableId)
+        {
+            var chosenTable = (await LockTables([tableId])).SingleOrDefault();
+            if (chosenTable is null || !chosenTable.KhuVuc.DangSuDung || chosenTable.TrangThai == TrangThaiBan.NgungSuDung)
+                return "Bàn đã chọn không còn sử dụng. Vui lòng chọn bàn khác trên sơ đồ.";
+            if (chosenTable.SoChoNgoi < guestCount) return $"Bàn {chosenTable.MaBan} chỉ có {chosenTable.SoChoNgoi} chỗ. Vui lòng chọn bàn lớn hơn.";
+            var taken = await OverlappingBookings(booking.GioDen, BlockingUntil(booking), booking.Id).AnyAsync(x => x.BanAnId == tableId)
+                || (await PhysicalBusyTables(booking.GioDen, booking.Id)).Contains(tableId);
+            if (taken) return $"Bàn {chosenTable.MaBan} vừa có người đặt trong ca này. Vui lòng chọn bàn khác trên sơ đồ.";
+            booking.KhuVucUuTienId = chosenTable.KhuVucId;
+            booking.YeuCauVip = chosenTable.KhuVuc.LaPhongVip;
+            foreach (var link in booking.Ban.Where(x => x.BanAnId != tableId).ToList())
+            { db.ChiTietDatBan.Remove(link); booking.Ban.Remove(link); }
+            if (!booking.Ban.Any(x => x.BanAnId == tableId)) booking.Ban.Add(new ChiTietDatBan { BanAnId = tableId });
+            return null;
+        }
+        if (booking.Ban.Count == 1 && await ReserveOnlineWithinTransaction(booking, booking.Ban.Single().BanAnId) is null) return null;
         var candidates = await db.BanAn.Where(x => x.KhuVuc.DangSuDung && x.TrangThai != TrangThaiBan.NgungSuDung
             && (!booking.KhuVucUuTienId.HasValue || x.KhuVucId == booking.KhuVucUuTienId)
             && x.KhuVuc.LaPhongVip == booking.YeuCauVip).Select(x => x.Id).ToListAsync();
@@ -130,8 +170,7 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
             .Select(x => x.BanAnId).Distinct().ToListAsync();
         busy.AddRange(await PhysicalBusyTables(booking.GioDen, booking.Id));
         var available = tables.Where(x => !busy.Contains(x.Id));
-        var guests = booking.SoNguoiLon + booking.SoTreEm;
-        var chosen = PickTables(available, guests);
+        var chosen = PickTables(available, guestCount);
         if (chosen is null) return "Khung giờ/khu vực này không còn đủ bàn phù hợp. Chọn giờ hoặc khu vực khác; bạn chưa phải thanh toán.";
         var chosenIds = chosen.Select(x => x.Id).ToArray();
         foreach (var link in booking.Ban.Where(x => !chosenIds.Contains(x.BanAnId)).ToList())

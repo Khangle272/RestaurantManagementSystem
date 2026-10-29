@@ -6,40 +6,47 @@
     var reception = admin || User.IsInRole("TiepTan");
     var staffOrder = admin || User.IsInRole("BoiBan") || User.IsInRole("ThuNgan") || User.IsInRole("TiepTan");
     var warehouse = admin || User.IsInRole("Kho");
+    var cashier = admin || User.IsInRole("ThuNgan");
+    var kitchen = admin || User.IsInRole("Bep");
+    // Menu theo luồng công việc: Đặt bàn → Gọi món & Bếp → Thu ngân → Thực đơn → Kho → Báo cáo → Hệ thống.
     var entries = new (string Group, string Controller, string Action, string Label, bool Allowed)[] {
-        ("Tài khoản", "Account", "Index", "Thông tin cá nhân", true),
-        ("Tài khoản", "NhanVien", "Index", "Quản lý nhân viên", admin),
-        ("Tài khoản", "NhanVien", "PhanQuyen", "Ma trận phân quyền", admin),
-        ("Tài khoản", "TaiKhoanKhachHang", "Index", "Quản lý khách hàng", admin),
-        ("Bàn & Đặt bàn", "SoDoBan", "Index", "Sơ đồ bàn", reception || User.IsInRole("BoiBan")),
-        ("Bàn & Đặt bàn", "QuanLyDatBan", "Index", "Yêu cầu đặt bàn", reception),
-        ("Thực đơn", "MonAn", "Index", admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức", admin || User.IsInRole("Bep")),
-        ("Thực đơn", "DanhMuc", "Index", "Quản lý danh mục món", admin),
-        ("Khuyến mãi & Voucher", "KhuyenMai", "Index", "Chương trình khuyến mãi", admin),
-        ("Vận hành", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
-        ("Vận hành", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
-        ("Vận hành", "Bep", "Index", "Bếp chế biến", admin || User.IsInRole("Bep")),
-        ("Vận hành", "HoaDon", "Index", "Hóa đơn & Thanh toán", admin || User.IsInRole("ThuNgan")),
-        ("Vận hành", "DatTruoc", "Index", "Đối chiếu cọc đặt bàn", admin || User.IsInRole("ThuNgan")),
-        ("Vận hành", "CauHinhQr", "Index", "Ảnh QR nhận cọc", admin),
-        ("Quản lý Kho", "Kho", "TonKho", "Theo dõi tồn kho", warehouse),
-        ("Quản lý Kho", "NhapKho", "Index", "Phiếu nhập kho", warehouse),
-        ("Quản lý Kho", "XuatKho", "Index", "Xuất kho chế biến", warehouse),
-        ("Quản lý Kho", "ThanhLy", "Index", "Thanh lý nguyên liệu", warehouse),
-        ("Quản lý Kho", "Kho", "BaoCao", "Báo cáo Nhập-Xuất-Tồn", warehouse),
-        ("Quản lý Kho", "NhaCungCap", "Index", "Nhà cung cấp", warehouse),
-        ("Quản lý Kho", "NguyenLieu", "Index", "Danh mục nguyên liệu", warehouse),
-        ("Báo cáo & Thống kê", "BaoCao", "Index", "Tổng quan kinh doanh", admin),
-        ("Báo cáo & Thống kê", "ThongKeDatBan", "Index", "Đặt bàn & dự trù nguyên liệu", reception || warehouse || User.IsInRole("Bep")),
-        ("Báo cáo & Thống kê", "BaoCao", "DoanhThu", "Báo cáo doanh thu", admin),
-        ("Báo cáo & Thống kê", "BaoCao", "MonBanChay", "Món ăn bán chạy", admin),
-        ("Báo cáo & Thống kê", "BaoCao", "TonKho", "Tồn kho tổng hợp", admin || warehouse),
-        ("Báo cáo & Thống kê", "BaoCao", "HieuQuaKhuyenMai", "Hiệu quả khuyến mãi", admin),
-        ("Đánh giá khách hàng", "QuanLyDatBan", "DanhGia", "Đánh giá khách hàng", reception)
+        ("Tổng quan", "BaoCao", "Index", "Tổng quan kinh doanh", admin),
+        ("Đặt bàn & Phục vụ", "SoDoBan", "Index", "Sơ đồ bàn", reception || User.IsInRole("BoiBan")),
+        ("Đặt bàn & Phục vụ", "QuanLyDatBan", "Create", "Đặt bàn cho khách", reception),
+        ("Đặt bàn & Phục vụ", "QuanLyDatBan", "Index", "Danh sách đặt bàn", reception),
+        ("Gọi món & Bếp", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
+        ("Gọi món & Bếp", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
+        ("Gọi món & Bếp", "Bep", "Index", "Màn hình bếp (KDS)", kitchen),
+        ("Thu ngân", "HoaDon", "Index", "Hóa đơn & Thanh toán", cashier),
+        ("Thu ngân", "DatTruoc", "Index", "Đối chiếu tiền đặt cọc", cashier),
+        ("Thu ngân", "BaoCao", "NopCa", "Báo cáo nộp ca", cashier),
+        ("Thực đơn & Khuyến mãi", "MonAn", "Index", admin ? "Món ăn" : "Chuẩn bị món & công thức", kitchen),
+        ("Thực đơn & Khuyến mãi", "DanhMuc", "Index", "Danh mục món", admin),
+        ("Thực đơn & Khuyến mãi", "KhuyenMai", "Index", "Khuyến mãi & Voucher", admin),
+        ("Kho", "Kho", "TonKho", "Tồn kho", warehouse),
+        ("Kho", "NhapKho", "Index", "Nhập kho", warehouse),
+        ("Kho", "XuatKho", "Index", "Xuất kho chế biến", warehouse),
+        ("Kho", "ThanhLy", "Index", "Thanh lý nguyên liệu", warehouse),
+        ("Kho", "NguyenLieu", "Index", "Nguyên liệu", warehouse),
+        ("Kho", "NhaCungCap", "Index", "Nhà cung cấp", warehouse),
+        ("Kho", "Kho", "BaoCao", "Báo cáo Nhập-Xuất-Tồn", warehouse),
+        ("Báo cáo quản lý", "BaoCao", "DoanhThu", "Doanh thu tháng / năm", admin),
+        ("Báo cáo quản lý", "BaoCao", "MonBanChay", "Món bán chạy", admin),
+        ("Báo cáo quản lý", "BaoCao", "HieuQuaKhuyenMai", "Hiệu quả khuyến mãi", admin),
+        ("Báo cáo quản lý", "BaoCao", "TonKho", "Tồn kho tổng hợp", admin || warehouse),
+        ("Báo cáo quản lý", "ThongKeDatBan", "Index", "Đặt bàn & dự trù nguyên liệu", reception || warehouse || User.IsInRole("Bep")),
+        ("Báo cáo quản lý", "QuanLyDatBan", "DanhGia", "Đánh giá khách hàng", reception),
+        ("Hệ thống", "NhanVien", "Index", "Nhân viên", admin),
+        ("Hệ thống", "NhanVien", "PhanQuyen", "Phân quyền", admin),
+        ("Hệ thống", "TaiKhoanKhachHang", "Index", "Khách hàng thành viên", admin),
+        ("Hệ thống", "KhuVuc", "Index", "Khu vực & tiền đặt cọc", admin),
+        ("Hệ thống", "BanAn", "Index", "Cấu hình bàn", admin),
+        ("Hệ thống", "CauHinhQr", "Index", "Tài khoản nhận chuyển khoản", admin),
+        ("Hệ thống", "Account", "Index", "Thông tin cá nhân", true)
     };
     bool IsActive(string targetController, string targetAction) =>
         (controller == targetController || (targetController == "NhanVien" && controller == "TaiKhoanNhanVien"))
-        && (targetController != "QuanLyDatBan" || (action == "DanhGia") == (targetAction == "DanhGia"))
+        && (targetController != "QuanLyDatBan" || (action is "Create" or "DanhGia" ? action == targetAction : targetAction == "Index"))
         && (targetController != "DonHang" || action == targetAction)
         && (targetController != "Kho" || action == targetAction)
         && (targetController != "NhanVien" || action == targetAction)
@@ -58,6 +65,13 @@
         ("BaoCao", "MonBanChay") => "bi-trophy",
         ("BaoCao", "TonKho") => "bi-archive",
         ("BaoCao", "HieuQuaKhuyenMai") => "bi-pie-chart",
+        ("BaoCao", "NopCa") => "bi-clipboard-check",
+        ("QuanLyDatBan", "Create") => "bi-calendar-plus",
+        ("DatTruoc", _) => "bi-piggy-bank",
+        ("KhuVuc", _) => "bi-diagram-3",
+        ("BanAn", _) => "bi-table",
+        ("CauHinhQr", _) => "bi-bank",
+        ("ThongKeDatBan", _) => "bi-clipboard-data",
         ("SoDoBan", _) => "bi-grid-3x3-gap",
         ("QuanLyDatBan", "Index") => "bi-calendar-check",
         ("QuanLyDatBan", "DanhGia") => "bi-star-half",

@@ -18,7 +18,7 @@ public class KhuVucController(RestaurantDbContext db) : ManagementControllerBase
         if (id == 0) return View(new AreaFormViewModel());
         var area = await Db.KhuVuc.FindAsync(id);
         return area is null ? NotFound() : View(new AreaFormViewModel { Id = area.Id, TenKhuVuc = area.TenKhuVuc, Tang = area.Tang,
-            LaPhongVip = area.LaPhongVip, DangSuDung = area.DangSuDung, RowVersion = VersionOf(area) });
+            LaPhongVip = area.LaPhongVip, TienCocGiuCho = area.TienCocGiuCho, DangSuDung = area.DangSuDung, RowVersion = VersionOf(area) });
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(AreaFormViewModel model)
@@ -37,7 +37,7 @@ public class KhuVucController(RestaurantDbContext db) : ManagementControllerBase
             ModelState.AddModelError("", "Khu vực còn lịch đã xác nhận. Chuyển lịch sang khu vực khác trước.");
         if (ModelState.IsValid && (model.Id == 0 || ApplyVersion(area, model.RowVersion)))
         {
-            area.TenKhuVuc = model.TenKhuVuc; area.Tang = model.Tang; area.LaPhongVip = model.LaPhongVip; area.DangSuDung = model.DangSuDung;
+            area.TenKhuVuc = model.TenKhuVuc; area.Tang = model.Tang; area.LaPhongVip = model.LaPhongVip; area.TienCocGiuCho = model.TienCocGiuCho; area.DangSuDung = model.DangSuDung;
             if (model.Id == 0) Db.KhuVuc.Add(area);
             if (await SaveAsync(nameof(model.TenKhuVuc), "Khu vực đã tồn tại.")) return RedirectToAction(nameof(Index));
         }

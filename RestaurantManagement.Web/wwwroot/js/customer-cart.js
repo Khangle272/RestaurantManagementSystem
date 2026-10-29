@@ -63,7 +63,7 @@
         const total = items.reduce((sum, item) => sum + details(item).price * item.quantity, 0) + sent.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
         byId('cart-count').textContent = items.reduce((sum, item) => sum + item.quantity, 0) + sent.reduce((sum, item) => sum + Number(item.quantity), 0);
         byId('cart-total').textContent = money(total);
-        if (byId('booking-deposit-preview')) byId('booking-deposit-preview').textContent = loading ? 'Đang tính…' : money(total > 0 ? Math.ceil(total * .5) : 299000);
+        if (byId('booking-deposit-preview')) byId('booking-deposit-preview').textContent = loading ? 'Đang tính…' : (window.bookingDepositPreview ? window.bookingDepositPreview(total) : money(total > 0 ? Math.ceil(total * .5) : 0));
         byId('cart-version').value = version;
         byId('cart-request-id').value = requestId;
         document.querySelectorAll('[data-cart-inputs]').forEach(container => {

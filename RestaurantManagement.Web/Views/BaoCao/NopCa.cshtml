@@ -1,0 +1,92 @@
+@model RestaurantManagement.Web.Models.BaoCaoNopCaViewModel
+@using RestaurantManagement.API.Models
+@using RestaurantManagement.Web.Services
+@{
+    ViewData["Title"] = "Báo cáo nộp ca";
+    string Money(decimal value) => value.ToString("N0") + " đ";
+}
+<style media="print">
+    .admin-sidebar, .admin-topbar, .no-print, nav, header, footer { display: none !important; }
+    .admin-main { margin: 0 !important; padding: 0 !important; }
+</style>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Báo cáo nộp ca — @Model.Ngay.ToString("dd/MM/yyyy")</h1>
+        <p class="text-muted mb-0">Dòng tiền thực thu trong ngày theo từng ca (lấy từ bảng Chi tiết thanh toán). Tiền đặt cọc tính vào ngày khách nộp cọc, không cộng lại vào ngày khách đến ăn.</p>
+    </div>
+    <button type="button" class="btn btn-primary no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i>In phiếu nộp ca</button>
+</div>
+
+<form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-4 no-print">
+    <div><label class="form-label small" for="report-day">Ngày</label><input id="report-day" type="date" name="ngay" value="@Model.Ngay.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div><label class="form-label small" for="report-shift">Xem chi tiết giao dịch</label><select id="report-shift" name="ca" class="form-select">
+        <option value="">Cả ngày</option>
+        @foreach (var slot in ReservationSchedule.Slots) { <option value="@slot.Id" selected="@(Model.CaId == slot.Id)">@slot.Name</option> }
+    </select></div>
+    <button class="btn btn-success">Xem báo cáo</button>
+    <a asp-action="NopCa" class="btn btn-outline-secondary">Hôm nay</a>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Tiền mặt phải nộp (cả ngày)</div><div class="fs-3 fw-bold text-success">@Money(Model.TongTienMat)</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Chuyển khoản đã vào tài khoản</div><div class="fs-3 fw-bold text-primary">@Money(Model.TongChuyenKhoan)</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Tổng thực thu ngày @Model.Ngay.ToString("dd/MM")</div><div class="fs-3 fw-bold">@Money(Model.TongThucThu)</div></div></div></div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3"><h2 class="h6 fw-bold mb-0">Tổng hợp theo ca</h2></div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light small">
+                <tr><th>Ca</th><th class="text-end">Thu cọc</th><th class="text-end">Thanh toán dứt điểm</th><th class="text-end">Hoàn cọc</th><th class="text-end">Tiền mặt</th><th class="text-end">Chuyển khoản</th>@if (Model.TongKhac != 0) { <th class="text-end">Khác (cũ)</th> }<th class="text-end">Tổng ca</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.TheoCa)
+            {
+                <tr>
+                    <td><strong>@row.TenCa</strong> <span class="small text-muted">(@row.KhungGio · @row.SoGiaoDich giao dịch)</span></td>
+                    <td class="text-end small">TM @Money(row.CocTienMat)<br />CK @Money(row.CocChuyenKhoan)</td>
+                    <td class="text-end small">TM @Money(row.ThanhToanTienMat)<br />CK @Money(row.ThanhToanChuyenKhoan)</td>
+                    <td class="text-end small text-danger">@(row.HoanTienMat + row.HoanChuyenKhoan > 0 ? "-" + Money(row.HoanTienMat + row.HoanChuyenKhoan) : "0 đ")</td>
+                    <td class="text-end fw-bold text-success">@Money(row.TienMat)</td>
+                    <td class="text-end fw-bold text-primary">@Money(row.ChuyenKhoan)</td>
+                    @if (Model.TongKhac != 0) { <td class="text-end">@Money(row.Khac)</td> }
+                    <td class="text-end fw-bold">@Money(row.Tong)</td>
+                </tr>
+            }
+            </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr><td colspan="4">TỔNG NGÀY</td><td class="text-end text-success">@Money(Model.TongTienMat)</td><td class="text-end text-primary">@Money(Model.TongChuyenKhoan)</td>@if (Model.TongKhac != 0) { <td class="text-end">@Money(Model.TongKhac)</td> }<td class="text-end">@Money(Model.TongThucThu)</td></tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between"><h2 class="h6 fw-bold mb-0">Chi tiết giao dịch @(Model.CaId is null ? "cả ngày" : ReservationSchedule.Slots.First(x => x.Id == Model.CaId).Name.ToLower())</h2><span class="badge bg-light text-dark border">@Model.GiaoDich.Count giao dịch</span></div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light small"><tr><th>Giờ</th><th>Mã thanh toán</th><th>Hóa đơn / đặt bàn</th><th>Loại giao dịch</th><th>Hình thức</th><th>Thu ngân</th><th class="text-end">Số tiền</th></tr></thead>
+            <tbody>
+            @foreach (var p in Model.GiaoDich)
+            {
+                <tr>
+                    <td>@p.GioThanhToan.ToString("HH:mm")</td>
+                    <td class="font-monospace small">@p.MaThanhToan</td>
+                    <td class="small">
+                        @if (p.HoaDon is not null) { <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@p.HoaDonId">@p.HoaDon.MaHoaDon</a> }
+                        @if (p.DatBan is not null) { <div class="text-muted">@p.DatBan.MaDatBan · @p.DatBan.HoTenLienHe</div> }
+                    </td>
+                    <td><span class="badge @(p.LoaiGiaoDich switch { LoaiGiaoDichThanhToan.DatCoc => "bg-info text-dark", LoaiGiaoDichThanhToan.ThanhToan => "bg-success", _ => "bg-danger" })">@PaymentLedger.LoaiText(p.LoaiGiaoDich)</span></td>
+                    <td>@PaymentLedger.HinhThucText(p.HinhThuc)</td>
+                    <td class="small">@(p.NhanVien?.HoTen ?? "—")</td>
+                    <td class="text-end fw-semibold @(p.LoaiGiaoDich == LoaiGiaoDichThanhToan.HoanCoc ? "text-danger" : "")">@Money(PaymentLedger.SignedAmount(p))</td>
+                </tr>
+            }
+            @if (Model.GiaoDich.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">Chưa có giao dịch thu/chi trong ngày/ca này.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+<p class="small text-muted mt-3">Ca trưa: giao dịch trước @ReservationSchedule.Slots[1].Start.ToString("HH:mm"); ca tối: từ @ReservationSchedule.Slots[1].Start.ToString("HH:mm"). Ký xác nhận: Thu ngân ................ · Quản lý ................</p>

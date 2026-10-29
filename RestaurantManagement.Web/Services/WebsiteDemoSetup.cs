@@ -142,7 +142,7 @@ public static class WebsiteDemoSetup
             if (i == 0) booking.TrangThai = TrangThaiDatBan.ChoXacNhan;
             if (i is 1 or 2)
             {
-                booking.TrangThai = TrangThaiDatBan.ChoCoc; ReservationDepositPolicy.Apply(booking, 0);
+                booking.TrangThai = TrangThaiDatBan.ChoCoc; ReservationDepositPolicy.Apply(booking, 0, area.TienCocGiuCho);
                 if (i == 2) { booking.ThoiDiemBaoChuyenKhoan = now; booking.SoTienKhachBao = booking.TienCocYeuCau; booking.MaGiaoDichKhachBao = $"DEMO-{today:MMdd}-COC"; }
             }
             if (i is 3 or 4)
@@ -151,7 +151,7 @@ public static class WebsiteDemoSetup
                 foreach (var size in sizes.Take(2)) booking.MonDatTruoc.Add(new MonDatTruoc { MonAnId = size.MonAnId, MonAnSizeId = size.Id,
                     TenMonLucDat = size.MonAn.TenMon, TenSizeLucDat = size.TenSize, SoLuong = 2, DonGiaThoaThuan = size.GiaBan, YeuCauCheBien = "Ít cay, nước sốt để riêng" });
                 booking.YeuCauCoc = booking.CocTuDong = true;
-                booking.TienCocYeuCau = booking.TienCocDaNop = ReservationDepositPolicy.Calculate(booking.MonDatTruoc.Sum(x => x.SoLuong * x.DonGiaThoaThuan));
+                booking.TienCocYeuCau = booking.TienCocDaNop = ReservationDepositPolicy.Calculate(booking.MonDatTruoc.Sum(x => x.SoLuong * x.DonGiaThoaThuan), area.TienCocGiuCho);
                 booking.TrangThaiCoc = TrangThaiCoc.DaCoc; booking.ThoiDiemCoc = now;
             }
             if (i == 5) { booking.TrangThai = TrangThaiDatBan.DaHuy; booking.ThoiDiemHuy = now; booking.LyDoHuy = "Khách đổi kế hoạch (demo)"; booking.NhanVienHuyId = reception.Id; }

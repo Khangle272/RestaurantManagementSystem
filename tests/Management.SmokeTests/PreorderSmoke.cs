@@ -73,6 +73,7 @@ public static class PreorderSmoke
             ["Items[0].MonAnId"] = dish.Id.ToString(), ["Items[0].MonAnSizeId"] = size.Id.ToString(), ["Items[0].SoLuong"] = "1",
             ["Items[0].YeuCauCheBien"] = "PREORDER-FIFO-FIRST", ["Items[0].DonGiaThoaThuan"] = "1"
         };
+        createFields["BanAnId"] = TestTables.For(db, null, createFields["ThoiGianDen"]);
         await Ajax(customer, "/DatBan", customerForm, createFields);
         var early = await db.DatBan.SingleAsync(x => x.YeuCauTaoId == createId);
         var earlyId = early.Id;

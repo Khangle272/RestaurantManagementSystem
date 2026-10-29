@@ -2,9 +2,8 @@
 @using RestaurantManagement.Web.Services
 @{ ViewData["Title"] = "Đặt bàn cho khách"; }
 <div class="mb-3"><a asp-controller="SoDoBan" asp-action="Index" class="text-muted">← Sơ đồ bàn</a></div>
-<section class="card border-0 shadow-sm" style="max-width:860px"><div class="card-body p-4"><h1 class="h3 mb-2">Đặt bàn cho khách</h1><p class="text-muted">Tiếp nhận khách gọi điện, nhắn tin hoặc khách đến trực tiếp. Sau khi lưu, chọn bàn trên sơ đồ để xác nhận.</p>
-<form method="post" asp-action="Create" data-ajax-form="true" data-slot-url="@Url.Action("KhungGio", "SoDoBan")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="-15" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")"><div asp-validation-summary="All" class="text-danger" role="alert"></div><div class="row g-3">
-<input asp-for="BanAnId" type="hidden" />
+<section class="card border-0 shadow-sm" style="max-width:860px"><div class="card-body p-4"><h1 class="h3 mb-2">Đặt bàn cho khách</h1><p class="text-muted">Tiếp nhận khách gọi điện, nhắn tin hoặc khách đến trực tiếp. Chọn khu vực, xem sơ đồ bàn/phòng trống theo ngày và ca, rồi bấm chọn đúng bàn khách muốn.</p>
+<form method="post" asp-action="Create" data-ajax-form="true" data-table-picker-url="@Url.Action("BanTrong", "SoDoBan")" data-slot-url="@Url.Action("KhungGio", "SoDoBan")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="-15" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")"><div asp-validation-summary="All" class="text-danger" role="alert"></div><div class="row g-3">
 @if (Model.RequestedTableName is not null) { <div class="col-12"><div class="alert alert-success mb-0">Bàn dự kiến: <strong>@Model.RequestedTableName</strong><br /><span class="small">Chưa giữ bàn. Sau khi lưu, chọn đúng một bàn đủ chỗ; hệ thống kiểm tra lại lịch khi xác nhận.</span></div></div> }
 <div class="col-md-6"><label asp-for="HoTen" class="form-label">Họ tên khách</label><input asp-for="HoTen" class="form-control" /></div>
 <div class="col-md-6"><label asp-for="SoDienThoai" class="form-label">Số điện thoại</label><input asp-for="SoDienThoai" class="form-control" type="tel" /></div>
@@ -17,7 +16,16 @@
 <div class="col-md-3"><label asp-for="SoNguoi" class="form-label">Số khách</label><input asp-for="SoNguoi" class="form-control" min="1" max="50" /></div>
 <p class="small text-muted col-12 mb-0">Phục vụ liên tục @ReservationSchedule.ServiceHours. Mỗi ca gợi ý một giờ sớm nhất có thể nhận theo thời gian hiện tại; vẫn được nhập giờ nhận khách thực tế. Không bắt khách chọn đúng giờ gợi ý.</p>
 <p id="slot-status" class="small text-muted col-12" role="status">Đang kiểm tra bàn theo giờ đã chọn…</p>
-<div class="col-12"><label asp-for="KhuVucId" class="form-label">Khu vực ưu tiên</label><select asp-for="KhuVucId" class="form-select"><option value="">Không yêu cầu</option>@foreach (var area in Model.Areas) { <option value="@area.Id">@area.TenKhuVuc · tầng @area.Tang</option> }</select></div>
+<div class="col-12"><label asp-for="KhuVucId" class="form-label">Khu vực / loại phòng</label><select asp-for="KhuVucId" class="form-select"><option value="">Xem tất cả khu vực</option>@foreach (var area in Model.Areas.OrderBy(x => x.LaPhongVip).ThenBy(x => x.TenKhuVuc)) { <option value="@area.Id">@area.TenKhuVuc · tầng @area.Tang @(area.LaPhongVip ? "· VIP" : "") · cọc giữ chỗ @area.TienCocGiuCho.ToString("N0")đ</option> }</select></div>
+<div class="col-12"><div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><span class="form-label fw-semibold mb-0">Chọn bàn / phòng <span class="text-danger">*</span></span>
+    <div class="table-picker-legend"><span class="lg-free">Còn trống</span><span class="lg-busy">Đã kín</span><span class="lg-small">Không đủ chỗ</span><span class="lg-picked">Đang chọn</span></div></div>
+    <input type="hidden" name="BanAnId" value="@Model.BanAnId" />
+    <div data-table-picker aria-live="polite"></div>
+    <p data-table-picker-summary class="small fw-semibold mb-0 mt-2" role="status"></p><span asp-validation-for="BanAnId" class="text-danger small"></span>
+</div>
+<div class="col-12"><label class="form-check"><input asp-for="KhachDenNgay" class="form-check-input" /> <span class="form-check-label">Khách đến ăn ngay (walk-in), không cần tiền đặt cọc</span></label>
+    <p class="small text-muted mb-0">Khách đặt trước không đặt món: tiền đặt cọc theo khu vực của bàn đã chọn. Thu ngân ghi nhận tiền đặt cọc (tiền mặt/chuyển khoản) trong mục "Món &amp; cọc".</p></div>
 <div class="col-12"><label asp-for="GhiChu" class="form-label">Ghi chú / yêu cầu của khách</label><textarea asp-for="GhiChu" class="form-control" rows="3"></textarea></div>
-</div><button class="btn btn-success mt-4">Lưu và chọn bàn</button><a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-secondary mt-4 ms-2">Hủy</a></form></div></section>
-@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/reservation-slots.js" asp-append-version="true"></script> }
+</div><button class="btn btn-success mt-4">Lưu đặt bàn</button><a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-secondary mt-4 ms-2">Hủy</a></form></div></section>
+@section Styles { <link rel="stylesheet" href="~/css/table-picker.css" asp-append-version="true" /> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/reservation-slots.js" asp-append-version="true"></script><script src="~/js/table-picker.js" asp-append-version="true"></script> }

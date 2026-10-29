@@ -19,6 +19,9 @@ public class TableBoardViewModel
     public TimeOnly ScheduleTime { get; set; }
     public string SlotId { get; set; } = "now";
     public bool IsLive { get; set; }
+    // Bộ lọc trạng thái: can-xu-ly (mặc định), dang-phuc-vu, dat-truoc, trong, tat-ca.
+    public string StatusFilter { get; set; } = "can-xu-ly";
+    public int HiddenTables { get; set; }
     public List<DatBan> Requests { get; set; } = [];
     public List<ServiceReview> PendingServices { get; set; } = [];
     public bool CanAssign => Booking is not null && Booking.GioKetThucDuKien > DateTimeOffset.UtcNow
@@ -57,6 +60,7 @@ public class ReceptionBookingViewModel
     [StringLength(1000)] public string? GhiChu { get; set; }
     public List<KhuVuc> Areas { get; set; } = [];
     public int? BanAnId { get; set; }
+    public bool KhachDenNgay { get; set; }
     public string? RequestedTableName { get; set; }
 }
 public class AreaFormViewModel
@@ -65,6 +69,7 @@ public class AreaFormViewModel
     [Required, StringLength(100)] public string TenKhuVuc { get; set; } = "";
     [Range(0, 99)] public int Tang { get; set; } = 1;
     public bool LaPhongVip { get; set; }
+    [Range(0, 100000000)] public decimal TienCocGiuCho { get; set; } = 200000;
     public bool DangSuDung { get; set; } = true;
     public string? RowVersion { get; set; }
 }

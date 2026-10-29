@@ -204,3 +204,34 @@ public class HieuQuaKhuyenMaiItem
         }
     }
 }
+
+// Báo cáo nộp ca: dòng tiền thực thu/chi trong ngày theo ca, tách tiền mặt và chuyển khoản.
+public class BaoCaoNopCaViewModel
+{
+    public DateOnly Ngay { get; set; }
+    public string? CaId { get; set; }
+    public List<NopCaRow> TheoCa { get; set; } = [];
+    public List<ChiTietThanhToan> GiaoDich { get; set; } = [];
+    public decimal TongTienMat => TheoCa.Sum(x => x.TienMat);
+    public decimal TongChuyenKhoan => TheoCa.Sum(x => x.ChuyenKhoan);
+    public decimal TongKhac => TheoCa.Sum(x => x.Khac);
+    public decimal TongThucThu => TheoCa.Sum(x => x.Tong);
+}
+
+public class NopCaRow
+{
+    public string CaId { get; set; } = "";
+    public string TenCa { get; set; } = "";
+    public string KhungGio { get; set; } = "";
+    public int SoGiaoDich { get; set; }
+    public decimal CocTienMat { get; set; }
+    public decimal CocChuyenKhoan { get; set; }
+    public decimal ThanhToanTienMat { get; set; }
+    public decimal ThanhToanChuyenKhoan { get; set; }
+    public decimal HoanTienMat { get; set; }
+    public decimal HoanChuyenKhoan { get; set; }
+    public decimal Khac { get; set; }
+    public decimal TienMat => CocTienMat + ThanhToanTienMat - HoanTienMat;
+    public decimal ChuyenKhoan => CocChuyenKhoan + ThanhToanChuyenKhoan - HoanChuyenKhoan;
+    public decimal Tong => TienMat + ChuyenKhoan + Khac;
+}

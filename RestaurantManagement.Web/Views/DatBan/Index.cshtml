@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-slot-url="@Url.Action("KhungGio")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="30" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")">
+        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-table-picker-url="@Url.Action("SoDoBanTrong")" data-preorder-rate="@ReservationDepositPolicy.PreorderRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-slot-url="@Url.Action("KhungGio")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="30" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")">
             @Html.AntiForgeryToken()
             <input type="hidden" name="RequestId" value="@Model.RequestId" />
             <div data-cart-inputs></div>
@@ -33,15 +33,15 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 id="booking-menu-title" class="h5 mb-0">Món đã chọn</h2><a asp-controller="Home" asp-action="Index" asp-route-cart="new" asp-fragment="thuc-don" class="btn btn-sm btn-outline-restaurant">Chọn / bổ sung món</a></div>
                 <ul id="booking-cart-summary" class="mb-2"></ul>
                 <p class="mb-2">Tiền món tham khảo: <strong id="booking-cart-total">0 ₫</strong></p>
-                <p class="mb-2">Cọc dự kiến: <strong id="booking-deposit-preview">299.000đ</strong></p>
+                <p class="mb-2">Tiền đặt cọc dự kiến: <strong id="booking-deposit-preview">—</strong></p>
                 <div class="form-check mb-2"><input asp-for="ChuanBiTruoc" class="form-check-input" id="booking-prepare" /><label class="form-check-label" for="booking-prepare">Muốn chuẩn bị trước</label></div>
-                <p class="small text-muted mb-0">Tiếp theo: kiểm tra còn bàn và thanh toán cọc. Có món đặt trước: cọc 50% tổng tiền món; chưa chọn món: 299.000đ/lịch. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
+                <p class="small text-muted mb-0">Có đặt món trước: tiền đặt cọc = @ReservationDepositPolicy.PreorderRateText tổng giá trị món. Chỉ đặt giữ chỗ: tiền đặt cọc theo khu vực/loại bàn bạn chọn bên dưới. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
                 <button type="button" class="btn btn-link p-0 mt-2" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer">Sửa số lượng / ghi chú món</button>
             </section>
 
             <div class="row g-4">
                 <!-- CỘT 1: THỜI GIAN & KHÔNG GIAN -->
-                <div class="col-lg-5">
+                <div class="col-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
                             <div class="d-flex align-items-center">
@@ -90,10 +90,10 @@
                             <!-- Khu vực ưu tiên -->
                             <div class="mb-2">
                                 <label asp-for="MaKhuVuc" class="form-label fw-semibold text-secondary">
-                                    <i class="bi bi-geo-alt me-1"></i>Khu vực mong muốn
+                                    <i class="bi bi-geo-alt me-1"></i>Khu vực / loại phòng
                                 </label>
                                 <select asp-for="MaKhuVuc" asp-items="Model.KhuVucOptions" class="form-select form-select-lg border-2">
-                                    <option value="">-- Tùy chọn khu vực phù hợp --</option>
+                                    <option value="">-- Xem tất cả khu vực --</option>
                                 </select>
                                 <label class="d-block mt-3"><input asp-for="YeuCauTrangTri" class="form-check-input me-2" /> Tôi muốn trao đổi thêm về trang trí bàn</label>
                             </div>
@@ -101,8 +101,22 @@
                     </div>
                 </div>
 
+                <div class="col-12">
+            <section class="card border-0 shadow-sm rounded-4 bg-white" aria-labelledby="table-picker-title"><div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h2 id="table-picker-title" class="h5 fw-bold mb-0"><i class="bi bi-grid-3x3-gap me-1"></i>Chọn bàn / phòng <span class="text-danger">*</span></h2>
+                    <div class="table-picker-legend"><span class="lg-free">Còn trống</span><span class="lg-busy">Đã kín</span><span class="lg-small">Không đủ chỗ</span><span class="lg-picked">Bàn bạn chọn</span></div>
+                </div>
+                <p class="small text-muted">Sơ đồ hiển thị đúng ngày và ca bạn chọn. Chọn khu vực (ví dụ Phòng VIP) để chỉ xem các phòng của khu vực đó, rồi bấm vào bàn/phòng còn trống.</p>
+                <input type="hidden" name="BanAnId" value="@Model.BanAnId" />
+                <div data-table-picker aria-live="polite"></div>
+                <p data-table-picker-summary class="small fw-semibold mb-0 mt-2" role="status"></p>
+                <span asp-validation-for="BanAnId" class="text-danger small"></span>
+            </div></section>
+                </div>
+
                 <!-- CỘT 2: THÔNG TIN LIÊN HỆ & XÁC NHẬN -->
-                <div class="col-lg-7">
+                <div class="col-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
                             <div class="d-flex align-items-center">
@@ -188,6 +202,7 @@
     </div>
 </div>
 
+@section Styles { <link rel="stylesheet" href="~/css/table-picker.css" asp-append-version="true" /> }
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -204,4 +219,5 @@
         });
     </script>
     <script src="~/js/reservation-slots.js" asp-append-version="true"></script>
+    <script src="~/js/table-picker.js" asp-append-version="true"></script>
 }

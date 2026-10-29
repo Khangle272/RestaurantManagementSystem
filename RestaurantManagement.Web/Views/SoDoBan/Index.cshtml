@@ -31,6 +31,13 @@
     <div><label for="area" class="form-label small">Khu vực</label><select id="area" name="khuVucId" class="form-select"><option value="">Tất cả khu vực</option>
         @foreach (var area in Model.Areas) { <option value="@area.Id" selected="@(area.Id == Model.AreaId)">@area.TenKhuVuc · tầng @area.Tang</option> }
     </select></div>
+    <div><label for="status-filter" class="form-label small">Trạng thái bàn</label><select id="status-filter" name="trangThai" class="form-select" disabled="@(Model.Booking is not null)">
+        <option value="can-xu-ly" selected="@(Model.StatusFilter == "can-xu-ly")">Cần xử lý (đặt trước sắp tới + đang phục vụ)</option>
+        <option value="dang-phuc-vu" selected="@(Model.StatusFilter == "dang-phuc-vu")">Đang phục vụ</option>
+        <option value="dat-truoc" selected="@(Model.StatusFilter == "dat-truoc")">Đặt trước sắp tới giờ</option>
+        <option value="trong" selected="@(Model.StatusFilter == "trong")">Bàn trống</option>
+        <option value="tat-ca" selected="@(Model.StatusFilter == "tat-ca")">Tất cả bàn</option>
+    </select></div>
     <button class="btn btn-success">Lọc sơ đồ</button><a asp-action="Index" asp-route-datBanId="@Model.Booking?.Id" asp-route-preferredTableId="@Model.PreferredTableId" class="btn btn-outline-secondary">Bỏ lọc</a>
     <span id="board-refresh" class="small text-muted ms-auto" role="status">Tự cập nhật mỗi 10 giây</span>
 </form>

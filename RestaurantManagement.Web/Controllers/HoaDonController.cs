@@ -59,6 +59,10 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
             ? await new RestaurantManagement.Web.Services.CustomerVoucherService(db, promotionService).ListAsync(invoice.KhachHangId.Value, true)
             : new List<RestaurantManagement.Web.Services.CustomerVoucherItem>();
         ViewBag.Customer = invoice.KhachHangId.HasValue ? await db.KhachHang.AsNoTracking().SingleOrDefaultAsync(x => x.Id == invoice.KhachHangId) : null;
+        // Các đợt thanh toán của hóa đơn: cọc nhận trước (theo lịch đặt bàn) + thanh toán dứt điểm.
+        ViewBag.Payments = await db.ChiTietThanhToan.AsNoTracking()
+            .Where(x => x.HoaDonId == id || (invoice.DatBanId != null && x.DatBanId == invoice.DatBanId && x.HoaDonId == null))
+            .OrderBy(x => x.NgayThanhToan).ThenBy(x => x.GioThanhToan).ToListAsync();
         return View(invoice);
     }
 
@@ -68,15 +72,16 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
     {
         var bill = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == id);
         if (bill is null) return NotFound();
-        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.KhachHangId.HasValue || bill.VoucherId.HasValue) return BadRequest();
+        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.VoucherId.HasValue) return BadRequest();
         var bytes = new byte[8];
         if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, bytes, out var length) || length != 8
             || !bytes.SequenceEqual(db.Entry(bill).Property<byte[]>("RowVersion").CurrentValue ?? [])) return Conflict("Hóa đơn đã thay đổi. Vui lòng tải lại.");
-        var customer = await db.KhachHang.SingleOrDefaultAsync(x => x.SoDienThoai == phone.Trim() && x.DangSuDung);
-        if (customer is null) TempData["Error"] = "Chưa có hồ sơ khách hàng với số điện thoại này.";
+        // Số điện thoại là duy nhất: tra ra mã khách hàng và mở ví voucher, không cần khách đăng nhập tại quầy.
+        var customer = await db.KhachHang.SingleOrDefaultAsync(x => x.SoDienThoai == (phone ?? "").Trim() && x.DangSuDung);
+        if (customer is null) TempData["Error"] = $"Số {phone} chưa là khách hàng thành viên. Thanh toán bình thường, không áp mã.";
         else {
             bill.KhachHangId = customer.Id;
-            try { await db.SaveChangesAsync(); TempData["Success"] = "Đã gắn khách hàng để sử dụng ví voucher và tích điểm."; }
+            try { await db.SaveChangesAsync(); TempData["Success"] = $"Khách hàng: {customer.HoTen} (mã KH {customer.Id}). Chọn voucher trong ví bên dưới nếu có."; }
             catch (DbUpdateConcurrencyException) { TempData["Error"] = "Hóa đơn đã thay đổi. Vui lòng tải lại."; }
         }
         return RedirectToAction(nameof(Details), new { id });

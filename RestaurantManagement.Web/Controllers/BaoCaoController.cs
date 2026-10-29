@@ -18,6 +18,16 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
         return View(model);
     }
 
+    // Thu ngân kết ca: kiểm tiền mặt / chuyển khoản theo ngày và ca, không cần biểu đồ.
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    public async Task<IActionResult> NopCa(DateOnly? ngay, string? ca)
+    {
+        var day = ngay ?? DateOnly.FromDateTime(TableService.VietnamNow);
+        if (day.Year is < 2000 or > 2100) return BadRequest("Ngày không hợp lệ.");
+        if (ca is not null && ReservationSchedule.Slots.All(x => x.Id != ca)) ca = null;
+        return View(await baoCaoService.GetShiftReportAsync(day, ca));
+    }
+
     [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DoanhThu(string? cheDo, DateTime? tuNgay, DateTime? denNgay, int? nam)
     {

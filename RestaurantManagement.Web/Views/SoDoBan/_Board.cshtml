@@ -1,9 +1,12 @@
 @model TableBoardViewModel
 @using RestaurantManagement.API.Models
 @using RestaurantManagement.Web.Services
+@if (Model.HiddenTables > 0) {
+    <p class="small text-muted mb-3"><i class="bi bi-funnel me-1"></i>Đang ẩn @Model.HiddenTables bàn không cần xử lý theo bộ lọc. Chọn "Tất cả bàn" để xem toàn bộ.</p>
+}
 @if (Model.IsLive && Model.PendingServices.Count > 0) {
-    <section class="alert alert-warning" aria-label="Lượt khách cũ cần xử lý">
-        <h2 class="h6">Lượt cũ chưa xác nhận hoàn tất</h2>
+    <details class="alert alert-light border small mb-3" aria-label="Lượt khách cũ cần xử lý">
+        <summary>@Model.PendingServices.Count lượt của ngày trước chưa đóng sổ (không tính vào sơ đồ hôm nay)</summary>
         <p class="small">Các lượt này không phải khách đang dùng bàn hôm nay và không khóa lịch ngày tương lai. Xử lý tiền/món/cọc rồi xác nhận hoàn tất. Hiển thị tối đa 50 lượt cũ nhất trong khu vực đang lọc.</p>
         @foreach (var review in Model.PendingServices) {
             var old = review.Booking;
@@ -23,7 +26,7 @@
                 </div>
             </div>
         }
-    </section>
+    </details>
 }
 @foreach (var group in Model.Tables.GroupBy(x => x.Table.KhuVucId)) {
     var area = group.First().Table.KhuVuc;
@@ -80,4 +83,4 @@
     }
     </div></section>
 }
-@if (Model.Tables.Count == 0) { <div class="alert alert-light border">Chưa có bàn trong khu vực này. Quản lý có thể thêm khu vực và bàn trong phần cấu hình.</div> }
+@if (Model.Tables.Count == 0) { <div class="alert alert-light border">@(Model.HiddenTables > 0 ? "Không có bàn nào cần xử lý trong ngày/ca đang xem." : "Chưa có bàn trong khu vực này. Quản lý có thể thêm khu vực và bàn trong phần cấu hình.")</div> }

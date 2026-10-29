@@ -115,7 +115,9 @@ public static class Week10BookingSmoke
         check(customerForm.Contains("data-server-now=")&&customerForm.Contains("data-time-error"),"Customer form supports immediate server-clock-based time validation");
         var onlineArrival=day.AddDays(30).ToDateTime(new(18,45));
         var requestId=hidden(customerForm[customerForm.IndexOf("id=\"formDatBan\"",StringComparison.Ordinal)..],"RequestId");
-        var onlineFields=new Dictionary<string,string>{["HoTen"]="W10-ONLINE",["SoDienThoai"]="0901234567",["SoNguoi"]="4",["MaKhuVuc"]=area.Id.ToString(),["ThoiGianDen"]=onlineArrival.ToString("yyyy-MM-ddTHH:mm"),["RequestId"]=requestId};
+        var onlineFields=new Dictionary<string,string>{["HoTen"]="W10-ONLINE",["SoDienThoai"]="0901234567",["SoNguoi"]="4",["MaKhuVuc"]=area.Id.ToString(),["ThoiGianDen"]=onlineArrival.ToString("yyyy-MM-ddTHH:mm"),["RequestId"]=requestId,
+            // Khách tự chọn bàn trên sơ đồ (không còn tự gán bàn).
+            ["BanAnId"]=(await db.BanAn.Where(x=>x.KhuVucId==area.Id&&x.SoChoNgoi>=4&&x.TrangThai!=TrangThaiBan.NgungSuDung).OrderBy(x=>x.SoChoNgoi).Select(x=>x.Id).FirstAsync()).ToString()};
         check(await Post(customer,"/DatBan",customerForm,onlineFields)==HttpStatusCode.OK,"Direct customer POST accepts 18:45, not only suggested times");
         var online=await db.DatBan.SingleAsync(x=>x.HoTenLienHe=="W10-ONLINE");
         check(online.TrangThai==TrangThaiDatBan.ChoCoc&&online.TienCocDaNop==0&&online.TienCocYeuCau>0,"Free-time booking still requires real deposit verification");

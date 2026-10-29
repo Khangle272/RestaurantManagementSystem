@@ -76,11 +76,12 @@ public static class PaymentQrSmoke
         using (var create = await customer.PostAsync("/DatBan", new FormUrlEncodedContent(new Dictionary<string, string>
             { ["__RequestVerificationToken"] = hidden(bookingForm, "__RequestVerificationToken"), ["RequestId"] = request.ToString(),
                 ["HoTen"] = "QR smoke", ["SoDienThoai"] = "0901234567", ["SoNguoi"] = "2", ["MaKhuVuc"] = area.Id.ToString(),
+                ["BanAnId"] = TestTables.For(db, area.Id, TableService.VietnamNow.AddDays(2).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm")),
                 ["ThoiGianDen"] = TableService.VietnamNow.AddDays(2).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm") })))
             check(create.StatusCode == HttpStatusCode.Redirect, "Reservation with configured QR is created normally");
         var booking = await db.DatBan.AsNoTracking().SingleAsync(x => x.YeuCauTaoId == request);
         var checkout = await Page(customer, "/DatBan/ThanhToanCoc/" + booking.Id);
-        check(checkout.Contains(second) && !checkout.Contains("payment-qr-demo.svg") && checkout.Contains("299.000"), "Customer checkout uses uploaded QR and retains the authoritative deposit amount");
+        check(checkout.Contains(second) && !checkout.Contains("payment-qr-demo.svg") && checkout.Contains(booking.TienCocYeuCau.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))) || checkout.Contains(booking.TienCocYeuCau.ToString("N0")), "Customer checkout uses uploaded QR and retains the authoritative deposit amount");
         check(booking.TienCocDaNop == 0 && booking.TrangThai == TrangThaiDatBan.ChoCoc, "Uploading QR never confirms money or a booking");
     }
 }

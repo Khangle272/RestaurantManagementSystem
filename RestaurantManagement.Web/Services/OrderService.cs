@@ -427,15 +427,16 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         {
             // Waiter / Admin transitions:
             // SanSang -> DaPhucVu (mang ra bàn)
-            // ChoCheBien -> DaHuy (khách đổi ý hủy món trước khi nấu)
+            // ChoCheBien/DangCheBien -> DaHuy (khách đổi ý; bếp thấy món hủy trên KDS và dừng chế biến)
             valid = (item.TrangThai == TrangThaiCheBien.SanSang && newStatus == TrangThaiCheBien.DaPhucVu)
-                 || (item.TrangThai == TrangThaiCheBien.ChoCheBien && newStatus == TrangThaiCheBien.DaHuy);
+                 || (item.TrangThai is TrangThaiCheBien.ChoCheBien or TrangThaiCheBien.DangCheBien && newStatus == TrangThaiCheBien.DaHuy);
         }
 
         if (!valid)
             return $"Không thể chuyển trạng thái từ '{item.TrangThai}' sang '{newStatus}'.";
 
         item.TrangThai = newStatus;
+        if (newStatus == TrangThaiCheBien.DaHuy) item.ThoiDiemHuy = DateTimeOffset.UtcNow;
 
         // If cancelled, adjust invoice total
         if (newStatus == TrangThaiCheBien.DaHuy)
@@ -496,9 +497,10 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
                 return "Phiên bản hóa đơn không hợp lệ hoặc đã thay đổi. Vui lòng tải lại và đối chiếu.";
             if (invoice.DatBan is not null && !ApplyPaymentVersion(invoice.DatBan, form.BookingRowVersion))
                 return "Phiên bản đặt bàn đã thay đổi hoặc không hợp lệ. Vui lòng tải lại để đối chiếu tiền cọc.";
-            if (form.PhuongThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan or PhuongThucThanhToan.The)
+            // Chưa tích hợp cổng thanh toán: chỉ nhận tiền mặt và chuyển khoản ngân hàng (thu ngân đối chiếu).
+            if (form.PhuongThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan)
                 || form.TienKhachDua < 0 || cashierId <= 0)
-                return "Thông tin thanh toán không hợp lệ.";
+                return "Chỉ nhận thanh toán bằng tiền mặt hoặc chuyển khoản ngân hàng.";
             if (!await db.NhanVien.AnyAsync(x => x.Id == cashierId && x.DangLamViec))
                 return "Không tìm thấy nhân viên đang làm việc để ghi nhận thanh toán.";
 
@@ -529,17 +531,8 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             if (form.PhuongThuc != PhuongThucThanhToan.TienMat && form.SoTienPhaiThuDuKien is null
                 && discount != invoice.TienGiam)
                 return "Vui lòng tải lại hóa đơn sau khi thay đổi giảm giá để đối chiếu số tiền thanh toán.";
-            var last4 = form.SoThe4SoCuoi?.Trim();
-            if (form.PhuongThuc == PhuongThucThanhToan.The && !string.IsNullOrEmpty(last4)
-                && (last4.Length != 4 || last4.Any(c => c < '0' || c > '9')))
-                return "Vui lòng nhập đúng 4 số cuối của thẻ.";
             var reference = string.IsNullOrWhiteSpace(form.MaGiaoDich) ? null : form.MaGiaoDich.Trim();
             var transactionReference = form.PhuongThuc == PhuongThucThanhToan.TienMat ? null : reference;
-            if (form.PhuongThuc == PhuongThucThanhToan.The)
-            {
-                var cardType = string.IsNullOrWhiteSpace(form.LoaiThe) ? "Thẻ ngân hàng" : form.LoaiThe.Trim();
-                transactionReference = $"{cardType} *{last4 ?? "XXXX"}" + (reference is null ? "" : $" (Tham chiếu: {reference})");
-            }
             if (transactionReference?.Length > 100) return "Mã tham chiếu thanh toán quá dài.";
 
             invoice.TongTienHang = total;
@@ -562,6 +555,16 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             invoice.ThoiDiemThanhToan = DateTimeOffset.UtcNow;
             invoice.TrangThai = TrangThaiHoaDon.DaThanhToan;
             CustomerHistoryService.EarnPoints(db, invoice);
+            // Sổ chi tiết thanh toán: nối các đợt cọc đã nhận trước vào hóa đơn, rồi ghi đợt thanh toán dứt điểm hôm nay.
+            if (invoice.DatBanId is int ledgerBookingId)
+            {
+                var earlier = await db.ChiTietThanhToan.Where(x => x.DatBanId == ledgerBookingId && x.HoaDonId == null).ToListAsync();
+                foreach (var payment in earlier) payment.HoaDonId = invoice.Id;
+            }
+            if (amountDue > 0)
+                db.ChiTietThanhToan.Add(PaymentLedger.Create(LoaiGiaoDichThanhToan.ThanhToan, form.PhuongThuc, amountDue,
+                    invoice.Id, invoice.DatBanId, cashierId, transactionReference,
+                    deposit > 0 ? $"Đã trừ tiền đặt cọc {deposit:N0} đ" : null));
             await db.SaveChangesAsync();
             if (invoice.DatBanId is int finishedBookingId)
             {
