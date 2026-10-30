@@ -201,10 +201,12 @@
                 notify('Món ăn cần ít nhất 1 kích cỡ. Không thể xóa kích cỡ duy nhất!', false);
                 return;
             }
-            if (confirm('Bạn có chắc muốn xóa kích cỡ này cùng các định lượng bên trong?')) {
+            const ask = window.uxConfirm ?? (message => Promise.resolve(window.confirm(message)));
+            ask('Kích cỡ này cùng các định lượng bên trong sẽ bị xóa khỏi biểu mẫu.', { title: 'Xóa kích cỡ?', ok: 'Xóa kích cỡ' }).then(accepted => {
+                if (!accepted) return;
                 card?.remove();
                 indexAll(); renderCompare();
-            }
+            });
             return;
         }
 

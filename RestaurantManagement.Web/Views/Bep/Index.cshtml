@@ -47,13 +47,12 @@
         </div>
         @if (canClose)
         {
-            <form asp-action="KetThucNgay" method="post" onsubmit="return confirm('Kết thúc ngày bếp? Món chưa nấu của bill chưa thu tiền sẽ bị hủy, món đã nấu xong chuyển Đã phục vụ.');">
+            <form asp-action="KetThucNgay" method="post" data-confirm="Món chưa nấu của bill chưa thu tiền sẽ bị hủy, món đã nấu xong chuyển Đã phục vụ." data-confirm-title="Kết thúc ngày bếp?" data-confirm-ok="Kết thúc ngày">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-moon-stars me-1"></i>Kết thúc ngày bếp</button>
             </form>
         }
     </div>
-    @if (TempData["Success"] is string ok) { <div class="alert alert-success py-2">@ok</div> }
     <p class="small text-muted">Món của ngày trước được hệ thống tự đóng sổ lúc qua ngày mới, không còn treo trên màn hình bếp.</p>
 
     @if (cancelled.Count > 0)

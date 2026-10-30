@@ -179,12 +179,12 @@
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Chỉnh sửa thông tin">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái hợp tác của nhà cung cấp này?');">
+                                    <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline" data-confirm="Bạn có chắc muốn đổi trạng thái hợp tác của nhà cung cấp này?" data-confirm-title="Đổi trạng thái hợp tác" data-confirm-variant="warning">
                                         <button type="submit" class="btn @(item.DangSuDung ? "btn-outline-secondary" : "btn-outline-success")" title="@(item.DangSuDung ? "Tạm ngưng hợp tác" : "Kích hoạt hợp tác")">
                                             <i class="bi @(item.DangSuDung ? "bi-pause-fill" : "bi-play-fill")"></i>
                                         </button>
                                     </form>
-                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa nhà cung cấp này? Chỉ xóa được khi chưa có lịch sử nhập hàng.');">
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" data-confirm="Chỉ xóa được khi nhà cung cấp chưa có lịch sử nhập hàng. Thao tác này không thể hoàn tác." data-confirm-title="Xóa nhà cung cấp?" data-confirm-ok="Xóa">
                                         <button type="submit" class="btn btn-outline-danger" title="Xóa nhà cung cấp">
                                             <i class="bi bi-trash"></i>
                                         </button>

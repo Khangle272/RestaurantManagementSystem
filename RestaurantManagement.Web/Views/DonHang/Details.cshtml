@@ -159,7 +159,7 @@
                                             }
                                             @if (item.TrangThai is TrangThaiCheBien.ChoCheBien or TrangThaiCheBien.DangCheBien && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
                                             {
-                                                <form asp-action="CapNhatMon" method="post" class="d-inline" onsubmit="return confirm('Hủy món này? Màn hình bếp sẽ báo ngay để bếp dừng chế biến.');">
+                                                <form asp-action="CapNhatMon" method="post" class="d-inline" data-confirm="Màn hình bếp sẽ báo ngay để bếp dừng chế biến." data-confirm-title="Hủy món này?" data-confirm-ok="Hủy món" data-confirm-cancel="Giữ món">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="id" value="@item.Id" />
                                                     <input type="hidden" name="hoaDonId" value="@Model.Id" />

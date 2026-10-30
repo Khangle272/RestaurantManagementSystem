@@ -1,37 +1,15 @@
 (() => {
     'use strict';
 
-    // Success alerts disappear on their own; errors stay until dismissed.
+    // Thông báo thành công nằm trong trang (không phải thông báo nổi) tự ẩn sau 5 giây; lỗi giữ tới khi đóng.
+    // Chống bấm gửi hai lần và thông báo nổi được xử lý chung trong ux.js.
     document.querySelectorAll('.admin-main .alert-success.alert-dismissible').forEach(alert => {
+        if (alert.closest('.flash-stack')) return;
         setTimeout(() => {
             if (!document.body.contains(alert)) return;
             if (window.bootstrap?.Alert) window.bootstrap.Alert.getOrCreateInstance(alert).close();
             else alert.remove();
         }, 5000);
-    });
-
-    // Prevent double submits on regular (non-ajax) POST forms.
-    document.addEventListener('submit', event => {
-        const form = event.target;
-        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') return;
-        if (form.hasAttribute('data-ajax') || form.hasAttribute('data-pos-form') || form.dataset.noLock !== undefined) return;
-        setTimeout(() => {
-            if (event.defaultPrevented) return;
-            if (form.dataset.submitting === 'true') return;
-            form.dataset.submitting = 'true';
-            const button = event.submitter || form.querySelector('button[type="submit"]');
-            if (button) {
-                button.classList.add('is-loading');
-                button.setAttribute('aria-busy', 'true');
-            }
-            // Re-enable when returning via the back/forward cache.
-            window.addEventListener('pageshow', () => {
-                form.dataset.submitting = 'false';
-                button?.classList.remove('is-loading');
-                button?.removeAttribute('aria-busy');
-            }, { once: true });
-        }, 0);
-        if (form.dataset.submitting === 'true') event.preventDefault();
     });
 
     // Press "/" to jump to the first search box of the page.
@@ -46,10 +24,18 @@
         search.select?.();
     });
 
-    // Close the mobile menu after choosing a link.
-    const menu = document.getElementById('management-menu');
-    menu?.addEventListener('click', event => {
-        if (!event.target.closest('a.nav-link') || window.innerWidth >= 768) return;
-        window.bootstrap?.Collapse.getInstance(menu)?.hide();
+    // Gợi ý phím tắt "/" ngay trong ô tìm kiếm.
+    const search = document.querySelector('.admin-main input[name="search"], .admin-main input[type="search"]');
+    if (search && search.placeholder && !search.placeholder.includes('(/)') && window.matchMedia('(hover: hover)').matches) {
+        search.placeholder = `${search.placeholder} (/)`;
+        search.title ||= 'Nhấn phím / để tìm nhanh';
+    }
+
+    // Esc trong ô tìm kiếm có nội dung: xóa nhanh từ khóa.
+    document.addEventListener('keydown', event => {
+        const input = event.target;
+        if (event.key !== 'Escape' || !(input instanceof HTMLInputElement) || input.name !== 'search' || !input.value) return;
+        input.value = '';
+        event.preventDefault();
     });
 })();

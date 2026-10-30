@@ -25,9 +25,6 @@
     }
     }
     initialize();
-    document.addEventListener('submit', e => {
-        if (e.target.matches('[data-complete-service]') && !window.confirm('Xác nhận khách đã dùng xong và bàn đã trống, sẵn sàng? Hệ thống sẽ kiểm tra tiền, món và cọc trước khi hoàn tất.')) e.preventDefault();
-    });
     document.addEventListener('booking:loaded', e => initialize(e.target));
     document.addEventListener('click', e => {
         const button = e.target.closest('[data-table-warning]');

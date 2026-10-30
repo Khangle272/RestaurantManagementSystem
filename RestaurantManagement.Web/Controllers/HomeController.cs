@@ -123,5 +123,15 @@ namespace RestaurantManagement.Web.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        // Trang báo lỗi thân thiện cho mã trạng thái HTTP (404, 403, 400...) thay vì trang trắng.
+        [AllowAnonymous]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult HttpStatus(int id)
+        {
+            var code = id is >= 400 and <= 599 ? id : 404;
+            Response.StatusCode = code;
+            return View("HttpStatus", StatusPageViewModel.ForCode(code, HttpContext.TraceIdentifier));
+        }
     }
 }

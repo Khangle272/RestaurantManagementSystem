@@ -210,7 +210,7 @@
                                         @if (item.TrangThai == "Đã xác nhận")
                                         {
                                             <form asp-action="NhanBan" method="post" class="d-inline" 
-                                                  onsubmit="return confirm('Xác nhận khách @item.HoTen (@item.BookingCode) đã đến và nhận bàn? Bàn sẽ chuyển sang Đang phục vụ.')">
+                                                  data-confirm="Khách @item.HoTen (@item.BookingCode) đã đến và nhận bàn? Bàn sẽ chuyển sang Đang phục vụ." data-confirm-title="Xác nhận khách đến" data-confirm-ok="Khách đã đến" data-confirm-variant="primary">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="datBanId" value="@item.MaDatBan" />
                                                 <input type="hidden" name="rowVersion" value="@item.RowVersion" />

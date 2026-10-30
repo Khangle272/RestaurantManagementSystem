@@ -146,6 +146,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Lỗi 404/403/400... (không có nội dung) hiển thị trang báo lỗi tiếng Việt thay vì trang trắng.
+app.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();

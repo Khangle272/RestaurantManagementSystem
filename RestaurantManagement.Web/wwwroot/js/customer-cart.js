@@ -197,7 +197,9 @@
     byId('cart-switch-new').addEventListener('click', () => { if (submitting) return; try { sessionStorage.setItem(contextKey, '0'); } catch { /* Query selects the new context. */ } location.href = '/Home?cart=new#thuc-don'; });
     byId('cart-reload').addEventListener('click', async () => {
         if (submitting || loading) return;
-        if (!confirm('Thay giỏ nháp bằng danh sách món chưa gửi bếp của lịch hiện tại?')) return;
+        const ask = window.uxConfirm ?? (message => Promise.resolve(window.confirm(message)));
+        if (!await ask('Giỏ nháp hiện tại sẽ được thay bằng danh sách món chưa gửi bếp của lịch này.', { title: 'Tải lại giỏ món?', ok: 'Tải lại', variant: 'warning' })) return;
+        if (submitting || loading) return;
         draft = null; items = []; sent = []; version = ''; loading = true; conflict = false;
         byId('cart-reload').hidden = true; error(''); requestId = newRequestId();
         await initialize();

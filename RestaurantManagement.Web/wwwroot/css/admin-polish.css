@@ -28,6 +28,7 @@ body { -webkit-font-smoothing: antialiased; line-height: 1.5; }
 .management-menu-group summary::after { content: "\F282"; font-family: "bootstrap-icons"; font-size: .75rem; transition: transform .2s ease; }
 .management-menu-group[open] > summary::after { transform: rotate(180deg); }
 .management-menu-group[open] > summary { color: #fff; }
+.admin-sidebar-nav .nav-link-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .management-sidebar-actions button:hover { background: rgba(255,255,255,.1); border-radius: .5rem; }
 
 /* Topbar */
@@ -130,6 +131,36 @@ body { -webkit-font-smoothing: antialiased; line-height: 1.5; }
   .stat-value { font-size: 1.25rem; }
   .stat-tile { padding: .85rem; gap: .65rem; }
   .stat-icon { width: 2.4rem; height: 2.4rem; font-size: 1.1rem; }
+}
+
+/* Breadcrumb trên thanh topbar: Nhóm › Chức năng › Trang hiện tại */
+.min-w-0 { min-width: 0; }
+.admin-topbar > div:first-child { min-width: 0; flex: 1 1 auto; }
+.topbar-breadcrumb { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+.topbar-crumb { font-size: .85rem; color: var(--text-secondary); white-space: nowrap; text-decoration: none; }
+a.topbar-crumb:hover { color: var(--brand-primary); text-decoration: underline; }
+.topbar-crumb::after { content: "\F285"; font-family: "bootstrap-icons"; font-size: .65rem; margin-left: .45rem; color: #CBD5E1; vertical-align: .05rem; }
+.topbar-breadcrumb h5 { min-width: 0; }
+
+/* Bộ lọc: nút "Lọc / Bỏ lọc" không bị xuống dòng chữ */
+.admin-main form[method="get"] .btn { white-space: nowrap; }
+.admin-main form[method="get"] > .col-md-2.d-flex { flex: 0 0 auto; width: auto; }
+
+/* Điện thoại: sidebar thành ngăn kéo trượt từ trái, topbar dính trên cùng */
+.admin-backdrop { display: none; }
+.btn-sidebar-close { color: #fff; border: 1px solid rgba(255,255,255,.35); line-height: 1; }
+.btn-sidebar-close:hover { background: rgba(255,255,255,.12); color: #fff; }
+@media (max-width: 767.98px) {
+  body .admin-sidebar#admin-sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: min(85vw, 300px); height: 100dvh; transform: translateX(-100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; z-index: 1050; box-shadow: 8px 0 24px rgba(15, 23, 42, .25); }
+  body.sidebar-open .admin-sidebar#admin-sidebar { transform: none; visibility: visible; transition: transform .25s ease; }
+  .admin-sidebar#admin-sidebar .management-sidebar-content { max-height: none; overflow: hidden; flex: 1 1 auto; }
+  .admin-sidebar#admin-sidebar .admin-sidebar-nav { overflow-y: auto; padding: .5rem 0; }
+  .admin-backdrop { display: block; position: fixed; inset: 0; z-index: 1045; background: rgba(15, 23, 42, .45); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+  body.sidebar-open .admin-backdrop { opacity: 1; pointer-events: auto; }
+  body.sidebar-open { overflow: hidden; }
+  body .admin-topbar#admin-topbar { position: sticky; top: 0; left: 0; height: 3.5rem; padding: 0 .75rem; z-index: 1030; }
+  body .admin-main#admin-main-content { margin: 0; padding: .5rem .75rem 1.5rem; min-height: calc(100dvh - 3.5rem); }
+  body:has(.admin-topbar) .flash-stack { top: 4rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

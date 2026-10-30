@@ -18,7 +18,7 @@
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-secondary">Hóa đơn @bill.MaHoaDon</a>
                     }
                     @if (User.IsInRole("Admin") || User.IsInRole("BoiBan")) {
-                        <form asp-action="HoanTatLuot" asp-controller="SoDoBan" method="post" data-complete-service>
+                        <form asp-action="HoanTatLuot" asp-controller="SoDoBan" method="post" data-complete-service data-confirm="Khách đã dùng xong và bàn đã trống, sẵn sàng? Hệ thống sẽ kiểm tra tiền, món và cọc trước khi hoàn tất." data-confirm-title="Hoàn tất lượt phục vụ" data-confirm-ok="Hoàn tất" data-confirm-variant="primary">
                             <input type="hidden" name="id" value="@old.Id" /><input type="hidden" name="rowVersion" value="@review.Version" />
                             <button type="submit" class="btn btn-sm btn-outline-success">Xác nhận hoàn tất lượt cũ</button>
                         </form>
@@ -71,7 +71,7 @@
                 @if (card.DisplayStatus == TrangThaiBan.DangPhucVu && !card.NeedsInspection) {
                     <a asp-controller="DonHang" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-primary w-100">Gọi món / Order</a>
                 }
-                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100" data-complete-service>
+                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100" data-complete-service data-confirm="Khách đã dùng xong và bàn đã trống, sẵn sàng? Hệ thống sẽ kiểm tra tiền, món và cọc trước khi hoàn tất." data-confirm-title="Hoàn tất lượt phục vụ" data-confirm-ok="Hoàn tất" data-confirm-variant="primary">
                     <input type="hidden" name="id" value="@table.Id" /><input type="hidden" name="rowVersion" value="@card.Version" />
                     <input type="hidden" name="clean" value="true" />
                     <button class="btn btn-sm btn-outline-success w-100" type="submit">Xác nhận hoàn tất bàn</button>

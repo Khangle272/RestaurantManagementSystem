@@ -50,7 +50,15 @@
         && (targetController != "DonHang" || action == targetAction)
         && (targetController != "Kho" || action == targetAction)
         && (targetController != "NhanVien" || action == targetAction)
-        && (targetController != "BaoCao" || action == targetAction);
+        && (targetController != "BaoCao" || action == targetAction)
+        && (targetController != "Account" || action != "Denied");
+
+    // Ghi lại mục đang mở để thanh trên cùng hiển thị đường dẫn (breadcrumb): Nhóm › Chức năng › Trang.
+    if (!Model)
+    {
+        var current = entries.FirstOrDefault(x => x.Allowed && IsActive(x.Controller, x.Action));
+        if (current.Group is not null) Context.Items["NavCurrent"] = (current.Group, current.Controller, current.Action, current.Label);
+    }
 
     string GetIcon(string ctrl, string act) => (ctrl, act) switch
     {
