@@ -1,13 +1,13 @@
 @model RestaurantManagement.Web.Models.BaoCaoHieuQuaKhuyenMaiViewModel
 @using RestaurantManagement.API.Models
 @{
-    ViewData["Title"] = "Đánh giá Hiệu quả Khuyến mãi & Voucher";
+    ViewData["Title"] = "Hiệu quả khuyến mãi & voucher";
     ViewData["ActiveMenu"] = "BaoCaoKhuyenMai";
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">🎁 Đánh Giá Hiệu Quả Khuyến Mãi & Voucher</h1>
+        <h1 class="h3 fw-bold mb-1">Hiệu quả khuyến mãi & voucher</h1>
         <p class="text-muted mb-0">Thống kê ưu đãi thực tế đã chốt trên hóa đơn, theo ngày thanh toán (giờ Việt Nam).</p>
         <p class="small text-muted mb-0">Giảm thủ công đã ghi nhận: @Model.TongGiamThuCong.ToString("N0") đ, không gán cho chương trình. Bill có nhiều ưu đãi có thể xuất hiện ở nhiều dòng; tổng bill đếm một lần. Chỉ số doanh thu/giảm không phải lợi nhuận hay ROI đầu tư.</p>
         @if (Model.SoHoaDonThieuLichSu > 0)
@@ -190,13 +190,13 @@
             labels: promoNames,
             datasets: [
                 {
-                    label: 'Doanh thu mang lại (VNĐ)',
+                    label: 'Doanh thu mang lại (đ)',
                     data: revenueData,
                     backgroundColor: '#10B981',
                     borderRadius: 4
                 },
                 {
-                    label: 'Chi phí chiết khấu (VNĐ)',
+                    label: 'Chi phí chiết khấu (đ)',
                     data: discountData,
                     backgroundColor: '#EF4444',
                     borderRadius: 4

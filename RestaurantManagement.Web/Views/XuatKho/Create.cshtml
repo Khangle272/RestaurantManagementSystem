@@ -1,14 +1,14 @@
 @model PhieuXuatCreateVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Lập Phiếu Xuất Kho Chế Biến";
+    ViewData["Title"] = "Lập phiếu xuất kho chế biến";
     var nguyenLieuList = ViewBag.NguyenLieuList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
 
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Lập Phiếu Xuất Kho Chế Biến</h1>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Lập phiếu xuất kho chế biến</h1>
             <p class="text-muted mb-0">Xuất nguyên liệu cho các bếp và quầy pha chế; tự động kiểm tra và chặn xuất âm tồn kho.</p>
         </div>
         <a asp-action="Index" class="btn btn-brand-outline">
@@ -104,7 +104,7 @@
                                     Tổng giá trị xuất ước tính:
                                 </td>
                                 <td class="text-end fw-bold text-danger fs-4 py-3" id="lblTongTien">
-                                    0 VNĐ
+                                    0 đ
                                 </td>
                                 <td></td>
                             </tr>
@@ -177,10 +177,10 @@
                     <div class="error-feedback text-danger small mt-1 d-none"><i class="bi bi-x-circle me-1"></i>Vượt quá tồn kho!</div>
                 </td>
                 <td class="text-end text-dongia text-muted">
-                    0 VNĐ
+                    0 đ
                 </td>
                 <td class="text-end fw-bold text-dark text-thanhtien">
-                    0 VNĐ
+                    0 đ
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger btn-xoadong" title="Xóa dòng này">
@@ -201,15 +201,15 @@
                 if (sel && sel.value) {
                     const stock = parseFloat(sel.dataset.stock) || 0;
                     const price = parseFloat(sel.dataset.price) || 0;
-                    stockEl.textContent = stock.toLocaleString("vi-VN");
+                    stockEl.textContent = stock.toLocaleString("en-US");
                     dvtEl.textContent = sel.dataset.dvt || "—";
-                    priceEl.textContent = price.toLocaleString("vi-VN") + " VNĐ";
+                    priceEl.textContent = price.toLocaleString("en-US") + " đ";
                     tr.dataset.stock = stock;
                     tr.dataset.price = price;
                 } else {
                     stockEl.textContent = "0";
                     dvtEl.textContent = "—";
-                    priceEl.textContent = "0 VNĐ";
+                    priceEl.textContent = "0 đ";
                     tr.dataset.stock = 0;
                     tr.dataset.price = 0;
                 }
@@ -247,7 +247,7 @@
             }
 
             const total = qty * price;
-            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " VNĐ";
+            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("en-US") + " đ";
             updateTotals();
         }
 
@@ -278,7 +278,7 @@
                 sum += qty * price;
             });
 
-            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " VNĐ";
+            lblTongTien.textContent = sum.toLocaleString("en-US") + " đ";
 
             if (rows.length === 0 || hasError) {
                 btnSubmit.disabled = true;

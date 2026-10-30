@@ -14,7 +14,7 @@
         <div class="col-6 col-xl-3">
             <a asp-controller="BaoCao" asp-action="DoanhThu" class="stat-tile stat-success">
                 <span class="stat-icon"><i class="bi bi-cash-stack"></i></span>
-                <span class="stat-body"><span class="stat-label">Doanh thu hôm nay</span><strong class="stat-value">@Model.RevenueToday.ToString("N0") ₫</strong><small class="stat-sub">@Model.InvoicesToday hóa đơn đã thanh toán</small></span>
+                <span class="stat-body"><span class="stat-label">Doanh thu hôm nay</span><strong class="stat-value">@Model.RevenueToday.ToString("N0") đ</strong><small class="stat-sub">@Model.InvoicesToday hóa đơn đã thanh toán</small></span>
             </a>
         </div>
         <div class="col-6 col-xl-3">
@@ -26,13 +26,13 @@
         <div class="col-6 col-xl-3">
             <a asp-controller="QuanLyDatBan" asp-action="Index" class="stat-tile @(Model.PendingReservations > 0 ? "stat-danger" : "stat-muted")">
                 <span class="stat-icon"><i class="bi bi-calendar-check"></i></span>
-                <span class="stat-body"><span class="stat-label">Đặt bàn cần xử lý</span><strong class="stat-value">@Model.PendingReservations</strong><small class="stat-sub">@Model.ReservationsToday lượt đến trong hôm nay</small></span>
+                <span class="stat-body"><span class="stat-label">Đặt bàn cần xử lý</span><strong class="stat-value">@Model.PendingReservations</strong><small class="stat-sub">@Model.ReservationsToday lượt đến hôm nay · @Model.OccupiedTables/@Model.TotalTables bàn đang phục vụ</small></span>
             </a>
         </div>
         <div class="col-6 col-xl-3">
             <a asp-controller="Kho" asp-action="TonKho" class="stat-tile @(Model.LowStockItems > 0 ? "stat-danger" : "stat-muted")">
                 <span class="stat-icon"><i class="bi bi-boxes"></i></span>
-                <span class="stat-body"><span class="stat-label">Nguyên liệu sắp hết</span><strong class="stat-value">@Model.LowStockItems</strong><small class="stat-sub">Bàn đang phục vụ: @Model.OccupiedTables/@Model.TotalTables</small></span>
+                <span class="stat-body"><span class="stat-label">Nguyên liệu sắp hết</span><strong class="stat-value">@Model.LowStockItems</strong><small class="stat-sub">@(Model.LowStockItems > 0 ? "Tồn kho chạm ngưỡng cảnh báo, cần nhập thêm" : "Tồn kho đang ở mức an toàn")</small></span>
             </a>
         </div>
     </div>

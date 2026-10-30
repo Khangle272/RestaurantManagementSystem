@@ -2,7 +2,7 @@
 @using RestaurantManagement.Web.Security
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Ma trận phân quyền chức vụ";
+    ViewData["Title"] = "Phân quyền theo chức vụ";
     ViewData["ActiveMenu"] = "PhanQuyen";
     var accountRoles = ViewBag.AccountRoles as Dictionary<int, string> ?? new();
 }
@@ -16,7 +16,7 @@
                     <li class="breadcrumb-item active" aria-current="page">Ma trận phân quyền</li>
                 </ol>
             </nav>
-            <h1 class="h3 fw-bold mb-1">🛡️ Cơ Chế Phân Quyền Theo Chức Vụ (RBAC)</h1>
+            <h1 class="h3 fw-bold mb-1">Phân quyền theo chức vụ (RBAC)</h1>
             <p class="text-muted mb-0">Bộ quyền hạn cố định theo chức vụ công việc nhằm chuẩn hóa quy trình tiếp nhận đặt bàn, phục vụ, thu ngân, kho và giám sát kinh doanh.</p>
         </div>
         <div class="d-flex gap-2">
@@ -39,18 +39,18 @@
                 <thead class="table-light">
                     <tr>
                         <th class="text-start" style="width: 280px;">Nghiệp vụ hệ thống</th>
-                        <th style="width: 120px;" class="bg-primary-subtle text-primary">👑 Quản trị<br/><small>(Admin)</small></th>
-                        <th style="width: 120px;">🛎️ Tiếp tân<br/><small>(TiepTan)</small></th>
-                        <th style="width: 120px;">🍽️ Phục vụ<br/><small>(BoiBan)</small></th>
-                        <th style="width: 120px;">💵 Thu ngân<br/><small>(ThuNgan)</small></th>
-                        <th style="width: 120px;">🍳 Bếp<br/><small>(Bep)</small></th>
-                        <th style="width: 120px;">📦 Kho<br/><small>(Kho)</small></th>
+                        <th style="width: 120px;" class="bg-primary-subtle text-primary">Quản trị<br/><small>(Admin)</small></th>
+                        <th style="width: 120px;">Tiếp tân<br/><small>(TiepTan)</small></th>
+                        <th style="width: 120px;">Phục vụ<br/><small>(BoiBan)</small></th>
+                        <th style="width: 120px;">Thu ngân<br/><small>(ThuNgan)</small></th>
+                        <th style="width: 120px;">Bếp<br/><small>(Bep)</small></th>
+                        <th style="width: 120px;">Kho<br/><small>(Kho)</small></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Tiếp nhận đặt bàn & Sơ đồ bàn</div>
+                            <div>Tiếp nhận đặt bàn & sơ đồ bàn</div>
                             <small class="text-muted">Nhận lịch, xếp bàn, đối chiếu sức chứa, sơ đồ bàn</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -62,7 +62,7 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Phục vụ bàn & Dọn bàn</div>
+                            <div>Phục vụ bàn & dọn bàn</div>
                             <small class="text-muted">Mang món ra bàn, kết thúc phục vụ, xác nhận dọn xong</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -86,7 +86,7 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>KDS Điều phối chế biến món</div>
+                            <div>Màn hình bếp (KDS) & điều phối món</div>
                             <small class="text-muted">Nhận món FIFO, chuyển trạng thái nấu, chuẩn bị công thức</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -98,7 +98,7 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Xuất hóa đơn & Thanh toán đa phương thức</div>
+                            <div>Hóa đơn & thanh toán (tiền mặt, chuyển khoản)</div>
                             <small class="text-muted">Tiền mặt, chuyển khoản, trừ tiền đặt cọc, báo cáo nộp ca, in bill</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -110,7 +110,7 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Quản lý Kho & Cung ứng</div>
+                            <div>Quản lý kho & cung ứng</div>
                             <small class="text-muted">Theo dõi tồn kho, lập phiếu nhập, xuất chế biến, thanh lý</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -122,7 +122,43 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Quản lý Khuyến mãi & Voucher</div>
+                            <div>Thực đơn & công thức món</div>
+                            <small class="text-muted">Món ăn, kích cỡ, định mức nguyên liệu; Admin duyệt món mới</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Dự trù nguyên liệu theo lịch đặt</div>
+                            <small class="text-muted">Thống kê lịch đặt theo ngày/ca và nguyên liệu cần chuẩn bị</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Đánh giá khách hàng</div>
+                            <small class="text-muted">Xem nhận xét sau dịch vụ và ghi phản hồi của nhà hàng</small>
+                        </td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                        <td class="text-muted"><i class="bi bi-dash"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="text-start fw-semibold">
+                            <div>Quản lý khuyến mãi & voucher</div>
                             <small class="text-muted">Thiết lập chương trình ưu đãi, tạo voucher, điều kiện kết hợp</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -134,7 +170,7 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Báo cáo doanh thu & Thống kê kinh doanh</div>
+                            <div>Báo cáo doanh thu & thống kê kinh doanh</div>
                             <small class="text-muted">Doanh thu ngày/tháng/năm, món bán chạy, hiệu quả khuyến mãi</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>
@@ -146,7 +182,7 @@
                     </tr>
                     <tr>
                         <td class="text-start fw-semibold">
-                            <div>Quản trị nhân sự & Cấp tài khoản</div>
+                            <div>Quản trị nhân sự & cấp tài khoản</div>
                             <small class="text-muted">CRUD nhân viên, phân công vai trò, khóa/mở khóa tài khoản</small>
                         </td>
                         <td class="text-success fs-5"><i class="bi bi-check-circle-fill"></i></td>

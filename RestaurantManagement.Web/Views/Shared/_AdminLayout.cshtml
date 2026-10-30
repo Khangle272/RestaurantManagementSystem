@@ -50,7 +50,9 @@
                 @if (navCurrent is { } nav)
                 {
                     <span class="topbar-crumb d-none d-lg-inline">@nav.Group</span>
-                    @if (!string.Equals(nav.Label, pageTitle, StringComparison.OrdinalIgnoreCase))
+                    @* Chỉ hiện mục chức năng khi đang ở trang con (thêm/sửa/chi tiết) để bấm quay về danh sách. *@
+                    @if (!string.Equals(nav.Action, ViewContext.RouteData.Values["action"]?.ToString(), StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(nav.Label, pageTitle, StringComparison.OrdinalIgnoreCase))
                     {
                         <a class="topbar-crumb d-none d-md-inline" asp-controller="@nav.Controller" asp-action="@nav.Action">@nav.Label</a>
                     }

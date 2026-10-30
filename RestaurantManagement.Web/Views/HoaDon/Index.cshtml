@@ -1,11 +1,11 @@
 @model List<RestaurantManagement.API.Models.HoaDon>
 @using RestaurantManagement.API.Models
 @{
-    ViewData["Title"] = "Hóa đơn";
+    ViewData["Title"] = "Hóa đơn & thanh toán";
     ViewData["ActiveMenu"] = "HoaDon";
     var daThanhToan = ViewBag.DaThanhToan is true;
 }
-<h1 class="h3 mb-3">Hóa đơn</h1>
+<h1 class="h3 mb-3">Hóa đơn & thanh toán</h1>
 <div class="mb-3 d-flex gap-2">
     <a asp-action="Index" asp-route-daThanhToan="false" class="btn @(daThanhToan ? "btn-outline-primary" : "btn-primary")">Chờ thanh toán</a>
     <a asp-action="Index" asp-route-daThanhToan="true" class="btn @(daThanhToan ? "btn-primary" : "btn-outline-primary")">Đã thanh toán</a>

@@ -1,7 +1,7 @@
 @model PhieuNhapCreateVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Lập Phiếu Nhập Kho";
+    ViewData["Title"] = "Lập phiếu nhập kho";
     var nccList = ViewBag.NhaCungCapList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
     var nguyenLieuList = ViewBag.NguyenLieuList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
@@ -9,7 +9,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-cart-plus me-2 text-danger"></i>Lập Phiếu Nhập Kho</h1>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-cart-plus me-2 text-danger"></i>Lập phiếu nhập kho</h1>
             <p class="text-muted mb-0">Tạo phiếu nhập Master-Detail, cập nhật số lượng tồn kho và điều chỉnh đơn giá vốn tức thời.</p>
         </div>
         <a asp-action="Index" class="btn btn-brand-outline">
@@ -109,7 +109,7 @@
                                     Tổng giá trị nhập:
                                 </td>
                                 <td class="text-end fw-bold text-danger fs-4 py-3" id="lblTongTien">
-                                    0 VNĐ
+                                    0 đ
                                 </td>
                                 <td colspan="3"></td>
                             </tr>
@@ -182,7 +182,7 @@
                     </div>
                 </td>
                 <td class="text-end fw-bold text-dark text-thanhtien">
-                    0 VNĐ
+                    0 đ
                 </td>
                 <td>
                     <input type="date" name="ChiTiets[${rowIndex}].HanSuDung" class="form-control form-control-sm" />
@@ -253,7 +253,7 @@
             const qty = parseFloat(tr.querySelector(".input-soluong").value) || 0;
             const price = parseFloat(tr.querySelector(".input-dongia").value) || 0;
             const total = qty * price;
-            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " VNĐ";
+            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("en-US") + " đ";
             updateTotals();
         }
 
@@ -279,7 +279,7 @@
                 const price = parseFloat(tr.querySelector(".input-dongia").value) || 0;
                 sum += qty * price;
             });
-            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " VNĐ";
+            lblTongTien.textContent = sum.toLocaleString("en-US") + " đ";
         }
 
         btnThemDong.addEventListener("click", () => addRow());

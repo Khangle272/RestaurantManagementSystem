@@ -125,13 +125,13 @@
                                     @switch (item.TrangThai)
                                     {
                                         case TrangThaiCheBien.ChoCheBien:
-                                            <span class="badge bg-secondary">⏳ Chờ nấu</span>
+                                            <span class="badge bg-secondary"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Chờ nấu</span>
                                             break;
                                         case TrangThaiCheBien.DangCheBien:
-                                            <span class="badge bg-warning text-dark">🔥 Đang nấu</span>
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-fire me-1" aria-hidden="true"></i>Đang nấu</span>
                                             break;
                                         case TrangThaiCheBien.SanSang:
-                                            <span class="badge bg-success">⚡ Đã xong (Sẵn sàng)</span>
+                                            <span class="badge bg-success"><i class="bi bi-bell me-1" aria-hidden="true"></i>Sẵn sàng phục vụ</span>
                                             break;
                                         case TrangThaiCheBien.DaPhucVu:
                                             <span class="badge bg-light text-success border border-success">✓ Đã phục vụ</span>
@@ -275,7 +275,7 @@
                     else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && canPay)
                     {
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
-                            💳 Thanh toán (Tiền mặt / Chuyển khoản)
+                            <i class="bi bi-credit-card me-1" aria-hidden="true"></i>Thanh toán (tiền mặt / chuyển khoản)
                         </a>
                     }
                     else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)

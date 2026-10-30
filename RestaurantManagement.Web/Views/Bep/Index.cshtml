@@ -3,7 +3,7 @@
 @functions { private static string TableServiceToday() => RestaurantManagement.Web.Services.TableService.VietnamNow.ToString("dd/MM/yyyy"); }
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Bếp chế biến & Điều phối";
+    ViewData["Title"] = "Màn hình bếp (KDS)";
     var currentFilter = (ViewBag.Filter as string) ?? "active";
     var cancelled = ViewBag.Cancelled as List<RestaurantManagement.Web.Controllers.BepRow> ?? [];
     var canClose = User.IsInRole("Admin") || User.IsInRole("Bep");
@@ -31,7 +31,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div>
-            <h1 class="h3 mb-1">Màn hình Bếp (KDS) & Điều phối món</h1>
+            <h1 class="h3 mb-1">Màn hình bếp (KDS) & điều phối món</h1>
             <p class="text-muted mb-0">Chỉ hiển thị món gọi trong ngày @TableServiceToday(). Thứ tự: món gọi trước làm trước — đọc từ trái sang phải, từ trên xuống dưới. <span id="kds-live-status" role="status">Tự cập nhật trạng thái.</span></p>
         </div>
         <div class="btn-group" role="group">

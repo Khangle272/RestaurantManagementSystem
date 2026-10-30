@@ -379,12 +379,12 @@
                 <ul class="nav nav-pills nav-fill mb-4" id="paymentTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active fw-bold py-2" id="cash-tab" data-bs-toggle="tab" data-bs-target="#cash-content" type="button" role="tab">
-                            💵 Tiền mặt
+                            <i class="bi bi-cash me-1" aria-hidden="true"></i>Tiền mặt
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link fw-bold py-2" id="qr-tab" data-bs-toggle="tab" data-bs-target="#qr-content" type="button" role="tab">
-                            🏦 Chuyển khoản ngân hàng
+                            <i class="bi bi-bank me-1" aria-hidden="true"></i>Chuyển khoản ngân hàng
                         </button>
                     </li>
                 </ul>
@@ -523,12 +523,12 @@
         const promotionDiscount = @((effectiveDiscount - manualDiscount).ToString(invariant));
         const netDue = Math.max(0, dishTotal - promotionDiscount - discount - availableDeposit);
         const tendered = parseFloat(tenderedInput.value) || 0;
-        document.getElementById('cash-due').innerText = netDue.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('cash-due').innerText = netDue.toLocaleString('en-US') + ' đ';
         document.getElementById('cash-expected-due').value = netDue;
 
         if (Number.isFinite(discount) && discount >= 0 && discount <= dishTotal - promotionDiscount && tendered >= netDue) {
             const change = tendered - netDue;
-            changeDisplay.innerText = change.toLocaleString('vi-VN') + ' đ';
+            changeDisplay.innerText = change.toLocaleString('en-US') + ' đ';
             warningDisplay.classList.add('d-none');
             submitBtn.disabled = false;
         } else {

@@ -1,12 +1,12 @@
 @model RestaurantManagement.Web.Models.BaoCaoDashboardViewModel
 @{
-    ViewData["Title"] = "Tổng quan Báo cáo & Thống kê";
+    ViewData["Title"] = "Tổng quan kinh doanh";
     ViewData["ActiveMenu"] = "BaoCaoTongQuan";
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">Trung tâm báo cáo</h1>
+        <h1 class="h3 fw-bold mb-1">Tổng quan kinh doanh</h1>
         <p class="text-muted mb-0">Doanh thu, đơn hàng, món bán chạy và tồn kho trong kỳ đã chọn.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
@@ -264,7 +264,7 @@
         data: {
             labels: timelineLabels,
             datasets: [{
-                label: 'Doanh thu (VNĐ)',
+                label: 'Doanh thu (đ)',
                 data: timelineData,
                 borderColor: '#10B981',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',

@@ -1,14 +1,14 @@
 @model PhieuThanhLyCreateVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Lập Biên Bản Thanh Lý / Tiêu Hủy";
+    ViewData["Title"] = "Lập biên bản thanh lý / tiêu hủy";
     var nguyenLieuList = ViewBag.NguyenLieuList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
 
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>Lập Biên Bản Thanh Lý / Tiêu Hủy</h1>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>Lập biên bản thanh lý / tiêu hủy</h1>
             <p class="text-muted mb-0">Tiêu hủy nguyên liệu hư hỏng, ẩm mốc hoặc hết hạn; giảm trừ tồn kho và ghi nhận chi phí thiệt hại.</p>
         </div>
         <a asp-action="Index" class="btn btn-brand-outline">
@@ -89,7 +89,7 @@
                                     Tổng thiệt hại ước tính:
                                 </td>
                                 <td class="text-end fw-bold text-danger fs-4 py-3" id="lblTongTien">
-                                    0 VNĐ
+                                    0 đ
                                 </td>
                                 <td colspan="2"></td>
                             </tr>
@@ -162,10 +162,10 @@
                     <div class="error-feedback text-danger small mt-1 d-none"><i class="bi bi-x-circle me-1"></i>Vượt tồn kho!</div>
                 </td>
                 <td class="text-end text-dongia text-muted">
-                    0 VNĐ
+                    0 đ
                 </td>
                 <td class="text-end fw-bold text-danger text-thanhtien">
-                    0 VNĐ
+                    0 đ
                 </td>
                 <td>
                     <input type="text" name="ChiTiets[${rowIndex}].GhiChu" class="form-control form-control-sm" placeholder="Mô tả hư hỏng..." />
@@ -189,15 +189,15 @@
                 if (sel && sel.value) {
                     const stock = parseFloat(sel.dataset.stock) || 0;
                     const price = parseFloat(sel.dataset.price) || 0;
-                    stockEl.textContent = stock.toLocaleString("vi-VN");
+                    stockEl.textContent = stock.toLocaleString("en-US");
                     dvtEl.textContent = sel.dataset.dvt || "—";
-                    priceEl.textContent = price.toLocaleString("vi-VN") + " VNĐ";
+                    priceEl.textContent = price.toLocaleString("en-US") + " đ";
                     tr.dataset.stock = stock;
                     tr.dataset.price = price;
                 } else {
                     stockEl.textContent = "0";
                     dvtEl.textContent = "—";
-                    priceEl.textContent = "0 VNĐ";
+                    priceEl.textContent = "0 đ";
                     tr.dataset.stock = 0;
                     tr.dataset.price = 0;
                 }
@@ -235,7 +235,7 @@
             }
 
             const total = qty * price;
-            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " VNĐ";
+            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("en-US") + " đ";
             updateTotals();
         }
 
@@ -268,7 +268,7 @@
                 sum += qty * price;
             });
 
-            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " VNĐ";
+            lblTongTien.textContent = sum.toLocaleString("en-US") + " đ";
 
             if (rows.length === 0 || hasError) {
                 btnSubmit.disabled = true;
