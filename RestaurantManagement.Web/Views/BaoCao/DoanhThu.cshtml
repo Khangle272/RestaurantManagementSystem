@@ -69,7 +69,7 @@
                 <div class="col-auto"><span class="small fw-semibold text-muted">Năm xem:</span></div>
                 <div class="col-md-2">
                     <select name="nam" class="form-select form-select-sm" onchange="this.form.submit()">
-                        @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+                        @for (int y = RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year; y >= RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year - 5; y--)
                         {
                             <option value="@y" selected="@(Model.Nam == y)">@y</option>
                         }

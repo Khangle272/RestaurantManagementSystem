@@ -46,7 +46,7 @@
 
                     <div class="col-12 col-md-3">
                         <label asp-for="NgayNhap" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
-                        <input asp-for="NgayNhap" type="datetime-local" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" required />
+                        <input asp-for="NgayNhap" type="datetime-local" class="form-control" value="@RestaurantManagement.Web.Services.TableService.VietnamNow.ToString("yyyy-MM-ddTHH:mm")" required />
                         <span asp-validation-for="NgayNhap" class="text-danger small"></span>
                     </div>
 

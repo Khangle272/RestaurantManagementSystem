@@ -2,7 +2,7 @@
 @{ Layout = "_AdminLayout"; ViewData["Title"] = "Trang chủ"; }
 <div class="page-header">
     <div>
-        <p class="page-eyebrow">KHU LÀM VIỆC · @DateTime.Now.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"))</p>
+        <p class="page-eyebrow">KHU LÀM VIỆC · @RestaurantManagement.Web.Services.TableService.VietnamNow.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"))</p>
         <h1 class="h3 mb-1">Chào mừng bạn trở lại</h1>
         <p class="text-muted mb-0">Chọn công việc cần xử lý. Các chức năng hiển thị theo quyền của bạn.</p>
     </div>

@@ -83,6 +83,7 @@ public class DatBanItemVM
     public decimal TongTienHoaDon { get; set; }
     public int? HoaDonId { get; set; }
     public bool DaThanhToan { get; set; }
+    public bool CoTheDanhGia { get; set; }
     public bool DaDanhGia { get; set; }
     public string? GhiChu { get; set; }
     public List<ChiTietMonAnItemVM> ChiTietMonAn { get; set; } = [];

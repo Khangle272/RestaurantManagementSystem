@@ -7,7 +7,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
 
-public class OrderService(RestaurantDbContext db, IKhoService? khoService = null, IPromotionService? promotionService = null)
+public class OrderService(RestaurantDbContext db, IKhoService? khoService = null, IPromotionService? promotionService = null, ILogger<OrderService>? logger = null)
 {
     public async Task<List<BanAnCardItem>> GetOccupiedTablesAsync()
     {
@@ -283,17 +283,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             await db.SaveChangesAsync();
             await tx.CommitAsync();
 
-            if (khoService != null)
-            {
-                try
-                {
-                    await khoService.DeductInventoryForOrderDishesAsync(hoaDon.Id, model.Items, staffId);
-                }
-                catch
-                {
-                    // Do not fail the committed order if background inventory deduction encounters errors
-                }
-            }
+            await DeductInventoryAfterCommitAsync(hoaDon.Id, model.Items, staffId);
 
             return (null, hoaDon.Id);
         }
@@ -304,6 +294,29 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         catch (SqlException ex) when (ex.Number is 1205 or 1222)
         {
             return ("Hệ thống đang bận xử lý dữ liệu đơn hàng. Vui lòng thử lại sau giây lát.", null);
+        }
+    }
+
+    /// <summary>Stock problems found after the last order was saved, for the cashier to see.</summary>
+    public List<string> InventoryWarnings { get; } = [];
+
+    // The order is already committed: a stock problem must not cancel it, but it must be logged and shown.
+    private async Task DeductInventoryAfterCommitAsync(int hoaDonId, List<OrderItemInputModel> items, int? staffId = null)
+    {
+        if (khoService == null) return;
+        try
+        {
+            var result = await khoService.DeductInventoryForOrderDishesAsync(hoaDonId, items, staffId);
+            if (!result.Success)
+            {
+                InventoryWarnings.AddRange(result.Warnings);
+                logger?.LogWarning("Inventory deduction for invoice {HoaDonId} incomplete: {Warnings}", hoaDonId, string.Join(" | ", result.Warnings));
+            }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Inventory deduction failed for invoice {HoaDonId}", hoaDonId);
+            InventoryWarnings.Add("Đơn đã lưu nhưng chưa tự xuất kho được. Vui lòng báo quản lý kho kiểm tra phiếu xuất của hóa đơn này.");
         }
     }
 
@@ -375,17 +388,7 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
             await db.SaveChangesAsync();
             await tx.CommitAsync();
 
-            if (khoService != null)
-            {
-                try
-                {
-                    await khoService.DeductInventoryForOrderDishesAsync(bill.Id, items);
-                }
-                catch
-                {
-                    // Do not fail the committed addition if background inventory deduction encounters errors
-                }
-            }
+            await DeductInventoryAfterCommitAsync(bill.Id, items);
 
             return (null, bill.Id);
         }

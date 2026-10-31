@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using RestaurantManagement.API.Models;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Models;
 
@@ -33,7 +34,7 @@ public class NhanVienFormViewModel : EditRecordViewModel
     public string ChucVu { get; set; } = "";
 
     [Display(Name = "Ngày vào làm"), Required(ErrorMessage = "Vui lòng chọn ngày vào làm."), DataType(DataType.Date)]
-    public DateOnly? NgayVaoLam { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public DateOnly? NgayVaoLam { get; set; } = DateOnly.FromDateTime(TableService.VietnamNow.Date);
 
     [Display(Name = "Đang làm việc")]
     public bool DangLamViec { get; set; } = true;

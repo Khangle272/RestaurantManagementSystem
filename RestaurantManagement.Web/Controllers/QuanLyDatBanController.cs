@@ -332,7 +332,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         int markerIdx = currentNoiDung.IndexOf("\n[Phản hồi từ Nhà hàng]:", StringComparison.Ordinal);
         var baseContent = markerIdx >= 0 ? currentNoiDung[..markerIdx] : currentNoiDung;
 
-        var fullContent = $"{baseContent}{replyTag}{noiDungPhanHoi.Trim()} ({DateTime.Now:dd/MM/yyyy HH:mm})";
+        var fullContent = $"{baseContent}{replyTag}{noiDungPhanHoi.Trim()} ({TableService.VietnamNow:dd/MM/yyyy HH:mm})";
         danhGia.NoiDung = fullContent.Length > 2000 ? fullContent[..2000] : fullContent;
 
         await Db.SaveChangesAsync();

@@ -33,7 +33,7 @@
                 @await Html.PartialAsync("_ManagementNavigation", false)
             </nav>
             <div class="management-sidebar-actions"><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="btn btn-link text-white text-decoration-none w-100 text-start d-flex align-items-center gap-2" title="Đăng xuất"><i class="bi bi-box-arrow-right"></i><span class="nav-link-text">Đăng xuất</span></button></form></div>
-            <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
+            <div class="admin-sidebar-footer">&copy; @RestaurantManagement.Web.Services.TableService.VietnamNow.Year - Quản lý nhà hàng</div>
         </div>
     </aside>
     <div class="admin-backdrop" data-sidebar-close aria-hidden="true"></div>

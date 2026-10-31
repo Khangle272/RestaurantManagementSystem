@@ -68,9 +68,13 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
             }).ToList()
         };
         model.SoVeDaPhatHanh = await VoucherInventory.ProgramIssuedAsync(db, id);
+        var voucherIds = model.Vouchers.Select(x => x.Id).ToList();
+        var issued = await VoucherInventory.IssuedByVoucherAsync(db, voucherIds);
+        var used = await db.HoaDon.Where(x => x.VoucherId != null && voucherIds.Contains(x.VoucherId.Value) && x.TrangThai != TrangThaiHoaDon.DaHuy)
+            .GroupBy(x => x.VoucherId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
         foreach (var row in model.Vouchers) {
-            row.SoVeDaPhatHanh = await VoucherInventory.IssuedAsync(db, row.Id);
-            row.SoLuotDaDung = await db.HoaDon.CountAsync(x => x.VoucherId == row.Id && x.TrangThai != TrangThaiHoaDon.DaHuy);
+            row.SoVeDaPhatHanh = issued[row.Id];
+            row.SoLuotDaDung = used.GetValueOrDefault(row.Id);
         }
         return View("Form", model);
     }

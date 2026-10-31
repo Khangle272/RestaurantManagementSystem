@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using RestaurantManagement.API.Models;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Models;
 
@@ -79,7 +80,7 @@ public class PhieuNhapCreateVM
     public int MaNhaCungCap { get; set; }
 
     [Display(Name = "Ngày nhập kho")]
-    public DateTime NgayNhap { get; set; } = DateTime.Now;
+    public DateTime NgayNhap { get; set; } = TableService.VietnamNow;
 
     [Display(Name = "Số hóa đơn đỏ / chứng từ")]
     public string? SoHoaDon { get; set; }
@@ -129,7 +130,7 @@ public class PhieuXuatCreateVM
     public string? NguoiNhan { get; set; }
 
     [Display(Name = "Ngày xuất")]
-    public DateTime NgayXuat { get; set; } = DateTime.Now;
+    public DateTime NgayXuat { get; set; } = TableService.VietnamNow;
 
     [Required(ErrorMessage = "Vui lòng chọn hoặc nhập lý do xuất.")]
     [Display(Name = "Lý do xuất kho")]
@@ -176,7 +177,7 @@ public class ChiTietThanhLyItemVM
 public class PhieuThanhLyCreateVM
 {
     [Display(Name = "Ngày thanh lý")]
-    public DateTime NgayThanhLy { get; set; } = DateTime.Now;
+    public DateTime NgayThanhLy { get; set; } = TableService.VietnamNow;
 
     [Required(ErrorMessage = "Vui lòng chọn lý do thanh lý.")]
     [Display(Name = "Lý do chính")]

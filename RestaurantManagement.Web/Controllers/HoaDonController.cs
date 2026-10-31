@@ -12,7 +12,7 @@ namespace RestaurantManagement.Web.Controllers;
 public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users, RestaurantManagement.Web.Services.OrderService orderService, RestaurantManagement.Web.Services.IPromotionService promotionService) : Controller
 {
     [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
-    public async Task<IActionResult> Index(bool daThanhToan = false)
+    public async Task<IActionResult> Index(bool daThanhToan = false, int page = 1)
     {
         ViewData["AutoCollapseSidebar"] = true;
         var query = db.HoaDon.AsNoTracking();
@@ -21,8 +21,13 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
             : query.Where(x => x.TrangThai == TrangThaiHoaDon.ChuaThanhToan
                 || x.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan);
 
+        const int pageSize = 20;
+        var count = await query.CountAsync();
+        var pages = Math.Max(1, (int)Math.Ceiling(count / (double)pageSize));
+        page = Math.Clamp(page, 1, pages);
         ViewBag.DaThanhToan = daThanhToan;
-        return View(await query.OrderByDescending(x => x.ThoiDiemLap).Take(100).ToListAsync());
+        ViewBag.Pagination = new RestaurantManagement.Web.Models.PaginationViewModel { CurrentPage = page, TotalPages = pages, TotalItems = count };
+        return View(await query.OrderByDescending(x => x.ThoiDiemLap).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync());
     }
 
     public async Task<IActionResult> Details(int id)

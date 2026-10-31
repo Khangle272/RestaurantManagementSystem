@@ -1,4 +1,5 @@
 using RestaurantManagement.API.Models;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Models;
 
@@ -41,9 +42,9 @@ public class BaoCaoDoanhThuViewModel
 {
     public int SoHoaDonThieuNgayThanhToan { get; set; }
     public string CheDo { get; set; } = "TheoNgay"; // TheoNgay, TheoThang, TheoNam
-    public DateTime TuNgay { get; set; } = DateTime.Today.AddDays(-30);
-    public DateTime DenNgay { get; set; } = DateTime.Today;
-    public int Nam { get; set; } = DateTime.Today.Year;
+    public DateTime TuNgay { get; set; } = TableService.VietnamNow.Date.AddDays(-30);
+    public DateTime DenNgay { get; set; } = TableService.VietnamNow.Date;
+    public int Nam { get; set; } = TableService.VietnamNow.Date.Year;
 
     public decimal TongDoanhThu { get; set; }
     public decimal TongTienHang { get; set; }
@@ -82,8 +83,8 @@ public class DoanhThuTimelineRow
 
 public class BaoCaoMonBanChayViewModel
 {
-    public DateTime TuNgay { get; set; } = DateTime.Today.AddDays(-30);
-    public DateTime DenNgay { get; set; } = DateTime.Today;
+    public DateTime TuNgay { get; set; } = TableService.VietnamNow.Date.AddDays(-30);
+    public DateTime DenNgay { get; set; } = TableService.VietnamNow.Date;
     public int? DanhMucId { get; set; }
     public int TopN { get; set; } = 10;
 
@@ -123,8 +124,8 @@ public class CoCauDanhMucItem
 
 public class BaoCaoTonKhoTongHopViewModel
 {
-    public DateTime TuNgay { get; set; } = DateTime.Today.AddDays(-30);
-    public DateTime DenNgay { get; set; } = DateTime.Today;
+    public DateTime TuNgay { get; set; } = TableService.VietnamNow.Date.AddDays(-30);
+    public DateTime DenNgay { get; set; } = TableService.VietnamNow.Date;
 
     public decimal TongGiaTriTonHienTai { get; set; }
     public decimal TongGiaTriNhapTrongKy { get; set; }
@@ -164,8 +165,8 @@ public class BaoCaoHieuQuaKhuyenMaiViewModel
 {
     public int SoHoaDonThieuLichSu { get; set; }
     public decimal TongGiamThuCong { get; set; }
-    public DateTime TuNgay { get; set; } = DateTime.Today.AddDays(-30);
-    public DateTime DenNgay { get; set; } = DateTime.Today;
+    public DateTime TuNgay { get; set; } = TableService.VietnamNow.Date.AddDays(-30);
+    public DateTime DenNgay { get; set; } = TableService.VietnamNow.Date;
 
     public decimal TongChiPhiKhuyenMai { get; set; }
     public decimal TongDoanhThuDonKhuyenMai { get; set; }

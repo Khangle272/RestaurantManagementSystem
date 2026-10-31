@@ -208,3 +208,10 @@ a { text-underline-offset: 3px; }
 .restaurant-nav .nav-link.active::after { content: ""; position: absolute; left: .8rem; right: .8rem; bottom: .3rem; height: 2px; border-radius: 2px; background: var(--leaf); }
 @media (max-width: 991.98px) { .restaurant-nav .nav-link.active { background: #eef4e8; border-radius: 8px; } .restaurant-nav .nav-link.active::after { display: none; } }
 .restaurant-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 2000; background: #fff; padding: .5rem .85rem; border-radius: .4rem; box-shadow: 0 4px 14px #0002; }
+
+/* Customer booking and review pages */
+.review-hero { background: linear-gradient(135deg, var(--forest-deep) 0%, var(--forest) 100%); }
+.star-rating .rating-star { color: #f59e0b; cursor: pointer; line-height: 1; }
+.star-rating .rating-input:focus-visible + .rating-star { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 4px; }
+.booking-step-icon { background: #e8f2df; color: var(--forest); }
+.booking-note { background: var(--paper); border: 1px dashed var(--line); }

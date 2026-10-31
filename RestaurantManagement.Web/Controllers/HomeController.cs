@@ -127,7 +127,7 @@ namespace RestaurantManagement.Web.Controllers
         // Trang báo lỗi thân thiện cho mã trạng thái HTTP (404, 403, 400...) thay vì trang trắng.
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult HttpStatus(int id)
+        public IActionResult HttpStatus([FromRoute] int id)
         {
             var code = id is >= 400 and <= 599 ? id : 404;
             Response.StatusCode = code;
