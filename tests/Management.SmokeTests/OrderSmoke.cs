@@ -261,7 +261,7 @@ public static class OrderSmoke
 
         var orderDetailView = await Get(waiter, $"/DonHang/Details/{tableBill.Id}");
         var orderDetailText = WebUtility.HtmlDecode(orderDetailView);
-        check(orderDetailText.Contains("Đã xong (Sẵn sàng)"), "Waiter sees ready dish on order details");
+        check(orderDetailText.Contains("Sẵn sàng phục vụ"), "Waiter sees ready dish on order details");
         check(WebUtility.HtmlDecode(await Get(waiter, $"/HoaDon/Details/{tableBill.Id}")).Contains("Thanh toán phần còn lại"),
             "Waiter can open the invoice payment page");
         var deniedInvoiceList = await waiter.GetAsync("/HoaDon");

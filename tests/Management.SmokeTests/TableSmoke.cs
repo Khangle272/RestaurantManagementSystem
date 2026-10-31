@@ -72,13 +72,13 @@ public static class TableSmoke
         check((await Get(customer, "/DatBan/LichSu")).Contains(own.MaDatBan), "Customer sees own reservation without phone lookup");
         using (var anonymous = newClient())
         {
-            using var blocked = await anonymous.GetAsync("/DatBan/Success/" + own.Id);
+            using var blocked = await anonymous.GetAsync("/DatBan/ChiTiet/" + own.Id);
             check(blocked.StatusCode == HttpStatusCode.Redirect, "Anonymous cannot inspect reservation by ID");
         }
         var other = new DatBan { MaDatBan = "TABLE-OTHER-OWNER", HoTenLienHe = "Khách khác", LaKhachTrucTiep = true, GioDen = DateTimeOffset.UtcNow,
             GioKetThucDuKien = DateTimeOffset.UtcNow.AddHours(2), SoNguoiLon = 2, TrangThai = TrangThaiDatBan.ChoXacNhan };
         db.DatBan.Add(other); await db.SaveChangesAsync();
-        using (var denied = await customer.GetAsync("/DatBan/Success/" + other.Id))
+        using (var denied = await customer.GetAsync("/DatBan/ChiTiet/" + other.Id))
             check(denied.StatusCode == HttpStatusCode.NotFound, "Customer cannot inspect another reservation");
         check(!(await Get(customer, "/DatBan/LichSu?bookingCode=" + other.MaDatBan)).Contains(other.MaDatBan + "</"), "Search cannot expose another customer's booking");
         using (var denied = await customer.PostAsync("/QuanLyDatBan/XacNhan", new FormUrlEncodedContent(new Dictionary<string, string>())))
