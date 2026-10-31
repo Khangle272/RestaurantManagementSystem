@@ -131,6 +131,18 @@ try
         return;
     }
 
+    if (args.Contains("--reviews-only") || args.Contains("--payments-only") || args.Contains("--kitchen-only"))
+    {
+        await InitDemoAccounts();
+        await using var featureDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(featureDb);
+        if (args.Contains("--reviews-only")) await Management.SmokeTests.ReviewSmoke.Run(featureDb, client, NewClient, Hidden, Check);
+        else if (args.Contains("--payments-only")) await Management.SmokeTests.PaymentLedgerSmoke.Run(featureDb, client, NewClient, Hidden, Check);
+        else await Management.SmokeTests.KitchenStockSmoke.Run(featureDb, client, NewClient, Hidden, Check);
+        Console.WriteLine($"PASS: {checks} review/payment/kitchen HTTP/database checks.");
+        return;
+    }
+
     if (args.Contains("--promotions-only"))
     {
         await InitDemoAccounts();
@@ -296,9 +308,9 @@ try
         Check(accountPage.Contains(email), role + " views own account");
         Check(accountPage.Contains("Thông tin cá nhân") && accountPage.Contains($"href=\"{allowed}\"")
             && !accountPage.Contains($"href=\"{denied}\""), role + " navigation uses shared labels and filters forbidden functions");
-        Check(accountPage.Contains("aria-controls=\"management-menu\"") && accountPage.Contains("aria-expanded=\"false\"")
-            && accountPage.Contains("management-sidebar-content collapse d-md-flex"),
-            role + " small-screen menu starts collapsed and stays visible on desktop");
+        Check(accountPage.Contains("aria-controls=\"admin-sidebar\"") && accountPage.Contains("id=\"management-menu\"")
+            && accountPage.Contains("data-sidebar-close"),
+            role + " small-screen menu opens as a closable drawer and stays visible on desktop");
         var workspace = WebUtility.HtmlDecode(await roleClient.GetStringAsync("/admin/TrangChu"));
         Check(workspace.Contains("KHU LÀM VIỆC") && workspace.Contains($"href=\"{allowed}\"")
             && !workspace.Contains($"href=\"{denied}\""), role + " workspace shares the permission-filtered navigation");
@@ -591,6 +603,9 @@ try
     await Management.SmokeTests.PaymentQrSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PromotionSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
     await Management.SmokeTests.CustomerPromotionSmoke.Run(db, client, NewClient, Hidden, Check, connection.ConnectionString);
+    await Management.SmokeTests.ReviewSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.PaymentLedgerSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.KitchenStockSmoke.Run(db, client, NewClient, Hidden, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch

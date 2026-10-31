@@ -119,10 +119,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
                     TrangThaiBadgeClass = badgeClass,
                     GhiChu = x.YeuCau,
                     GioKetThuc = x.GioKetThucDuKien,
-                    TinhTrangCoc = x.TienCocYeuCau <= 0 ? "Không yêu cầu cọc"
-                        : ReservationDepositPolicy.Remaining(x) <= 0 ? "Đã đối chiếu đủ cọc"
-                        : x.ThoiDiemBaoChuyenKhoan != null ? "Khách báo chuyển — chờ đối chiếu"
-                        : $"Còn chờ cọc {ReservationDepositPolicy.Remaining(x):N0} đ",
+                    TinhTrangCoc = ReservationDepositPolicy.StatusText(x),
                     HoaDonId = invoice?.Id,
                     TongTienHoaDon = invoice?.ChiTiet.Sum(c => c.SoLuong * c.DonGia) ?? 0,
                     DaThanhToan = daThanhToan
@@ -235,15 +232,21 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         if (model.KhuVucId.HasValue && !model.Areas.Any(x => x.Id == model.KhuVucId))
             ModelState.AddModelError(nameof(model.KhuVucId), "Khu vực không còn sử dụng.");
         if (string.IsNullOrWhiteSpace(model.HoTen)) ModelState.AddModelError(nameof(model.HoTen), "Nhập họ tên khách.");
-        if (model.BanAnId is int requestedId)
+        BanAn? chosen = null;
+        if (model.BanAnId is not int requestedId) ModelState.AddModelError(nameof(model.BanAnId), "Chọn bàn/phòng khách muốn trên sơ đồ.");
+        else if ((chosen = await RequestedTable(requestedId)) is null)
+            ModelState.AddModelError(nameof(model.BanAnId), "Bàn đã ngừng sử dụng hoặc không tồn tại. Chọn bàn khác trên sơ đồ.");
+        else
         {
-            var table = await RequestedTable(requestedId);
-            if (table is null) ModelState.AddModelError(nameof(model.BanAnId), "Bàn đã ngừng sử dụng hoặc không tồn tại. Chọn bàn khác trên sơ đồ.");
-            else
+            model.KhuVucId = chosen.KhuVucId;
+            model.RequestedTableName = $"{chosen.MaBan} · {chosen.KhuVuc.TenKhuVuc} · {chosen.SoChoNgoi} chỗ";
+            if (ModelState.IsValid)
             {
-                model.RequestedTableName = $"{table.MaBan} · {table.KhuVuc.TenKhuVuc} · {table.SoChoNgoi} chỗ";
-                if (model.KhuVucId != table.KhuVucId)
-                    ModelState.AddModelError(nameof(model.KhuVucId), "Khu vực cần khớp với bàn đã chọn. Quay lại sơ đồ nếu muốn đổi bàn.");
+                var (availabilityError, map) = await tables.TableAvailability(model.GioDen, model.SoNguoi, chosen.KhuVucId, -15);
+                var status = map.SingleOrDefault(x => x.Id == chosen.Id);
+                if (availabilityError is not null) ModelState.AddModelError(nameof(model.GioDen), availabilityError);
+                else if (status?.TrangThai != "trong")
+                    ModelState.AddModelError(nameof(model.BanAnId), $"Bàn {chosen.MaBan}: {status?.GhiChu ?? "không còn trống"}. Chọn bàn khác.");
             }
         }
         if (!ModelState.IsValid) return View(model);
@@ -252,17 +255,24 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             MaDatBan = await TableService.NewBookingCode(Db), HoTenLienHe = model.HoTen.Trim(), SoDienThoaiLienHe = model.SoDienThoai,
             KhachHangId = customerId, LaKhachTrucTiep = true, ThoiDiemTao = DateTimeOffset.UtcNow,
             GioDen = arrival, GioKetThucDuKien = until, SoNguoiLon = model.SoNguoi,
-            KhuVucUuTienId = model.KhuVucId, YeuCau = model.GhiChu?.Trim(), TrangThai = TrangThaiDatBan.ChoXacNhan,
-            YeuCauVip = model.Areas.Any(x => x.Id == model.KhuVucId && x.LaPhongVip),
-            YeuCauCoc = model.SoNguoi >= 8 || model.Areas.Any(x => x.Id == model.KhuVucId && x.LaPhongVip),
+            KhuVucUuTienId = model.KhuVucId, YeuCau = model.GhiChu?.Trim(),
+            YeuCauVip = chosen!.KhuVuc.LaPhongVip,
+            // Đặt giữ chỗ không kèm món: tiền đặt cọc theo khu vực của bàn; khách walk-in ăn ngay thì không cọc.
+            YeuCauCoc = !model.KhachDenNgay && chosen.KhuVuc.TienCocGiuCho > 0,
+            TienCocYeuCau = model.KhachDenNgay ? 0 : chosen.KhuVuc.TienCocGiuCho,
+            DieuKienCocDaThoaThuan = model.KhachDenNgay ? null : ReservationDepositPolicy.Terms(chosen.KhuVuc.TienCocGiuCho, false),
             NhanVienTiepNhanId = await StaffId()
         };
+        booking.TrangThai = booking.YeuCauCoc ? TrangThaiDatBan.ChoCoc : TrangThaiDatBan.DaXacNhan;
+        booking.Ban.Add(new ChiTietDatBan { BanAnId = chosen.Id });
         Db.DatBan.Add(booking);
         if (!await SaveAsync("", "Không tạo được yêu cầu. Vui lòng thử lại.")) return View(model);
+        TempData["SuccessMessage"] = booking.YeuCauCoc
+            ? $"Đã giữ {chosen.MaBan} cho {booking.HoTenLienHe}. Chưa đặt cọc — cần cọc {booking.TienCocYeuCau:N0} đ."
+            : $"Đã xếp {chosen.MaBan} cho {booking.HoTenLienHe}.";
         if (Request.Headers.XRequestedWith == "XMLHttpRequest")
-            return Json(new { ok = true, redirectUrl = Url.Action(nameof(Index), new { xepBanId = booking.Id, preferredTableId = model.BanAnId }) });
-        TempData["SuccessMessage"] = "Đã ghi nhận khách. Chọn bàn phù hợp để xác nhận.";
-        return RedirectToAction(nameof(Index), new { xepBanId = booking.Id, preferredTableId = model.BanAnId });
+            return Json(new { ok = true, redirectUrl = Url.Action(nameof(Index)) });
+        return RedirectToAction(nameof(Index));
     }
 
     private Task<BanAn?> RequestedTable(int id) => Db.BanAn.AsNoTracking().Include(x => x.KhuVuc)
@@ -322,7 +332,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         int markerIdx = currentNoiDung.IndexOf("\n[Phản hồi từ Nhà hàng]:", StringComparison.Ordinal);
         var baseContent = markerIdx >= 0 ? currentNoiDung[..markerIdx] : currentNoiDung;
 
-        var fullContent = $"{baseContent}{replyTag}{noiDungPhanHoi.Trim()} ({DateTime.Now:dd/MM/yyyy HH:mm})";
+        var fullContent = $"{baseContent}{replyTag}{noiDungPhanHoi.Trim()} ({TableService.VietnamNow:dd/MM/yyyy HH:mm})";
         danhGia.NoiDung = fullContent.Length > 2000 ? fullContent[..2000] : fullContent;
 
         await Db.SaveChangesAsync();

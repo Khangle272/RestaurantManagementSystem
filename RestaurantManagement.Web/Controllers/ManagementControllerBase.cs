@@ -11,6 +11,11 @@ public abstract class ManagementControllerBase(RestaurantDbContext context) : Co
 {
     protected RestaurantDbContext Db { get; } = context;
 
+    // Full details go to the log; the user only sees a friendly Vietnamese message.
+    protected void LogUnexpected(Exception ex, string action) =>
+        HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(GetType())
+            .LogError(ex, "Unexpected error while {Action}", action);
+
     public override void OnActionExecuting(ActionExecutingContext context)
     {
         ViewData["ActiveMenu"] = ControllerContext.ActionDescriptor.ControllerName;

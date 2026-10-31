@@ -1,12 +1,12 @@
 @model NguyenLieuIndexViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Kho nguyên liệu";
+    ViewData["Title"] = "Danh mục nguyên liệu";
     var p = Model.Pagination;
 }
 <div class="container-fluid py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div><h2 class="h3 mb-1">Kho nguyên liệu</h2><p class="text-muted mb-0">Tồn kho tính từ phiếu nhập và phiếu xuất đã ghi sổ.</p></div>
+        <div><h2 class="h3 mb-1">Danh mục nguyên liệu</h2><p class="text-muted mb-0">Tồn kho tính từ phiếu nhập và phiếu xuất đã ghi sổ.</p></div>
         <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm nguyên liệu</a>
     </div>
     <div class="row g-3 mb-4">

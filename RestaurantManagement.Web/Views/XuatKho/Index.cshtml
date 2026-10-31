@@ -1,7 +1,7 @@
 @model PhieuXuatIndexVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Quản lý Xuất kho chế biến";
+    ViewData["Title"] = "Xuất kho chế biến";
     var p = Model.Pagination;
 }
 
@@ -9,12 +9,12 @@
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Quản lý Xuất kho chế biến</h1>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Xuất kho chế biến</h1>
             <p class="text-muted mb-0">Xuất nguyên vật liệu cho Bếp nóng, Bếp lạnh và Quầy Bar phục vụ hoạt động nhà hàng.</p>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-plus-circle"></i> Lập Phiếu Xuất Kho
+                <i class="bi bi-plus-circle"></i> Lập phiếu xuất kho
             </a>
         </div>
     </div>
@@ -39,7 +39,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small fw-semibold text-uppercase">Tổng Giá Trị Xuất Kho</div>
-                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongGiaTriXuat.ToString("N0") <small class="fs-6 text-muted">VNĐ</small></div>
+                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongGiaTriXuat.ToString("N0") <small class="fs-6 text-muted">đ</small></div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-danger fs-3">
                         <i class="bi bi-currency-dollar"></i>
@@ -145,7 +145,7 @@
                                 <span class="badge bg-light text-dark border">@item.ChiTiet.Count món</span>
                             </td>
                             <td class="text-end fw-bold text-dark">
-                                @item.TongTien.ToString("N0") VNĐ
+                                @item.TongTien.ToString("N0") đ
                             </td>
                             <td>
                                 <span class="badge-status-success d-inline-flex align-items-center gap-1">

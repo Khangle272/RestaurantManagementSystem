@@ -1,9 +1,12 @@
 @model List<RestaurantManagement.Web.Controllers.BepRow>
 @using RestaurantManagement.API.Models
+@functions { private static string TableServiceToday() => RestaurantManagement.Web.Services.TableService.VietnamNow.ToString("dd/MM/yyyy"); }
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Bếp chế biến & Điều phối";
+    ViewData["Title"] = "Màn hình bếp (KDS)";
     var currentFilter = (ViewBag.Filter as string) ?? "active";
+    var cancelled = ViewBag.Cancelled as List<RestaurantManagement.Web.Controllers.BepRow> ?? [];
+    var canClose = User.IsInRole("Admin") || User.IsInRole("Bep");
 
     (string Label, string Color, string Border) TrangThaiStyle(TrangThaiCheBien trangThai) => trangThai switch
     {
@@ -21,13 +24,15 @@
     .kds-sl { font-size: 1.35rem; font-weight: 800; color: #E11D48; }
     .kds-note { border: 1px solid #F59E0B; background: #FFFBEB; color: #92400E; border-radius: 8px; padding: .45rem .6rem; font-size: .85rem; font-weight: 600; }
     .kds-meta { font-size: .8rem; color: #64748B; }
+    .kds-seq { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; height: 2rem; border-radius: 50%; background: #0F172A; color: #fff; font-weight: 800; font-size: .85rem; }
+    .kds-cancel { border: 2px solid #DC2626; background: #FEF2F2; border-radius: 12px; }
 </style>
 
 <div class="container-fluid py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div>
-            <h1 class="h3 mb-1">Màn hình Bếp (KDS) & Điều phối món</h1>
-            <p class="text-muted mb-0">Theo dõi thứ tự gọi món (FIFO), chế biến theo size và điều phối phục vụ ra bàn. <span id="kds-live-status" role="status">Tự cập nhật trạng thái.</span></p>
+            <h1 class="h3 mb-1">Màn hình bếp (KDS) & điều phối món</h1>
+            <p class="text-muted mb-0">Chỉ hiển thị món gọi trong ngày @TableServiceToday(). Thứ tự: món gọi trước làm trước — đọc từ trái sang phải, từ trên xuống dưới. <span id="kds-live-status" role="status">Tự cập nhật trạng thái.</span></p>
         </div>
         <div class="btn-group" role="group">
             <a asp-action="Index" asp-route-filter="active" class="btn btn-sm @(currentFilter == "active" ? "btn-primary" : "btn-outline-primary")">
@@ -40,7 +45,28 @@
                 Tất cả
             </a>
         </div>
+        @if (canClose)
+        {
+            <form asp-action="KetThucNgay" method="post" data-confirm="Món chưa nấu của bill chưa thu tiền sẽ bị hủy, món đã nấu xong chuyển Đã phục vụ." data-confirm-title="Kết thúc ngày bếp?" data-confirm-ok="Kết thúc ngày">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-moon-stars me-1"></i>Kết thúc ngày bếp</button>
+            </form>
+        }
     </div>
+    <p class="small text-muted">Món của ngày trước được hệ thống tự đóng sổ lúc qua ngày mới, không còn treo trên màn hình bếp.</p>
+
+    @if (cancelled.Count > 0)
+    {
+        <div class="kds-cancel p-3 mb-3" role="alert">
+            <div class="fw-bold text-danger mb-2"><i class="bi bi-x-octagon-fill me-1"></i>KHÁCH ĐÃ HỦY — DỪNG CHẾ BIẾN</div>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var c in cancelled)
+                {
+                    <span class="badge bg-danger fs-6 fw-semibold">@c.Ban · @c.Mon (@c.Size) x@c.SoLuong · hủy lúc @c.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                }
+            </div>
+        </div>
+    }
 
     @if (Model.Count == 0)
     {
@@ -55,7 +81,7 @@
     else
     {
         <div class="row g-3">
-            @foreach (var item in Model)
+            @foreach (var (item, index) in Model.Select((x, i) => (x, i + 1)))
             {
                 var style = TrangThaiStyle(item.TrangThai);
                 var thoiDiem = item.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7));
@@ -63,8 +89,11 @@
                     <div class="card border-0 shadow-sm h-100 kds-card" style="border-left: 4px solid @style.Border !important;">
                         <div class="card-body d-flex flex-column gap-2">
                             <div class="d-flex justify-content-between align-items-start gap-2">
-                                <div class="kds-ban">@item.Ban</div>
-                                <span class="badge" style="background-color: @style.Color;">@style.Label</span>
+                                <div class="d-flex align-items-center gap-2"><span class="kds-seq" title="Thứ tự chế biến">#@index</span><div class="kds-ban">@item.Ban</div></div>
+                                <div class="text-end">
+                                    <span class="badge" style="background-color: @style.Color;">@style.Label</span>
+                                    @if (item.GoiThem) { <div><span class="badge bg-danger mt-1"><i class="bi bi-plus-circle me-1"></i>Gọi thêm</span></div> }
+                                </div>
                             </div>
                             <div class="kds-meta">
                                 <i class="bi bi-calendar3 me-1"></i>@thoiDiem.ToString("dd/MM/yyyy")
@@ -119,7 +148,7 @@
     }
 </div>
 
-<script type="application/json" id="kds-state">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => new { x.Id, Status = (int)x.TrangThai, x.ThoiDiemGoi }), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))</script>
+<script type="application/json" id="kds-state">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { items = Model.Select(x => new { x.Id, Status = (int)x.TrangThai, x.ThoiDiemGoi }), cancelled = cancelled.Select(x => x.Id).Order() }, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))</script>
 
 @section Scripts {
     <script>

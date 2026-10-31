@@ -6,6 +6,7 @@ using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -101,7 +102,7 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
         var sb = new StringBuilder();
         sb.AppendLine("BÁO CÁO TỔNG HỢP NHẬP - XUẤT - TỒN KHO");
         sb.AppendLine($"Khoảng thời gian: {model.TuNgay:dd/MM/yyyy} - {model.DenNgay:dd/MM/yyyy}");
-        sb.AppendLine($"Ngày xuất báo cáo: {DateTime.Now:dd/MM/yyyy HH:mm}");
+        sb.AppendLine($"Ngày xuất báo cáo: {TableService.VietnamNow:dd/MM/yyyy HH:mm}");
         sb.AppendLine();
         sb.AppendLine("Mã NL,Tên nguyên liệu,ĐVT,Nhóm,Đơn giá (VNĐ),Tồn đầu (SL),Tồn đầu (Tiền),Nhập trong kỳ (SL),Nhập trong kỳ (Tiền),Xuất trong kỳ (SL),Xuất trong kỳ (Tiền),Thanh lý trong kỳ (SL),Thanh lý trong kỳ (Tiền),Tồn cuối (SL),Tồn cuối (Tiền)");
 
@@ -131,7 +132,7 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
     {
         DateTime start;
         DateTime end;
-        var now = DateTime.Now;
+        var now = TableService.VietnamNow;
 
         switch (preset?.ToLower())
         {
@@ -167,8 +168,8 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
             (start, end) = (end, start);
         }
 
-        var startOffset = new DateTimeOffset(start);
-        var endOffset = new DateTimeOffset(end);
+        var startOffset = TableService.VietnamTime(start);
+        var endOffset = TableService.VietnamTime(end);
 
         var ingredients = await Db.NguyenLieu.Where(x => x.DangSuDung).OrderBy(x => x.TenNguyenLieu).ToListAsync();
 

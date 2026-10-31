@@ -1,7 +1,7 @@
 @model PhieuThanhLyIndexVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Quản lý Thanh lý Nguyên liệu";
+    ViewData["Title"] = "Thanh lý nguyên liệu";
     var p = Model.Pagination;
 }
 
@@ -9,12 +9,12 @@
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>Quản lý Thanh lý & Tiêu hủy</h1>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-trash3 me-2 text-danger"></i>Thanh lý & tiêu hủy nguyên liệu</h1>
             <p class="text-muted mb-0">Hạch toán hao hụt, thanh lý các nguyên vật liệu hết hạn sử dụng, ẩm mốc hoặc hư hỏng sơ chế.</p>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-plus-circle"></i> Lập Phiếu Thanh Lý
+                <i class="bi bi-plus-circle"></i> Lập phiếu thanh lý
             </a>
         </div>
     </div>
@@ -39,7 +39,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small fw-semibold text-uppercase">Tổng Thiệt Hại Hao Hụt</div>
-                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongThietHai.ToString("N0") <small class="fs-6 text-muted">VNĐ</small></div>
+                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongThietHai.ToString("N0") <small class="fs-6 text-muted">đ</small></div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-danger fs-3">
                         <i class="bi bi-exclamation-octagon"></i>

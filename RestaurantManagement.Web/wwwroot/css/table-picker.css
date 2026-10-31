@@ -1,0 +1,17 @@
+/* Sơ đồ chọn bàn/phòng khi đặt bàn */
+.table-picker-area { margin-bottom: 1rem; }
+.table-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: .5rem; }
+.table-picker-item { display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; padding: .6rem .7rem; border-radius: .6rem; border: 2px solid #CBD5E1; background: #fff; text-align: left; font-size: .9rem; }
+.table-picker-item small { font-size: .72rem; color: #64748B; }
+.table-picker-item.is-trong { border-color: #16A34A; background: #F0FDF4; cursor: pointer; }
+.table-picker-item.is-trong:hover { background: #DCFCE7; }
+.table-picker-item.is-da-dat { border-color: #FCA5A5; background: #FEF2F2; color: #991B1B; cursor: not-allowed; }
+.table-picker-item.is-khong-du-cho { border-style: dashed; color: #94A3B8; cursor: not-allowed; }
+.table-picker-item.is-selected { border-color: #E11D48; background: #E11D48; color: #fff; box-shadow: 0 0 0 3px rgba(225,29,72,.25); }
+.table-picker-item.is-selected small { color: #FFE4E6; }
+.table-picker-legend { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .8rem; color: #475569; }
+.table-picker-legend span::before { content: ""; display: inline-block; width: .8rem; height: .8rem; border-radius: .2rem; margin-right: .3rem; vertical-align: -1px; border: 2px solid; }
+.table-picker-legend .lg-free::before { border-color: #16A34A; background: #F0FDF4; }
+.table-picker-legend .lg-busy::before { border-color: #FCA5A5; background: #FEF2F2; }
+.table-picker-legend .lg-small::before { border-color: #CBD5E1; border-style: dashed; }
+.table-picker-legend .lg-picked::before { border-color: #E11D48; background: #E11D48; }

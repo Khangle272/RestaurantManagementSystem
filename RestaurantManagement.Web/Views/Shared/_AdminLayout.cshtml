@@ -9,12 +9,13 @@
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
     <script>
-        if (localStorage.getItem('sidebar_collapsed') === 'true') {
+        if (localStorage.getItem('sidebar_collapsed') === 'true' && !window.matchMedia('(max-width: 767.98px)').matches) {
             document.documentElement.classList.add('sidebar-preload-collapsed');
         }
     </script>
     <link rel="stylesheet" href="~/css/management-ui.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/admin-polish.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ux.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
     <body class="@((ViewData["AutoCollapseSidebar"] as bool? == true) ? "sidebar-collapsed" : "")" data-operational-workspace="@((ViewData["AutoCollapseSidebar"] as bool? == true).ToString().ToLowerInvariant())">
@@ -22,9 +23,9 @@
     <aside class="admin-sidebar" id="admin-sidebar">
         <div class="admin-sidebar-header d-flex align-items-center justify-content-between gap-3">
             <h4 class="mb-0 fw-bold text-nowrap"><i class="bi bi-shop me-2"></i><span class="admin-brand-text">Quản lý nhà hàng</span></h4>
-            <button class="btn btn-outline-light btn-sm d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#management-menu" aria-controls="management-menu" aria-expanded="false" aria-label="Mở hoặc đóng menu chức năng">Menu</button>
+            <button class="btn btn-sm btn-sidebar-close d-md-none" type="button" data-sidebar-close aria-label="Đóng menu"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </div>
-        <div id="management-menu" class="management-sidebar-content collapse d-md-flex flex-column flex-grow-1">
+        <div id="management-menu" class="management-sidebar-content d-flex flex-column flex-grow-1">
             <nav class="admin-sidebar-nav" aria-label="Chức năng quản lý">
                 <a asp-controller="Admin" asp-action="TrangChu" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "active" : "")" title="Trang chủ">
                     <i class="bi bi-house-door me-2"></i><span class="nav-link-text">Trang chủ</span>
@@ -32,15 +33,32 @@
                 @await Html.PartialAsync("_ManagementNavigation", false)
             </nav>
             <div class="management-sidebar-actions"><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="btn btn-link text-white text-decoration-none w-100 text-start d-flex align-items-center gap-2" title="Đăng xuất"><i class="bi bi-box-arrow-right"></i><span class="nav-link-text">Đăng xuất</span></button></form></div>
-            <div class="admin-sidebar-footer">&copy; @DateTime.Now.Year - Quản lý nhà hàng</div>
+            <div class="admin-sidebar-footer">&copy; @RestaurantManagement.Web.Services.TableService.VietnamNow.Year - Quản lý nhà hàng</div>
         </div>
     </aside>
-    <header class="admin-topbar">
-        <div class="d-flex align-items-center gap-3">
-            <button type="button" class="btn-sidebar-toggle" id="btnToggleSidebar" title="Thu gọn / Mở rộng Menu" aria-label="Thu gọn hoặc mở rộng thanh điều hướng">
+    <div class="admin-backdrop" data-sidebar-close aria-hidden="true"></div>
+    <header class="admin-topbar" id="admin-topbar">
+        <div class="d-flex align-items-center gap-3 min-w-0">
+            <button type="button" class="btn-sidebar-toggle" id="btnToggleSidebar" title="Thu gọn / Mở rộng Menu" aria-label="Thu gọn hoặc mở rộng thanh điều hướng" aria-controls="admin-sidebar">
                 <i class="bi bi-list"></i>
             </button>
-            <h5 class="mb-0 fw-semibold text-heading">@ViewData["Title"]</h5>
+            @{
+                var pageTitle = ViewData["Title"]?.ToString() ?? "";
+                var navCurrent = Context.Items["NavCurrent"] as (string Group, string Controller, string Action, string Label)?;
+            }
+            <nav class="topbar-breadcrumb" aria-label="Vị trí trang">
+                @if (navCurrent is { } nav)
+                {
+                    <span class="topbar-crumb d-none d-lg-inline">@nav.Group</span>
+                    @* Chỉ hiện mục chức năng khi đang ở trang con (thêm/sửa/chi tiết) để bấm quay về danh sách. *@
+                    @if (!string.Equals(nav.Action, ViewContext.RouteData.Values["action"]?.ToString(), StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(nav.Label, pageTitle, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <a class="topbar-crumb d-none d-md-inline" asp-controller="@nav.Controller" asp-action="@nav.Action">@nav.Label</a>
+                    }
+                }
+                <h5 class="mb-0 fw-semibold text-heading" aria-current="page">@pageTitle</h5>
+            </nav>
         </div>
         <div class="ms-auto topbar-user">
             @{ var userName = User.Identity?.Name ?? ""; var initial = userName.Length > 0 ? char.ToUpperInvariant(userName[0]).ToString() : "?"; }
@@ -60,30 +78,61 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         (function() {
+            // Màn hình rộng: nút ☰ thu gọn / mở rộng sidebar. Điện thoại: sidebar là ngăn kéo trượt từ bên trái.
+            var mobile = window.matchMedia('(max-width: 767.98px)');
             var operational = document.body.dataset.operationalWorkspace === 'true';
-            var isCollapsed = operational
-                ? sessionStorage.getItem('operational_sidebar_state') !== 'expanded'
-                : localStorage.getItem('sidebar_collapsed') === 'true';
-            if (isCollapsed) {
-                document.body.classList.add('sidebar-collapsed');
-            }
             var btn = document.getElementById('btnToggleSidebar');
+            var read = function (store, key) { try { return window[store].getItem(key); } catch (e) { return null; } };
+            var write = function (store, key, value) { try { window[store].setItem(key, value); } catch (e) { /* Bộ nhớ trình duyệt có thể bị tắt. */ } };
+            var desktopCollapsed = function () {
+                return operational
+                    ? read('sessionStorage', 'operational_sidebar_state') !== 'expanded'
+                    : read('localStorage', 'sidebar_collapsed') === 'true';
+            };
+            var setDrawer = function (open) {
+                document.body.classList.toggle('sidebar-open', open);
+                if (btn) btn.setAttribute('aria-expanded', String(open));
+                if (open) {
+                    var first = document.querySelector('#admin-sidebar .nav-link.active') || document.querySelector('#admin-sidebar .nav-link');
+                    if (first) first.focus({ preventScroll: true });
+                }
+            };
+            var applyMode = function () {
+                document.documentElement.classList.remove('sidebar-preload-collapsed');
+                document.body.classList.toggle('sidebar-collapsed', !mobile.matches && desktopCollapsed());
+                setDrawer(false);
+            };
+            var closeDrawer = function () { setDrawer(false); if (btn) btn.focus(); };
+            applyMode();
+            if (mobile.addEventListener) mobile.addEventListener('change', applyMode); else mobile.addListener(applyMode);
             if (btn) {
-                btn.addEventListener('click', function() {
-                    document.body.classList.toggle('sidebar-collapsed');
-                    var collapsed = document.body.classList.contains('sidebar-collapsed');
-                    if (operational) {
-                        sessionStorage.setItem('operational_sidebar_state', collapsed ? 'collapsed' : 'expanded');
-                    } else {
-                        localStorage.setItem('sidebar_collapsed', collapsed ? 'true' : 'false');
-                    }
+                btn.addEventListener('click', function () {
+                    if (mobile.matches) { setDrawer(!document.body.classList.contains('sidebar-open')); return; }
+                    var collapsed = document.body.classList.toggle('sidebar-collapsed');
+                    if (operational) write('sessionStorage', 'operational_sidebar_state', collapsed ? 'collapsed' : 'expanded');
+                    else write('localStorage', 'sidebar_collapsed', collapsed ? 'true' : 'false');
                 });
+            }
+            document.querySelectorAll('[data-sidebar-close]').forEach(function (el) { el.addEventListener('click', closeDrawer); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) closeDrawer();
+            });
+            document.getElementById('admin-sidebar').addEventListener('click', function (e) {
+                if (mobile.matches && e.target.closest('a.nav-link')) setDrawer(false);
+            });
+            // Menu dài: cuộn mục đang mở vào giữa tầm nhìn để luôn thấy mình đang ở đâu.
+            var active = document.querySelector('#admin-sidebar .nav-link.active');
+            var nav = active && active.closest('.admin-sidebar-nav');
+            if (nav) {
+                var top = active.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+                if (top + active.offsetHeight > nav.clientHeight) nav.scrollTop = top - nav.clientHeight / 2;
             }
         })();
     </script>
     <script src="~/js/ajax-forms.js" asp-append-version="true"></script>
     <script src="~/js/management-ui.js" asp-append-version="true"></script>
     <script src="~/js/admin-polish.js" asp-append-version="true"></script>
+    <script src="~/js/ux.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

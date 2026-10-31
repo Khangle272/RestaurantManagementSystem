@@ -38,6 +38,8 @@ public class DatBanCreateVM : IValidatableObject
     public int? MaKhuVuc { get; set; }
 
     public List<SelectListItem> KhuVucOptions { get; set; } = [];
+    // Bàn/phòng khách tự chọn trên sơ đồ.
+    public int? BanAnId { get; set; }
     public Guid? RequestId { get; set; }
     public bool ChuanBiTruoc { get; set; }
     public bool YeuCauTrangTri { get; set; }
@@ -81,6 +83,7 @@ public class DatBanItemVM
     public decimal TongTienHoaDon { get; set; }
     public int? HoaDonId { get; set; }
     public bool DaThanhToan { get; set; }
+    public bool CoTheDanhGia { get; set; }
     public bool DaDanhGia { get; set; }
     public string? GhiChu { get; set; }
     public List<ChiTietMonAnItemVM> ChiTietMonAn { get; set; } = [];

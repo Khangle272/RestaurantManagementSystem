@@ -73,6 +73,7 @@ public static class PreorderSmoke
             ["Items[0].MonAnId"] = dish.Id.ToString(), ["Items[0].MonAnSizeId"] = size.Id.ToString(), ["Items[0].SoLuong"] = "1",
             ["Items[0].YeuCauCheBien"] = "PREORDER-FIFO-FIRST", ["Items[0].DonGiaThoaThuan"] = "1"
         };
+        createFields["BanAnId"] = TestTables.For(db, null, createFields["ThoiGianDen"]);
         await Ajax(customer, "/DatBan", customerForm, createFields);
         var early = await db.DatBan.SingleAsync(x => x.YeuCauTaoId == createId);
         var earlyId = early.Id;
@@ -187,7 +188,7 @@ public static class PreorderSmoke
         var secondPosition = kitchen.IndexOf("PREORDER-FIFO-SECOND", StringComparison.Ordinal);
         check(firstPosition >= 0 && secondPosition > firstPosition, "Actual KDS renders FIFO by kitchen release, not booking/draft creation");
 
-        check(await orders.UpdateDishStatusAsync(earlyLines[0].Id, TrangThaiCheBien.DangCheBien, false) is null, "Start cooking one early-prep line");
+        check(earlyLines.All(x => x.TrangThai == TrangThaiCheBien.DangCheBien), "Released early-prep lines go straight into cooking");
         await Ajax(customer, $"/DatBan/YeuCauHuy/{earlyId}", customerForm, new()
         { ["RowVersion"] = await Version(earlyId), ["LyDo"] = "Khách xin hủy sau khi bếp bắt đầu" });
         var requested = await db.DatBan.AsNoTracking().SingleAsync(x => x.Id == earlyId);
@@ -217,8 +218,8 @@ public static class PreorderSmoke
         var resolved = await db.DatBan.AsNoTracking().SingleAsync(x => x.Id == earlyId);
         var preserved = await db.ChiTietHoaDon.AsNoTracking().Where(x => x.MonDatTruoc != null && x.MonDatTruoc.DatBanId == earlyId).ToListAsync();
         check(resolved.TrangThai == TrangThaiDatBan.DaHuy && resolved.TienCocDaHoan == 50000m, "Admin closes cancellation after actual deposit handling");
-        check(preserved.Count == 2 && preserved.Any(x => x.TrangThai == TrangThaiCheBien.DangCheBien)
-            && preserved.Any(x => x.TrangThai == TrangThaiCheBien.DaHuy), "Cancellation preserves cooked history and cancels only waiting lines");
+        check(preserved.Count == 2 && preserved.All(x => x.TrangThai == TrangThaiCheBien.DangCheBien),
+            "Cancellation preserves dishes the kitchen already started instead of deleting cooked history");
         var closedBills = await db.HoaDon.AsNoTracking().Include(x => x.ChiTiet).Where(x => x.DatBanId == earlyId).ToListAsync();
         check(closedBills.All(x => x.TrangThai == TrangThaiHoaDon.DaHuy
             && x.TongTienHang == x.ChiTiet.Where(i => i.TrangThai != TrangThaiCheBien.DaHuy).Sum(i => i.SoLuong * i.DonGia)),

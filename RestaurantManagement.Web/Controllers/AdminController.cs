@@ -6,6 +6,7 @@ using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -65,7 +66,7 @@ public class AdminController(RestaurantDbContext db, UserManager<TaiKhoan> users
     {
         // Chi so tong quan chi hien cho Admin; nhan vien khac chi thay loi tat chuc nang.
         if (!User.IsInRole(AppRoles.Admin)) return View(new DashboardViewModel());
-        var today = new DateTimeOffset(DateTime.Today);
+        var today = TableService.VietnamTime(TableService.VietnamNow.Date);
         var tomorrow = today.AddDays(1);
         var paidToday = db.HoaDon.AsNoTracking()
             .Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan && x.ThoiDiemLap >= today && x.ThoiDiemLap < tomorrow);

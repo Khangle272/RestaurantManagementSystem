@@ -18,6 +18,16 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
         return View(model);
     }
 
+    // Thu ngân kết ca: kiểm tiền mặt / chuyển khoản theo ngày và ca, không cần biểu đồ.
+    [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    public async Task<IActionResult> NopCa(DateOnly? ngay, string? ca)
+    {
+        var day = ngay ?? DateOnly.FromDateTime(TableService.VietnamNow);
+        if (day.Year is < 2000 or > 2100) return BadRequest("Ngày không hợp lệ.");
+        if (ca is not null && ReservationSchedule.Slots.All(x => x.Id != ca)) ca = null;
+        return View(await baoCaoService.GetShiftReportAsync(day, ca));
+    }
+
     [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DoanhThu(string? cheDo, DateTime? tuNgay, DateTime? denNgay, int? nam)
     {
@@ -39,7 +49,7 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
             sb.AppendLine($"\"{r.NhanThoiGian}\",{r.SoDonThanhCong},{r.SoDonHuy},{r.TongTienHang:F0},{r.TienGiam:F0},{r.DoanhThuThuc:F0},{r.TienMat:F0},{r.ChuyenKhoan:F0},{r.The:F0}");
         }
 
-        var fileName = $"BaoCaoDoanhThu_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+        var fileName = $"BaoCaoDoanhThu_{TableService.VietnamNow:yyyyMMdd_HHmm}.csv";
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
         return File(bytes, "text/csv; charset=utf-8", fileName);
     }
@@ -66,7 +76,7 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
             sb.AppendLine(FormattableString.Invariant($"{rank++},{CsvExport.Cell(m.TenMon)},{CsvExport.Cell(m.TenDanhMuc)},{CsvExport.Cell(m.SizePhoBien)},{m.SoLuongDaBan},{m.DoanhThuMangLai:F0},{m.TyTrongDoanhThu:F2}%"));
         }
 
-        var fileName = $"TopMonBanChay_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+        var fileName = $"TopMonBanChay_{TableService.VietnamNow:yyyyMMdd_HHmm}.csv";
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
         return File(bytes, "text/csv; charset=utf-8", fileName);
     }
@@ -102,7 +112,7 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
             sb.AppendLine(FormattableString.Invariant($"{CsvExport.Cell(item.TenChuongTrinh)},{CsvExport.Cell(phamVi)},{CsvExport.Cell(uuDai)},{(item.CanVoucher ? "Có" : "Không")},{item.SoLuotApDung},{item.TongTienGiam:F0},{item.DoanhThuMangLai:F0},{item.TyLeGiamTrungBinh:F2}%,{item.ChiSoROI:F2},{CsvExport.Cell(item.DanhGiaHieuQua)}"));
         }
 
-        var fileName = $"BaoCaoHieuQuaKhuyenMai_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+        var fileName = $"BaoCaoHieuQuaKhuyenMai_{TableService.VietnamNow:yyyyMMdd_HHmm}.csv";
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
         return File(bytes, "text/csv; charset=utf-8", fileName);
     }

@@ -7,9 +7,9 @@
     <div class="col-lg-10">
         <!-- Tiêu đề trang -->
         <div class="text-center mb-4">
-            <h2 class="fw-bold text-dark mb-1">
-                <i class="bi bi-clock-history text-danger me-2"></i>Tra Cứu Lịch Sử Đặt Bàn
-            </h2>
+            <h1 class="h2 fw-bold text-dark mb-1">
+                <i class="bi bi-clock-history text-success me-2" aria-hidden="true"></i>Tra cứu lịch sử đặt bàn
+            </h1>
             <p class="text-muted">Nhập số điện thoại hoặc mã đặt chỗ để theo dõi trạng thái và chi tiết hóa đơn món ăn.</p>
         </div>
 
@@ -18,22 +18,22 @@
             <div class="card-body p-4">
                 <form asp-action="LichSu" method="get" class="row g-3">
                     <div class="col-md-5">
-                        <label class="form-label small fw-semibold text-secondary">Số điện thoại liên hệ</label>
+                        <label asp-for="SoDienThoai" class="form-label small fw-semibold text-secondary">Số điện thoại liên hệ</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted"></i></span>
+                            <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted" aria-hidden="true"></i></span>
                             <input asp-for="SoDienThoai" class="form-control" placeholder="0912345678" />
                         </div>
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label small fw-semibold text-secondary">Hoặc Mã đặt chỗ (Booking Code)</label>
+                        <label asp-for="BookingCode" class="form-label small fw-semibold text-secondary">Hoặc mã đặt bàn</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="bi bi-qr-code text-muted"></i></span>
-                            <input asp-for="BookingCode" class="form-control font-monospace" placeholder="BK-20260928-XXXX" />
+                            <span class="input-group-text bg-light"><i class="bi bi-qr-code text-muted" aria-hidden="true"></i></span>
+                            <input asp-for="BookingCode" class="form-control font-monospace" placeholder="DB-A1B2C3" />
                         </div>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-danger w-100 fw-semibold" style="background-color: #E11D48; border-color: #E11D48;">
-                            <i class="bi bi-search me-1"></i>Tra cứu
+                        <button type="submit" class="btn btn-restaurant w-100">
+                            <i class="bi bi-search" aria-hidden="true"></i>Tra cứu
                         </button>
                     </div>
                 </form>
@@ -44,7 +44,7 @@
         @if (Model.DanhSachDatBan.Any())
         {
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0">Tìm thấy @Model.DanhSachDatBan.Count lượt đặt bàn</h5>
+                <h2 class="h5 fw-bold text-dark mb-0">Tìm thấy @Model.DanhSachDatBan.Count lượt đặt bàn</h2>
                 <span class="text-muted small">Sắp xếp theo thời gian mới nhất</span>
             </div>
 
@@ -65,20 +65,20 @@
                                         </span>
                                     </div>
                                     <div class="fw-bold fs-5 text-dark">@item.HoTen</div>
-                                    <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@item.SoDienThoai</div>
+                                    <div class="text-muted small"><i class="bi bi-telephone me-1" aria-hidden="true"></i>@item.SoDienThoai</div>
                                 </div>
 
                                 <!-- Giờ đến & Bàn ăn -->
                                 <div class="col-md-4">
                                     <div class="d-flex align-items-center mb-1">
-                                        <i class="bi bi-calendar3 text-danger me-2"></i>
-                                        <span class="fw-semibold">@item.ThoiGianDen.ToLocalTime().ToString("HH:mm - dd/MM/yyyy")</span>
+                                        <i class="bi bi-calendar3 text-success me-2" aria-hidden="true"></i>
+                                        <span class="fw-semibold">@item.ThoiGianDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm - dd/MM/yyyy")</span>
                                     </div>
                                     <div class="text-secondary small mb-1">
-                                        <i class="bi bi-people me-2"></i>Số lượng: <strong>@item.SoNguoi người</strong>
+                                        <i class="bi bi-people me-2" aria-hidden="true"></i>Số lượng: <strong>@item.SoNguoi người</strong>
                                     </div>
                                     <div class="text-secondary small">
-                                        <i class="bi bi-table me-2"></i>Bàn: <strong class="text-primary">@item.TenBan</strong>
+                                        <i class="bi bi-table me-2" aria-hidden="true"></i>Bàn: <strong class="text-primary">@item.TenBan</strong>
                                     </div>
                                 </div>
 
@@ -91,27 +91,26 @@
                                             <a asp-controller="Home" asp-action="Index" asp-route-datBanId="@item.MaDatBan" asp-fragment="thuc-don" class="btn btn-sm btn-outline-restaurant">Bổ sung món</a>
                                         }
                                     </div>
-                                    @if (item.TrangThai == "Hoàn tất")
+                                    @if (item.CoTheDanhGia)
                                     {
                                         if (!item.DaDanhGia)
                                         {
-                                            <a asp-action="DanhGia" asp-route-id="@item.BookingCode" 
-                                               class="btn btn-warning text-dark fw-bold px-3 py-2 rounded-pill shadow-sm mb-2"
-                                               style="background-color: #F59E0B; border-color: #F59E0B;">
-                                                <i class="bi bi-star-fill text-white me-1"></i>Đánh giá ngay
+                                            <a asp-action="DanhGia" asp-route-id="@item.BookingCode"
+                                               class="btn btn-warning text-dark fw-bold px-3 py-2 rounded-pill shadow-sm mb-2">
+                                                <i class="bi bi-star-fill me-1" aria-hidden="true"></i>Đánh giá ngay
                                             </a>
                                         }
                                         else
                                         {
                                             <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill mb-2">
-                                                <i class="bi bi-check2-all me-1"></i>Đã gửi đánh giá
+                                                <i class="bi bi-check2-all me-1" aria-hidden="true"></i>Đã gửi đánh giá
                                             </span>
                                         }
                                     }
                                     @if (item.TongTienHoaDon > 0)
                                     {
                                         <div class="text-muted small">Tổng tiền hóa đơn:</div>
-                                        <div class="fw-bold fs-5 text-danger">@item.TongTienHoaDon.ToString("N0") VNĐ</div>
+                                        <div class="fw-bold fs-5 text-danger">@item.TongTienHoaDon.ToString("N0") đ</div>
                                     }
                                 </div>
                             </div>
@@ -123,7 +122,7 @@
                                     <button class="btn btn-sm btn-outline-secondary rounded-pill" type="button" 
                                             data-bs-toggle="collapse" data-bs-target="#menu-@item.MaDatBan" 
                                             aria-expanded="false" aria-controls="menu-@item.MaDatBan">
-                                        <i class="bi bi-receipt me-1"></i>Xem danh sách món ăn đã dùng (@item.ChiTietMonAn.Count món)
+                                        <i class="bi bi-receipt me-1" aria-hidden="true"></i>Xem danh sách món ăn đã dùng (@item.ChiTietMonAn.Count món)
                                     </button>
 
                                     <div class="collapse mt-3" id="menu-@item.MaDatBan">
@@ -166,15 +165,24 @@
                 }
             </div>
         }
-        else if (!string.IsNullOrWhiteSpace(Model.SoDienThoai) || !string.IsNullOrWhiteSpace(Model.BookingCode))
+        else
         {
+            var daTimKiem = !string.IsNullOrWhiteSpace(Model.SoDienThoai) || !string.IsNullOrWhiteSpace(Model.BookingCode);
             <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
-                <i class="bi bi-calendar-x display-4 text-muted mb-3"></i>
-                <h5 class="fw-bold text-dark">Không tìm thấy thông tin đặt bàn</h5>
-                <p class="text-muted mb-3">Vui lòng kiểm tra lại số điện thoại hoặc mã đặt bàn của quý khách.</p>
+                <i class="bi bi-calendar-x display-4 text-muted mb-3" aria-hidden="true"></i>
+                @if (daTimKiem)
+                {
+                    <h2 class="h5 fw-bold text-dark">Không tìm thấy thông tin đặt bàn</h2>
+                    <p class="text-muted mb-3">Vui lòng kiểm tra lại số điện thoại hoặc mã đặt bàn của quý khách.</p>
+                }
+                else
+                {
+                    <h2 class="h5 fw-bold text-dark">Quý khách chưa có lượt đặt bàn nào</h2>
+                    <p class="text-muted mb-3">Các lượt đặt bàn sẽ hiện ở đây để quý khách theo dõi tiền cọc, món đặt trước và gửi đánh giá.</p>
+                }
                 <div>
-                    <a asp-action="Index" class="btn btn-danger px-4 py-2 rounded-pill fw-semibold" style="background-color: #E11D48;">
-                        <i class="bi bi-calendar-plus me-1"></i>Đặt bàn mới ngay
+                    <a asp-action="Index" class="btn btn-restaurant px-4">
+                        <i class="bi bi-calendar-plus" aria-hidden="true"></i>Đặt bàn mới
                     </a>
                 </div>
             </div>

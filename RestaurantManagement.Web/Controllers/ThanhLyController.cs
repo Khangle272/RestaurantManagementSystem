@@ -5,6 +5,7 @@ using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -82,6 +83,10 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
             try
             {
                 // Validate stock availability
+                // Load every ingredient on the slip in one query instead of one lookup per line.
+                var ingredientIds = model.ChiTiets.Select(c => c.MaNguyenLieu).Distinct().ToList();
+                var ingredients = await Db.NguyenLieu.Where(x => ingredientIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id);
+
                 var requiredTotals = model.ChiTiets
                     .GroupBy(c => c.MaNguyenLieu)
                     .Select(g => new { MaNguyenLieu = g.Key, TongSoLuong = g.Sum(x => x.SoLuong) })
@@ -89,7 +94,7 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
 
                 foreach (var req in requiredTotals)
                 {
-                    var nl = await Db.NguyenLieu.FindAsync(req.MaNguyenLieu);
+                    var nl = ingredients.GetValueOrDefault(req.MaNguyenLieu);
                     if (nl == null || nl.SoLuongTon < req.TongSoLuong)
                     {
                         throw new InvalidOperationException($"Nguyên liệu '{nl?.TenNguyenLieu ?? "N/A"}' không đủ tồn kho để thanh lý (Hiện tồn: {nl?.SoLuongTon.ToString("0.##") ?? "0"}, Đề nghị thanh lý: {req.TongSoLuong.ToString("0.##")}).");
@@ -101,7 +106,7 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
                 {
                     MaPhieu = "TL-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
                     NhanVienId = staffId,
-                    ThoiDiem = new DateTimeOffset(model.NgayThanhLy),
+                    ThoiDiem = TableService.VietnamTime(model.NgayThanhLy),
                     LyDoThanhLy = model.LyDoThanhLy,
                     GhiChu = model.GhiChu?.Trim(),
                     TrangThai = "DaThanhLy"
@@ -110,7 +115,7 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
                 decimal totalLoss = 0;
                 foreach (var item in model.ChiTiets)
                 {
-                    var nl = await Db.NguyenLieu.FindAsync(item.MaNguyenLieu);
+                    var nl = ingredients.GetValueOrDefault(item.MaNguyenLieu);
                     if (nl != null)
                     {
                         nl.SoLuongTon -= item.SoLuong;
@@ -145,7 +150,8 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
             catch (Exception ex)
             {
                 await trans.RollbackAsync();
-                ModelState.AddModelError("", "Lỗi khi lưu phiếu thanh lý: " + ex.Message);
+                LogUnexpected(ex, "saving disposal record");
+                ModelState.AddModelError("", "Chưa lưu được phiếu thanh lý do lỗi hệ thống. Dữ liệu chưa thay đổi, vui lòng thử lại.");
             }
         }
 

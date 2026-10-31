@@ -1,12 +1,12 @@
 @model RestaurantManagement.Web.Models.BaoCaoTonKhoTongHopViewModel
 @{
-    ViewData["Title"] = "Báo cáo Tình hình Tồn kho & Cung ứng";
+    ViewData["Title"] = "Tổng hợp giá trị tồn kho";
     ViewData["ActiveMenu"] = "BaoCaoTonKho";
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">📦 Tình Hình Nhập - Xuất - Tồn Kho</h1>
+        <h1 class="h3 fw-bold mb-1">Tổng hợp giá trị tồn kho</h1>
         <p class="text-muted mb-0">Tổng hợp giá trị hàng tồn kho, biến động nhập/xuất chế biến/thanh lý và cảnh báo ngưỡng an toàn nguyên liệu.</p>
     </div>
     <div class="d-flex gap-2">
@@ -156,7 +156,7 @@
                             }
                             else
                             {
-                                <span class="badge bg-success rounded-pill">🟢 An toàn</span>
+                                <span class="badge bg-success rounded-pill">An toàn</span>
                             }
                         </td>
                     </tr>

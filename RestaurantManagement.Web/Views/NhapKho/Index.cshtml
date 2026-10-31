@@ -1,7 +1,7 @@
 @model PhieuNhapIndexVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Quản lý Nhập kho";
+    ViewData["Title"] = "Nhập kho";
     var p = Model.Pagination;
 }
 
@@ -9,12 +9,12 @@
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-in-down me-2 text-danger"></i>Quản lý Nhập kho</h1>
+            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-in-down me-2 text-danger"></i>Nhập kho</h1>
             <p class="text-muted mb-0">Theo dõi lịch sử nhập hàng, phiếu nhập Master-Detail và cập nhật tồn kho nguyên liệu.</p>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-plus-circle"></i> Lập Phiếu Nhập Kho
+                <i class="bi bi-plus-circle"></i> Lập phiếu nhập kho
             </a>
         </div>
     </div>
@@ -39,7 +39,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small fw-semibold text-uppercase">Tổng Giá Trị Nhập Hàng</div>
-                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongGiaTriNhap.ToString("N0") <small class="fs-6 text-muted">VNĐ</small></div>
+                        <div class="fs-2 fw-bold text-danger mt-1">@Model.TongGiaTriNhap.ToString("N0") <small class="fs-6 text-muted">đ</small></div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-danger fs-3">
                         <i class="bi bi-cash-stack"></i>

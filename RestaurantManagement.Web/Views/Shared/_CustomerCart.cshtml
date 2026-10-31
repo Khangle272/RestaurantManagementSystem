@@ -13,7 +13,7 @@
             <button type="button" id="cart-reload" class="btn btn-sm btn-outline-secondary mb-3" hidden>Tải lại món chưa gửi bếp theo lịch hiện tại</button>
             <div id="cart-items"></div>
             <div class="cart-total"><span>Tiền món tham khảo</span><strong id="cart-total">0 ₫</strong></div>
-            <p class="small text-muted">Cọc 50% tiền món đã chọn; nếu chưa chọn món, cọc giữ bàn 299.000đ/lịch. Số tiền được tính lại ở server trước thanh toán và trừ vào hóa đơn cuối.</p>
+            <p class="small text-muted">Có đặt món trước: tiền đặt cọc = 50% tổng giá trị món. Chỉ giữ chỗ: tiền đặt cọc theo khu vực/loại bàn (bàn thường, phòng VIP khác nhau). Tiền đặt cọc được trừ vào hóa đơn khi thanh toán.</p>
             <a id="cart-new-checkout" class="btn btn-restaurant w-100" asp-controller="DatBan" asp-action="Index" asp-route-cart="new">Tiếp tục đặt bàn</a>
             <form id="cart-save-form" method="post" data-ajax-form="true" hidden>
                 @Html.AntiForgeryToken()

@@ -1,0 +1,27 @@
+@model StatusPageViewModel
+@{
+    var staff = User.Identity?.IsAuthenticated == true && !User.IsInRole("KhachHang");
+}
+<section class="status-page" aria-labelledby="status-page-title">
+    <div class="status-page-inner">
+        <div class="status-page-icon @Model.Tone" aria-hidden="true"><i class="bi @Model.Icon"></i></div>
+        @if (Model.Code is not null) { <div class="status-page-code">LỖI @Model.Code</div> }
+        <h1 id="status-page-title">@Model.Title</h1>
+        <p>@Model.Message</p>
+        <div class="status-page-actions">
+            <button type="button" class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : location.assign('/')"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Quay lại</button>
+            @if (staff)
+            {
+                <a class="btn btn-primary" asp-controller="Admin" asp-action="TrangChu"><i class="bi bi-house-door me-1" aria-hidden="true"></i>Về khu làm việc</a>
+            }
+            else
+            {
+                <a class="btn btn-dark" asp-controller="Home" asp-action="Index"><i class="bi bi-house-door me-1" aria-hidden="true"></i>Về trang chủ</a>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Model.RequestId))
+        {
+            <div class="status-page-ref">Mã tra cứu lỗi: <code>@Model.RequestId</code></div>
+        }
+    </div>
+</section>

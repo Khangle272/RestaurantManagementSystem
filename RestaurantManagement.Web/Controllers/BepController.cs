@@ -18,65 +18,86 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
         return string.IsNullOrEmpty(soBan) ? $"Bàn {ban.MaBan}" : $"Bàn {khuVuc} {soBan}";
     }
 
+    // Bếp chỉ quản lý món gọi trong ngày hiện tại, xếp theo giờ gọi (gọi trước làm trước).
+    private IQueryable<ChiTietHoaDon> TodayQuery(string? filter)
+    {
+        var today = RestaurantManagement.Web.Services.KitchenDayClosing.StartOfToday;
+        var query = db.ChiTietHoaDon.AsNoTracking()
+            .Where(x => x.ThoiDiemGoi >= today && x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
+                && (x.HoaDon.DatBan == null || x.HoaDon.DatBan.TrangThai != TrangThaiDatBan.DaHuy));
+        return filter switch
+        {
+            "ready" => query.Where(x => x.TrangThai == TrangThaiCheBien.SanSang),
+            "all" => query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien
+                || x.TrangThai == TrangThaiCheBien.DangCheBien || x.TrangThai == TrangThaiCheBien.SanSang),
+            _ => query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien || x.TrangThai == TrangThaiCheBien.DangCheBien)
+        };
+    }
+
+    // Món khách vừa hủy (trong 60 phút): hiện riêng để bếp dừng chế biến ngay.
+    private IQueryable<ChiTietHoaDon> RecentlyCancelled()
+    {
+        var since = DateTimeOffset.UtcNow.AddMinutes(-60);
+        var today = RestaurantManagement.Web.Services.KitchenDayClosing.StartOfToday;
+        return db.ChiTietHoaDon.AsNoTracking().Where(x => x.TrangThai == TrangThaiCheBien.DaHuy
+            && x.ThoiDiemHuy >= since && x.ThoiDiemGoi >= today);
+    }
+
+    private static string TableLabel(HoaDon bill) => bill.LoaiDonHang switch
+    {
+        LoaiDonHang.TaiBan => bill.DatBan == null ? "Tại bàn" : string.Join(", ", bill.DatBan.Ban.Select(b => TenBanHienThi(b.BanAn))),
+        LoaiDonHang.MangDi => "Mang đi",
+        LoaiDonHang.GiaoHang => string.IsNullOrWhiteSpace(bill.TenNguoiNhan) ? "Giao hàng" : $"Giao hàng · {bill.TenNguoiNhan}",
+        _ => "—"
+    };
+
     public async Task<IActionResult> Index(string? filter = "active")
     {
         ViewData["ActiveMenu"] = "Bep";
         ViewData["AutoCollapseSidebar"] = true;
         ViewBag.Filter = filter;
 
-        var query = db.ChiTietHoaDon.AsNoTracking()
+        var rows = await TodayQuery(filter)
             .Include(x => x.MonAnSize)
             .Include(x => x.HoaDon).ThenInclude(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn).ThenInclude(x => x.KhuVuc)
-            .Where(x => x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
-                && (x.HoaDon.DatBan == null || x.HoaDon.DatBan.TrangThai != TrangThaiDatBan.DaHuy));
-
-        if (filter == "ready")
-        {
-            query = query.Where(x => x.TrangThai == TrangThaiCheBien.SanSang);
-        }
-        else if (filter == "all")
-        {
-            query = query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien
-                || x.TrangThai == TrangThaiCheBien.DangCheBien
-                || x.TrangThai == TrangThaiCheBien.SanSang);
-        }
-        else
-        {
-            // Default active in kitchen: ChoCheBien & DangCheBien
-            query = query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien || x.TrangThai == TrangThaiCheBien.DangCheBien);
-        }
-
-        var rows = await query
             .OrderBy(x => x.ThoiDiemGoi).ThenBy(x => x.Id).Take(150)
             .ToListAsync();
+        var billIds = rows.Select(x => x.HoaDonId).Distinct().ToList();
+        // Lượt gọi đầu tiên của mỗi hóa đơn; món gọi sau mốc này là món gọi thêm.
+        var firstOrder = await db.ChiTietHoaDon.Where(x => billIds.Contains(x.HoaDonId))
+            .GroupBy(x => x.HoaDonId).Select(g => new { g.Key, First = g.Min(x => x.ThoiDiemGoi) })
+            .ToDictionaryAsync(x => x.Key, x => x.First);
 
-        var items = rows.Select(x =>
+        var items = rows.Select(x => new BepRow
         {
-            var banName = x.HoaDon.LoaiDonHang switch
-            {
-                LoaiDonHang.TaiBan => x.HoaDon.DatBan == null
-                    ? "Tại bàn"
-                    : string.Join(", ", x.HoaDon.DatBan.Ban.Select(b => TenBanHienThi(b.BanAn))),
-                LoaiDonHang.MangDi => "Mang đi",
-                LoaiDonHang.GiaoHang => string.IsNullOrWhiteSpace(x.HoaDon.TenNguoiNhan) ? "Giao hàng" : $"Giao hàng · {x.HoaDon.TenNguoiNhan}",
-                _ => "—"
-            };
-
-            return new BepRow
-            {
-                Id = x.Id,
-                Mon = x.TenMonLucBan,
-                Size = !string.IsNullOrEmpty(x.TenSizeLucBan) ? x.TenSizeLucBan : (x.MonAnSize?.TenSize ?? "Mặc định"),
-                SoLuong = x.SoLuong,
-                GhiChu = string.Join(" · ", new[] { x.YeuCauCheBien, x.MonAnSize?.GhiChuThanhPhanKhacBiet }
-                    .Where(s => !string.IsNullOrWhiteSpace(s))),
-                TrangThai = x.TrangThai,
-                Ban = banName,
-                ThoiDiemGoi = x.ThoiDiemGoi
-            };
+            Id = x.Id,
+            Mon = x.TenMonLucBan,
+            Size = !string.IsNullOrEmpty(x.TenSizeLucBan) ? x.TenSizeLucBan : (x.MonAnSize?.TenSize ?? "Mặc định"),
+            SoLuong = x.SoLuong,
+            GhiChu = string.Join(" · ", new[] { x.YeuCauCheBien, x.MonAnSize?.GhiChuThanhPhanKhacBiet }
+                .Where(s => !string.IsNullOrWhiteSpace(s))),
+            TrangThai = x.TrangThai,
+            Ban = TableLabel(x.HoaDon),
+            ThoiDiemGoi = x.ThoiDiemGoi,
+            GoiThem = firstOrder.TryGetValue(x.HoaDonId, out var first) && x.ThoiDiemGoi > first.AddSeconds(30)
         }).ToList();
 
+        var cancelled = await RecentlyCancelled()
+            .Include(x => x.HoaDon).ThenInclude(x => x.DatBan).ThenInclude(x => x!.Ban).ThenInclude(x => x.BanAn).ThenInclude(x => x.KhuVuc)
+            .OrderByDescending(x => x.ThoiDiemHuy).Take(20).ToListAsync();
+        ViewBag.Cancelled = cancelled.Select(x => new BepRow { Id = x.Id, Mon = x.TenMonLucBan, Size = x.TenSizeLucBan ?? "Mặc định",
+            SoLuong = x.SoLuong, TrangThai = x.TrangThai, Ban = TableLabel(x.HoaDon), ThoiDiemGoi = x.ThoiDiemHuy ?? x.ThoiDiemGoi }).ToList();
+
         return View(items);
+    }
+
+    // Kết thúc ngày: đóng toàn bộ món còn treo để không trôi sang ngày hôm sau.
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.Bep)]
+    public async Task<IActionResult> KetThucNgay()
+    {
+        var count = await RestaurantManagement.Web.Services.KitchenDayClosing.CloseBeforeAsync(db, DateTimeOffset.UtcNow);
+        TempData["Success"] = count == 0 ? "Không còn món nào treo trên màn hình bếp." : $"Đã kết thúc ngày: đóng {count} món còn treo (món chưa nấu của bill chưa thu tiền được hủy).";
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -95,22 +116,13 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
     [HttpGet]
     public async Task<IActionResult> Snapshot(string? filter = "active")
     {
-        var query = db.ChiTietHoaDon.AsNoTracking()
-            .Where(x => x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
-                && (x.HoaDon.DatBan == null || x.HoaDon.DatBan.TrangThai != TrangThaiDatBan.DaHuy));
-        query = filter switch
-        {
-            "ready" => query.Where(x => x.TrangThai == TrangThaiCheBien.SanSang),
-            "all" => query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien
-                || x.TrangThai == TrangThaiCheBien.DangCheBien || x.TrangThai == TrangThaiCheBien.SanSang),
-            _ => query.Where(x => x.TrangThai == TrangThaiCheBien.ChoCheBien || x.TrangThai == TrangThaiCheBien.DangCheBien)
-        };
         // TrangThai lưu dạng nvarchar: cast sau khi đã tải về, không để EF dịch thành CAST(... AS int) trong SQL.
-        var rows = await query.OrderBy(x => x.ThoiDiemGoi).ThenBy(x => x.Id).Take(150)
+        var rows = await TodayQuery(filter).OrderBy(x => x.ThoiDiemGoi).ThenBy(x => x.Id).Take(150)
             .Select(x => new { x.Id, x.TrangThai, x.ThoiDiemGoi })
             .ToListAsync();
+        var cancelled = await RecentlyCancelled().OrderBy(x => x.Id).Select(x => x.Id).ToListAsync();
         var snapshot = rows.Select(x => new { x.Id, Status = (int)x.TrangThai, x.ThoiDiemGoi });
-        return Json(snapshot);
+        return Json(new { items = snapshot, cancelled });
     }
 }
 
@@ -124,4 +136,5 @@ public class BepRow
     public TrangThaiCheBien TrangThai { get; set; }
     public string Ban { get; set; } = "";
     public DateTimeOffset ThoiDiemGoi { get; set; }
+    public bool GoiThem { get; set; }
 }

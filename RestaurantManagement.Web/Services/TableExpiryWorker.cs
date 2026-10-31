@@ -18,6 +18,9 @@ public sealed class TableExpiryWorker(IServiceScopeFactory scopes, ILogger<Table
                 using (var scope = scopes.CreateScope())
                 {
                     var db = scope.ServiceProvider.GetRequiredService<RestaurantDbContext>();
+                    // Qua ngày mới: tự đóng sổ bếp các món của ngày trước.
+                    var closed = await KitchenDayClosing.CloseBeforeAsync(db, KitchenDayClosing.StartOfToday);
+                    if (closed > 0) logger.LogInformation("Đã đóng sổ bếp {Count} món tồn của ngày trước.", closed);
                     ids = await db.DatBan.AsNoTracking().Where(x => x.TrangThai == TrangThaiDatBan.DaNhanBan
                         && x.ThoiDiemKetThuc == null
                         && x.HoaDon.Any(b => b.TrangThai == TrangThaiHoaDon.DaThanhToan))

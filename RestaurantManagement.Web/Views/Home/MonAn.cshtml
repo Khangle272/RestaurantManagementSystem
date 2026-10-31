@@ -1,6 +1,6 @@
 @model MenuItemViewModel
 @using RestaurantManagement.API.Models
-@{ Layout = "_Layout"; ViewData["Title"] = Model.Name; }
+@{ Layout = "_Layout"; ViewData["Title"] = Model.Name; ViewData["Description"] = string.IsNullOrWhiteSpace(Model.Description) ? $"{Model.Name} - xem giá, size và đặt món trước tại nhà hàng." : Model.Description; }
 <nav class="detail-breadcrumb"><a asp-action="Index">Trang chủ</a><i class="bi bi-chevron-right"></i><a asp-action="Index" asp-fragment="thuc-don">Thực đơn</a><i class="bi bi-chevron-right"></i><span>@Model.Name</span></nav>
 <article class="dish-detail">
     <div class="dish-detail-image">@if (!string.IsNullOrWhiteSpace(Model.Image)) { <img src="@Model.Image" alt="@Model.Name" /> } else { <i class="bi bi-cup-hot" aria-hidden="true"></i> }</div>

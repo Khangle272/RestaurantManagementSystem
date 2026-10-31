@@ -30,6 +30,14 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             : (Available: false, Message: "Chọn một ca gợi ý hoặc tự nhập giờ muốn đến.");
         return Json(new { slots = result.Slots, available = selected.Available, message = selected.Message });
     }
+    [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> SoDoBanTrong(DateTime gioDen, int soNguoi = 2, int? maKhuVuc = null)
+    {
+        if (!ModelState.IsValid) return BadRequest(new { message = "Giờ đến hoặc số khách không hợp lệ." });
+        var (error, items) = await tables.TableAvailability(gioDen, soNguoi, maKhuVuc);
+        return error is null ? Json(new { tables = items }) : BadRequest(new { message = error });
+    }
+
     // GET /DatBan
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -57,6 +65,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         else ModelState.AddModelError(nameof(model.RequestId), "Thiếu mã gửi yêu cầu. Hãy mở lại trang đặt bàn.");
         if (model.SoTreEm > model.SoNguoi)
             ModelState.AddModelError(nameof(model.SoTreEm), "Số trẻ em không được lớn hơn tổng số khách.");
+        if (model.BanAnId is null)
+            ModelState.AddModelError(nameof(model.BanAnId), "Vui lòng chọn bàn/phòng trên sơ đồ bàn trống.");
         if (!ModelState.IsValid) return await CreateFailure(model);
         if (ReservationSchedule.Validate(model.ThoiGianDen, TableService.VietnamNow) is { } scheduleError)
             ModelState.AddModelError(nameof(model.ThoiGianDen), scheduleError);
@@ -74,10 +84,12 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             replay = await FindCreateRequest(khachHang.Id, model.RequestId!.Value);
             if (replay is null)
             {
+                var chosenTable = await db.BanAn.Include(x => x.KhuVuc).SingleOrDefaultAsync(x => x.Id == model.BanAnId);
+                if (chosenTable is not null) model.MaKhuVuc = chosenTable.KhuVucId;
                 var area = model.MaKhuVuc is int areaId
                     ? await db.KhuVuc.SingleOrDefaultAsync(x => x.Id == areaId && x.DangSuDung) : null;
-                if (model.MaKhuVuc.HasValue && area is null)
-                    ModelState.AddModelError(nameof(model.MaKhuVuc), "Khu vực không còn sử dụng.");
+                if (chosenTable is null || area is null)
+                    ModelState.AddModelError(nameof(model.BanAnId), "Bàn hoặc khu vực đã chọn không còn sử dụng.");
                 var (error, lines) = await preorders.PrepareLines(model.Items);
                 if (error is not null) ModelState.AddModelError(nameof(model.Items), error);
                 if (ModelState.IsValid)
@@ -95,8 +107,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                         TrangThai = TrangThaiDatBan.ChoCoc,
                         TrangThaiCoc = TrangThaiCoc.ChuaCoc, LaKhachTrucTiep = false
                     };
-                    ReservationDepositPolicy.Apply(created, lines.Sum(x => x.DonGiaThoaThuan * x.SoLuong));
-                    var reservationError = await new TableService(db, preorders).ReserveOnlineWithinTransaction(created);
+                    ReservationDepositPolicy.Apply(created, lines.Sum(x => x.DonGiaThoaThuan * x.SoLuong), area!.TienCocGiuCho);
+                    var reservationError = await new TableService(db, preorders).ReserveOnlineWithinTransaction(created, model.BanAnId);
                     if (reservationError is not null) ModelState.AddModelError("", reservationError);
                     else { db.DatBan.Add(created); await db.SaveChangesAsync(); await tx.CommitAsync(); committed = true; }
                 }
@@ -134,7 +146,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         if (booking.HoTenLienHe == (model.HoTen?.Trim() ?? "") && booking.SoDienThoaiLienHe == (model.SoDienThoai?.Trim() ?? "")
             && model.ThoiGianDen >= DateTime.MinValue.AddHours(7) && booking.GioDen == TableService.VietnamTime(model.ThoiGianDen)
             && booking.SoNguoiLon + booking.SoTreEm == model.SoNguoi && booking.SoTreEm == model.SoTreEm
-            && booking.KhuVucUuTienId == model.MaKhuVuc && (booking.YeuCau ?? "") == (ContactNote(model) ?? "")
+            && (model.MaKhuVuc is null || booking.KhuVucUuTienId == model.MaKhuVuc) && (booking.YeuCau ?? "") == (ContactNote(model) ?? "")
             && booking.ChuanBiTruoc == model.ChuanBiTruoc && booking.YeuCauTrangTri == model.YeuCauTrangTri
             && submitted.SequenceEqual(original)) return CreateSuccess(booking.Id);
         ModelState.AddModelError(nameof(model.RequestId), "Mã gửi này đã tạo một lịch với nội dung khác. Hãy xem lịch đã tạo; nếu cần lịch mới, hãy điều chỉnh biểu mẫu rồi gửi lại.");
@@ -248,19 +260,6 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         return RedirectToAction(nameof(ChiTiet), new { id });
     }
 
-    // GET /DatBan/Success/{id}
-    [HttpGet]
-    public async Task<IActionResult> Success(int id)
-    {
-        var datBan = await OwnedBookings()
-            .Include(x => x.Ban).ThenInclude(b => b.BanAn).ThenInclude(b => b.KhuVuc)
-            .Include(x => x.KhachHang)
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        if (datBan == null) return NotFound();
-        return View(datBan);
-    }
-
     // GET /DatBan/LichSu
     [HttpGet]
     public async Task<IActionResult> LichSu(string? soDienThoai, string? bookingCode)
@@ -296,6 +295,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         model.DanhSachDatBan = list.Select(d =>
         {
             var activeInvoice = ResolveBookingInvoice(d);
+            var reviewInvoice = ReviewableInvoice(d);
             var daThanhToan = activeInvoice?.TrangThai == TrangThaiHoaDon.DaThanhToan;
             var isCompleted = d.ThoiDiemKetThuc.HasValue || d.TrangThai == TrangThaiDatBan.DaNhanBan && daThanhToan;
 
@@ -319,7 +319,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             }
             else if (d.TrangThai == TrangThaiDatBan.ChoCoc)
             {
-                trangThaiText = d.TienCocYeuCau > 0 ? "Chờ nhận cọc" : "Chờ nhà hàng liên hệ về cọc";
+                trangThaiText = d.TienCocYeuCau > 0 ? "Chưa đặt cọc" : "Chờ nhà hàng liên hệ về tiền đặt cọc";
                 badgeClass = "badge-status-warning";
             }
             else if (d.TrangThai == TrangThaiDatBan.DaHuy)
@@ -353,7 +353,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                 HoaDonId = activeInvoice?.Id,
                 TongTienHoaDon = activeInvoice?.ChiTiet.Sum(c => c.SoLuong * c.DonGia) ?? 0,
                 DaThanhToan = daThanhToan,
-                DaDanhGia = activeInvoice != null && reviewedHoaDonIds.Contains(activeInvoice.Id),
+                CoTheDanhGia = reviewInvoice != null,
+                DaDanhGia = reviewInvoice != null && reviewedHoaDonIds.Contains(reviewInvoice.Id),
                 GhiChu = d.YeuCau,
                 ChiTietMonAn = activeInvoice?.ChiTiet.Select(c => new ChiTietMonAnItemVM
                 {
@@ -373,9 +374,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
     {
         if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
-        var datBan = await OwnedBookings()
-            .Include(x => x.HoaDon)
-            .FirstOrDefaultAsync(x => x.MaDatBan == id || x.Id.ToString() == id);
+        var datBan = await FindReviewBooking(id);
 
         if (datBan == null)
         {
@@ -383,12 +382,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             return RedirectToAction(nameof(LichSu));
         }
 
-        var hoaDon = datBan.HoaDon.Where(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan)
-            .OrderByDescending(h => h.ThoiDiemThanhToan ?? h.ThoiDiemLap).FirstOrDefault();
-        var daThanhToan = hoaDon?.TrangThai == TrangThaiHoaDon.DaThanhToan;
-        var isCompleted = datBan.TrangThai == TrangThaiDatBan.DaNhanBan && daThanhToan;
-
-        if (!isCompleted || hoaDon == null)
+        var hoaDon = ReviewableInvoice(datBan);
+        if (hoaDon == null)
         {
             TempData["ErrorMessage"] = "Chỉ những đơn đặt bàn đã hoàn tất dùng bữa và thanh toán mới có thể gửi đánh giá dịch vụ.";
             return RedirectToAction(nameof(LichSu), new { bookingCode = datBan.MaDatBan });
@@ -415,11 +410,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
     [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(3 * 1024 * 1024)]
     public async Task<IActionResult> DanhGia(DanhGiaCreateVM model)
     {
-        if (!ModelState.IsValid) return View(model);
-
-        var datBan = await OwnedBookings()
-            .Include(x => x.HoaDon)
-            .FirstOrDefaultAsync(x => x.MaDatBan == model.MaDatBan || x.Id.ToString() == model.MaDatBan);
+        var datBan = await FindReviewBooking(model.MaDatBan);
 
         if (datBan == null)
         {
@@ -427,12 +418,11 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             return RedirectToAction(nameof(LichSu));
         }
 
-        var hoaDon = datBan.HoaDon.Where(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan)
-            .OrderByDescending(h => h.ThoiDiemThanhToan ?? h.ThoiDiemLap).FirstOrDefault();
-        if (hoaDon == null || hoaDon.TrangThai != TrangThaiHoaDon.DaThanhToan || datBan.TrangThai != TrangThaiDatBan.DaNhanBan)
+        var hoaDon = ReviewableInvoice(datBan);
+        if (hoaDon == null)
         {
-            TempData["ErrorMessage"] = "Không tìm thấy hóa đơn tương ứng.";
-            return RedirectToAction(nameof(LichSu));
+            TempData["ErrorMessage"] = "Chỉ những đơn đặt bàn đã hoàn tất dùng bữa và thanh toán mới có thể gửi đánh giá dịch vụ.";
+            return RedirectToAction(nameof(LichSu), new { bookingCode = datBan.MaDatBan });
         }
 
         var daDanhGia = await db.DanhGia.AnyAsync(d => d.HoaDonId == hoaDon.Id && d.ChiTietHoaDonId == null);
@@ -442,23 +432,37 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             return RedirectToAction(nameof(LichSu), new { bookingCode = datBan.MaDatBan });
         }
 
-        string? hinhAnhUrl = null;
+        // Summary fields come from the owned booking, never from the posted hidden inputs.
+        model.MaDatBan = datBan.MaDatBan;
+        model.TenKhachHang = datBan.HoTenLienHe;
+        model.ThoiGianDen = datBan.GioDen;
+        foreach (var key in new[] { nameof(model.MaDatBan), nameof(model.TenKhachHang), nameof(model.ThoiGianDen) }) ModelState.Remove(key);
+
+        var header = new byte[8];
+        var read = 0;
+        var png = false;
         if (model.HinhAnhFile != null && model.HinhAnhFile.Length > 0)
         {
             await using var source = model.HinhAnhFile.OpenReadStream();
-            var header = new byte[8];
-            var read = await source.ReadAsync(header);
-            var png = read == 8 && header.AsSpan().SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+            read = await source.ReadAsync(header);
+            png = read == 8 && header.AsSpan().SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
             var jpeg = read >= 3 && header[0] == 255 && header[1] == 216 && header[2] == 255;
             if (model.HinhAnhFile.Length > 2 * 1024 * 1024 || (!png && !jpeg))
-            { ModelState.AddModelError(nameof(model.HinhAnhFile), "Chỉ nhận ảnh PNG/JPEG tối đa 2 MB."); return View(model); }
+                ModelState.AddModelError(nameof(model.HinhAnhFile), "Chỉ nhận ảnh PNG/JPEG tối đa 2 MB.");
+        }
+        if (!ModelState.IsValid) return View(model);
+
+        string? hinhAnhUrl = null;
+        string? filePath = null;
+        if (model.HinhAnhFile != null && model.HinhAnhFile.Length > 0)
+        {
             var uploadsFolder = Path.Combine(env.WebRootPath, "uploads", "reviews");
             if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
             var fileName = $"rev_{Guid.NewGuid():N}" + (png ? ".png" : ".jpg");
-            var filePath = Path.Combine(uploadsFolder, fileName);
+            filePath = Path.Combine(uploadsFolder, fileName);
+            await using var source = model.HinhAnhFile.OpenReadStream();
             await using var stream = new FileStream(filePath, FileMode.Create);
-            await stream.WriteAsync(header.AsMemory(0, read));
             await source.CopyToAsync(stream);
             hinhAnhUrl = $"/uploads/reviews/{fileName}";
         }
@@ -478,7 +482,16 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         };
 
         db.DanhGia.Add(danhGia);
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            // Do not leave an orphan image on disk when the review row was not saved.
+            if (filePath != null && System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
+            throw;
+        }
 
         TempData["SuccessMessage"] = "Gửi đánh giá thành công! Cảm ơn quý khách đã đóng góp ý kiến để nhà hàng hoàn thiện chất lượng dịch vụ.";
         return RedirectToAction(nameof(LichSu), new { bookingCode = datBan.MaDatBan });
@@ -487,9 +500,23 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
     private async Task<List<SelectListItem>> GetKhuVucOptionsAsync() =>
         await db.KhuVuc.AsNoTracking()
             .Where(x => x.DangSuDung)
-            .OrderBy(x => x.TenKhuVuc)
-            .Select(x => new SelectListItem(x.TenKhuVuc + (x.LaPhongVip ? " (Phòng VIP)" : ""), x.Id.ToString()))
+            .OrderBy(x => x.LaPhongVip).ThenBy(x => x.TenKhuVuc)
+            .Select(x => new SelectListItem(x.TenKhuVuc + (x.LaPhongVip ? " (Phòng VIP)" : "") + " · cọc giữ chỗ " + x.TienCocGiuCho.ToString("N0") + "đ", x.Id.ToString()))
             .ToListAsync();
+
+    // A booking can be reviewed once the party was seated and one of its bills is fully paid.
+    private static HoaDon? ReviewableInvoice(DatBan booking) =>
+        booking.TrangThai != TrangThaiDatBan.DaNhanBan ? null
+            : booking.HoaDon.Where(h => h.TrangThai == TrangThaiHoaDon.DaThanhToan)
+                .OrderByDescending(h => h.ThoiDiemThanhToan ?? h.ThoiDiemLap).FirstOrDefault();
+
+    private Task<DatBan?> FindReviewBooking(string? code)
+    {
+        var query = OwnedBookings().Include(x => x.HoaDon);
+        return int.TryParse(code, out var id)
+            ? query.FirstOrDefaultAsync(x => x.MaDatBan == code || x.Id == id)
+            : query.FirstOrDefaultAsync(x => x.MaDatBan == code);
+    }
 
     private static HoaDon? ResolveBookingInvoice(DatBan booking)
     {

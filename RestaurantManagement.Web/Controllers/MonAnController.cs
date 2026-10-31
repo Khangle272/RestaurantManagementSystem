@@ -600,7 +600,8 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
         catch (Exception ex)
         {
             await tx.RollbackAsync();
-            TempData["Error"] = "Không thể lưu định mức: " + ex.Message;
+            LogUnexpected(ex, "saving dish recipe");
+            TempData["Error"] = "Chưa lưu được định mức do lỗi hệ thống. Định mức cũ vẫn giữ nguyên, vui lòng thử lại.";
             return RedirectToAction(nameof(DinhMuc), new { id = model.MonAnId });
         }
     }

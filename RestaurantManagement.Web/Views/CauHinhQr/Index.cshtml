@@ -1,7 +1,7 @@
 @model PaymentQrViewModel
-@{ ViewData["Title"] = "Ảnh QR nhận cọc"; }
+@{ ViewData["Title"] = "QR nhận chuyển khoản"; }
 <section style="max-width: 740px">
-    <h1 class="h3">Ảnh QR nhận cọc</h1>
+    <h1 class="h3">QR nhận chuyển khoản</h1>
     <p class="text-muted">Tải ảnh QR của nhà hàng để thay ảnh trên trang thanh toán cọc. Chỉ Admin được thay ảnh; không cần sửa code.</p>
     <div class="card"><div class="card-body">
         @if (!string.IsNullOrEmpty(Model.Version)) {

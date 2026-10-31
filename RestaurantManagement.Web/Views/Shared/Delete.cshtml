@@ -4,21 +4,23 @@
     ViewData["Title"] = $"Xóa {Model.Description}";
 }
 <div class="container-fluid py-4">
-    <a asp-action="Index" class="text-decoration-none text-muted d-inline-block mb-3">← Quay lại danh sách</a>
-    <h2 class="h3 mb-4">@ViewData["Title"]</h2>
-    <div class="card shadow-sm border-0">
+    <a asp-action="Index" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1 mb-3"><i class="bi bi-arrow-left" aria-hidden="true"></i>Quay lại danh sách</a>
+    <div class="card shadow-sm border-0 delete-confirm-card">
         <div class="card-body p-4">
-            <p>Bạn có chắc chắn muốn xóa @Model.Description <strong>@Model.Name</strong>?</p>
-            <p class="text-muted">Thao tác này không thể hoàn tác. Bản ghi có dữ liệu liên quan sẽ không được xóa.</p>
-            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
-                <input asp-for="Id" type="hidden" />
-                <input asp-for="RowVersion" type="hidden" />
-                <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-danger">Xác nhận xóa</button>
-                    <a asp-action="Index" class="btn btn-outline-secondary">Hủy bỏ</a>
-                </div>
-            </form>
+            <span class="delete-confirm-icon" aria-hidden="true"><i class="bi bi-trash3"></i></span>
+            <div class="flex-grow-1">
+                <h1 class="h4 mb-2">Xóa @Model.Description <span class="text-danger">@Model.Name</span>?</h1>
+                <p class="text-muted mb-3">Thao tác này <strong>không thể hoàn tác</strong>. Nếu bản ghi đang được dùng ở dữ liệu khác (đơn hàng, phiếu kho, đặt bàn...), hệ thống sẽ giữ lại và báo lý do.</p>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                    <input asp-for="Id" type="hidden" />
+                    <input asp-for="RowVersion" type="hidden" />
+                    <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Hủy, giữ lại</a>
+                        <button type="submit" class="btn btn-danger"><i class="bi bi-trash3 me-1" aria-hidden="true"></i>Xác nhận xóa</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

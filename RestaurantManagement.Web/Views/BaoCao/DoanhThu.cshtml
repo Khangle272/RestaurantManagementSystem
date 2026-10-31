@@ -1,6 +1,6 @@
 @model RestaurantManagement.Web.Models.BaoCaoDoanhThuViewModel
 @{
-    ViewData["Title"] = "Báo cáo Doanh thu & Đơn hàng";
+    ViewData["Title"] = "Báo cáo doanh thu & đơn hàng";
     ViewData["ActiveMenu"] = "BaoCaoDoanhThu";
 }
 
@@ -8,7 +8,7 @@
     <div>
         <h1 class="h3 fw-bold mb-1">Báo cáo doanh thu & đơn hàng</h1>
         <p class="text-muted mb-0">Doanh thu tiền món sau giảm giá theo ngày thanh toán (giờ Việt Nam). Cọc là tiền đã nhận, không phải giảm giá.</p>
-        <p class="small text-muted mb-0">Tiền mặt/QR/thẻ là tiền thu thêm khi chốt bill, chưa gồm cọc nhận trước. Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
+        <p class="small text-muted mb-0">Tiền mặt/chuyển khoản là tiền thu thêm khi chốt bill, chưa gồm tiền đặt cọc nhận trước (xem Báo cáo nộp ca để có dòng tiền thực thu theo ngày). Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
         @if (Model.SoHoaDonThieuNgayThanhToan > 0)
         {
             <div class="alert alert-warning mt-2">Có @Model.SoHoaDonThieuNgayThanhToan hóa đơn cũ chưa lưu ngày thanh toán; tạm thống kê theo ngày lập, không sửa dữ liệu gốc.</div>
@@ -69,7 +69,7 @@
                 <div class="col-auto"><span class="small fw-semibold text-muted">Năm xem:</span></div>
                 <div class="col-md-2">
                     <select name="nam" class="form-select form-select-sm" onchange="this.form.submit()">
-                        @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+                        @for (int y = RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year; y >= RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year - 5; y--)
                         {
                             <option value="@y" selected="@(Model.Nam == y)">@y</option>
                         }
@@ -124,6 +124,8 @@
     </div>
 </div>
 
+@if (Model.CheDo != "TheoNgay")
+{
 <div class="row g-4 mb-4">
     <!-- Biểu đồ doanh thu chính -->
     <div class="col-lg-8">
@@ -164,6 +166,12 @@
     </div>
 </div>
 
+}
+else
+{
+    <div class="alert alert-light border small mb-4"><i class="bi bi-info-circle me-1"></i>Biểu đồ chỉ hiển thị khi xem <strong>theo tháng / năm</strong> (dành cho quản lý). Thu ngân kết ca dùng <a asp-action="NopCa">Báo cáo nộp ca</a> để kiểm tiền mặt / chuyển khoản theo từng ca.</div>
+}
+
 <!-- Bảng chi tiết số liệu -->
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -181,8 +189,8 @@
                     <th class="text-end">Tiền giảm</th>
                     <th class="text-end text-success fw-bold">Doanh thu thực</th>
                     <th class="text-end">Tiền mặt</th>
-                    <th class="text-end">QR VietQR</th>
-                    <th class="text-end">Thẻ POS</th>
+                    <th class="text-end">Chuyển khoản</th>
+                    <th class="text-end">Thẻ (cũ)</th>
                 </tr>
             </thead>
             <tbody>
@@ -234,6 +242,8 @@
 </div>
 
 @section Scripts {
+@if (Model.CheDo != "TheoNgay")
+{
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChiTietTimeline.Select(x => x.NhanThoiGian)));
@@ -292,4 +302,5 @@
         }
     });
 </script>
+}
 }

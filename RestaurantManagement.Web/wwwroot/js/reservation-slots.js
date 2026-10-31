@@ -62,7 +62,7 @@
             ready = data.available && validateTime(); status.textContent = data.message;
         } catch (error) {
             if (current === sequence) status.textContent = error.name === 'AbortError' ? 'Kết nối chậm. Thông tin vẫn được giữ; bấm kiểm tra lại.' : error.message;
-        } finally { clearTimeout(timeout); }
+        } finally { clearTimeout(timeout); if (current === sequence) form.dispatchEvent(new CustomEvent('slots:refreshed')); }
     }
     day.addEventListener('change', () => { if (arrival.value) arrival.value = day.value + 'T' + arrival.value.split('T')[1]; refresh(); });
     arrival.addEventListener('input', () => { ready = false; sequence++; controller?.abort(); if (arrival.value) day.value = arrival.value.split('T')[0]; validateTime(); });

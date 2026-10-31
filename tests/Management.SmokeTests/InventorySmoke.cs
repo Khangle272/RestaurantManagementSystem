@@ -47,7 +47,7 @@ public static class InventorySmoke
         }
 
         var khoTonKhoHtml = await Get(khoUser, "/Kho/TonKho");
-        check(khoTonKhoHtml.Contains("Theo dõi Tồn kho & Cảnh báo"), "Warehouse staff can access /Kho/TonKho");
+        check(WebUtility.HtmlDecode(khoTonKhoHtml).Contains("Tồn kho & cảnh báo"), "Warehouse staff can access /Kho/TonKho");
         await Get(khoUser, "/NhapKho");
         await Get(khoUser, "/XuatKho");
         await Get(khoUser, "/ThanhLy");
@@ -56,7 +56,7 @@ public static class InventorySmoke
 
         // 2. Test Nhà Cung Cấp CRUD
         var nccIndexHtml = await Get(admin, "/NhaCungCap");
-        check(nccIndexHtml.Contains("Quản lý Nhà cung cấp"), "Admin can access /NhaCungCap");
+        check(WebUtility.HtmlDecode(nccIndexHtml).Contains(">Nhà cung cấp</h1>"), "Admin can access /NhaCungCap");
 
         var nccCreateForm = await Get(admin, "/NhaCungCap/Create");
         var testSupplierName = "Công ty TNHH Cung Ứng Test " + Guid.NewGuid().ToString("N")[..6];
@@ -201,7 +201,7 @@ public static class InventorySmoke
 
         // 7. Test Báo Cáo Nhập - Xuất - Tồn and CSV Export
         var baoCaoHtml = await Get(admin, "/Kho/BaoCao?preset=thangnay");
-        check(baoCaoHtml.Contains("BÁO CÁO NHẬP - XUẤT - TỒN KHO") || baoCaoHtml.Contains("Báo Cáo Nhập - Xuất - Tồn"),
+        check(WebUtility.HtmlDecode(baoCaoHtml).Contains("Báo cáo nhập – xuất – tồn"),
             "BaoCao page renders correctly");
         check(baoCaoHtml.Contains("Tồn Đầu Kỳ") && baoCaoHtml.Contains("Tồn Cuối Kỳ"),
             "BaoCao renders key metric sections");
@@ -275,7 +275,7 @@ public static class InventorySmoke
         // 10. Test Multi-size BOM Configuration (DinhMucTheoSize)
         var testDish = await db.MonAn.Include(x => x.Sizes).FirstAsync(x => x.Sizes.Count >= 2);
         var dinhmucHtml = await Get(admin, $"/MonAn/DinhMuc/{testDish.Id}");
-        check(dinhmucHtml.Contains("Định Mức Đa Kích Cỡ (BOM)") && dinhmucHtml.Contains("Size"), "DinhMuc page rendered successfully");
+        check(WebUtility.HtmlDecode(dinhmucHtml).Contains("Định mức nguyên liệu theo kích cỡ (BOM)") && dinhmucHtml.Contains("Size"), "DinhMuc page rendered successfully");
 
         var size1 = testDish.Sizes.First();
         var size2 = testDish.Sizes.Skip(1).First();

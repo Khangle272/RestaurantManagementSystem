@@ -61,7 +61,7 @@ public static class ReservationDepositSmoke
         var arrival = TableService.VietnamNow.AddDays(2).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm");
         var requestId = Guid.NewGuid();
         var create = new Dictionary<string, string> { ["RequestId"] = requestId.ToString(), ["HoTen"] = "PAYMENT-CUSTOMER",
-            ["SoDienThoai"] = "0901234567", ["SoNguoi"] = "2", ["MaKhuVuc"] = areaId.ToString(), ["ThoiGianDen"] = arrival,
+            ["SoDienThoai"] = "0901234567", ["SoNguoi"] = "2", ["MaKhuVuc"] = areaId.ToString(), ["ThoiGianDen"] = arrival, ["BanAnId"] = TestTables.For(db, areaId, arrival),
             ["Items[0].MonAnSizeId"] = sizeId.ToString(), ["Items[0].SoLuong"] = "2", ["TienCocYeuCau"] = "1" };
         await Post(customer, "/DatBan", form, create);
         var booking = await db.DatBan.AsNoTracking().SingleAsync(x => x.YeuCauTaoId == requestId);
@@ -145,13 +145,14 @@ public static class ReservationDepositSmoke
         var emptyId = Guid.NewGuid();
         var empty = new Dictionary<string, string> { ["RequestId"] = emptyId.ToString(), ["HoTen"] = "PAYMENT-NO-FOOD", ["SoDienThoai"] = "0901234567",
             ["SoNguoi"] = "2", ["MaKhuVuc"] = areaId.ToString(), ["ThoiGianDen"] = TableService.VietnamNow.AddDays(3).Date.AddHours(11).ToString("yyyy-MM-ddTHH:mm") };
+        empty["BanAnId"] = TestTables.For(db, areaId, empty["ThoiGianDen"]);
         await Post(customer, "/DatBan", form, empty);
         var noFood = await db.DatBan.SingleAsync(x => x.YeuCauTaoId == emptyId);
-        check(noFood.TienCocYeuCau == 299000m, "No-food reservation has the published per-booking deposit, not a fabricated per-person fee");
+        check(noFood.TienCocYeuCau == area.TienCocGiuCho && noFood.TienCocYeuCau > 0, "No-food reservation uses the area hold deposit, not a fabricated per-person fee");
         noFood.HanThanhToanCoc = DateTimeOffset.UtcNow.AddMinutes(-1); await db.SaveChangesAsync();
         var noFoodPage = await Get(customer, $"/DatBan/ThanhToanCoc/{noFood.Id}");
         await Post(customer, $"/DatBan/BaoChuyenKhoan/{noFood.Id}", noFoodPage, new()
-            { ["RowVersion"] = Version(noFood), ["SoTien"] = "299000" }, HttpStatusCode.Conflict);
+            { ["RowVersion"] = Version(noFood), ["SoTien"] = noFood.TienCocYeuCau.ToString("0") }, HttpStatusCode.Conflict);
         await Expire(noFood.Id); noFood = await Reload(noFood.Id);
         check(noFood.TrangThai == TrangThaiDatBan.DaHuy && noFood.ThoiDiemHuy != null && noFood.LyDoHuy!.Contains("Tự động hủy")
             && noFood.Ban.Count == 1, "Expired unpaid hold is cancelled with history/reason and table links retained");

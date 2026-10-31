@@ -5,7 +5,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
 
-public class InventoryService(RestaurantDbContext db) : IKhoService
+public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>? logger = null) : IKhoService
 {
     public async Task<InventoryDeductionResult> DeductInventoryForOrderDishesAsync(int hoaDonId, List<OrderItemInputModel> items, int? staffId = null)
     {
@@ -145,14 +145,16 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
             catch (Exception ex)
             {
                 result.Success = false;
-                result.Warnings.Add("Không thể hoàn tất tự động xuất kho do xung đột dữ liệu: " + ex.Message);
+                logger?.LogError(ex, "Inventory deduction retry failed for invoice {HoaDonId}", hoaDon.Id);
+                result.Warnings.Add("Không thể hoàn tất tự động xuất kho do xung đột dữ liệu. Vui lòng kiểm tra lại phiếu xuất của hóa đơn này.");
                 return result;
             }
         }
         catch (Exception ex)
         {
             result.Success = false;
-            result.Warnings.Add("Không thể hoàn tất tự động xuất kho: " + ex.Message);
+            logger?.LogError(ex, "Inventory deduction failed for invoice {HoaDonId}", hoaDon.Id);
+            result.Warnings.Add("Không thể hoàn tất tự động xuất kho. Vui lòng kiểm tra lại phiếu xuất của hóa đơn này.");
             return result;
         }
 

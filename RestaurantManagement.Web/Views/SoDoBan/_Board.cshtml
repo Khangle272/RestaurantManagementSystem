@@ -1,9 +1,12 @@
 @model TableBoardViewModel
 @using RestaurantManagement.API.Models
 @using RestaurantManagement.Web.Services
+@if (Model.HiddenTables > 0) {
+    <p class="small text-muted mb-3"><i class="bi bi-funnel me-1"></i>Đang ẩn @Model.HiddenTables bàn không cần xử lý theo bộ lọc. Chọn "Tất cả bàn" để xem toàn bộ.</p>
+}
 @if (Model.IsLive && Model.PendingServices.Count > 0) {
-    <section class="alert alert-warning" aria-label="Lượt khách cũ cần xử lý">
-        <h2 class="h6">Lượt cũ chưa xác nhận hoàn tất</h2>
+    <details class="alert alert-light border small mb-3" aria-label="Lượt khách cũ cần xử lý">
+        <summary>@Model.PendingServices.Count lượt của ngày trước chưa đóng sổ (không tính vào sơ đồ hôm nay)</summary>
         <p class="small">Các lượt này không phải khách đang dùng bàn hôm nay và không khóa lịch ngày tương lai. Xử lý tiền/món/cọc rồi xác nhận hoàn tất. Hiển thị tối đa 50 lượt cũ nhất trong khu vực đang lọc.</p>
         @foreach (var review in Model.PendingServices) {
             var old = review.Booking;
@@ -15,7 +18,7 @@
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-secondary">Hóa đơn @bill.MaHoaDon</a>
                     }
                     @if (User.IsInRole("Admin") || User.IsInRole("BoiBan")) {
-                        <form asp-action="HoanTatLuot" asp-controller="SoDoBan" method="post" data-complete-service>
+                        <form asp-action="HoanTatLuot" asp-controller="SoDoBan" method="post" data-complete-service data-confirm="Khách đã dùng xong và bàn đã trống, sẵn sàng? Hệ thống sẽ kiểm tra tiền, món và cọc trước khi hoàn tất." data-confirm-title="Hoàn tất lượt phục vụ" data-confirm-ok="Hoàn tất" data-confirm-variant="primary">
                             <input type="hidden" name="id" value="@old.Id" /><input type="hidden" name="rowVersion" value="@review.Version" />
                             <button type="submit" class="btn btn-sm btn-outline-success">Xác nhận hoàn tất lượt cũ</button>
                         </form>
@@ -23,7 +26,7 @@
                 </div>
             </div>
         }
-    </section>
+    </details>
 }
 @foreach (var group in Model.Tables.GroupBy(x => x.Table.KhuVucId)) {
     var area = group.First().Table.KhuVuc;
@@ -68,7 +71,7 @@
                 @if (card.DisplayStatus == TrangThaiBan.DangPhucVu && !card.NeedsInspection) {
                     <a asp-controller="DonHang" asp-action="Create" asp-route-banAnId="@table.Id" class="btn btn-sm btn-primary w-100">Gọi món / Order</a>
                 }
-                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100" data-complete-service>
+                <form asp-action="TrangThai" asp-controller="SoDoBan" method="post" class="w-100" data-complete-service data-confirm="Khách đã dùng xong và bàn đã trống, sẵn sàng? Hệ thống sẽ kiểm tra tiền, món và cọc trước khi hoàn tất." data-confirm-title="Hoàn tất lượt phục vụ" data-confirm-ok="Hoàn tất" data-confirm-variant="primary">
                     <input type="hidden" name="id" value="@table.Id" /><input type="hidden" name="rowVersion" value="@card.Version" />
                     <input type="hidden" name="clean" value="true" />
                     <button class="btn btn-sm btn-outline-success w-100" type="submit">Xác nhận hoàn tất bàn</button>
@@ -80,4 +83,4 @@
     }
     </div></section>
 }
-@if (Model.Tables.Count == 0) { <div class="alert alert-light border">Chưa có bàn trong khu vực này. Quản lý có thể thêm khu vực và bàn trong phần cấu hình.</div> }
+@if (Model.Tables.Count == 0) { <div class="alert alert-light border">@(Model.HiddenTables > 0 ? "Không có bàn nào cần xử lý trong ngày/ca đang xem." : "Chưa có bàn trong khu vực này. Quản lý có thể thêm khu vực và bàn trong phần cấu hình.")</div> }

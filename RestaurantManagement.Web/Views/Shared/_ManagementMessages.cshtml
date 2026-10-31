@@ -1,21 +1,34 @@
 @{
     var successMsg = TempData["SuccessMessage"]?.ToString() ?? TempData["Success"]?.ToString();
     var errorMsg = TempData["ErrorMessage"]?.ToString() ?? TempData["Error"]?.ToString();
+    var warningMsg = TempData["Warning"]?.ToString();
 }
-@if (!string.IsNullOrEmpty(successMsg))
+@if (!string.IsNullOrEmpty(successMsg) || !string.IsNullOrEmpty(errorMsg) || !string.IsNullOrEmpty(warningMsg))
 {
-    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm no-print d-print-none" role="alert">
-        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-        <div>@successMsg</div>
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    <div class="flash-stack no-print d-print-none">
+        @if (!string.IsNullOrEmpty(errorMsg))
+        {
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-start gap-2 pe-5" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
+                <div><strong class="d-block">Chưa thực hiện được</strong>@errorMsg</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(warningMsg))
+        {
+            <div class="alert alert-warning alert-dismissible fade show d-flex align-items-start gap-2 pe-5" role="alert">
+                <i class="bi bi-box-seam fs-5" aria-hidden="true"></i>
+                <div>@warningMsg</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(successMsg))
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-start gap-2 pe-5" role="status">
+                <i class="bi bi-check-circle-fill fs-5" aria-hidden="true"></i>
+                <div>@successMsg</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+            </div>
+        }
     </div>
 }
-@if (!string.IsNullOrEmpty(errorMsg))
-{
-    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm no-print d-print-none" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-        <div>@errorMsg</div>
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Đóng"></button>
-    </div>
-}
-

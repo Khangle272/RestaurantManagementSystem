@@ -12,10 +12,39 @@ public interface IBaoCaoService
     Task<BaoCaoMonBanChayViewModel> GetTopDishesReportAsync(DateTime? tuNgay, DateTime? denNgay, int? danhMucId, int topN = 10);
     Task<BaoCaoTonKhoTongHopViewModel> GetInventorySummaryReportAsync(DateTime? tuNgay, DateTime? denNgay);
     Task<BaoCaoHieuQuaKhuyenMaiViewModel> GetPromotionEffectivenessReportAsync(DateTime? tuNgay, DateTime? denNgay);
+    Task<BaoCaoNopCaViewModel> GetShiftReportAsync(DateOnly ngay, string? caId);
 }
 
 public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 {
+    // Doanh thu ngày chỉ gồm khoản thực thu trong ngày đó: cọc nhận hôm trước thuộc doanh thu hôm trước.
+    public async Task<BaoCaoNopCaViewModel> GetShiftReportAsync(DateOnly ngay, string? caId)
+    {
+        var payments = await db.ChiTietThanhToan.AsNoTracking().Include(x => x.HoaDon).Include(x => x.DatBan).Include(x => x.NhanVien)
+            .Where(x => x.NgayThanhToan == ngay).OrderBy(x => x.GioThanhToan).ToListAsync();
+        var model = new BaoCaoNopCaViewModel { Ngay = ngay, CaId = caId };
+        foreach (var slot in ReservationSchedule.Slots)
+        {
+            var inShift = payments.Where(x => PaymentLedger.ShiftOf(x.GioThanhToan).Id == slot.Id).ToList();
+            decimal Sum(LoaiGiaoDichThanhToan loai, PhuongThucThanhToan hinhThuc) =>
+                inShift.Where(x => x.LoaiGiaoDich == loai && x.HinhThuc == hinhThuc).Sum(x => x.SoTien);
+            model.TheoCa.Add(new NopCaRow
+            {
+                CaId = slot.Id, TenCa = slot.Name, KhungGio = slot.Id == ReservationSchedule.Slots[0].Id ? $"đến {slot.End:HH:mm}" : $"từ {slot.Start:HH:mm}",
+                SoGiaoDich = inShift.Count,
+                CocTienMat = Sum(LoaiGiaoDichThanhToan.DatCoc, PhuongThucThanhToan.TienMat),
+                CocChuyenKhoan = Sum(LoaiGiaoDichThanhToan.DatCoc, PhuongThucThanhToan.ChuyenKhoan),
+                ThanhToanTienMat = Sum(LoaiGiaoDichThanhToan.ThanhToan, PhuongThucThanhToan.TienMat),
+                ThanhToanChuyenKhoan = Sum(LoaiGiaoDichThanhToan.ThanhToan, PhuongThucThanhToan.ChuyenKhoan),
+                HoanTienMat = Sum(LoaiGiaoDichThanhToan.HoanCoc, PhuongThucThanhToan.TienMat),
+                HoanChuyenKhoan = Sum(LoaiGiaoDichThanhToan.HoanCoc, PhuongThucThanhToan.ChuyenKhoan),
+                Khac = inShift.Where(x => x.HinhThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan)).Sum(PaymentLedger.SignedAmount)
+            });
+        }
+        model.GiaoDich = caId is null ? payments : payments.Where(x => PaymentLedger.ShiftOf(x.GioThanhToan).Id == caId).ToList();
+        return model;
+    }
+
     private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
     private static DateTime Today => DateTimeOffset.UtcNow.ToOffset(VietnamOffset).Date;
     private static DateTimeOffset StartDay(DateTime day) => new(day.Date, VietnamOffset);

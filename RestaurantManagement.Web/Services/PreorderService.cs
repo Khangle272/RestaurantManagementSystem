@@ -72,7 +72,8 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
             await db.Entry(booking).Collection(x => x.Ban).LoadAsync();
             var sentTotal = await db.MonDatTruoc.Where(x => x.DatBanId == id && sentIds.Contains(x.Id))
                 .SumAsync(x => x.DonGiaThoaThuan * x.SoLuong);
-            ReservationDepositPolicy.Apply(booking, sentTotal + lines.Sum(x => x.DonGiaThoaThuan * x.SoLuong));
+            ReservationDepositPolicy.Apply(booking, sentTotal + lines.Sum(x => x.DonGiaThoaThuan * x.SoLuong),
+                await ReservationDepositPolicy.AreaDepositAsync(db, booking));
         }
         booking.ChuanBiTruoc = model.ChuanBiTruoc;
         // Dishes added during service are normal additions, not a new deposit requirement.
@@ -108,7 +109,7 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
             return "Lịch đã xác nhận/nhận bàn không được tự đổi điều kiện cọc.";
         await db.Entry(booking).Collection(x => x.Ban).LoadAsync();
         var total = await db.MonDatTruoc.Where(x => x.DatBanId == id).SumAsync(x => x.DonGiaThoaThuan * x.SoLuong);
-        ReservationDepositPolicy.Apply(booking, total);
+        ReservationDepositPolicy.Apply(booking, total, await ReservationDepositPolicy.AreaDepositAsync(db, booking));
         return await new TableService(db, this).ReserveOnlineWithinTransaction(booking);
     });
 
@@ -288,6 +289,17 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
         db.GiaoDichCoc.Add(new GiaoDichCoc { DatBanId = id, TaiKhoanXuLyId = actorId, Loai = model.Loai,
             SoTien = model.SoTien, ThoiDiem = DateTimeOffset.UtcNow, MaThamChieu = model.MaThamChieu?.Trim(),
             LyDo = model.LyDo.Trim(), YeuCauId = model.RequestId });
+        // Giữ cọc không phát sinh dòng tiền; thu và hoàn cọc ghi vào sổ chi tiết thanh toán theo ngày thực thu/chi.
+        if (model.Loai != LoaiGiaoDichCoc.Giu)
+        {
+            if (model.HinhThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan))
+                return "Chỉ nhận tiền mặt hoặc chuyển khoản ngân hàng.";
+            var staffId = await db.NhanVien.Where(x => x.TaiKhoanId == actorId).Select(x => (int?)x.Id).FirstOrDefaultAsync();
+            db.ChiTietThanhToan.Add(PaymentLedger.Create(
+                model.Loai == LoaiGiaoDichCoc.Thu ? LoaiGiaoDichThanhToan.DatCoc : LoaiGiaoDichThanhToan.HoanCoc,
+                model.HinhThuc, model.SoTien, datBanId: id, nhanVienId: staffId, maThamChieu: model.MaThamChieu,
+                ghiChu: $"{booking.MaDatBan}: {model.LyDo.Trim()}"));
+        }
         return null;
     });
 

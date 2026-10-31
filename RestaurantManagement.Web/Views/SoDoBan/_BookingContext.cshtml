@@ -12,7 +12,7 @@
         <p class="small mb-2">Khu vực: @(Model.Areas.FirstOrDefault(x => x.Id == booking.KhuVucUuTienId)?.TenKhuVuc ?? "Bàn chung, không yêu cầu VIP")</p>
         @if (booking.YeuCauVip) { <p class="fw-semibold">Khách yêu cầu VIP.</p> }
         @if (!string.IsNullOrWhiteSpace(booking.YeuCau)) { <p class="bg-light rounded p-2">@booking.YeuCau</p> }
-        <p class="small">Cọc yêu cầu: <strong>@booking.TienCocYeuCau.ToString("N0") đ</strong><br />Đã đối chiếu: <strong>@booking.TienCocDaNop.ToString("N0") đ</strong></p>
+        <p class="small">Tiền đặt cọc: <span class="badge @(ReservationDepositPolicy.HasDeposit(booking) ? "bg-success" : "bg-warning text-dark")">@ReservationDepositPolicy.StatusText(booking)</span></p>
         @if (booking.ThoiDiemBaoChuyenKhoan is not null && ReservationDepositPolicy.Remaining(booking) > 0) {
             <p class="small text-warning-emphasis">Khách đã báo chuyển, chưa đối chiếu đủ tiền. Xếp bàn không thay cho xác nhận cọc.</p>
         }

@@ -39,14 +39,14 @@
             <div class="col-12"><div class="alert alert-warning">Nhà hàng chưa xác nhận khoản chuyển: @booking.LyDoTuChoiChuyenKhoan. Kiểm tra lại giao dịch; không chuyển thêm tiền nếu ngân hàng đã trừ tiền.</div></div>
         }
         <div class="col-md-6"><div class="card h-100"><div class="card-body">
-            <h2 class="h5">Thông tin tiền cọc</h2>
+            <h2 class="h5">Thông tin tiền đặt cọc</h2>
             <dl class="row mb-3">
                 <dt class="col-7">Tiền món đặt trước</dt><dd class="col-5 text-end">@Money(Model.FoodTotal)</dd>
-                <dt class="col-7">Cọc theo chính sách</dt><dd class="col-5 text-end">@Money(booking.TienCocYeuCau)</dd>
+                <dt class="col-7">Tiền đặt cọc</dt><dd class="col-5 text-end">@Money(booking.TienCocYeuCau)</dd>
                 <dt class="col-7">Nhà hàng đã nhận</dt><dd class="col-5 text-end">@Money(ReservationDepositPolicy.Received(booking))</dd>
                 <dt class="col-7">Cần thanh toán thêm</dt><dd class="col-5 text-end fw-bold text-success">@Money(Model.Remaining)</dd>
             </dl>
-            <p class="small">@(booking.CocTuDong ? Model.FoodTotal > 0 ? "Cọc 50% tổng giá món/size/combo đã chọn." : "Cọc giữ bàn 299.000đ cho cả lịch, không tính theo số bàn hoặc số khách." : "Áp dụng điều kiện cọc đã được nhà hàng thống nhất cho lịch này.")</p>
+            <p class="small">@(booking.CocTuDong ? Model.FoodTotal > 0 ? $"Có đặt món trước: tiền đặt cọc = {ReservationDepositPolicy.PreorderRateText} tổng giá trị món đã chọn." : "Chỉ đặt giữ chỗ: tiền đặt cọc theo khu vực/loại bàn đã chọn." : "Áp dụng tiền đặt cọc đã được nhà hàng thống nhất cho lịch này.")</p>
             @if (!cancelled && booking.HanThanhToanCoc is DateTimeOffset deadline && ReservationDepositPolicy.Received(booking) == 0) {
                 <p class="small">Hạn báo thanh toán: <strong>@deadline.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</strong>.</p>
                 <p class="small">@(pending ? "Bạn đã báo chuyển khoản trong hạn. Chỗ được giữ trong lúc thu ngân đối chiếu; không chuyển lại." : "Lịch mới giữ chỗ 1 tiếng. Hết hạn chưa báo chuyển/nhận cọc thì tự hủy; không chuyển tiền sau hạn.")</p>
