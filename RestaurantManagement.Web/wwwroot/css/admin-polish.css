@@ -119,9 +119,6 @@ body { -webkit-font-smoothing: antialiased; line-height: 1.5; }
 .admin-main .alert-danger { border-left-color: var(--state-danger); }
 .admin-main .alert.fade:not(.show) { display: none; }
 
-/* Empty states */
-.admin-main .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-secondary); }
-
 /* Mobile */
 @media (max-width: 767.98px) {
   .admin-main .table-responsive { max-height: none; }
