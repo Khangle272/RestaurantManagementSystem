@@ -102,7 +102,12 @@ internal static class MenuSmoke
         check(!kitchenQueue.Contains("TEST-CANCELED-KITCHEN-LINE"), "Kitchen queue excludes canceled invoices");
         using (var response = await Submit(kitchen, "/Bep/CapNhat", kitchenEdit, new()
         { ["id"] = history.ChiTiet.Single().Id.ToString(), ["trangThai"] = "DangCheBien" }))
-            check(response.StatusCode == HttpStatusCode.BadRequest, "Direct kitchen update cannot resume canceled invoice");
+            check(response.StatusCode == HttpStatusCode.Redirect
+                && await db.ChiTietHoaDon.AsNoTracking().Where(x => x.Id == history.ChiTiet.Single().Id).Select(x => x.TrangThai).SingleAsync() == TrangThaiCheBien.ChoCheBien,
+                "Direct kitchen update cannot resume canceled invoice");
+        var appCulture = RestaurantManagement.Web.Services.AppCulture.Create();
+        check(1234567m.ToString("N0", appCulture) == "1.234.567" && decimal.Parse("1.5", System.Globalization.NumberStyles.Number, appCulture) == 1.5m,
+            "Money shows Vietnamese grouping while decimal input keeps its value");
         using var services = new ServiceCollection().AddDbContext<RestaurantDbContext>(o => o.UseSqlServer(connection)).BuildServiceProvider();
         var blocked = false;
         try { await RetiredRoleCleanup.RunAsync(services); }

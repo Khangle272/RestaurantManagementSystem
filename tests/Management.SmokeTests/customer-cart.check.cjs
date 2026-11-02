@@ -24,7 +24,7 @@ async function start({ search = '?cart=new', draft, context, owner = '7', store 
     const ids = new Map(), element = id => { if (!ids.has(id)) { const node = new Element(); node.id = id; ids.set(id, node); } return ids.get(id); };
     ['customer-cart', 'cart-context', 'cart-count', 'cart-total', 'cart-version', 'cart-request-id', 'cart-prepare', 'cart-items', 'cart-errors', 'cart-save-form', 'cart-save-button', 'cart-description', 'cart-new-checkout', 'cart-details', 'cart-switch-new', 'cartDrawer', 'dishModal', 'cart-dish-form', 'dish-title', 'dish-image', 'dish-description', 'dish-extras', 'dish-size', 'dish-quantity', 'dish-note', 'dish-error', 'dish-add', 'cart-feedback', 'formDatBan', 'booking-cart-summary', 'booking-cart-total', 'booking-prepare', 'cart-reload'].forEach(element);
     element('customer-cart').dataset = { owner, dishUrl: '/Home/CartDish', contextUrl: '/DatBan/CartContext', bookingUrl: '/DatBan', saveUrl: '/DatBan/SavePreorder', detailUrl: '/DatBan/ChiTiet' };
-    const hidden = [new Element(), new Element()], createRequest = new Element(), createSubmit = new Element(), choose = new Element('button');
+    const filled = new Element(), empty = new Element(), hidden = [new Element(), new Element()], createRequest = new Element(), createSubmit = new Element(), choose = new Element('button');
     choose.dataset.cartDish = '1';
     element('formDatBan').queries = { '[name="RequestId"]': createRequest, '[type="submit"]': createSubmit };
     const storage = { getItem: key => store.get(key) || null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) };
@@ -32,11 +32,11 @@ async function start({ search = '?cart=new', draft, context, owner = '7', store 
     const key = `customer-cart:v1:${owner}:${bookingId || 'new'}`;
     if (draft) store.set(key, JSON.stringify(draft));
     const dish = { id: 1, name: 'Món thử', description: 'Mô tả', image: '/images/test.jpg', canOrder: true, sizes: [{ id: 11, name: 'Nhỏ', price: 125000 }], comboItems: [], promotions: [] };
-    const document = { getElementById: id => ids.get(id) || null, createElement: tag => new Element(tag), querySelectorAll: selector => selector === '[data-cart-inputs]' ? hidden : selector === '[data-cart-dish]' ? [choose] : [] };
+    const document = { getElementById: id => ids.get(id) || null, createElement: tag => new Element(tag), querySelectorAll: selector => selector === '[data-cart-inputs]' ? hidden : selector === '[data-cart-dish]' ? [choose] : selector === '[data-cart-filled]' ? [filled] : selector === '[data-cart-empty]' ? [empty] : [] };
     let drawerOpens = 0;
-    vm.runInNewContext(script, { document, localStorage: storage, sessionStorage: storage, location: { search, origin: 'http://localhost', href: 'http://localhost/Home' + search }, URLSearchParams, URL, Intl, crypto: webcrypto, confirm: () => true, setTimeout: () => 1, clearTimeout: () => {}, bootstrap: { Modal: { getOrCreateInstance: () => ({ show() {}, hide() {} }) }, Offcanvas: { getOrCreateInstance: () => ({ show() { drawerOpens++; } }) } }, fetch: async url => ({ ok: true, headers: { get: () => 'application/json' }, json: async () => url.includes('CartContext') ? context : dish }) });
+    vm.runInNewContext(script, { document, window: { confirm: () => true }, localStorage: storage, sessionStorage: storage, location: { search, origin: 'http://localhost', href: 'http://localhost/Home' + search }, URLSearchParams, URL, Intl, crypto: webcrypto, confirm: () => true, setTimeout: () => 1, clearTimeout: () => {}, bootstrap: { Modal: { getOrCreateInstance: () => ({ show() {}, hide() {} }) }, Offcanvas: { getOrCreateInstance: () => ({ show() { drawerOpens++; } }) } }, fetch: async url => ({ ok: true, headers: { get: () => 'application/json' }, json: async () => url.includes('CartContext') ? context : dish }) });
     await settle(); await settle();
-    return { ids, element, hidden, store, key, createRequest, createSubmit, choose, drawerOpens: () => drawerOpens };
+    return { ids, element, filled, empty, hidden, store, key, createRequest, createSubmit, choose, drawerOpens: () => drawerOpens };
 }
 (async () => {
     const note = 'Ít cay, "không hành" <>& \n ghi chú';
@@ -52,7 +52,7 @@ async function start({ search = '?cart=new', draft, context, owner = '7', store 
     assert.equal(fields['Items[0].MonAnSizeId'], '11');
     assert.equal(fields['Items[0].SoLuong'], '2');
     assert.equal(fields['Items[0].YeuCauCheBien'], note, 'Posted notes are text values, not HTML');
-    assert.equal(cart.element('booking-cart-total').textContent.replace(/\s/g, ''), '250.000₫');
+    assert.equal(cart.element('booking-cart-total').textContent.replace(/\s/g, ''), '250.000đ');
     const rowNote = walk(cart.element('cart-items')).find(x => x.tagName === 'textarea');
     rowNote.value = 'Không đá "ít ngọt"'; await rowNote.fire('input');
     saved = JSON.parse(cart.store.get(cart.key));
@@ -70,13 +70,17 @@ async function start({ search = '?cart=new', draft, context, owner = '7', store 
     assert.equal(cart.store.get('customer-cart:v1:7:other'), 'kept', 'Other booking drafts must remain scoped');
 
     const modal = await start();
+    assert.equal(modal.filled.hidden, true, 'Empty booking cart hides dish-only details');
+    assert.equal(modal.empty.hidden, false, 'Empty booking cart shows the table-only deposit note');
     await modal.choose.fire('click');
     modal.element('dish-size').value = '11'; modal.element('dish-quantity').value = '2'; modal.element('dish-note').value = note;
     await modal.element('cart-dish-form').fire('submit');
     assert.equal(JSON.parse(modal.store.get(modal.key)).items[0].sizeId, 11, 'Modal must use the real size identifier');
     assert.equal(JSON.parse(modal.store.get(modal.key)).items[0].note, note.trim());
     assert.equal(modal.element('dish-title').textContent, 'Món thử');
-    assert.equal(modal.element('dish-size').children[0].textContent, 'Nhỏ — 125.000 ₫');
+    assert.equal(modal.element('dish-size').children[0].textContent, 'Nhỏ — 125.000 đ');
+    assert.equal(modal.filled.hidden, false, 'Adding a dish reveals its details');
+    assert.equal(modal.empty.hidden, true);
     assert.equal(modal.drawerOpens(), 0, 'Adding a dish must not interrupt browsing by opening the cart');
     assert.match(modal.element('cart-feedback').textContent, /Đã thêm 2 phần/);
 

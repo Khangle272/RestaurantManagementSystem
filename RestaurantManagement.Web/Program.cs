@@ -1,9 +1,13 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
+
+CultureInfo.DefaultThreadCurrentCulture = AppCulture.Create();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,7 +53,11 @@ builder.Services.Configure<SecurityStampValidatorOptions>(options =>
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new FriendlyTextErrorFilter());
+    options.Filters.Add(new KeepListFilterResultFilter());
+});
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
 builder.Services.AddScoped<RestaurantManagement.Web.Services.ReservationPlanningService>();
 builder.Services.AddSingleton<RestaurantManagement.Web.Services.PaymentQrStore>();

@@ -3,7 +3,7 @@
     const root = document.getElementById('customer-cart');
     if (!root) return;
     const byId = id => document.getElementById(id);
-    const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
+    const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' đ';
     const statuses = { ChoCheBien: 'Chờ chế biến', DangCheBien: 'Đang chế biến', SanSang: 'Sẵn sàng', DaPhucVu: 'Đã phục vụ', DaHuy: 'Đã hủy', 0: 'Chờ chế biến', 1: 'Đang chế biến', 2: 'Sẵn sàng', 3: 'Đã phục vụ', 4: 'Đã hủy' };
     const storage = { get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Draft remains available for this page. */ } }, remove(key) { try { localStorage.removeItem(key); } catch { /* Storage may be disabled. */ } } };
     const owner = root.dataset.owner;
@@ -85,6 +85,8 @@
                 items.forEach(item => { const line = document.createElement('li'); const info = details(item); line.textContent = `${item.quantity} × ${info.name} (${info.sizeName})${item.note ? ' — ' + item.note : ''}${!loading && !info.available ? ' — Không còn phục vụ, vui lòng chọn lại' : ''}`; if (!loading && !info.available) line.className = 'text-danger'; summary.append(line); });
             }
             if (byId('booking-cart-total')) byId('booking-cart-total').textContent = money(total);
+            document.querySelectorAll('[data-cart-filled]').forEach(node => { node.hidden = !items.length; });
+            document.querySelectorAll('[data-cart-empty]').forEach(node => { node.hidden = Boolean(items.length); });
             if (!submitting) bookingForm.querySelector('[type="submit"]').disabled = loading || Boolean(bookingId) || items.some(item => !details(item).available);
         }
         if (!submitting) byId('cart-save-button').disabled = loading || conflict || !canEdit || items.some(item => !details(item).available);

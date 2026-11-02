@@ -87,10 +87,18 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
     {
         var bill = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == id);
         if (bill is null) return NotFound();
-        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.VoucherId.HasValue) return BadRequest();
+        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.VoucherId.HasValue)
+        {
+            TempData["Error"] = "Hóa đơn đã thanh toán hoặc đã áp voucher nên không đổi được khách hàng.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
         var bytes = new byte[8];
         if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, bytes, out var length) || length != 8
-            || !bytes.SequenceEqual(db.Entry(bill).Property<byte[]>("RowVersion").CurrentValue ?? [])) return Conflict("Hóa đơn đã thay đổi. Vui lòng tải lại.");
+            || !bytes.SequenceEqual(db.Entry(bill).Property<byte[]>("RowVersion").CurrentValue ?? []))
+        {
+            TempData["Error"] = "Hóa đơn vừa được thay đổi ở nơi khác. Hãy kiểm tra lại rồi nhập số điện thoại lần nữa.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
         // Số điện thoại là duy nhất: tra ra mã khách hàng và mở ví voucher, không cần khách đăng nhập tại quầy.
         var customer = await db.KhachHang.SingleOrDefaultAsync(x => x.SoDienThoai == (phone ?? "").Trim() && x.DangSuDung);
         if (customer is null) TempData["Error"] = $"Số {phone} chưa là khách hàng thành viên. Thanh toán bình thường, không áp mã.";

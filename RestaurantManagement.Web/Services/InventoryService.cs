@@ -97,7 +97,7 @@ public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>?
             if (nguyenLieu.SoLuongTon < qty)
             {
                 result.Success = false;
-                result.Warnings.Add($"Không đủ tồn kho [{nguyenLieu.TenNguyenLieu}] (còn {nguyenLieu.SoLuongTon:N2} {nguyenLieu.DonViTinh}, cần {qty:N2}). Đã ghi nhận thiếu và giữ tồn về 0.");
+                result.Warnings.Add($"Không đủ tồn kho [{nguyenLieu.TenNguyenLieu}] (còn {nguyenLieu.SoLuongTon:0.##} {nguyenLieu.DonViTinh}, cần {qty:0.##}). Đã ghi nhận thiếu và giữ tồn về 0.");
             }
 
             nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - qty);
@@ -117,7 +117,7 @@ public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>?
             if (nguyenLieu.SoLuongTon <= nguyenLieu.NguongCanhBao)
             {
                 result.LowStockIngredients.Add(nguyenLieu.TenNguyenLieu);
-                result.Warnings.Add($"Cảnh báo: Nguyên liệu [{nguyenLieu.TenNguyenLieu}] tồn kho còn {nguyenLieu.SoLuongTon:N2} {nguyenLieu.DonViTinh}, dưới ngưỡng an toàn ({nguyenLieu.NguongCanhBao:N2})!");
+                result.Warnings.Add($"Cảnh báo: Nguyên liệu [{nguyenLieu.TenNguyenLieu}] tồn kho còn {nguyenLieu.SoLuongTon:0.##} {nguyenLieu.DonViTinh}, dưới ngưỡng an toàn ({nguyenLieu.NguongCanhBao:0.##})!");
             }
         }
 

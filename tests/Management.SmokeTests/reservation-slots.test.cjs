@@ -6,7 +6,7 @@ const vm = require('node:vm');
 // Small DOM stub verifies time feedback; it is not a browser end-to-end test.
 const element = (value = '') => ({ value, dataset: {}, listeners: {}, classList: { toggle() {} },
     addEventListener(name, callback) { this.listeners[name] = callback; },
-    setAttribute() {}, setCustomValidity(message) { this.validationMessage = message; },
+    setAttribute() {}, dispatchEvent() {}, setCustomValidity(message) { this.validationMessage = message; },
     replaceChildren() {}, append() {}, reportValidity() {} });
 const day = element('2026-10-25'), arrival = element(), guests = element('4');
 const status = element(), suggestions = element(), error = element();
@@ -18,7 +18,7 @@ form.dataset = { slotUrl: '/slots', serverNow: '2026-10-25T13:06:00Z',
     leadMinutes: '30', openTime: '11:00', closeTime: '22:00' };
 form.querySelector = selector => fields[selector];
 const script = fs.readFileSync(path.resolve(__dirname, '../../RestaurantManagement.Web/wwwroot/js/reservation-slots.js'), 'utf8');
-vm.runInNewContext(script, { document: { querySelector: () => form }, Date, URL, AbortController,
+vm.runInNewContext(script, { document: { querySelector: () => form }, Date, URL, AbortController, CustomEvent: class { constructor(type) { this.type = type; } },
     setTimeout, clearTimeout, location: { origin: 'https://localhost' },
     fetch: async () => ({ ok: true, headers: { get: () => 'application/json' },
         json: async () => ({ slots: [], available: false, message: 'Choose time' }) }) });

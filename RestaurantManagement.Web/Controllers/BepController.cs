@@ -109,7 +109,7 @@ public class BepController(RestaurantDbContext db, RestaurantManagement.Web.Serv
         if (trangThai is not (TrangThaiCheBien.DangCheBien or TrangThaiCheBien.SanSang or TrangThaiCheBien.DaPhucVu))
             return BadRequest();
         var error = await orders.UpdateDishStatusAsync(id, trangThai, isWaiterOrAdmin: serving);
-        if (error is not null) return BadRequest(error);
+        if (error is not null) TempData["Error"] = error;
         return RedirectToAction(nameof(Index), new { filter });
     }
 

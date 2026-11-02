@@ -31,11 +31,12 @@
             <section class="cart-booking-summary" aria-labelledby="booking-menu-title">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 id="booking-menu-title" class="h5 mb-0">Món đã chọn</h2><a asp-controller="Home" asp-action="Index" asp-route-cart="new" asp-fragment="thuc-don" class="btn btn-sm btn-outline-restaurant">Chọn / bổ sung món</a></div>
                 <ul id="booking-cart-summary" class="mb-2"></ul>
-                <p class="mb-2">Tiền món tham khảo: <strong id="booking-cart-total">0 ₫</strong></p>
+                <p class="mb-2" data-cart-filled hidden>Tiền món tham khảo: <strong id="booking-cart-total">0 đ</strong></p>
                 <p class="mb-2">Tiền đặt cọc dự kiến: <strong id="booking-deposit-preview">—</strong></p>
-                <div class="form-check mb-2"><input asp-for="ChuanBiTruoc" class="form-check-input" id="booking-prepare" /><label class="form-check-label" for="booking-prepare">Muốn chuẩn bị trước</label></div>
-                <p class="small text-muted mb-0">Có đặt món trước: tiền đặt cọc = @ReservationDepositPolicy.PreorderRateText tổng giá trị món. Chỉ đặt giữ chỗ: tiền đặt cọc theo khu vực/loại bàn bạn chọn bên dưới. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
-                <button type="button" class="btn btn-link p-0 mt-2" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer">Sửa số lượng / ghi chú món</button>
+                <div class="form-check mb-2" data-cart-filled hidden><input asp-for="ChuanBiTruoc" class="form-check-input" id="booking-prepare" /><label class="form-check-label" for="booking-prepare">Muốn chuẩn bị trước</label></div>
+                <p class="small text-muted mb-0" data-cart-filled hidden>Tiền đặt cọc = @ReservationDepositPolicy.PreorderRateText tổng giá trị món. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
+                <p class="small text-muted mb-0" data-cart-empty>Tiền đặt cọc theo khu vực/loại bàn bạn chọn bên dưới.</p>
+                <button type="button" class="btn btn-link p-0 mt-2" data-cart-filled hidden data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer">Sửa số lượng / ghi chú món</button>
             </section>
 
             <div class="row g-4">

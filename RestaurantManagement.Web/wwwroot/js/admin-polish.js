@@ -155,7 +155,7 @@
 (() => {
     'use strict';
 
-    const key = path => `admin-list:${path.toLowerCase()}`;
+    const key = path => `admin-list:${path.toLowerCase().replace(/\/index\/?$/, '').replace(/\/$/, '')}`;
     const read = name => { try { return sessionStorage.getItem(name); } catch { return null; } };
     const write = (name, value) => {
         try {
@@ -172,5 +172,17 @@
         if (link.search || !link.pathname || !link.classList.contains('page-back') && !/^(Quay lại|Danh sách|Hủy)/.test(link.textContent.trim())) return;
         const saved = read(key(link.pathname));
         if (saved) link.search = saved;
+    });
+
+    // Lưu xong quay về danh sách cũng giữ bộ lọc; thêm mới thì không, để thấy ngay dòng vừa tạo.
+    const listQuery = isList ? location.search : read(key(`/${location.pathname.split('/')[1]}`));
+    if (!listQuery || /\/Create\/?$/i.test(location.pathname)) return;
+    main.querySelectorAll('form').forEach(form => {
+        if (form.method.toLowerCase() !== 'post') return;
+        const field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = '__listQuery';
+        field.value = listQuery;
+        form.append(field);
     });
 })();

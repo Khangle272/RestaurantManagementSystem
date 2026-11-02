@@ -98,9 +98,9 @@ namespace RestaurantManagement.Web.Controllers
             Name = item.TenChuongTrinh, End = item.KetThuc,
             Summary = (item.PhamVi == PhamViUuDai.HoaDon ? "Hóa đơn: " : "Món áp dụng: ")
                 + (item.KieuGiam == KieuGiam.PhanTram
-                ? $"Giảm {item.GiaTri:0.#}%" : $"Giảm {item.GiaTri:N0} ₫")
-                + (item.MucGiamToiDa is decimal max ? $", tối đa {max:N0} ₫" : "")
-                + (item.GiaTriToiThieu > 0 ? $", từ {item.GiaTriToiThieu:N0} ₫" : "")
+                ? $"Giảm {item.GiaTri:0.#}%" : $"Giảm {item.GiaTri:N0} đ")
+                + (item.MucGiamToiDa is decimal max ? $", tối đa {max:N0} đ" : "")
+                + (item.GiaTriToiThieu > 0 ? $", từ {item.GiaTriToiThieu:N0} đ" : "")
         };
 
         private static PromotionViewModel ToVoucherOffer(Voucher v)
@@ -112,9 +112,9 @@ namespace RestaurantManagement.Web.Controllers
             return new PromotionViewModel
             {
                 Name = p.TenChuongTrinh, Code = v.Ma, End = v.KetThuc ?? p.KetThuc,
-                Summary = $"Giảm {value:N0}{(type == KieuGiam.PhanTram ? "%" : " ₫")} "
+                Summary = $"Giảm {value:N0}{(type == KieuGiam.PhanTram ? "%" : " đ")} "
                     + (scope == PhamViUuDai.MonAn ? "món áp dụng" : "hóa đơn")
-                    + (cap.HasValue ? $", tối đa {cap:N0} ₫" : "") + (minimum > 0 ? $", từ {minimum:N0} ₫" : "")
+                    + (cap.HasValue ? $", tối đa {cap:N0} đ" : "") + (minimum > 0 ? $", từ {minimum:N0} đ" : "")
             };
         }
         [AllowAnonymous]

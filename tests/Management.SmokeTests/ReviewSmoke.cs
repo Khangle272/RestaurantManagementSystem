@@ -106,9 +106,9 @@ public static class ReviewSmoke
         using (var response = await PostReview(customer, form, valid, png))
             check(RedirectsToHistory(response), "Valid review with a PNG photo is accepted");
         var review = await db.DanhGia.AsNoTracking().SingleAsync(x => x.HoaDonId == done.HoaDon.Single().Id);
-        check(review.KhachHangId == customerId && review.Diem == 4 && review.NoiDung.Contains("[Ảnh: /uploads/reviews/"),
+        check(review.KhachHangId == customerId && review.Diem == 4 && review.NoiDung!.Contains("[Ảnh: /uploads/reviews/"),
             "Review stores the owner, the average score and the photo link");
-        var savedPhoto = Path.Combine(uploads, review.NoiDung.Split("/uploads/reviews/")[1].TrimEnd(']'));
+        var savedPhoto = Path.Combine(uploads, review.NoiDung!.Split("/uploads/reviews/")[1].TrimEnd(']'));
         check(File.Exists(savedPhoto), "Uploaded review photo is written to disk");
         File.Delete(savedPhoto);
 
