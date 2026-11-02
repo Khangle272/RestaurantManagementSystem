@@ -1,41 +1,56 @@
 @using RestaurantManagement.API.Models
 @model PagedListViewModel<KhachHang>
 @{ ViewData["Title"] = "Khách hàng thành viên"; }
-<h1 class="h3 mb-2">Khách hàng thành viên</h1>
-<p class="text-muted">Hồ sơ khách hàng, tiến độ đơn, lịch sử mua hàng và tích điểm.</p>
-<a asp-action="Create" class="btn btn-primary mb-3">Thêm hồ sơ khách hàng</a>
-<form method="get" class="d-flex flex-wrap gap-2 mb-4">
-    <input name="search" value="@Model.Pagination.Search" class="form-control" style="max-width:360px" aria-label="Tìm tên, email hoặc số điện thoại" placeholder="Tên, email hoặc số điện thoại" />
-    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
-    <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a>
-</form>
-<div class="card border-0 shadow-sm table-responsive">
-<table class="table table-hover align-middle mb-0">
-    <thead class="table-light"><tr><th>Khách hàng</th><th>Email / tài khoản</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-    <tbody>
-    @if (!Model.Items.Any()) { <tr><td colspan="4" class="text-muted text-center py-4">Chưa có tài khoản phù hợp.</td></tr> }
-    @foreach (var customer in Model.Items)
-    {
-        var locked = customer.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow;
-        <tr>
-            <td><a asp-action="Details" asp-route-id="@customer.Id">@customer.HoTen</a><small class="d-block text-muted">#@customer.Id · @customer.SoDienThoai</small></td>
-            <td class="text-break">@(customer.TaiKhoan?.Email ?? customer.Email ?? "Chưa có tài khoản đăng nhập")</td>
-            <td>@(!customer.DangSuDung ? "Hồ sơ ngừng sử dụng" : locked ? "Đã khóa" : "Hoạt động")</td>
-            <td><a asp-action="Details" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-primary mb-1">Đơn hàng & tích điểm</a>
-                <a asp-action="Edit" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-primary mb-1">Sửa thông tin</a>
-                @if (customer.TaiKhoanId.HasValue) {
-                <a asp-controller="Account" asp-action="ResetPassword" asp-route-id="@customer.TaiKhoanId" class="btn btn-sm btn-outline-secondary mb-1">Đặt lại mật khẩu</a>
-                <form asp-action="SetLocked" method="post">
-                <input type="hidden" name="id" value="@customer.Id" />
-                <input type="hidden" name="locked" value="@(!locked)" />
-                <button class="btn btn-sm btn-outline-secondary" type="submit">@(locked ? "Mở khóa" : "Khóa")</button>
-            </form>
-                }
-                else if (customer.DangSuDung) { <a asp-action="CreateAccount" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-secondary">Cấp tài khoản</a> }
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+<div class="page-header">
+    <div>
+        <h1 class="h3">Khách hàng thành viên</h1>
+        <p class="text-muted">Hồ sơ khách hàng, tiến độ đơn, lịch sử mua hàng và tích điểm.</p>
+    </div>
+    <div class="page-actions"><a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm hồ sơ khách hàng</a></div>
 </div>
-<partial name="_ManagementPagination" model="Model.Pagination" />
+<form method="get" class="filter-bar">
+    <div class="filter-field is-wide input-icon">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="search" value="@Model.Pagination.Search" class="form-control" aria-label="Tìm tên, email hoặc số điện thoại" placeholder="Tên, email hoặc số điện thoại" />
+    </div>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a>
+    </div>
+</form>
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Khách hàng</th><th>Email / tài khoản</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            @if (!Model.Items.Any()) { <tr><td colspan="4" class="empty-state"><i class="bi bi-person-heart" aria-hidden="true"></i>Chưa có tài khoản phù hợp.</td></tr> }
+            @foreach (var customer in Model.Items)
+            {
+                var locked = customer.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow;
+                var (statusLabel, statusClass) = !customer.DangSuDung ? ("Hồ sơ ngừng sử dụng", "badge-status-muted") : locked ? ("Đã khóa", "badge-status-danger") : ("Hoạt động", "badge-status-success");
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@customer.Id" class="fw-semibold text-decoration-none">@customer.HoTen</a><span class="cell-sub">#@customer.Id · @customer.SoDienThoai</span></td>
+                    <td>@(customer.TaiKhoan?.Email ?? customer.Email ?? "Chưa có tài khoản đăng nhập")</td>
+                    <td><span class="@statusClass">@statusLabel</span></td>
+                    <td class="text-end">
+                        <div class="row-actions can-wrap">
+                            <a asp-action="Details" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-primary">Đơn hàng & tích điểm</a>
+                            <a asp-action="Edit" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-secondary">Sửa thông tin</a>
+                            @if (customer.TaiKhoanId.HasValue) {
+                                <a asp-controller="Account" asp-action="ResetPassword" asp-route-id="@customer.TaiKhoanId" class="btn btn-sm btn-outline-secondary">Đặt lại mật khẩu</a>
+                                <form asp-action="SetLocked" method="post" data-confirm="@(locked ? null : $"Khóa tài khoản của {customer.HoTen}? Khách sẽ không đăng nhập được cho tới khi được mở khóa.")" data-confirm-title="Khóa tài khoản" data-confirm-ok="Khóa" data-confirm-variant="danger">
+                                    <input type="hidden" name="id" value="@customer.Id" />
+                                    <input type="hidden" name="locked" value="@(!locked)" />
+                                    <button class="btn btn-sm @(locked ? "btn-outline-success" : "btn-outline-danger")" type="submit">@(locked ? "Mở khóa" : "Khóa")</button>
+                                </form>
+                            }
+                            else if (customer.DangSuDung) { <a asp-action="CreateAccount" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-secondary">Cấp tài khoản</a> }
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_ManagementPagination" model="Model.Pagination" />
+</div>

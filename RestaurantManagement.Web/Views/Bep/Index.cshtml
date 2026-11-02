@@ -29,21 +29,10 @@
 </style>
 
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div class="page-header">
         <div>
-            <h1 class="h3 mb-1">Màn hình bếp (KDS) & điều phối món</h1>
+            <h1 class="h3">Màn hình bếp (KDS) & điều phối món</h1>
             <p class="text-muted mb-0">Chỉ hiển thị món gọi trong ngày @TableServiceToday(). Thứ tự: món gọi trước làm trước — đọc từ trái sang phải, từ trên xuống dưới. <span id="kds-live-status" role="status">Tự cập nhật trạng thái.</span></p>
-        </div>
-        <div class="btn-group" role="group">
-            <a asp-action="Index" asp-route-filter="active" class="btn btn-sm @(currentFilter == "active" ? "btn-primary" : "btn-outline-primary")">
-                <i class="bi bi-fire me-1"></i> Đang chờ & Đang nấu
-            </a>
-            <a asp-action="Index" asp-route-filter="ready" class="btn btn-sm @(currentFilter == "ready" ? "btn-success" : "btn-outline-success")">
-                <i class="bi bi-check2-circle me-1"></i> Đã nấu xong (Chờ mang ra)
-            </a>
-            <a asp-action="Index" asp-route-filter="all" class="btn btn-sm @(currentFilter == "all" ? "btn-secondary" : "btn-outline-secondary")">
-                Tất cả
-            </a>
         </div>
         @if (canClose)
         {
@@ -53,13 +42,20 @@
             </form>
         }
     </div>
-    <p class="small text-muted">Món của ngày trước được hệ thống tự đóng sổ lúc qua ngày mới, không còn treo trên màn hình bếp.</p>
+    <div class="toolbar">
+        <nav class="segmented" aria-label="Lọc món theo tiến độ">
+            <a asp-action="Index" asp-route-filter="active" class="@(currentFilter == "active" ? "active" : "")"><i class="bi bi-fire" aria-hidden="true"></i>Đang chờ & đang nấu</a>
+            <a asp-action="Index" asp-route-filter="ready" class="@(currentFilter == "ready" ? "active" : "")"><i class="bi bi-check2-circle" aria-hidden="true"></i>Đã nấu xong (chờ mang ra)</a>
+            <a asp-action="Index" asp-route-filter="all" class="@(currentFilter == "all" ? "active" : "")">Tất cả</a>
+        </nav>
+        <span class="small text-muted">Món của ngày trước được hệ thống tự đóng sổ lúc qua ngày mới, không còn treo trên màn hình bếp.</span>
+    </div>
 
     @if (cancelled.Count > 0)
     {
         <div class="kds-cancel p-3 mb-3" role="alert">
             <div class="fw-bold text-danger mb-2"><i class="bi bi-x-octagon-fill me-1"></i>KHÁCH ĐÃ HỦY — DỪNG CHẾ BIẾN</div>
-            <div class="d-flex flex-wrap gap-2">
+            <div class="page-actions">
                 @foreach (var c in cancelled)
                 {
                     <span class="badge bg-danger fs-6 fw-semibold">@c.Ban · @c.Mon (@c.Size) x@c.SoLuong · hủy lúc @c.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>

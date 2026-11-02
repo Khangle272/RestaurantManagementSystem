@@ -3,7 +3,7 @@
 @using RestaurantManagement.Web.Models
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @{ ViewData["Title"] = Model.Id == 0 ? "Tạo chương trình khuyến mãi" : Model.TenChuongTrinh; ViewData["ActiveMenu"] = "KhuyenMai"; }
-<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">Một chương trình chứa nhiều mã với mức giảm và thời hạn riêng. Thời gian theo giờ Việt Nam (UTC+7).</p></div><a asp-action="Index" class="btn btn-outline-secondary">Danh sách</a></div>
+<div class="page-header"><div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">Một chương trình chứa nhiều mã với mức giảm và thời hạn riêng. Thời gian theo giờ Việt Nam (UTC+7).</p></div><a asp-action="Index" class="btn btn-outline-secondary">Danh sách</a></div>
 <form method="post" asp-action="@(Model.Id == 0 ? "Create" : "Edit")" id="campaign-form">
     <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
     <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>

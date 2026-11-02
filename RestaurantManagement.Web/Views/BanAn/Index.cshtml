@@ -6,14 +6,14 @@
 }
 
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h2 class="h3 mb-1">@ViewData["Title"]</h2>
+            <h1 class="h3">@ViewData["Title"]</h1>
             <p class="text-muted mb-0">Quản lý bàn ăn, khu vực, số chỗ ngồi và trạng thái phục vụ.</p>
         </div>
         @if ((User.IsInRole("Admin") || User.IsInRole("BoiBan")))
         {
-            <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm bàn ăn</a>
+            <a asp-action="Create" class="btn btn-primary btn-brand-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm bàn ăn</a>
         }
     </div>
     <div class="card shadow-sm border-0 mb-4">
@@ -70,7 +70,7 @@
                     @foreach (var item in Model.Items)
                     {
                         <tr>
-                            <td class="fw-medium">@item.MaBan</td>
+                            <td class="cell-code">@item.MaBan</td>
                             <td>@item.KhuVuc.TenKhuVuc</td>
                             <td>@item.SoChoNgoi</td>
                             <td><span class="badge @(item.TrangThai == TrangThaiBan.SanSang ? "bg-success" : "bg-secondary")">@BanAnLabels.TrangThai(item.TrangThai)</span></td>

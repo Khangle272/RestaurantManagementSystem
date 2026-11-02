@@ -9,118 +9,28 @@
 @section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
 <div id="reservation-feedback" role="status" class="alert alert-success" hidden></div>
 <div id="reservation-list">
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+<div class="page-header">
     <div>
-        <h1 class="h3 mb-1">Danh sách đặt bàn</h1>
-        <p class="text-muted mb-0">Duyệt yêu cầu đặt bàn, xếp bàn, đối chiếu cọc và nhận khách theo từng trạng thái.</p>
+        <h1 class="h3">Danh sách đặt bàn</h1>
+        <p class="text-muted mb-0">Duyệt yêu cầu đặt bàn, xếp bàn, đối chiếu cọc và nhận khách theo từng trạng thái. Hôm nay có <strong>@Model.HomNayCount</strong> lượt khách.</p>
     </div>
-    <div class="d-flex flex-wrap gap-2">
+    <div class="page-actions">
         <a asp-controller="SoDoBan" asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-grid-3x3-gap me-1" aria-hidden="true"></i>Sơ đồ bàn</a>
         <a asp-action="Create" class="btn btn-primary"><i class="bi bi-calendar-plus me-1" aria-hidden="true"></i>Đặt bàn cho khách</a>
     </div>
 </div>
-<!-- THẺ TÓM TẮT NHANH (SUMMARY CARDS) -->
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
-        <a asp-action="Index" asp-route-tab="ChoXacNhan" class="text-decoration-none">
-            <div class="card card-stat border-0 shadow-sm rounded-3 @(currentTab == "ChoXacNhan" ? "border-start border-4 border-warning" : "")">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Chờ duyệt</div>
-                        <div class="fs-3 fw-bold text-warning">@Model.ChoXacNhanCount</div>
-                    </div>
-                    <div class="rounded-circle p-3 bg-warning-subtle text-warning">
-                        <i class="bi bi-clock-history fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-sm-6 col-xl-3">
-        <a asp-action="Index" asp-route-tab="DaXacNhan" class="text-decoration-none">
-            <div class="card card-stat border-0 shadow-sm rounded-3 @(currentTab == "DaXacNhan" ? "border-start border-4 border-primary" : "")">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Đã xác nhận</div>
-                        <div class="fs-3 fw-bold text-primary">@Model.DaXacNhanCount</div>
-                    </div>
-                    <div class="rounded-circle p-3 bg-primary-subtle text-primary">
-                        <i class="bi bi-calendar2-check fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-sm-6 col-xl-3">
-        <a asp-action="Index" asp-route-tab="DangPhucVu" class="text-decoration-none">
-            <div class="card card-stat border-0 shadow-sm rounded-3 @(currentTab == "DangPhucVu" ? "border-start border-4 border-success" : "")">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Đang phục vụ</div>
-                        <div class="fs-3 fw-bold text-success">@Model.DangPhucVuCount</div>
-                    </div>
-                    <div class="rounded-circle p-3 bg-success-subtle text-success">
-                        <i class="bi bi-cup-straw fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-sm-6 col-xl-3">
-        <div class="card card-stat border-0 shadow-sm rounded-3">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="text-muted small fw-semibold text-uppercase">Lượt khách hôm nay</div>
-                    <div class="fs-3 fw-bold text-dark">@Model.HomNayCount</div>
-                </div>
-                <div class="rounded-circle p-3 bg-dark-subtle text-dark">
-                    <i class="bi bi-people-fill fs-4"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- TABS VÀ THANH CÔNG CỤ LỌC -->
 <div class="card border-0 shadow-sm rounded-3 bg-white">
     <div class="card-header bg-white border-bottom p-3">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <!-- Tabs -->
-            <ul class="nav nav-pills card-header-pills">
-                <li class="nav-item">
-                    <a class="nav-link @(currentTab == "ChoXacNhan" ? "active bg-warning text-dark fw-bold" : "text-dark")" 
-                       asp-action="Index" asp-route-tab="ChoXacNhan">
-                        <i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận (@Model.ChoXacNhanCount)
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentTab == "DaXacNhan" ? "active bg-primary fw-bold" : "text-dark")" 
-                       asp-action="Index" asp-route-tab="DaXacNhan">
-                        <i class="bi bi-check2-circle me-1"></i>Đã xác nhận (@Model.DaXacNhanCount)
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentTab == "DangPhucVu" ? "active bg-success fw-bold" : "text-dark")" 
-                       asp-action="Index" asp-route-tab="DangPhucVu">
-                        <i class="bi bi-bell-fill me-1"></i>Đang phục vụ (@Model.DangPhucVuCount)
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentTab == "HoanTat" ? "active bg-secondary fw-bold" : "text-dark")"
-                       asp-action="Index" asp-route-tab="HoanTat">
-                        <i class="bi bi-archive me-1"></i>Hoàn tất
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(currentTab == "DaHuy" ? "active bg-danger text-white fw-bold" : "text-dark")"
-                       asp-action="Index" asp-route-tab="DaHuy">
-                        <i class="bi bi-x-octagon me-1"></i>Đã hủy (@Model.DaHuyCount)
-                    </a>
-                </li>
-            </ul>
+            <nav class="segmented" aria-label="Lọc yêu cầu theo trạng thái">
+                <a class="@(currentTab == "ChoXacNhan" ? "active" : "")" asp-action="Index" asp-route-tab="ChoXacNhan"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Chờ xác nhận <span class="count">@Model.ChoXacNhanCount</span></a>
+                <a class="@(currentTab == "DaXacNhan" ? "active" : "")" asp-action="Index" asp-route-tab="DaXacNhan"><i class="bi bi-check2-circle" aria-hidden="true"></i>Đã xác nhận <span class="count">@Model.DaXacNhanCount</span></a>
+                <a class="@(currentTab == "DangPhucVu" ? "active" : "")" asp-action="Index" asp-route-tab="DangPhucVu"><i class="bi bi-bell" aria-hidden="true"></i>Đang phục vụ <span class="count">@Model.DangPhucVuCount</span></a>
+                <a class="@(currentTab == "HoanTat" ? "active" : "")" asp-action="Index" asp-route-tab="HoanTat"><i class="bi bi-archive" aria-hidden="true"></i>Hoàn tất</a>
+                <a class="@(currentTab == "DaHuy" ? "active" : "")" asp-action="Index" asp-route-tab="DaHuy"><i class="bi bi-x-octagon" aria-hidden="true"></i>Đã hủy <span class="count">@Model.DaHuyCount</span></a>
+            </nav>
 
             <!-- Bộ lọc ngày -->
             <form asp-action="Index" method="get" class="d-flex align-items-center gap-2">
@@ -150,8 +60,7 @@
                         <th>Giờ đến hẹn</th>
                         <th>Bàn ăn đã xếp</th>
                         <th>Trạng thái</th>
-                        <th>Ghi chú</th>
-                        <th class="text-end pe-3">Thao tác</th>
+                                                <th class="text-end pe-3">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,17 +75,18 @@
                                     var slotLabel = slot?.Name ?? "Lịch cũ";
                                 }
                                 <td class="ps-3">
-                                    <div class="font-monospace fw-bold text-danger">@item.BookingCode</div>
+                                    <div class="cell-code">@item.BookingCode</div>
                                     <span class="badge bg-light text-secondary border mt-1">@slotLabel</span>
                                 </td>
                                 <td>
-                                    <div class="fw-bold fs-6 text-dark">@item.HoTen</div>
+                                    <div class="fw-semibold">@item.HoTen</div>
                                     <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@item.SoDienThoai</div>
                                     <span class="badge bg-light text-dark border mt-1"><i class="bi bi-people me-1"></i>@item.SoNguoi khách</span>
+                                    @if (!string.IsNullOrEmpty(item.GhiChu)) { <span class="cell-sub cell-note mt-1" title="Ghi chú của khách"><i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>@item.GhiChu</span> }
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">
-                                        <i class="bi bi-clock me-1 text-secondary"></i>@local.ToString("HH:mm")–@item.GioKetThuc?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")
+                                    <div class="fw-semibold cell-nowrap">
+                                        <i class="bi bi-clock me-1 text-secondary" aria-hidden="true"></i>@local.ToString("HH:mm")–@item.GioKetThuc?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")
                                     </div>
                                     <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>@local.ToString("dd/MM/yyyy")</div>
                                 </td>
@@ -198,18 +108,15 @@
                                     <span class="badge @item.TrangThaiBadgeClass px-2 py-1">
                                         @item.TrangThai
                                     </span>
-                                    <div class="mt-1"><span class="badge bg-light text-secondary border fw-normal">@item.TinhTrangCoc</span></div>
-                                </td>
-                                <td class="small text-muted" style="max-width: 200px;">
-                                    @(string.IsNullOrEmpty(item.GhiChu) ? "—" : item.GhiChu)
+                                    <span class="cell-sub mt-1">@item.TinhTrangCoc</span>
                                 </td>
                                 <td class="text-end pe-3">
-                                    <div class="d-inline-flex gap-1">
-                                        <a asp-controller="DatTruoc" asp-action="ChiTiet" asp-route-id="@item.MaDatBan" class="btn btn-sm btn-outline-success" title="Món đặt trước, cọc và yêu cầu hủy">Món & cọc</a>
+                                    <div class="row-actions can-wrap">
+                                        <a asp-controller="DatTruoc" asp-action="ChiTiet" asp-route-id="@item.MaDatBan" class="btn btn-sm btn-outline-secondary" title="Món đặt trước, cọc và yêu cầu hủy">Món & cọc</a>
                                         <!-- Nút Xếp bàn (Cho Chờ xác nhận hoặc muốn đổi bàn) -->
                                         @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Chờ cọc" || item.TrangThai == "Đã xác nhận")
                                         {
-                                            <a asp-action="DoiGio" asp-route-id="@item.MaDatBan" data-reschedule-booking="@item.MaDatBan" class="btn btn-sm btn-outline-primary">Đổi giờ</a>
+                                            <a asp-action="DoiGio" asp-route-id="@item.MaDatBan" data-reschedule-booking="@item.MaDatBan" class="btn btn-sm btn-outline-secondary">Đổi giờ</a>
                                             <a asp-controller="SoDoBan" asp-action="Index" asp-route-datBanId="@item.MaDatBan" data-assign-booking="@item.MaDatBan" class="btn btn-sm btn-primary fw-semibold" title="Duyệt và xếp bàn">
                                                 <i class="bi bi-table me-1"></i>Xếp bàn
                                             </a>
@@ -233,7 +140,7 @@
                                         @if (item.HoaDonId.HasValue && User.IsInRole("Admin"))
                                         {
                                             <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@item.HoaDonId.Value" 
-                                               class="btn btn-sm btn-outline-info" title="Xem chi tiết hóa đơn">
+                                               class="btn btn-sm btn-outline-secondary" title="Xem chi tiết hóa đơn" aria-label="Xem chi tiết hóa đơn">
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                         }
@@ -244,7 +151,7 @@
                                             <button type="button" class="btn btn-sm btn-outline-danger" 
                                                     data-bs-toggle="modal" data-bs-target="#modalHuyBan" 
                                                     data-id="@item.MaDatBan" data-code="@item.BookingCode"
-                                                    data-version="@item.RowVersion" title="Hủy đơn đặt bàn">
+                                                    data-version="@item.RowVersion" title="Hủy đơn đặt bàn" aria-label="Hủy đơn đặt bàn">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         }
@@ -256,8 +163,8 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            <td colspan="6" class="empty-state">
+                                <i class="bi bi-calendar-x" aria-hidden="true"></i>
                                 Không có yêu cầu đặt bàn nào trong danh mục này.
                             </td>
                         </tr>
@@ -285,7 +192,7 @@
                 @Html.AntiForgeryToken()
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold text-danger" id="modalHuyBanTitle">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Hủy Đơn Đặt Bàn
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Hủy đơn đặt bàn
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>

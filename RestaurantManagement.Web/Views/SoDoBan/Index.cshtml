@@ -2,11 +2,11 @@
 @using RestaurantManagement.Web.Services
 @{ ViewData["Title"] = "Sơ đồ bàn"; var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan"); }
 @section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
-<div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
-    <div><p class="small text-success fw-semibold mb-1">KHU VỰC PHỤC VỤ</p><h1 class="h3 mb-1">Sơ đồ bàn</h1><p class="text-muted mb-0">Phục vụ liên tục @ReservationSchedule.ServiceHours. Chia ca quản lý trước 17h và từ 17h; mỗi bàn nhận một lượt mỗi ca.</p><p class="small text-muted mb-0">Xác nhận hoàn tất là xác nhận khách đã dùng xong và bàn sẵn sàng. Không có bước chờ dọn riêng; quá 3 tiếng chỉ nhắc kiểm tra.</p></div>
-    <div class="d-flex gap-2 flex-wrap">
+<div class="page-header">
+    <div><h1 class="h3">Sơ đồ bàn</h1><p class="text-muted">Phục vụ liên tục @ReservationSchedule.ServiceHours. Chia ca quản lý trước 17h và từ 17h; mỗi bàn nhận một lượt mỗi ca.</p></div>
+    <div class="page-actions">
         @if (User.IsInRole("Admin") || User.IsInRole("TiepTan")) {
-            <a asp-controller="QuanLyDatBan" asp-action="Create" class="btn btn-success">Đặt bàn cho khách</a>
+            <a asp-controller="QuanLyDatBan" asp-action="Create" class="btn btn-primary"><i class="bi bi-calendar-plus me-1" aria-hidden="true"></i>Đặt bàn cho khách</a>
             <a asp-controller="QuanLyDatBan" asp-action="Index" class="btn btn-outline-secondary">Yêu cầu đặt bàn</a>
         }
         @if (User.IsInRole("Admin")) {
@@ -15,31 +15,30 @@
         }
     </div>
 </div>
-<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-end">
+<form method="get" class="filter-bar">
     <input type="hidden" name="datBanId" value="@Model.Booking?.Id" />
     <input type="hidden" name="preferredTableId" value="@Model.PreferredTableId" />
-    <div><label for="schedule-day" class="form-label small">Ngày xem lịch</label><input id="schedule-day" name="ngay" type="date" value="@Model.ScheduleDay.ToString("yyyy-MM-dd")" class="form-control" disabled="@(Model.Booking is not null)" /></div>
-    <div><label for="schedule-slot" class="form-label small">Ca xem lịch</label><select id="schedule-slot" name="ca" class="form-select" disabled="@(Model.Booking is not null)">
+    <div class="filter-field"><label for="schedule-day" class="form-label">Ngày xem lịch</label><input id="schedule-day" name="ngay" type="date" value="@Model.ScheduleDay.ToString("yyyy-MM-dd")" class="form-control" disabled="@(Model.Booking is not null)" /></div>
+    <div class="filter-field"><label for="schedule-slot" class="form-label">Ca xem lịch</label><select id="schedule-slot" name="ca" class="form-select" disabled="@(Model.Booking is not null)">
         <option value="now" selected="@(Model.SlotId == "now")">Hiện tại — thao tác phục vụ</option>
         @foreach (var slot in ReservationSchedule.Slots) { <option value="@slot.Id" selected="@(Model.SlotId == slot.Id)">@slot.Label</option> }
         @if (Model.SlotId == "legacy") { <option selected value="">Khoảng giờ lịch cũ: @Model.ScheduleTime.ToString("HH:mm")</option> }
     </select></div>
     @if (Model.SlotId == "legacy") { <input type="hidden" name="gio" value="@Model.ScheduleTime.ToString("HH:mm")" /> }
-    <div><label for="floor" class="form-label small">Tầng</label><select id="floor" name="tang" class="form-select"><option value="">Tất cả tầng</option>
+    <div class="filter-field"><label for="floor" class="form-label">Tầng</label><select id="floor" name="tang" class="form-select"><option value="">Tất cả tầng</option>
         @foreach (var floor in Model.Areas.Select(x => x.Tang).Distinct()) { <option value="@floor" selected="@(floor == Model.Floor)">@(floor == 0 ? "Tầng trệt" : $"Tầng {floor}")</option> }
     </select></div>
-    <div><label for="area" class="form-label small">Khu vực</label><select id="area" name="khuVucId" class="form-select"><option value="">Tất cả khu vực</option>
+    <div class="filter-field"><label for="area" class="form-label">Khu vực</label><select id="area" name="khuVucId" class="form-select"><option value="">Tất cả khu vực</option>
         @foreach (var area in Model.Areas) { <option value="@area.Id" selected="@(area.Id == Model.AreaId)">@area.TenKhuVuc · tầng @area.Tang</option> }
     </select></div>
-    <div><label for="status-filter" class="form-label small">Trạng thái bàn</label><select id="status-filter" name="trangThai" class="form-select" disabled="@(Model.Booking is not null)">
+    <div class="filter-field is-wide"><label for="status-filter" class="form-label">Trạng thái bàn</label><select id="status-filter" name="trangThai" class="form-select" disabled="@(Model.Booking is not null)">
         <option value="can-xu-ly" selected="@(Model.StatusFilter == "can-xu-ly")">Cần xử lý (đặt trước sắp tới + đang phục vụ)</option>
         <option value="dang-phuc-vu" selected="@(Model.StatusFilter == "dang-phuc-vu")">Đang phục vụ</option>
         <option value="dat-truoc" selected="@(Model.StatusFilter == "dat-truoc")">Đặt trước sắp tới giờ</option>
         <option value="trong" selected="@(Model.StatusFilter == "trong")">Bàn trống</option>
         <option value="tat-ca" selected="@(Model.StatusFilter == "tat-ca")">Tất cả bàn</option>
     </select></div>
-    <button class="btn btn-success">Lọc sơ đồ</button><a asp-action="Index" asp-route-datBanId="@Model.Booking?.Id" asp-route-preferredTableId="@Model.PreferredTableId" class="btn btn-outline-secondary">Bỏ lọc</a>
-    <span id="board-refresh" class="small text-muted ms-auto" role="status">Tự cập nhật mỗi 10 giây</span>
+    <div class="filter-actions"><button class="btn btn-primary">Lọc sơ đồ</button><a asp-action="Index" asp-route-datBanId="@Model.Booking?.Id" asp-route-preferredTableId="@Model.PreferredTableId" class="btn btn-outline-secondary">Bỏ lọc</a></div>
 </form>
 @if (reception) { <div class="d-flex d-lg-none gap-2 mb-3"><a href="#booking-context" class="btn btn-sm btn-outline-success">Yêu cầu đặt bàn</a><a href="#table-board" class="btn btn-sm btn-outline-success">Xem sơ đồ</a></div> }
 <div class="@(reception ? "booking-workspace" : "")">
@@ -61,7 +60,17 @@
     </aside>
 }
 <section class="booking-board-panel" aria-label="Sơ đồ bàn và lịch đặt">
-    <p class="small text-muted mb-3">@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ngày và ca") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy"). Lịch xét đúng ngày đang xem; khi nhận khách, bàn phải được xác nhận sẵn sàng.</p>
+    <div class="board-caption">
+        <span>@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ngày và ca") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") · <span id="board-refresh" role="status">Tự cập nhật mỗi 10 giây</span></span>
+        <details class="board-rules">
+            <summary>Quy tắc</summary>
+            <ul class="mb-0 ps-3">
+                <li>Lịch xét đúng ngày đang xem; khi nhận khách, bàn phải được xác nhận sẵn sàng.</li>
+                <li>Xác nhận hoàn tất là xác nhận khách đã dùng xong và bàn sẵn sàng. Không có bước chờ dọn riêng; quá 3 tiếng chỉ nhắc kiểm tra.</li>
+                <li>Nhân viên kết thúc lượt sau khi khách dùng bữa xong; hệ thống không tự đóng theo số tiếng.</li>
+            </ul>
+        </details>
+    </div>
     <div id="assignment-warning" class="alert alert-warning" role="alert" tabindex="-1" hidden></div>
     <div id="table-board" data-poll="@(Model.Booking is null ? "true" : "false")"><partial name="_Board" model="Model" /></div>
 </section>

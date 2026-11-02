@@ -54,7 +54,11 @@
         <a asp-controller="DonHang" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-primary">Xem đơn hàng</a>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm" onclick="window.print()">
+        @if (canCollect && unpaid)
+        {
+            <a href="#payment-panel" class="btn btn-primary invoice-jump"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Thu tiền</a>
+        }
+        <button type="button" class="btn @(canCollect && unpaid ? "btn-outline-secondary" : "btn-primary") d-inline-flex align-items-center gap-1" onclick="window.print()">
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
             In hóa đơn
         </button>
@@ -95,7 +99,7 @@
                 {
                     <div><strong>Thanh toán:</strong> @Model.ThoiDiemThanhToan.Value.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</div>
                 }
-                <div><strong>Thu ngân:</strong> @Model.NhanVien?.HoTen</div>
+                @if (!string.IsNullOrEmpty(Model.NhanVien?.HoTen)) { <div><strong>Thu ngân:</strong> @Model.NhanVien.HoTen</div> }
             </div>
         </div>
 
@@ -150,10 +154,10 @@
             <dd class="col-5 col-sm-4 text-end">@activeTotal.ToString("N0") đ</dd>
 
             <dt class="col-7 col-sm-8 text-sm-end text-muted">Giảm giá / Voucher:</dt>
-            <dd class="col-5 col-sm-4 text-end text-success">- @effectiveDiscount.ToString("N0") đ</dd>
+            <dd class="col-5 col-sm-4 text-end text-success">@(effectiveDiscount > 0 ? "- " : "")@effectiveDiscount.ToString("N0") đ</dd>
 
             <dt class="col-7 col-sm-8 text-sm-end text-muted">Trừ tiền đặt cọc đã nhận:</dt>
-            <dd class="col-5 col-sm-4 text-end text-primary">- @depositDeduction.ToString("N0") đ</dd>
+            <dd class="col-5 col-sm-4 text-end text-primary">@(depositDeduction > 0 ? "- " : "")@depositDeduction.ToString("N0") đ</dd>
 
             <dt class="col-7 col-sm-8 text-sm-end fs-5 fw-bold border-top pt-2">@(unpaid ? "Khách cần trả thêm:" : "Đã thu khi thanh toán:")</dt>
             <dd class="col-5 col-sm-4 text-end fs-5 fw-bold text-danger border-top pt-2">@paymentAmount.ToString("N0") đ</dd>
@@ -354,7 +358,7 @@
     }
     @if (canCollect && unpaid && paymentAmount == 0)
     {
-        <form asp-action="ThanhToan" method="post" class="card p-4 no-print mb-4">
+        <form asp-action="ThanhToan" method="post" id="payment-panel" class="card p-4 no-print mb-4">
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" value="@Model.Id" />
             <input type="hidden" name="RowVersion" value="@ViewBag.RowVersion" />
@@ -369,7 +373,7 @@
     }
     @if (canCollect && unpaid && paymentAmount > 0)
     {
-        <div class="card border-0 shadow-sm no-print mb-4">
+        <div id="payment-panel" class="card border-0 shadow-sm no-print mb-4">
             <div class="card-header bg-primary text-white py-3">
                 <h2 class="h5 mb-0 fw-bold">Thanh toán phần còn lại</h2>
                 <div class="small opacity-75">Hai hình thức: Tiền mặt hoặc Chuyển khoản ngân hàng (thu ngân đối chiếu tiền vào tài khoản trước khi xác nhận).</div>

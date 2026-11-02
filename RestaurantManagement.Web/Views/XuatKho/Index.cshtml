@@ -7,12 +7,12 @@
 
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Xuất kho chế biến</h1>
-            <p class="text-muted mb-0">Xuất nguyên vật liệu cho Bếp nóng, Bếp lạnh và Quầy Bar phục vụ hoạt động nhà hàng.</p>
+            <h1 class="h3">Xuất kho chế biến</h1>
+            <p class="text-muted mb-0">Xuất nguyên vật liệu cho Bếp nóng, Bếp lạnh và Quầy Bar. Hệ thống kiểm tra tồn kho tức thời và chặn xuất âm.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="page-actions">
             <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
                 <i class="bi bi-plus-circle"></i> Lập phiếu xuất kho
             </a>
@@ -21,11 +21,11 @@
 
     <!-- Summary KPI Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-12 col-md-6 col-xl-4">
+        <div class="col-12 col-md-6">
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Tổng Số Phiếu Xuất</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng số phiếu xuất</div>
                         <div class="fs-2 fw-bold text-dark mt-1">@Model.TongSoPhieu</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-primary fs-3">
@@ -34,11 +34,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-4">
+        <div class="col-12 col-md-6">
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Tổng Giá Trị Xuất Kho</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng giá trị xuất kho</div>
                         <div class="fs-2 fw-bold text-danger mt-1">@Model.TongGiaTriXuat.ToString("N0") <small class="fs-6 text-muted">đ</small></div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-danger fs-3">
@@ -47,20 +47,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-12 col-xl-4">
-            <div class="card card-stat border-0">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Kiểm Soát Tồn Kho</div>
-                        <div class="fs-6 text-muted mt-1">Hệ thống tự động kiểm tra tồn kho tức thời & chặn xuất âm</div>
-                    </div>
-                    <div class="rounded-circle p-3 bg-light text-success fs-3">
-                        <i class="bi bi-shield-lock"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
+
 
     <!-- Filter Toolbar -->
     <div class="card border-0 shadow-sm mb-4">
@@ -88,7 +76,7 @@
                     <button class="btn btn-brand-primary w-100" type="submit">
                         <i class="bi bi-funnel me-1"></i> Lọc
                     </button>
-                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc">
+                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </a>
                 </div>
@@ -102,24 +90,22 @@
             <table class="table table-admin align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 110px;">Số phiếu</th>
+                        <th>Số phiếu</th>
                         <th>Ngày xuất</th>
                         <th>Bộ phận nhận</th>
-                        <th class="d-none d-xl-table-cell">Người nhận</th>
-                        <th class="d-none d-md-table-cell">Lý do xuất</th>
-                        <th class="d-none d-lg-table-cell">Người lập</th>
+                                                <th class="d-none d-md-table-cell">Lý do xuất</th>
+                        <th class="d-none d-xxl-table-cell">Người lập</th>
                         <th class="text-center">Mặt hàng</th>
                         <th class="text-end">Tổng giá trị</th>
-                        <th>Trạng thái</th>
-                        <th class="text-end" style="width: 90px;">Thao tác</th>
+                                                <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Items.Any())
                     {
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            <td colspan="7" class="empty-state">
+                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                                 Không tìm thấy phiếu xuất kho nào phù hợp.
                             </td>
                         </tr>
@@ -127,33 +113,28 @@
                     @foreach (var item in Model.Items)
                     {
                         <tr>
-                            <td class="fw-bold">
+                            <td class="cell-code">
                                 <a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-danger fw-semibold">
                                     @item.MaPhieu
                                 </a>
                             </td>
-                            <td>@item.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="cell-nowrap">@item.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</td>
                             <td>
                                 <span class="badge bg-light text-dark border fw-medium px-2 py-1">
                                     <i class="bi bi-geo-alt me-1 text-primary"></i>@(item.BoPhanNhan ?? "Bếp")
                                 </span>
+                                @if (!string.IsNullOrEmpty(item.NguoiNhan)) { <span class="cell-sub mt-1">@item.NguoiNhan</span> }
                             </td>
-                            <td class="d-none d-xl-table-cell">@(item.NguoiNhan ?? "—")</td>
-                            <td class="d-none d-md-table-cell text-truncate" style="max-width: 180px;">@(item.GhiChu ?? "Phục vụ chế biến")</td>
-                            <td class="d-none d-lg-table-cell">@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
+                            <td class="d-none d-md-table-cell cell-note">@(item.GhiChu ?? "Phục vụ chế biến")</td>
+                            <td class="d-none d-xxl-table-cell">@(item.NhanVien?.HoTen ?? "Thủ kho")</td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border">@item.ChiTiet.Count món</span>
                             </td>
-                            <td class="text-end fw-bold text-dark">
+                            <td class="text-end fw-semibold cell-nowrap">
                                 @item.TongTien.ToString("N0") đ
                             </td>
-                            <td>
-                                <span class="badge-status-success d-inline-flex align-items-center gap-1">
-                                    <span class="badge-dot bg-success"></span> Đã xuất kho
-                                </span>
-                            </td>
                             <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info" title="Xem chi tiết & In phiếu">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary" title="Xem chi tiết & In phiếu">
                                     <i class="bi bi-eye me-1"></i> Xem
                                 </a>
                             </td>

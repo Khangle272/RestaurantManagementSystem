@@ -8,12 +8,12 @@
 }
 
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h2 class="h3 mb-1">@ViewData["Title"]</h2>
+            <h1 class="h3">@ViewData["Title"]</h1>
             <p class="text-muted mb-0">Quản lý hồ sơ, vai trò và tài khoản đăng nhập tại cùng một nơi.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="page-actions">
             <a asp-action="PhanQuyen" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
                 <i class="bi bi-shield-lock"></i> Ma trận phân quyền
             </a>
@@ -50,7 +50,7 @@
                 <thead class="table-light">
                     <tr>
                         <th scope="col">Mã nhân viên</th>
-                        <th scope="col">Họ tên / Địa chỉ</th>
+                        <th scope="col">Họ tên / địa chỉ</th>
                         <th scope="col">Liên hệ</th>
                         <th scope="col">Chức vụ</th>
                         <th scope="col">Tài khoản</th>
@@ -67,14 +67,14 @@
                     @foreach (var item in Model.Items)
                     {
                         <tr>
-                            <td class="fw-medium">@item.MaNhanVien</td>
+                            <td class="cell-code">@item.MaNhanVien</td>
                             <td><div>@item.HoTen</div><small class="text-muted">@item.DiaChi</small></td>
-                            <td><div>@item.SoDienThoai</div><small class="text-muted">@item.Email</small></td>
+                            <td><div class="cell-nowrap">@item.SoDienThoai</div><span class="cell-sub">@item.Email</span></td>
                             <td>@(item.TaiKhoanId is int accountId && accountRoles.TryGetValue(accountId, out var roleLabel) ? roleLabel : AppRoles.Label(AppRoles.RoleForJob(item.ChucVu) ?? item.ChucVu))</td>
-                            <td><small class="text-break">@(item.TaiKhoan?.Email ?? "Chưa cấp")</small>
-                                @if (item.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow) { <span class="badge bg-secondary">Đã khóa</span> }
+                            <td><span class="@(item.TaiKhoan is null ? "badge-status-muted" : "badge-status-success")" title="@item.TaiKhoan?.Email">@(item.TaiKhoan is null ? "Chưa cấp" : "Đã cấp")</span>
+                                @if (item.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow) { <span class="badge-status-danger">Đã khóa</span> }
                             </td>
-                            <td>@item.NgayVaoLam.ToString("dd/MM/yyyy")</td>
+                            <td class="cell-nowrap">@item.NgayVaoLam.ToString("dd/MM/yyyy")</td>
                             <td><span class="badge @(item.DangLamViec ? "bg-success" : "bg-secondary")">@(item.DangLamViec ? "Đang làm việc" : "Đã nghỉ việc")</span></td>
                             <td class="text-end text-nowrap">
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Sửa</a>

@@ -1,8 +1,8 @@
 @model RestaurantManagement.Web.Models.CustomerAccountForm
 @{ ViewData["Title"] = "Cấp tài khoản khách hàng"; }
-<h1 class="h3 mb-3">Cấp tài khoản cho @Model.HoTen</h1>
-<p class="text-muted">Tài khoản được gắn vào hồ sơ hiện có, giữ nguyên đơn hàng và điểm tích lũy.</p>
-<form method="post" class="card card-body" style="max-width:650px">
+<a asp-action="Index" class="page-back"><i class="bi bi-arrow-left" aria-hidden="true"></i>Danh sách khách hàng</a>
+<div class="page-header"><div><h1 class="h3">Cấp tài khoản cho @Model.HoTen</h1><p class="text-muted">Tài khoản được gắn vào hồ sơ hiện có, giữ nguyên đơn hàng và điểm tích lũy.</p></div></div>
+<form method="post" class="card card-body form-narrow">
     <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
     <div asp-validation-summary="All" class="text-danger"></div>
     <label asp-for="Email" class="form-label">Email đăng nhập</label><input asp-for="Email" class="form-control mb-3" autocomplete="off" />

@@ -116,7 +116,7 @@
     }
     else
     {
-        <details class="management-menu-group" open="@(group.Any(x => IsActive(x.Controller, x.Action)))">
+        <details class="management-menu-group" name="admin-menu" open="@(group.Any(x => IsActive(x.Controller, x.Action)))">
             <summary>@group.Key</summary>
             <div class="management-menu-children">
             @foreach (var item in group) {

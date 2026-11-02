@@ -4,9 +4,9 @@
     ViewData["ActiveMenu"] = "BaoCaoDoanhThu";
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+<div class="page-header">
     <div>
-        <h1 class="h3 fw-bold mb-1">Báo cáo doanh thu & đơn hàng</h1>
+        <h1 class="h3">Báo cáo doanh thu & đơn hàng</h1>
         <p class="text-muted mb-0">Doanh thu tiền món sau giảm giá theo ngày thanh toán (giờ Việt Nam). Cọc là tiền đã nhận, không phải giảm giá.</p>
         <p class="small text-muted mb-0">Tiền mặt/chuyển khoản là tiền thu thêm khi chốt bill, chưa gồm tiền đặt cọc nhận trước (xem Báo cáo nộp ca để có dòng tiền thực thu theo ngày). Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
         @if (Model.SoHoaDonThieuNgayThanhToan > 0)
@@ -14,7 +14,7 @@
             <div class="alert alert-warning mt-2">Có @Model.SoHoaDonThieuNgayThanhToan hóa đơn cũ chưa lưu ngày thanh toán; tạm thống kê theo ngày lập, không sửa dữ liệu gốc.</div>
         }
     </div>
-    <div class="d-flex gap-2">
+    <div class="page-actions">
         <a asp-action="XuatDoanhThuCsv" asp-route-cheDo="@Model.CheDo" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")" asp-route-nam="@Model.Nam" class="btn btn-outline-success d-inline-flex align-items-center gap-1 shadow-sm">
             <i class="bi bi-file-earmark-excel"></i> Xuất file CSV
         </a>
@@ -25,63 +25,39 @@
 </div>
 
 <!-- Bộ lọc chế độ xem -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-3">
-        <!-- Tabs chuyển chế độ -->
-        <ul class="nav nav-pills mb-3" id="viewModeTabs">
-            <li class="nav-item">
-                <a class="nav-link @(Model.CheDo == "TheoNgay" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoNgay" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")">
+<div class="toolbar">
+    <nav class="segmented" id="viewModeTabs" aria-label="Chế độ xem báo cáo">
+                <a class="@(Model.CheDo == "TheoNgay" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoNgay" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")">
                     Theo ngày
                 </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link @(Model.CheDo == "TheoThang" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoThang" asp-route-nam="@Model.Nam">
+                <a class="@(Model.CheDo == "TheoThang" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoThang" asp-route-nam="@Model.Nam">
                     Theo tháng
                 </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link @(Model.CheDo == "TheoNam" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoNam" asp-route-nam="@Model.Nam">
+                <a class="@(Model.CheDo == "TheoNam" ? "active" : "")" asp-action="DoanhThu" asp-route-cheDo="TheoNam" asp-route-nam="@Model.Nam">
                     Theo năm
                 </a>
-            </li>
-        </ul>
-
-        <form method="get" class="row g-2 align-items-center">
-            <input type="hidden" name="cheDo" value="@Model.CheDo" />
-
-            @if (Model.CheDo == "TheoNgay")
-            {
-                <div class="col-auto"><span class="small fw-semibold text-muted">Từ ngày:</span></div>
-                <div class="col-md-3">
-                    <input type="date" name="tuNgay" value="@Model.TuNgay.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-                </div>
-                <div class="col-auto"><span class="small fw-semibold text-muted">Đến ngày:</span></div>
-                <div class="col-md-3">
-                    <input type="date" name="denNgay" value="@Model.DenNgay.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-sm btn-primary">Áp dụng</button>
-                    <a asp-action="DoanhThu" asp-route-cheDo="TheoNgay" class="btn btn-sm btn-light">30 ngày qua</a>
-                </div>
-            }
-            else
-            {
-                <div class="col-auto"><span class="small fw-semibold text-muted">Năm xem:</span></div>
-                <div class="col-md-2">
-                    <select name="nam" class="form-select form-select-sm" onchange="this.form.submit()">
-                        @for (int y = RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year; y >= RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year - 5; y--)
-                        {
-                            <option value="@y" selected="@(Model.Nam == y)">@y</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-sm btn-primary">Xem báo cáo</button>
-                </div>
-            }
-        </form>
-    </div>
+        
+    </nav>
 </div>
+<form method="get" class="filter-bar">
+    <input type="hidden" name="cheDo" value="@Model.CheDo" />
+    @if (Model.CheDo == "TheoNgay")
+    {
+        <div class="filter-field"><label class="form-label" for="filter-from">Từ ngày</label><input id="filter-from" type="date" name="tuNgay" value="@Model.TuNgay.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="filter-field"><label class="form-label" for="filter-to">Đến ngày</label><input id="filter-to" type="date" name="denNgay" value="@Model.DenNgay.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="filter-actions"><button type="submit" class="btn btn-primary">Áp dụng</button><a asp-action="DoanhThu" asp-route-cheDo="TheoNgay" class="btn btn-outline-secondary">30 ngày qua</a></div>
+    }
+    else
+    {
+        <div class="filter-field"><label class="form-label" for="filter-year">Năm xem</label><select id="filter-year" name="nam" class="form-select" onchange="this.form.submit()">
+            @for (int y = RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year; y >= RestaurantManagement.Web.Services.TableService.VietnamNow.Date.Year - 5; y--)
+            {
+                <option value="@y" selected="@(Model.Nam == y)">@y</option>
+            }
+        </select></div>
+        <div class="filter-actions"><button type="submit" class="btn btn-primary">Xem báo cáo</button></div>
+    }
+</form>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">

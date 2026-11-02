@@ -4,55 +4,83 @@
     ViewData["Title"] = "Hóa đơn & thanh toán";
     ViewData["ActiveMenu"] = "HoaDon";
     var daThanhToan = ViewBag.DaThanhToan is true;
+    var search = ViewBag.Search as string;
     var pagination = ViewBag.Pagination as PaginationViewModel ?? new PaginationViewModel { CurrentPage = 1, TotalPages = 1, TotalItems = Model.Count };
 }
-<h1 class="h3 mb-3">Hóa đơn & thanh toán</h1>
-<div class="mb-3 d-flex gap-2">
-    <a asp-action="Index" asp-route-daThanhToan="false" class="btn @(daThanhToan ? "btn-outline-primary" : "btn-primary")">Chờ thanh toán</a>
-    <a asp-action="Index" asp-route-daThanhToan="true" class="btn @(daThanhToan ? "btn-primary" : "btn-outline-primary")">Đã thanh toán</a>
+<div class="page-header">
+    <div>
+        <h1 class="h3">Hóa đơn & thanh toán</h1>
+        <p class="text-muted">Thu tiền hóa đơn đang mở và in lại hóa đơn đã thanh toán.</p>
+    </div>
 </div>
-<div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead><tr><th>Mã hóa đơn</th><th>Thời điểm lập</th><th>Trạng thái</th><th class="text-end">Tổng sau giảm/cọc</th><th></th></tr></thead>
-        <tbody>
-        @foreach (var item in Model)
+<div class="toolbar">
+    <nav class="segmented" aria-label="Lọc hóa đơn theo trạng thái">
+        <a asp-action="Index" asp-route-daThanhToan="false" asp-route-search="@search" class="@(daThanhToan ? "" : "active")" aria-current="@(daThanhToan ? null : "page")"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Chờ thanh toán</a>
+        <a asp-action="Index" asp-route-daThanhToan="true" asp-route-search="@search" class="@(daThanhToan ? "active" : "")" aria-current="@(daThanhToan ? "page" : null)"><i class="bi bi-check2-circle" aria-hidden="true"></i>Đã thanh toán</a>
+    </nav>
+</div>
+<form method="get" class="filter-bar">
+    <input type="hidden" name="daThanhToan" value="@daThanhToan" />
+    <div class="filter-field is-wide input-icon">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="search" value="@search" class="form-control" aria-label="Tìm mã hóa đơn, bàn, tên khách hoặc số điện thoại" placeholder="Mã hóa đơn, bàn, tên khách hoặc số điện thoại" />
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+        @if (!string.IsNullOrEmpty(search)) { <a asp-action="Index" asp-route-daThanhToan="@daThanhToan" class="btn btn-outline-secondary">Bỏ lọc</a> }
+    </div>
+</form>
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Mã hóa đơn</th><th>Loại đơn</th><th>Thời điểm lập</th><th>Trạng thái</th><th class="text-end">Tổng sau giảm/cọc</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="6" class="empty-state"><i class="bi bi-receipt" aria-hidden="true"></i>@(string.IsNullOrEmpty(search) ? "Chưa có hóa đơn trong nhóm này." : "Không tìm thấy hóa đơn phù hợp.")</td></tr>
+            }
+            @foreach (var item in Model)
+            {
+                var (statusLabel, statusClass) = item.TrangThai switch
+                {
+                    TrangThaiHoaDon.DaThanhToan => ("Đã thanh toán", "badge-status-success"),
+                    TrangThaiHoaDon.ThanhToanMotPhan => ("Thanh toán một phần", "badge-status-warning"),
+                    _ => ("Chưa thanh toán", "badge-status-danger")
+                };
+                <tr>
+                    <td class="cell-code"><a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-reset">@item.MaHoaDon</a></td>
+                    <td>@(item.LoaiDonHang switch { LoaiDonHang.MangDi => "Mang đi", LoaiDonHang.GiaoHang => "Giao hàng", _ => "Tại bàn" })</td>
+                    <td class="cell-nowrap">@item.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td>
+                    <td><span class="@statusClass">@statusLabel</span></td>
+                    <td class="text-end fw-semibold">@item.TongThanhToan.ToString("N0") đ</td>
+                    <td class="text-end"><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm @(daThanhToan ? "btn-outline-secondary" : "btn-outline-primary")">@(daThanhToan ? "Xem / in" : "Thu tiền / in")</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="data-card-footer">
+        <span>@pagination.TotalItems hóa đơn · Trang @pagination.CurrentPage / @pagination.TotalPages</span>
+        @if (pagination.TotalPages > 1)
         {
-            <tr>
-                <td>@item.MaHoaDon</td>
-                <td>@item.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td>
-                <td>@(item.TrangThai == TrangThaiHoaDon.DaThanhToan ? "Đã thanh toán" : item.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan ? "Thanh toán một phần" : "Chưa thanh toán")</td>
-                <td class="text-end">@item.TongThanhToan.ToString("N0") đ</td>
-                <td><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Xem / in</a></td>
-            </tr>
+            <nav aria-label="Phân trang hóa đơn">
+                <ul class="pagination pagination-sm mb-0">
+                    @if (pagination.CurrentPage > 1)
+                    {
+                        <li class="page-item"><a class="page-link" asp-action="Index" asp-route-daThanhToan="@daThanhToan" asp-route-search="@search" asp-route-page="@(pagination.CurrentPage - 1)">Trước</a></li>
+                    }
+                    @for (var pageNumber = Math.Max(1, pagination.CurrentPage - 2); pageNumber <= Math.Min(pagination.TotalPages, pagination.CurrentPage + 2); pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == pagination.CurrentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-daThanhToan="@daThanhToan" asp-route-search="@search" asp-route-page="@pageNumber" aria-current="@(pageNumber == pagination.CurrentPage ? "page" : null)">@pageNumber</a>
+                        </li>
+                    }
+                    @if (pagination.CurrentPage < pagination.TotalPages)
+                    {
+                        <li class="page-item"><a class="page-link" asp-action="Index" asp-route-daThanhToan="@daThanhToan" asp-route-search="@search" asp-route-page="@(pagination.CurrentPage + 1)">Sau</a></li>
+                    }
+                </ul>
+            </nav>
         }
-        </tbody>
-    </table>
-</div>
-@if (Model.Count == 0)
-{
-    <p>Chưa có hóa đơn trong nhóm này.</p>
-}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-    <span class="text-muted small">@pagination.TotalItems hóa đơn · Trang @pagination.CurrentPage / @pagination.TotalPages</span>
-    @if (pagination.TotalPages > 1)
-    {
-        <nav aria-label="Phân trang hóa đơn">
-            <ul class="pagination mb-0">
-                @if (pagination.CurrentPage > 1)
-                {
-                    <li class="page-item"><a class="page-link" asp-action="Index" asp-route-daThanhToan="@daThanhToan" asp-route-page="@(pagination.CurrentPage - 1)">Trước</a></li>
-                }
-                @for (var pageNumber = Math.Max(1, pagination.CurrentPage - 2); pageNumber <= Math.Min(pagination.TotalPages, pagination.CurrentPage + 2); pageNumber++)
-                {
-                    <li class="page-item @(pageNumber == pagination.CurrentPage ? "active" : "")">
-                        <a class="page-link" asp-action="Index" asp-route-daThanhToan="@daThanhToan" asp-route-page="@pageNumber" aria-current="@(pageNumber == pagination.CurrentPage ? "page" : null)">@pageNumber</a>
-                    </li>
-                }
-                @if (pagination.CurrentPage < pagination.TotalPages)
-                {
-                    <li class="page-item"><a class="page-link" asp-action="Index" asp-route-daThanhToan="@daThanhToan" asp-route-page="@(pagination.CurrentPage + 1)">Sau</a></li>
-                }
-            </ul>
-        </nav>
-    }
+    </div>
 </div>

@@ -196,7 +196,7 @@ public static class InventorySmoke
 
         // 6. Test Tồn Kho & Cảnh Báo UI
         var tonKhoHtml = await Get(admin, "/Kho/TonKho");
-        check(tonKhoHtml.Contains("Tổng Mặt Hàng") && tonKhoHtml.Contains("Tổng Giá Trị Tồn Kho"),
+        check(tonKhoHtml.Contains("Tổng mặt hàng") && tonKhoHtml.Contains("Tổng giá trị tồn kho"),
             "TonKho page renders KPI statistics");
 
         // 7. Test Báo Cáo Nhập - Xuất - Tồn and CSV Export

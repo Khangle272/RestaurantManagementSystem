@@ -39,7 +39,11 @@ public class KhuVucController(RestaurantDbContext db) : ManagementControllerBase
         {
             area.TenKhuVuc = model.TenKhuVuc; area.Tang = model.Tang; area.LaPhongVip = model.LaPhongVip; area.TienCocGiuCho = model.TienCocGiuCho; area.DangSuDung = model.DangSuDung;
             if (model.Id == 0) Db.KhuVuc.Add(area);
-            if (await SaveAsync(nameof(model.TenKhuVuc), "Khu vực đã tồn tại.")) return RedirectToAction(nameof(Index));
+            if (await SaveAsync(nameof(model.TenKhuVuc), "Khu vực đã tồn tại."))
+            {
+                TempData["Success"] = model.Id == 0 ? $"Đã thêm khu vực {model.TenKhuVuc}." : $"Đã lưu khu vực {model.TenKhuVuc}.";
+                return RedirectToAction(nameof(Index));
+            }
         }
         return View(model);
     }

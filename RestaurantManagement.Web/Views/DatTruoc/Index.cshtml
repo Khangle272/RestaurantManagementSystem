@@ -1,18 +1,38 @@
 @model List<RestaurantManagement.API.Models.DatBan>
 @{ Layout = "_AdminLayout"; ViewData["Title"] = "Đối chiếu tiền đặt cọc"; }
-<section class="container-fluid py-3">
-    <h1 class="h3">Đối chiếu tiền đặt cọc</h1>
-    <p class="text-muted">Khách đã báo chuyển tiền. Kiểm tra số tiền thực nhận và nội dung mã đặt bàn trên ngân hàng trước khi xác nhận.</p>
-    <form method="get" class="d-flex gap-2 mb-3"><input name="keyword" value="@ViewData["Keyword"]" class="form-control" placeholder="Tìm mã đặt bàn hoặc số điện thoại" aria-label="Tìm mã đặt bàn hoặc số điện thoại" /><button class="btn btn-outline-success">Tìm</button></form>
-    <div class="table-responsive"><table class="table align-middle">
-        <thead><tr><th>Mã đặt bàn</th><th>Khách / lịch đến</th><th>Khách báo đã chuyển</th><th>Thời điểm báo</th><th></th></tr></thead>
-        <tbody>@foreach (var booking in Model) {
-            <tr><td class="fw-bold">@booking.MaDatBan</td><td>@booking.HoTenLienHe · @booking.SoDienThoaiLienHe<br />@booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</td>
-            <td>@booking.SoTienKhachBao.ToString("N0") đ<br /><small>@booking.MaGiaoDichKhachBao</small></td>
-            <td>@booking.ThoiDiemBaoChuyenKhoan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</td>
-            <td><a asp-action="ChiTiet" asp-route-id="@booking.Id" class="btn btn-outline-success">Đối chiếu</a></td></tr>
-        }</tbody>
-    </table></div>
-    @if (!Model.Any()) { <p>Không có khoản chuyển nào đang chờ đối chiếu.</p> }
-    @if (Model.Count == 100) { <p class="text-muted small">Đang hiển thị 100 khoản chờ đầu tiên; tìm theo mã để xem khoản cụ thể.</p> }
-</section>
+<div class="page-header">
+    <div>
+        <h1 class="h3">Đối chiếu tiền đặt cọc</h1>
+        <p class="text-muted">Khách đã báo chuyển tiền. Kiểm tra số tiền thực nhận và nội dung mã đặt bàn trên ngân hàng trước khi xác nhận.</p>
+    </div>
+</div>
+<form method="get" class="filter-bar">
+    <div class="filter-field is-wide input-icon">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="keyword" value="@ViewData["Keyword"]" class="form-control" placeholder="Tìm mã đặt bàn hoặc số điện thoại" aria-label="Tìm mã đặt bàn hoặc số điện thoại" />
+    </div>
+    <div class="filter-actions">
+        <button class="btn btn-primary">Tìm</button>
+        @if (!string.IsNullOrEmpty(ViewData["Keyword"]?.ToString())) { <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a> }
+    </div>
+</form>
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Mã đặt bàn</th><th>Khách / lịch đến</th><th class="text-end">Khách báo đã chuyển</th><th>Thời điểm báo</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            @if (!Model.Any()) { <tr><td colspan="5" class="empty-state"><i class="bi bi-piggy-bank" aria-hidden="true"></i>Không có khoản chuyển nào đang chờ đối chiếu.</td></tr> }
+            @foreach (var booking in Model) {
+                <tr>
+                    <td class="cell-code">@booking.MaDatBan</td>
+                    <td>@booking.HoTenLienHe · @booking.SoDienThoaiLienHe<span class="cell-sub">Đến lúc @booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span></td>
+                    <td class="text-end"><span class="fw-semibold">@booking.SoTienKhachBao.ToString("N0") đ</span><span class="cell-sub">@booking.MaGiaoDichKhachBao</span></td>
+                    <td class="cell-nowrap">@booking.ThoiDiemBaoChuyenKhoan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</td>
+                    <td class="text-end"><a asp-action="ChiTiet" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-primary">Đối chiếu</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Count == 100) { <div class="data-card-footer">Đang hiển thị 100 khoản chờ đầu tiên; tìm theo mã để xem khoản cụ thể.</div> }
+</div>

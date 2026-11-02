@@ -123,7 +123,9 @@
 }
 
 /* --- Admin declutter layer (giữ nguyên navigation, chỉ giảm nhiễu thị giác) --- */
-.admin-main .container-fluid { max-width: 1120px; margin-inline: auto; padding-top: 1.25rem; padding-bottom: 2rem; }
+.admin-main .container-fluid { max-width: 1400px; margin-inline: auto; padding-top: 1.25rem; padding-bottom: 2rem; }
+/* Trang tự bọc container-fluid thêm một lớp: bỏ khoảng đệm thừa để tiêu đề mọi trang thẳng hàng nhau. */
+.admin-main > .container-fluid > .container-fluid:not(.pos-page) { padding: 0 !important; }
 .admin-main h1.h3, .admin-main h2.h3, .admin-main h1.h4 { font-size: 1.3rem; font-weight: 650; letter-spacing: -.01em; margin-bottom: .2rem; }
 .admin-main .text-muted.mb-0 { font-size: .9rem; max-width: 68ch; }
 /* Một lớp card duy nhất: bỏ shadow nổi, chỉ giữ viền mảnh */
@@ -135,7 +137,7 @@
 .admin-main .btn { border-radius: .5rem; }
 /* Bảng nhẹ hơn: header nhỏ, cho phép xuống dòng để không tràn trang */
 .admin-main .table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .02em; font-weight: 600; color: #64748b; background: #f8fafc; white-space: normal; line-height: 1.35; vertical-align: bottom; }
-.admin-main .table tbody td { padding: .65rem .75rem; font-size: .9rem; vertical-align: middle; overflow-wrap: anywhere; }
+.admin-main .table tbody td { padding: .65rem .75rem; font-size: .9rem; vertical-align: middle; overflow-wrap: break-word; }
 /* Badge trạng thái và nút thao tác không được rớt dòng */
 .admin-main .badge, .admin-main .badge-status-success, .admin-main .badge-status-warning, .admin-main .badge-status-danger { white-space: nowrap; }
 .admin-main td.text-end, .admin-main th.text-end { white-space: nowrap; }

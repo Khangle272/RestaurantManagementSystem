@@ -215,3 +215,36 @@ a { text-underline-offset: 3px; }
 .star-rating .rating-input:focus-visible + .rating-star { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 4px; }
 .booking-step-icon { background: #e8f2df; color: var(--forest); }
 .booking-note { background: var(--paper); border: 1px dashed var(--line); }
+
+/* Nút và liên kết Bootstrap trên trang khách dùng màu rừng của nhà hàng, không dùng xanh dương mặc định. */
+:root {
+  --bs-primary: #183d2d; --bs-primary-rgb: 24, 61, 45;
+  --bs-link-color: #286443; --bs-link-color-rgb: 40, 100, 67;
+  --bs-link-hover-color: #183d2d; --bs-link-hover-color-rgb: 24, 61, 45;
+}
+.btn-primary { --bs-btn-bg: var(--forest); --bs-btn-border-color: var(--forest); --bs-btn-hover-bg: #28573f; --bs-btn-hover-border-color: #28573f; --bs-btn-active-bg: var(--forest-deep); --bs-btn-active-border-color: var(--forest-deep); --bs-btn-disabled-bg: #5d7a69; --bs-btn-disabled-border-color: #5d7a69; --bs-btn-focus-shadow-rgb: 24, 61, 45; }
+.btn-outline-primary { --bs-btn-color: var(--forest); --bs-btn-border-color: var(--forest); --bs-btn-hover-bg: var(--forest); --bs-btn-hover-border-color: var(--forest); --bs-btn-active-bg: var(--forest-deep); --bs-btn-active-border-color: var(--forest-deep); --bs-btn-disabled-color: #5d7a69; --bs-btn-disabled-border-color: #5d7a69; --bs-btn-focus-shadow-rgb: 24, 61, 45; }
+.btn-link { --bs-btn-color: #286443; --bs-btn-hover-color: var(--forest); --bs-btn-active-color: var(--forest); }
+.form-control:focus, .form-select:focus { border-color: #7fa98c; box-shadow: 0 0 0 .2rem rgba(24, 61, 45, .15); }
+.form-check-input:checked { background-color: var(--forest); border-color: var(--forest); }
+.form-check-input:focus { border-color: #7fa98c; box-shadow: 0 0 0 .2rem rgba(24, 61, 45, .15); }
+
+/* Trang tài khoản của khách: tiêu đề không dính vào thanh điều hướng, nút giỏ món không che nội dung cuối trang. */
+.customer-head { padding-top: 1.5rem; }
+.min-w-0 { min-width: 0; }
+body:has(.cart-launcher) .restaurant-main { padding-bottom: 5rem; }
+/* Nhãn trạng thái dài được xuống dòng thay vì làm tràn ngang cả trang. */
+.restaurant-main .badge { max-width: 100%; white-space: normal; text-align: left; line-height: 1.35; }
+
+/* Bảng lịch sử: điện thoại hiển thị dạng thẻ để khỏi phải cuộn ngang. */
+@media (max-width: 575.98px) {
+  .customer-table thead { display: none; }
+  .customer-table, .customer-table tbody, .customer-table tr { display: block; width: 100%; }
+  .customer-table tr { padding: .75rem 1rem; border-bottom: 1px solid var(--line); }
+  .customer-table tr:last-child { border-bottom: 0; }
+  .customer-table.table > tbody > tr > td { display: flex; justify-content: space-between; gap: 1rem; padding: .2rem 0; border: 0; text-align: right; overflow-wrap: anywhere; }
+  .customer-table.table > tbody > tr > td::before { content: attr(data-label); flex: 0 0 auto; max-width: 45%; color: var(--muted); font-size: .85rem; text-align: left; }
+  .customer-table.table > tbody > tr > td.cell-main { display: block; text-align: left; }
+  .customer-table.table > tbody > tr > td.cell-action { justify-content: flex-end; padding-top: .5rem; }
+  .customer-table.table > tbody > tr > td[colspan] { display: block; text-align: center; }
+}

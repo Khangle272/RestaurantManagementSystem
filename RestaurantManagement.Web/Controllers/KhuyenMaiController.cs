@@ -186,7 +186,9 @@ public class KhuyenMaiController(RestaurantDbContext db) : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleStatus(int id) {
         var p = await db.KhuyenMai.FindAsync(id); if (p is null) return NotFound();
-        p.DangSuDung = !p.DangSuDung; await db.SaveChangesAsync(); return RedirectToAction(nameof(Index));
+        p.DangSuDung = !p.DangSuDung; await db.SaveChangesAsync();
+        TempData["Success"] = p.DangSuDung ? $"Đã kích hoạt chương trình {p.TenChuongTrinh}." : $"Đã ngừng chương trình {p.TenChuongTrinh}.";
+        return RedirectToAction(nameof(Index));
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id) {

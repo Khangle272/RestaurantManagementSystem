@@ -6,9 +6,9 @@
 }
 
 <div class="container-fluid py-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-box-arrow-up-right me-2 text-danger"></i>Lập phiếu xuất kho chế biến</h1>
+            <h1 class="h3">Lập phiếu xuất kho chế biến</h1>
             <p class="text-muted mb-0">Xuất nguyên liệu cho các bếp và quầy pha chế; tự động kiểm tra và chặn xuất âm tồn kho.</p>
         </div>
         <a asp-action="Index" class="btn btn-brand-outline">
@@ -16,7 +16,7 @@
         </a>
     </div>
 
-    <form asp-action="Create" method="post" id="formXuatKho">
+    <form asp-action="Create" method="post" id="formXuatKho" data-confirm="Phiếu xuất sẽ được ghi sổ và trừ tồn kho ngay, không sửa được sau khi lưu. Tiếp tục?" data-confirm-title="Xác nhận xuất kho" data-confirm-ok="Xuất kho">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
         <!-- Master Card -->
@@ -126,7 +126,7 @@
         <div class="d-flex justify-content-end gap-2 mb-5">
             <a asp-action="Index" class="btn btn-brand-outline">Hủy bỏ</a>
             <button type="submit" class="btn btn-brand-primary btn-lg shadow-sm" id="btnSubmit">
-                <i class="bi bi-check2-circle me-1"></i> Xác Nhận Xuất Kho & Trừ Tồn
+                <i class="bi bi-check2-circle me-1"></i> Xác nhận xuất kho & trừ tồn
             </button>
         </div>
     </form>
@@ -289,12 +289,7 @@
 
         btnThemDong.addEventListener("click", () => addRow());
 
-        // Add 1 default initial row
-        if (rawData.length > 0) {
-            addRow(rawData[0].Id, 1);
-        } else {
-            addRow();
-        }
+        addRow();
 
         document.getElementById("formXuatKho").addEventListener("submit", function (e) {
             const rows = rowsContainer.querySelectorAll(".item-row");

@@ -4,10 +4,10 @@
     ViewData["Title"] = "Sửa nhà cung cấp";
 }
 
-<div class="container-fluid py-4" style="max-width: 900px;">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<div class="container-fluid py-4 form-narrow">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-pencil-square me-2 text-warning"></i>Chỉnh sửa Nhà cung cấp</h1>
+            <h1 class="h3">Chỉnh sửa nhà cung cấp</h1>
             <p class="text-muted mb-0">Cập nhật thông tin đối tác @($"#NCC{Model.Id:D3}") - @Model.TenNhaCungCap</p>
         </div>
         <a asp-action="Index" class="btn btn-brand-outline">
@@ -81,7 +81,7 @@
                 <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                     <a asp-action="Index" class="btn btn-brand-outline">Hủy bỏ</a>
                     <button type="submit" class="btn btn-brand-primary">
-                        <i class="bi bi-check-lg me-1"></i> Lưu Thay Đổi
+                        <i class="bi bi-check-lg me-1"></i> Lưu thay đổi
                     </button>
                 </div>
             </form>

@@ -1,11 +1,60 @@
 @model RestaurantManagement.Web.Models.KhuyenMaiListViewModel
 @{ ViewData["Title"] = "Chương trình khuyến mãi & voucher"; }
-<div class="d-flex justify-content-between mb-4"><div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted">Mỗi chương trình quản lý chung nhiều mã giảm giá.</p></div><a asp-action="Create" class="btn btn-primary align-self-start">Tạo chương trình</a></div>
-<form method="get" class="d-flex flex-wrap gap-2 mb-3"><input name="search" value="@Model.Search" class="form-control" style="max-width:350px" placeholder="Tên chương trình hoặc mã voucher" aria-label="Tìm chương trình" /><select name="statusFilter" class="form-select" style="max-width:220px" aria-label="Trạng thái"><option value="">Mọi trạng thái</option><option value="DangDienRa" selected="@(Model.StatusFilter == "DangDienRa")">Đang diễn ra</option><option value="SapDienRa" selected="@(Model.StatusFilter == "SapDienRa")">Sắp diễn ra</option><option value="DaKetThuc" selected="@(Model.StatusFilter == "DaKetThuc")">Đã kết thúc</option><option value="NgungSuDung" selected="@(Model.StatusFilter == "NgungSuDung")">Ngừng sử dụng</option></select><button class="btn btn-outline-primary" type="submit">Tìm kiếm</button><a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a></form>
-<div class="card table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Chương trình</th><th>Mã voucher</th><th>Thời hạn (giờ Việt Nam)</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
-@if (Model.Items.Count == 0) { <tr><td colspan="5" class="text-muted text-center py-4">Chưa có chương trình phù hợp.</td></tr> }
-@foreach (var p in Model.Items) {
-    <tr><td><a asp-action="Edit" asp-route-id="@p.Id" class="fw-bold">@p.TenChuongTrinh</a><small class="d-block text-muted">@(p.CanVoucher ? "Ưu đãi riêng trên từng mã" : $"Tự động: giảm {p.GiaTri:0.##}{(p.KieuGiam == RestaurantManagement.API.Models.KieuGiam.PhanTram ? "%" : "đ")}")</small></td><td>@p.SoVoucherDaPhatHanh mã<small class="d-block text-muted">@p.SoLuotDaSuDung lượt dùng / giữ</small></td><td class="small">@p.BatDau.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")<br />→ @p.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td><td>@p.TrangThaiHienThi</td><td><a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary mb-1">Quản lý chương trình & mã</a><form asp-action="ToggleStatus" method="post"><input name="id" type="hidden" value="@p.Id" /><button type="submit" class="btn btn-sm btn-outline-secondary">@(p.DangSuDung ? "Ngừng chương trình" : "Kích hoạt")</button></form></td></tr>
-}
-</tbody></table></div>
-<div class="d-flex gap-3 mt-3 align-items-center"><span>@Model.TotalItems chương trình · Trang @Model.Page / @Model.TotalPages</span>@if (Model.Page > 1) { <a asp-route-page="@(Model.Page - 1)" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter">Trước</a> }@if (Model.Page < Model.TotalPages) { <a asp-route-page="@(Model.Page + 1)" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter">Tiếp</a> }</div>
+<div class="page-header">
+    <div>
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <p class="text-muted">Mỗi chương trình quản lý chung nhiều mã giảm giá.</p>
+    </div>
+    <div class="page-actions"><a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Tạo chương trình</a></div>
+</div>
+<form method="get" class="filter-bar">
+    <div class="filter-field is-wide input-icon">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input name="search" value="@Model.Search" class="form-control" placeholder="Tên chương trình hoặc mã voucher" aria-label="Tìm chương trình" />
+    </div>
+    <div class="filter-field">
+        <select name="statusFilter" class="form-select" aria-label="Trạng thái">
+            <option value="">Mọi trạng thái</option>
+            <option value="DangDienRa" selected="@(Model.StatusFilter == "DangDienRa")">Đang diễn ra</option>
+            <option value="SapDienRa" selected="@(Model.StatusFilter == "SapDienRa")">Sắp diễn ra</option>
+            <option value="DaKetThuc" selected="@(Model.StatusFilter == "DaKetThuc")">Đã kết thúc</option>
+            <option value="NgungSuDung" selected="@(Model.StatusFilter == "NgungSuDung")">Ngừng sử dụng</option>
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a>
+    </div>
+</form>
+<div class="data-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Chương trình</th><th>Mã voucher</th><th>Thời hạn (giờ Việt Nam)</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            @if (Model.Items.Count == 0) { <tr><td colspan="5" class="empty-state"><i class="bi bi-tags" aria-hidden="true"></i>Chưa có chương trình phù hợp.</td></tr> }
+            @foreach (var p in Model.Items) {
+                var statusClass = p.TrangThaiHienThi switch { "Đang diễn ra" => "badge-status-success", "Sắp diễn ra" => "badge-status-warning", _ => "badge-status-muted" };
+                <tr>
+                    <td><a asp-action="Edit" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.TenChuongTrinh</a><span class="cell-sub">@(p.CanVoucher ? "Ưu đãi riêng trên từng mã" : $"Tự động: giảm {p.GiaTri:0.##}{(p.KieuGiam == RestaurantManagement.API.Models.KieuGiam.PhanTram ? "%" : "đ")}")</span></td>
+                    <td class="cell-nowrap">@p.SoVoucherDaPhatHanh mã<span class="cell-sub">@p.SoLuotDaSuDung lượt dùng / giữ</span></td>
+                    <td class="cell-nowrap small">@p.BatDau.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")<br />→ @p.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td>
+                    <td><span class="@statusClass">@p.TrangThaiHienThi</span></td>
+                    <td class="text-end">
+                        <div class="row-actions">
+                            <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary" title="Quản lý chương trình và các mã">Quản lý</a>
+                            <form asp-action="ToggleStatus" method="post" data-confirm="@(p.DangSuDung ? $"Ngừng chương trình {p.TenChuongTrinh}? Khách sẽ không dùng được các mã của chương trình này nữa." : null)" data-confirm-title="Ngừng chương trình" data-confirm-ok="Ngừng" data-confirm-variant="danger"><input name="id" type="hidden" value="@p.Id" /><button type="submit" class="btn btn-sm btn-outline-secondary">@(p.DangSuDung ? "Ngừng" : "Kích hoạt")</button></form>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="data-card-footer">
+        <span>@Model.TotalItems chương trình · Trang @Model.Page / @Model.TotalPages</span>
+        <div class="d-flex gap-2">
+            @if (Model.Page > 1) { <a class="btn btn-sm btn-outline-secondary" asp-route-page="@(Model.Page - 1)" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter">Trước</a> }
+            @if (Model.Page < Model.TotalPages) { <a class="btn btn-sm btn-outline-secondary" asp-route-page="@(Model.Page + 1)" asp-route-search="@Model.Search" asp-route-statusFilter="@Model.StatusFilter">Tiếp</a> }
+        </div>
+    </div>
+</div>

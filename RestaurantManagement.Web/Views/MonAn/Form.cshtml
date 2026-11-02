@@ -32,8 +32,8 @@
     };
 }
 <div class="container-fluid py-4">
-    <a asp-action="Index" class="text-muted text-decoration-none">← Quay lại thực đơn</a>
-    <h2 class="h3 my-4">@ViewData["Title"]</h2>
+    <a asp-action="Index" class="page-back"><i class="bi bi-arrow-left" aria-hidden="true"></i>Quay lại thực đơn</a>
+    <div class="page-header"><h1 class="h3">@ViewData["Title"]</h1></div>
     @if (!admin)
     { <div class="alert alert-light border">Bạn chuẩn bị thông tin món, size và công thức. Mỗi lần lưu sẽ chuyển món về <strong>Chờ duyệt</strong>; Quản lý kiểm tra và đặt giá trước khi mở bán. Món đang gọi nằm riêng ở “Bếp chế biến”.</div> }
 
@@ -163,7 +163,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-subtle">
                 <h5 class="modal-title fw-bold" id="modalQuickAddCategoryLabel">
-                    <i class="bi bi-folder-plus text-danger me-2"></i>Thêm Nhanh Danh Mục Món
+                    <i class="bi bi-folder-plus text-danger me-2"></i>Thêm nhanh danh mục món
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
@@ -182,7 +182,7 @@
                 <div class="modal-footer border-subtle">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                     <button type="submit" class="btn btn-brand-primary" id="btnSaveQuickCategory">
-                        <i class="bi bi-check2-circle me-1"></i> Lưu Danh Mục
+                        <i class="bi bi-check2-circle me-1"></i> Lưu danh mục
                     </button>
                 </div>
             </form>
@@ -196,7 +196,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-subtle">
                 <h5 class="modal-title fw-bold" id="modalQuickAddIngredientLabel">
-                    <i class="bi bi-egg-fried text-danger me-2"></i>Thêm Nhanh Nguyên Liệu Vào Kho
+                    <i class="bi bi-egg-fried text-danger me-2"></i>Thêm nhanh nguyên liệu vào kho
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
@@ -236,7 +236,7 @@
                 <div class="modal-footer border-subtle">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                     <button type="submit" class="btn btn-brand-primary" id="btnSaveQuickIngredient">
-                        <i class="bi bi-check2-circle me-1"></i> Lưu Nguyên Liệu
+                        <i class="bi bi-check2-circle me-1"></i> Lưu nguyên liệu
                     </button>
                 </div>
             </form>

@@ -2,7 +2,7 @@
 @using RestaurantManagement.API.Models
 @using RestaurantManagement.Web.Services
 @{ ViewData["Title"] = $"Đơn hàng {Model.MaHoaDon}"; var evaluation = (PromotionEvaluationResult)ViewBag.Evaluation; var wallet = (List<CustomerVoucherItem>)ViewBag.Wallet; }
-<div class="d-flex justify-content-between mb-4"><div><h1 class="h3">@Model.MaHoaDon</h1><p id="order-status" aria-live="polite">@CustomerHistoryService.PaymentStatus(Model.TrangThai)</p></div><a asp-action="Index" class="btn btn-outline-secondary align-self-start">Đơn hàng của tôi</a></div>
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-4 customer-head"><div class="min-w-0"><h1 class="h3 text-break">@Model.MaHoaDon</h1><p id="order-status" aria-live="polite">@CustomerHistoryService.PaymentStatus(Model.TrangThai)</p></div><a asp-action="Index" class="btn btn-outline-secondary align-self-start">Đơn hàng của tôi</a></div>
 <div id="order-closed" class="alert alert-info" hidden>Đơn hàng đã được cập nhật. <a asp-action="Order" asp-route-id="@Model.Id">Tải lại để xem số tiền và ưu đãi đã chốt.</a></div>
 <p id="order-update-note" class="small text-muted" aria-live="polite">Tiến độ món tự cập nhật mỗi 15 giây khi đơn đang mở.</p>
 <div class="card table-responsive mb-4"><table class="table mb-0"><thead><tr><th>Món ăn</th><th>Số lượng</th><th>Thành tiền</th><th>Tiến độ</th></tr></thead><tbody>@foreach (var item in Model.ChiTiet) { <tr><td>@item.TenMonLucBan @item.TenSizeLucBan</td><td>@item.SoLuong</td><td>@((item.SoLuong * item.DonGia).ToString("N0")) đ</td><td data-line-status="@item.Id">@CustomerHistoryService.DishStatus(item.TrangThai)</td></tr> }</tbody></table></div>

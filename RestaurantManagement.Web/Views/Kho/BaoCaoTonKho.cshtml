@@ -6,17 +6,17 @@
 
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-file-earmark-bar-graph me-2 text-danger"></i>Báo cáo nhập – xuất – tồn</h1>
+            <h1 class="h3">Báo cáo nhập – xuất – tồn</h1>
             <p class="text-muted mb-0">Đối soát toàn diện luân chuyển nguyên vật liệu theo chu kỳ: Tồn đầu + Nhập - Xuất - Thanh lý = Tồn cuối.</p>
         </div>
-        <div class="d-flex gap-2 d-print-none">
+        <div class="page-actions d-print-none">
             <button onclick="window.print()" class="btn btn-brand-outline d-inline-flex align-items-center gap-2">
-                <i class="bi bi-printer"></i> In Báo Cáo
+                <i class="bi bi-printer"></i> In báo cáo
             </button>
             <a asp-action="ExportCsv" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")" asp-route-preset="@Model.Preset" class="btn btn-success d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-file-earmark-excel-fill"></i> Xuất File CSV / Excel
+                <i class="bi bi-file-earmark-excel-fill"></i> Xuất file CSV / Excel
             </a>
         </div>
     </div>
@@ -45,57 +45,26 @@
                 </div>
                 <div class="col-12 col-md-3 d-flex gap-2">
                     <button class="btn btn-brand-primary w-100" type="submit">
-                        <i class="bi bi-search me-1"></i> Xem Báo Cáo
+                        <i class="bi bi-search me-1"></i> Xem báo cáo
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- 5 KPI Summary Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-xl">
-            <div class="card card-stat border-0 h-100">
-                <div class="text-muted small fw-semibold text-uppercase">Tồn Đầu Kỳ</div>
-                <div class="fs-4 fw-bold text-secondary mt-1">@Model.TongGiaTriDauKy.ToString("N0") <small class="fs-6">đ</small></div>
-                <div class="text-muted small mt-1">Giá trị tồn đầu</div>
-            </div>
-        </div>
-        <div class="col-6 col-xl">
-            <div class="card card-stat border-0 h-100">
-                <div class="text-muted small fw-semibold text-uppercase">Nhập Trong Kỳ</div>
-                <div class="fs-4 fw-bold text-primary mt-1">+@Model.TongGiaTriNhap.ToString("N0") <small class="fs-6">đ</small></div>
-                <div class="text-primary small mt-1">Tiền nhập NCC</div>
-            </div>
-        </div>
-        <div class="col-6 col-xl">
-            <div class="card card-stat border-0 h-100">
-                <div class="text-muted small fw-semibold text-uppercase">Xuất Chế Biến</div>
-                <div class="fs-4 fw-bold text-danger mt-1">-@Model.TongGiaTriXuat.ToString("N0") <small class="fs-6">đ</small></div>
-                <div class="text-danger small mt-1">Xuất Bếp & Bar</div>
-            </div>
-        </div>
-        <div class="col-6 col-xl">
-            <div class="card card-stat border-0 h-100">
-                <div class="text-muted small fw-semibold text-uppercase">Hao Hụt Thanh Lý</div>
-                <div class="fs-4 fw-bold text-warning mt-1">-@Model.TongGiaTriThanhLy.ToString("N0") <small class="fs-6">đ</small></div>
-                <div class="text-warning small mt-1">Hết hạn, hư hỏng</div>
-            </div>
-        </div>
-        <div class="col-12 col-xl">
-            <div class="card card-stat border-0 h-100" style="background-color: #ECFDF5; border-left: 4px solid #10B981 !important;">
-                <div class="text-success small fw-semibold text-uppercase">Tồn Cuối Kỳ</div>
-                <div class="fs-3 fw-bold text-success mt-1">@Model.TongGiaTriCuoiKy.ToString("N0") <small class="fs-6">đ</small></div>
-                <div class="text-muted small mt-1">Giá trị tồn thực tế</div>
-            </div>
-        </div>
+    <div class="stat-grid is-compact">
+        <div class="stat-tile stat-plain"><span class="stat-body"><span class="stat-label">Tồn đầu kỳ</span><strong class="stat-value">@Model.TongGiaTriDauKy.ToString("N0") đ</strong><small class="stat-sub">Giá trị tồn đầu</small></span></div>
+        <div class="stat-tile stat-plain"><span class="stat-body"><span class="stat-label">Nhập trong kỳ</span><strong class="stat-value text-primary">@(Model.TongGiaTriNhap > 0 ? "+" : "")@Model.TongGiaTriNhap.ToString("N0") đ</strong><small class="stat-sub">Tiền nhập từ nhà cung cấp</small></span></div>
+        <div class="stat-tile stat-plain"><span class="stat-body"><span class="stat-label">Xuất chế biến</span><strong class="stat-value text-danger">@(Model.TongGiaTriXuat > 0 ? "-" : "")@Model.TongGiaTriXuat.ToString("N0") đ</strong><small class="stat-sub">Xuất cho bếp và bar</small></span></div>
+        <div class="stat-tile stat-plain"><span class="stat-body"><span class="stat-label">Hao hụt thanh lý</span><strong class="stat-value text-warning">@(Model.TongGiaTriThanhLy > 0 ? "-" : "")@Model.TongGiaTriThanhLy.ToString("N0") đ</strong><small class="stat-sub">Hết hạn, hư hỏng</small></span></div>
+        <div class="stat-tile stat-plain"><span class="stat-body"><span class="stat-label">Tồn cuối kỳ</span><strong class="stat-value text-success">@Model.TongGiaTriCuoiKy.ToString("N0") đ</strong><small class="stat-sub">Giá trị tồn thực tế</small></span></div>
     </div>
 
     <!-- Detailed Inventory Movement Table -->
     <div class="card border-0 shadow-sm invoice-printable">
         <div class="card-header bg-white py-3 border-subtle d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-table me-2 text-primary"></i>Bảng Tổng Hợp Chi Tiết Nhập - Xuất - Tồn</h5>
+                <h5 class="card-title mb-0 fw-semibold text-dark"><i class="bi bi-table me-2 text-primary"></i>Bảng tổng hợp nhập – xuất – tồn</h5>
                 <small class="text-muted">Kỳ đối soát: @Model.TuNgay.ToString("dd/MM/yyyy") đến @Model.DenNgay.ToString("dd/MM/yyyy")</small>
             </div>
         </div>
@@ -114,15 +83,15 @@
                         <th colspan="2" class="bg-success bg-opacity-10 text-success">Tồn Cuối Kỳ</th>
                     </tr>
                     <tr>
-                        <th style="width: 90px;">SL</th>
+                        <th>SL</th>
                         <th style="width: 120px;" class="text-end">Thành Tiền</th>
-                        <th style="width: 90px;">SL</th>
+                        <th>SL</th>
                         <th style="width: 120px;" class="text-end">Thành Tiền</th>
-                        <th style="width: 90px;">SL</th>
+                        <th>SL</th>
                         <th style="width: 120px;" class="text-end">Thành Tiền</th>
-                        <th style="width: 90px;">SL</th>
+                        <th>SL</th>
                         <th style="width: 120px;" class="text-end">Thành Tiền</th>
-                        <th style="width: 90px;">SL</th>
+                        <th>SL</th>
                         <th style="width: 130px;" class="text-end">Thành Tiền</th>
                     </tr>
                 </thead>
