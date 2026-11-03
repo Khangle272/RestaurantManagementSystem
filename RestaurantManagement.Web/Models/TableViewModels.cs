@@ -46,9 +46,9 @@ public class TableCard
 public record ServiceReview(DatBan Booking, string Version);
 public class ReceptionBookingViewModel
 {
-    [Required, StringLength(120)] public string HoTen { get; set; } = "";
-    [Required, RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.")]
-    public string SoDienThoai { get; set; } = "";
+    [StringLength(120)] public string? HoTen { get; set; }
+    [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.")]
+    public string? SoDienThoai { get; set; }
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
     public DateTime GioDen { get; set; } = Services.ReservationSchedule.NextArrival(Services.TableService.VietnamNow);
     public bool DatTheoCa { get; set; }

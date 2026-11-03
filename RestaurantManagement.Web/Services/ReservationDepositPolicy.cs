@@ -6,20 +6,20 @@ namespace RestaurantManagement.Web.Services;
 
 public static class ReservationDepositPolicy
 {
-    // Có đặt món trước: tiền đặt cọc = % tổng giá trị món. Chỉ giữ chỗ: tiền đặt cọc theo khu vực/loại bàn (KhuVuc.TienCocGiuCho).
+    // Tiền đặt cọc giữ chỗ theo khu vực/loại bàn (KhuVuc.TienCocGiuCho); có đặt món trước thì lấy mức cao hơn giữa % tổng giá trị món và mức giữ chỗ.
     public const decimal PreorderRate = 0.5m;
     public const decimal DefaultAreaDeposit = 200000m;
     public const int PaymentMinutes = 60;
     public static string PreorderRateText => $"{PreorderRate * 100:0}%";
 
     public static string Terms(decimal areaDeposit, bool preorder) => (preorder
-            ? $"Tiền đặt cọc: {PreorderRateText} tổng giá trị món đặt trước. "
+            ? $"Tiền đặt cọc: {PreorderRateText} tổng giá trị món đặt trước, tối thiểu bằng mức giữ chỗ {areaDeposit:N0}đ. "
             : $"Tiền đặt cọc giữ chỗ theo khu vực: {areaDeposit:N0}đ/lịch. ")
-        + "Tiền đặt cọc được trừ vào hóa đơn khi thanh toán. Giữ chỗ 1 tiếng để báo thanh toán; thu ngân đối chiếu tiền thực nhận và mã đặt bàn rồi mới xác nhận. "
-        + "Yêu cầu hủy được nhà hàng đối chiếu với món đã chuẩn bị và tiền đặt cọc đã nhận trước khi hoàn/giữ cọc.";
+        + "Tiền đặt cọc được trừ vào hóa đơn khi thanh toán. Giữ chỗ tối đa 1 tiếng và không quá giờ đến để báo thanh toán; thu ngân đối chiếu tiền thực nhận và mã đặt bàn rồi mới xác nhận. "
+        + "Lịch chưa có tiền đặt cọc được hủy ngay; lịch đã có tiền được nhà hàng đối chiếu trước khi hoàn/giữ cọc.";
 
     public static decimal Calculate(decimal foodTotal, decimal areaDeposit) =>
-        foodTotal > 0 ? decimal.Ceiling(foodTotal * PreorderRate) : areaDeposit;
+        Math.Max(areaDeposit, decimal.Ceiling(foodTotal * PreorderRate));
     public static decimal Received(DatBan booking) => booking.TienCocDaNop - booking.TienCocDaHoan - booking.TienCocDaGiu;
     public static decimal Remaining(DatBan booking) => Math.Max(0, booking.TienCocYeuCau - Received(booking));
     public static bool Expired(DatBan booking) => booking.CocTuDong && Received(booking) == 0 && booking.ThoiDiemBaoChuyenKhoan is null
@@ -59,7 +59,11 @@ public static class ReservationDepositPolicy
         booking.CocTuDong = booking.YeuCauCoc = true;
         booking.TienCocYeuCau = Calculate(foodTotal, areaDeposit);
         booking.DieuKienCocDaThoaThuan = Terms(areaDeposit, foodTotal > 0);
-        booking.HanThanhToanCoc ??= DateTimeOffset.UtcNow.AddMinutes(PaymentMinutes);
+        if (booking.HanThanhToanCoc is null)
+        {
+            var deadline = DateTimeOffset.UtcNow.AddMinutes(PaymentMinutes);
+            booking.HanThanhToanCoc = booking.GioDen < deadline ? booking.GioDen : deadline;
+        }
         if (booking.TrangThai != TrangThaiDatBan.DaNhanBan)
             booking.TrangThai = Remaining(booking) > 0 ? TrangThaiDatBan.ChoCoc
                 : booking.Ban.Any() ? TrangThaiDatBan.DaXacNhan : TrangThaiDatBan.ChoXacNhan;

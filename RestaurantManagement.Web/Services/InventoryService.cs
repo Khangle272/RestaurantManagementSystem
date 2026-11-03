@@ -166,8 +166,9 @@ public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>?
 
     public async Task<InventoryDeductionResult> DeductInventoryForBookingPreOrdersAsync(int datBanId, int hoaDonId, int? staffId = null)
     {
+        var cancelled = db.ChiTietHoaDon.Where(x => x.MonDatTruocId != null && x.TrangThai == TrangThaiCheBien.DaHuy).Select(x => x.MonDatTruocId!.Value);
         var preOrders = await db.MonDatTruoc
-            .Where(x => x.DatBanId == datBanId && x.SoLuong > 0)
+            .Where(x => x.DatBanId == datBanId && x.SoLuong > 0 && !cancelled.Contains(x.Id))
             .ToListAsync();
 
         if (preOrders.Count == 0)
@@ -184,6 +185,32 @@ public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>?
         }).ToList();
 
         return await DeductInventoryForOrderDishesAsync(hoaDonId, orderItems, staffId);
+    }
+
+    // Món hủy khi bếp chưa nấu: nguyên liệu còn nguyên, nhập lại kho bằng phiếu điều chỉnh tăng để đối chiếu được.
+    public async Task ReturnInventoryForCancelledDishAsync(ChiTietHoaDon line)
+    {
+        var requirements = new Dictionary<int, decimal>();
+        var dish = await db.MonAn.Include(x => x.ThanhPhanCombo).SingleOrDefaultAsync(x => x.Id == line.MonAnId);
+        if (dish is null) return;
+        if (dish.Loai == LoaiMon.Set && dish.ThanhPhanCombo.Count > 0)
+            foreach (var part in dish.ThanhPhanCombo) await AddDishIngredientsAsync(requirements, part.MonAnId, null, part.SoLuong * line.SoLuong);
+        else await AddDishIngredientsAsync(requirements, line.MonAnId, line.MonAnSizeId, line.SoLuong);
+        if (requirements.Count == 0) return;
+        var ids = requirements.Keys.ToList();
+        var ingredients = await db.NguyenLieu.Where(x => ids.Contains(x.Id)).ToListAsync();
+        var slip = new PhieuNhap { MaPhieu = TableService.NewCode("PN-HM"), NhanVienId = line.HoaDon.NhanVienId,
+            ThoiDiem = DateTimeOffset.UtcNow, TrangThai = TrangThaiPhieu.DaGhiSo, LyDo = LyDoNhap.DieuChinhTang,
+            GhiChu = $"Trả kho món hủy chưa nấu: {line.TenMonLucBan} x{line.SoLuong} - Hóa đơn #{line.HoaDon.MaHoaDon}" };
+        foreach (var ingredient in ingredients)
+        {
+            var quantity = requirements[ingredient.Id];
+            ingredient.SoLuongTon += quantity;
+            slip.ChiTiet.Add(new ChiTietPhieuNhap { NguyenLieuId = ingredient.Id, SoLuong = quantity,
+                DonGia = ingredient.DonGia, ThanhTien = quantity * ingredient.DonGia });
+        }
+        slip.TongTien = slip.ChiTiet.Sum(x => x.ThanhTien);
+        db.PhieuNhap.Add(slip);
     }
 
     private async Task AddDishIngredientsAsync(Dictionary<int, decimal> requirements, int dishId, int? sizeId, int dishQuantity)

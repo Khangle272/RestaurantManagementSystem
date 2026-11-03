@@ -191,6 +191,15 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         }
 
         if (cashierId == 0) return Forbid();
+        if (!User.IsInRole(AppRoles.Admin) && !User.IsInRole(AppRoles.ThuNgan))
+        {
+            var voucher = await db.HoaDon.AsNoTracking().Where(x => x.Id == form.Id).Select(x => x.Voucher != null ? x.Voucher.Ma : null).SingleOrDefaultAsync();
+            if (form.TienGiamThuCong != (await promotionService.EvaluatePromotionsAsync(form.Id, voucher)).TienGiamThuCong)
+            {
+                TempData["Error"] = "Chỉ thu ngân hoặc quản lý mới được giảm giá thủ công.";
+                return RedirectToAction(nameof(Details), new { id = form.Id });
+            }
+        }
 
         var error = await orderService.ProcessPaymentAsync(form, cashierId);
         if (error != null)
@@ -199,7 +208,10 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         }
         else
         {
-            TempData["Success"] = $"Đã thanh toán hóa đơn thành công bằng hình thức {form.PhuongThuc}.";
+            TempData["Success"] = $"Đã thanh toán hóa đơn thành công bằng hình thức {RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(form.PhuongThuc).ToLower()}.";
+            var paidBooking = await db.HoaDon.AsNoTracking().Where(x => x.Id == form.Id).Select(x => x.DatBanId).SingleOrDefaultAsync();
+            if (paidBooking is int bookingId && await orderService.AvailableDepositAsync(bookingId) is > 0 and var excess)
+                TempData["Success"] += $" Còn {excess:N0} đ tiền đặt cọc dư: hoàn cho khách ở mục Món & cọc rồi xác nhận hoàn tất bàn.";
         }
 
         return RedirectToAction(nameof(Details), new { id = form.Id });

@@ -2,6 +2,8 @@
 
 Bộ dữ liệu mô phỏng cho thực hành, được nạp vào `RestaurantDB` trên `.\SQLEXPRESS`. Không phải đơn hàng, tiền thanh toán hoặc thông tin người thật.
 
+Kịch bản từng bước có số liệu kết quả và danh sách test nằm ở **[KICH_BAN_TEST_DEMO.md](KICH_BAN_TEST_DEMO.md)**.
+
 ## Mở website và đăng nhập
 
 - Website: **https://localhost:7167/**
@@ -25,7 +27,7 @@ Dùng cửa sổ thường cho Admin, cửa sổ ẩn danh hoặc trình duyệt
 
 ### 1. Trang chủ, thực đơn và tài khoản khách
 
-Mở trang chủ, tìm tên món có/không dấu; xem danh mục, món và size. Đăng nhập `khach.demo@example.test`. Menu **Đơn hàng & tích điểm** đã có lịch sử mua trong bốn tuần, gồm tiền mặt/chuyển khoản/thẻ, giảm giá, đánh giá và các dòng tích điểm. Có giao dịch trong ngày để trang doanh thu không bị trống.
+Mở trang chủ, tìm tên món có/không dấu; xem danh mục, món và size. Đăng nhập `khach.demo@example.test`. Menu **Đơn hàng & tích điểm** đã có lịch sử mua trong bốn tuần, gồm tiền mặt/chuyển khoản, giảm giá, đánh giá và các dòng tích điểm. Có giao dịch trong ngày để trang doanh thu không bị trống.
 
 Mở **Voucher & ví của tôi**. Chương trình **Demo toàn website · 10/2026** có các mã:
 
@@ -64,7 +66,7 @@ Tiếp tân → **Yêu cầu đặt bàn** hoặc khách → **Lịch sử đặ
 - `LICH4`, `LICH5`: đã xác nhận, có cọc và món đặt trước theo size, ngày mai/ngày kia. Dùng để xem **Đặt bàn & dự trù nguyên liệu**.
 - `LICH6`: đã hủy; `LICH7`: khách không đến. Chọn bộ lọc tương ứng để thấy lịch sử.
 
-Các lịch tự động chờ cọc áp dụng hạn 60 phút như luồng thật. Nếu để lâu, lịch chưa báo chuyển có thể tự hết hạn. Lịch đã báo chuyển tiếp tục đợi nhân viên đối chiếu.
+Lịch chờ cọc do khách tạo mới có hạn 60 phút như luồng thật; lịch mẫu `LICH2`, `LICH3` được giữ một ngày kể từ lúc nạp. Lịch đã báo chuyển tiếp tục đợi nhân viên đối chiếu.
 
 ### 5. Khách hàng và tích điểm
 
@@ -77,7 +79,7 @@ Có thêm ba hồ sơ khách demo chưa có tài khoản để trình bày cấp
 Đăng nhập Kho → Tồn kho/Nhập kho/Xuất kho/Thanh lý:
 
 - Phiếu `WEB-yyyyMMdd-NHAP`: nhập đã ghi sổ, có lô và hạn sử dụng để đủ nguyên liệu demo.
-- Phiếu `WEB-yyyyMMdd-NHAPNHAP`: phiếu nháp để thực hành ghi sổ.
+- Phiếu `WEB-yyyyMMdd-NHAPNHAP`: phiếu nháp chỉ để xem, giao diện chưa có nút ghi sổ.
 - Các phiếu xuất chế biến gắn với hóa đơn demo; xem ghi chú chứa mã `WEB-`.
 - Phiếu `WEB-yyyyMMdd-THANHLY` và phiếu xuất `-HUY`: minh họa thanh lý có chứng từ tương ứng.
 

@@ -22,15 +22,17 @@ public static class Week10BookingSmoke
         check(ReservationSchedule.Slots.Count == 2 && ReservationSchedule.Validate(evening,TableService.VietnamNow) is null, "Free 18:30 arrival accepted in one of two shifts");
         check(ReservationSchedule.Validate(day.ToDateTime(new(16,0)),TableService.VietnamNow) is null, "16:00 is within continuous service, not a fabricated afternoon closure");
         check(ReservationSchedule.Validate(day.ToDateTime(new(10,59)),TableService.VietnamNow) is not null && ReservationSchedule.Validate(day.ToDateTime(new(22,0)),TableService.VietnamNow) is not null, "Actual opening and closing boundaries are enforced");
-        check(ReservationSchedule.Match(day.ToDateTime(new(16,0)))?.Id=="trua"&&ReservationSchedule.EndOf(day.ToDateTime(new(16,0)))==TableService.VietnamTime(day.ToDateTime(new(17,0))), "Afternoon arrivals belong to a management shift without an operating-hours gap");
+        check(ReservationSchedule.Match(day.ToDateTime(new(16,0)))?.Id=="trua"&&ReservationSchedule.EndOf(day.ToDateTime(new(16,0)))==TableService.VietnamTime(day.ToDateTime(new(18,0))), "Afternoon arrivals belong to a management shift without an operating-hours gap");
         var suggestionNow=day.ToDateTime(new(20,6));
         var lateSuggestions=ReservationSchedule.QuickArrivals(day,suggestionNow);
         check(lateSuggestions.SequenceEqual(new[]{day.ToDateTime(new(20,45))}), "Late-day quick choice contains only the remaining shift and respects the 30-minute lead");
         check(ReservationSchedule.QuickArrivals(day.AddDays(1),suggestionNow).Select(x=>x.Hour).SequenceEqual(new[]{11,17}),"Future date offers two shift shortcuts before the guest has typed a time");
         check(ReservationSchedule.Validate(day.AddDays(1).ToDateTime(new(16,7)),suggestionNow) is null,"Arbitrary 16:07 is valid independently of shift shortcuts");
         check(ReservationSchedule.QuickArrivals(day,day.ToDateTime(new(21,45))).Count==0,"After the last online arrival no expired shortcuts are displayed");
-        check(ReservationSchedule.QuickArrivals(day,day.ToDateTime(new(21,45)),-15).Count==1,"Reception can suggest a near-real-time arrival rather than inheriting the online 30-minute restriction");
-        check(ReservationSchedule.EndOf(evening) == TableService.VietnamTime(day.ToDateTime(new(22,0))), "Stored end is closing time, not arrival plus hours");
+        check(ReservationSchedule.QuickArrivals(day,day.ToDateTime(new(21,15)),-15).Count==1,"Reception can suggest a near-real-time arrival rather than inheriting the online 30-minute restriction");
+        check(ReservationSchedule.EndOf(evening) == TableService.VietnamTime(evening.AddHours(2)), "A booking holds its table for two hours from arrival");
+        check(ReservationSchedule.EndOf(day.ToDateTime(new(21,0))) == TableService.VietnamTime(day.ToDateTime(new(22,0))), "The two-hour hold stops at closing time");
+        check(ReservationSchedule.Validate(day.ToDateTime(new(21,30)),day.ToDateTime(new(10,0))) is not null&&ReservationSchedule.Validate(day.ToDateTime(new(21,0)),day.ToDateTime(new(10,0))) is null&&ReservationSchedule.Validate(day.ToDateTime(new(21,30)),day.ToDateTime(new(21,25)),-15) is null,"Online bookings stop at 21:00 and reception seats until 21:30");
         var service = new TableService(db,new PreorderService(db,new OrderService(db)));
         var area = new KhuVuc { TenKhuVuc = "W10-TEST-AREA" };
         var a = new BanAn { MaBan="W10-TEST-A", KhuVuc=area, SoChoNgoi=4, TrangThai=TrangThaiBan.CanDon };
@@ -61,8 +63,11 @@ public static class Week10BookingSmoke
         check(await service.Assign(first.Id,[b.Id],Version(first),null) is null,"First fitting table can be assigned");
         check(await service.Assign(first.Id,[a.Id],Version(first),null) is null,"Future booking can use stale global table status from an old date");
         check(await db.ChiTietDatBan.CountAsync(x=>x.DatBanId==first.Id)==1&&await db.ChiTietDatBan.AnyAsync(x=>x.DatBanId==first.Id&&x.BanAnId==a.Id),"Switching table replaces the previous link rather than retaining both");
-        var later=Booking("W10-LATER",day.ToDateTime(new(20,30)),TrangThaiDatBan.ChoXacNhan);db.DatBan.Add(later);await db.SaveChangesAsync();
-        check(await service.Assign(later.Id,[a.Id],Version(later),null) is not null,"Same table cannot take a second turn in the same shift");
+        var nextTurn=Booking("W10-NEXT-TURN",first.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime.AddHours(2),TrangThaiDatBan.ChoXacNhan);db.DatBan.Add(nextTurn);await db.SaveChangesAsync();
+        check(await service.Assign(nextTurn.Id,[a.Id],Version(nextTurn),null) is null,"The same table can take the next turn in the same shift once the two-hour hold ends");
+        db.ChiTietDatBan.RemoveRange(db.ChiTietDatBan.Where(x=>x.DatBanId==nextTurn.Id));db.DatBan.Remove(nextTurn);await db.SaveChangesAsync();
+        var later=Booking("W10-LATER",first.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime.AddHours(1),TrangThaiDatBan.ChoXacNhan);db.DatBan.Add(later);await db.SaveChangesAsync();
+        check(await service.Assign(later.Id,[a.Id],Version(later),null) is not null,"Same table cannot take a turn that overlaps the two-hour hold");
         check(await service.Assign(later.Id,[b.Id],Version(later),null) is null,"A different table can take the later arrival");
         check(!await service.HasCapacity(TableService.VietnamTime(evening),ReservationSchedule.EndOf(evening),4,area.Id,false),"Forecast closes a shift when all suitable tables already have turns");
         check(await service.HasCapacity(TableService.VietnamTime(day.ToDateTime(new(12,0))),ReservationSchedule.EndOf(day.ToDateTime(new(12,0))),4,area.Id,false),"Dinner bookings do not block lunch on the same day");
@@ -138,13 +143,14 @@ public static class Week10BookingSmoke
         onlineFields["RequestId"]=Guid.NewGuid().ToString();onlineFields.Remove("ThoiGianDen");
         check(await Post(customer,"/DatBan",customerForm,onlineFields)!=HttpStatusCode.OK&&await db.DatBan.CountAsync()==beforeInvalid,"Missing posted arrival cannot silently use a view-model default");
         var race1=Booking("W10-RACE-1",day.AddDays(20).ToDateTime(new(17,30)),TrangThaiDatBan.ChoXacNhan);
-        var race2=Booking("W10-RACE-2",day.AddDays(20).ToDateTime(new(20,0)),TrangThaiDatBan.ChoXacNhan);
+        var race2=Booking("W10-RACE-2",day.AddDays(20).ToDateTime(new(18,30)),TrangThaiDatBan.ChoXacNhan);
         db.DatBan.AddRange(race1,race2);await db.SaveChangesAsync();
         var raceResults=await Task.WhenAll(new[]{race1,race2}.Select(r=>Post(admin,"/QuanLyDatBan/XacNhan",edit,new(){["datBanId"]=r.Id.ToString(),["banAnIds"]=a.Id.ToString(),["rowVersion"]=Version(r)})));
         check(raceResults.Count(x=>x==HttpStatusCode.OK)==1&&raceResults.Count(x=>x==HttpStatusCode.Conflict)==1,"Concurrent different arrival times in one shift still allocate the table once");
         first.TrangThai=TrangThaiDatBan.DaNhanBan;first.ThoiDiemNhanBan=first.GioDen;first.ThoiDiemKetThuc=first.GioDen.AddMinutes(30);a.TrangThai=TrangThaiBan.SanSang;await db.SaveChangesAsync();
         var afterFinish=Booking("W10-SAME-SHIFT-AGAIN",day.ToDateTime(new(21,0)),TrangThaiDatBan.ChoXacNhan);db.DatBan.Add(afterFinish);await db.SaveChangesAsync();
-        check(await service.Assign(afterFinish.Id,[a.Id],Version(afterFinish),null) is not null,"Completed and cleaned table does not sell a second turn within the same shift");
+        check((await service.TableAvailability(day.ToDateTime(new(21,0)),4,area.Id)).Tables.Single(x=>x.Id==a.Id).TrangThai=="trong","Customer table map offers a table again once its previous turn has finished");
+        check(await service.Assign(afterFinish.Id,[a.Id],Version(afterFinish),null) is null,"A finished table can take a new turn within the same shift");
 
         var today=TableService.VietnamNow;var actualStart=TableService.VietnamTime(today.AddHours(-4));
         var active=Booking("W10-ACTIVE",day.ToDateTime(new(18,0)),TrangThaiDatBan.DaNhanBan);
@@ -160,7 +166,9 @@ public static class Week10BookingSmoke
         check(await service.ChangeTable(b.Id,Version(b),true) is not null,"Changing a physical flag to Needs cleaning cannot bypass an unpaid active bill");
         b.TrangThai=TrangThaiBan.DangPhucVu;await db.SaveChangesAsync();
         check(await new OrderService(db).ProcessPaymentAsync(new(){Id=bill.Id,RowVersion=Version(bill),BookingRowVersion=Version(active),PhuongThuc=PhuongThucThanhToan.TienMat,TienKhachDua=100000},staff.Id) is null,"Payment completes through the existing shared payment service");
-        await db.Entry(active).ReloadAsync();await db.Entry(b).ReloadAsync();check(active.ThoiDiemKetThuc is not null&&b.TrangThai==TrangThaiBan.SanSang,"Final payment completes service directly, with no separate cleaning stage");
+        await db.Entry(active).ReloadAsync();await db.Entry(b).ReloadAsync();check(active.ThoiDiemKetThuc is not null&&b.TrangThai==TrangThaiBan.CanDon,"Final payment completes service and leaves the table waiting to be cleaned");
+        check(await service.ChangeTable(b.Id,Version(b),true) is null,"Staff confirm the table is clean after the party leaves");
+        await db.Entry(b).ReloadAsync();check(b.TrangThai==TrangThaiBan.SanSang,"A cleaned table is ready for the next party");
         check(await service.ChangeTable(b.Id,Version(b),true) is not null,"Already completed table rejects repeated confirmation");
 
         var legacyTable=new BanAn{MaBan="W10-LEGACY",KhuVucId=area.Id,SoChoNgoi=4,TrangThai=TrangThaiBan.CanDon};

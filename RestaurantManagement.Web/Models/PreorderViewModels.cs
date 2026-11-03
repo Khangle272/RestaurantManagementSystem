@@ -7,7 +7,6 @@ public class SavePreorderModel
 {
     [Required] public string RowVersion { get; set; } = "";
     [Required] public Guid? RequestId { get; set; }
-    public bool ChuanBiTruoc { get; set; }
     public List<OrderItemInputModel> Items { get; set; } = [];
 }
 

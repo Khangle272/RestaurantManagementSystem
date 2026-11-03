@@ -8,7 +8,7 @@
         <h2 class="h4 mb-2">@booking.HoTenLienHe</h2>
         <p class="fs-5 fw-semibold mb-1">@(booking.SoNguoiLon + booking.SoTreEm) khách · @booking.SoDienThoaiLienHe</p>
         <p class="fw-semibold">@booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")–@booking.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</p>
-        <p class="small text-muted">Mỗi bàn một lượt trong ca. Giờ kết thúc ghi trên lịch là giờ đóng ca, không phải bộ đếm tự kết thúc phục vụ.</p>
+        <p class="small text-muted">Mỗi bàn phục vụ một lượt tại một thời điểm, xong lượt có thể nhận khách mới. Mỗi lịch giữ bàn 2 tiếng kể từ giờ đến; đây không phải bộ đếm tự kết thúc phục vụ.</p>
         <p class="small mb-2">Khu vực: @(Model.Areas.FirstOrDefault(x => x.Id == booking.KhuVucUuTienId)?.TenKhuVuc ?? "Bàn chung, không yêu cầu VIP")</p>
         @if (booking.YeuCauVip) { <p class="fw-semibold">Khách yêu cầu VIP.</p> }
         @if (!string.IsNullOrWhiteSpace(booking.YeuCau)) { <p class="bg-light rounded p-2">@booking.YeuCau</p> }
@@ -20,7 +20,7 @@
             @if (suggested.Count > 0) {
                 <p class="small">Gợi ý: <strong>@string.Join(", ", suggested.Select(x => x.Table.MaBan))</strong> · @suggested.Sum(x => x.Table.SoChoNgoi) chỗ</p>
                 <button id="choose-suggestion" type="button" class="btn btn-sm btn-outline-success w-100 mb-3">Chọn bàn gợi ý</button>
-            } else { <p class="small text-muted">Chưa có một bàn đủ chỗ trong bộ lọc. Đổi khu vực/ngày/ca hoặc thống nhất lại với khách; không tự ghép nhiều bàn.</p> }
+            } else { <p class="small text-muted">Chưa có một bàn đủ chỗ trong bộ lọc. Đổi khu vực/ngày/giờ hoặc thống nhất lại với khách; không tự ghép nhiều bàn.</p> }
             <form id="assign-booking" asp-controller="QuanLyDatBan" asp-action="XacNhan" method="post" data-ajax-form="@(inDialog ? "true" : "false")" data-guests="@(booking.SoNguoiLon + booking.SoTreEm)">
                 <input type="hidden" name="datBanId" value="@booking.Id" /><input type="hidden" name="rowVersion" value="@Model.BookingVersion" />
                 <p id="table-selection-summary" class="small text-muted" role="status">Chọn bàn trên sơ đồ.</p>

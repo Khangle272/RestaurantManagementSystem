@@ -443,10 +443,10 @@ public static class OrderSmoke
         var endError = await tableService.ChangeTable(table.Id, await Version(table), clean: false);
         check(endError != null, "Payment already ended the session; it cannot be ended a second time");
         await db.Entry(table).ReloadAsync();
-        check(table.TrangThai == TrangThaiBan.SanSang, "Final payment completes the party and returns the table ready without a cleaning stage");
+        check(table.TrangThai == TrangThaiBan.CanDon, "Final payment completes the party and leaves the table waiting to be cleaned");
 
         var cleanError = await tableService.ChangeTable(table.Id, await Version(table), clean: true);
-        check(cleanError != null, "Repeated completion is rejected rather than starting another cleaning step");
+        check(cleanError == null, "Staff confirm the table is clean after payment");
         await db.Entry(table).ReloadAsync();
         check(table.TrangThai == TrangThaiBan.SanSang, "Table returned to SanSang status");
 

@@ -438,8 +438,13 @@ public class OrderService(RestaurantDbContext db, IKhoService? khoService = null
         if (!valid)
             return $"Không thể chuyển trạng thái từ '{item.TrangThai}' sang '{newStatus}'.";
 
+        // Món đặt trước của khách chưa nhận bàn chưa bị trừ kho nên không có gì để trả lại.
+        var returnStock = newStatus == TrangThaiCheBien.DaHuy && item.TrangThai == TrangThaiCheBien.ChoCheBien && khoService is not null
+            && (item.MonDatTruocId is null || (item.HoaDon.DatBanId is int seatedId
+                && await db.DatBan.AnyAsync(x => x.Id == seatedId && x.TrangThai == TrangThaiDatBan.DaNhanBan)));
         item.TrangThai = newStatus;
         if (newStatus == TrangThaiCheBien.DaHuy) item.ThoiDiemHuy = DateTimeOffset.UtcNow;
+        if (returnStock) await khoService!.ReturnInventoryForCancelledDishAsync(item);
 
         // If cancelled, adjust invoice total
         if (newStatus == TrangThaiCheBien.DaHuy)

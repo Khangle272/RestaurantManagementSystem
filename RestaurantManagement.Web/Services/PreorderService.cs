@@ -10,11 +10,11 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
 
-public class PreorderService(RestaurantDbContext db, OrderService orders)
+public class PreorderService(RestaurantDbContext db, OrderService orders, IKhoService? khoService = null)
 {
     public static bool CanEdit(DatBan booking) => booking.ThoiDiemKetThuc is null
         && !ReservationDepositPolicy.Expired(booking)
-        && booking.YeuCauHuy is null && booking.GioKetThucDuKien > DateTimeOffset.UtcNow
+        && booking.YeuCauHuy is null && (booking.TrangThai == TrangThaiDatBan.DaNhanBan || booking.GioKetThucDuKien > DateTimeOffset.UtcNow)
         && booking.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc
             or TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.DaNhanBan;
 
@@ -54,7 +54,7 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
             return "Không tìm thấy yêu cầu đặt bàn của bạn.";
         if (model.RequestId is null || model.RequestId == Guid.Empty) return "Thiếu mã gửi giỏ hàng. Hãy mở lại trang.";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
-            model.ChuanBiTruoc, Items = model.Items.Select(x => new { x.MonAnSizeId, x.SoLuong, Note = x.YeuCauCheBien?.Trim() ?? "" })
+            Items = model.Items.Select(x => new { x.MonAnSizeId, x.SoLuong, Note = x.YeuCauCheBien?.Trim() ?? "" })
                 .OrderBy(x => x.MonAnSizeId).ThenBy(x => x.Note).ThenBy(x => x.SoLuong) }))));
         if (booking.LanLuuMonId == model.RequestId)
             return booking.LanLuuMonHash == hash ? null : "Mã gửi giỏ đã được dùng cho nội dung khác. Hãy tải lại lịch.";
@@ -75,7 +75,6 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
             ReservationDepositPolicy.Apply(booking, sentTotal + lines.Sum(x => x.DonGiaThoaThuan * x.SoLuong),
                 await ReservationDepositPolicy.AreaDepositAsync(db, booking));
         }
-        booking.ChuanBiTruoc = model.ChuanBiTruoc;
         // Dishes added during service are normal additions, not a new deposit requirement.
         booking.YeuCauCoc |= lines.Count > 0 && booking.TrangThai != TrangThaiDatBan.DaNhanBan;
         booking.LanLuuMonId = model.RequestId;
@@ -94,6 +93,11 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
         if (!CanEdit(booking) || booking.TrangThai == TrangThaiDatBan.DaNhanBan)
             return "Lịch đã nhận bàn hoặc kết thúc; liên hệ nhà hàng để xử lý.";
         if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500) return "Nhập lý do từ 1 đến 500 ký tự.";
+        // Chưa có tiền và bếp chưa làm gì thì không có gì để đối chiếu: hủy ngay, không bắt khách chờ nhân viên.
+        var started = await db.ChiTietHoaDon.AnyAsync(x => x.HoaDon.DatBanId == id && x.HoaDon.TrangThai != TrangThaiHoaDon.DaHuy
+            && x.TrangThai != TrangThaiCheBien.ChoCheBien && x.TrangThai != TrangThaiCheBien.DaHuy);
+        if (booking.TienCocDaNop == 0 && booking.ThoiDiemBaoChuyenKhoan is null && !started)
+            return await new TableService(db, this).CancelByCustomerWithinCurrentTransaction(booking, "Khách tự hủy: " + reason.Trim());
         booking.YeuCauHuy = reason.Trim();
         return null;
     });
@@ -176,23 +180,32 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
         return null;
     });
 
-    public Task<string?> Release(int id, string version, int staffId, bool acknowledgeEarly) => Run(async () =>
+    public Task<string?> Release(int id, string version, int staffId) => Run(async () =>
     {
         var booking = await Locked(id);
         if (booking is null || !Matches(booking, version)) return "Yêu cầu đã thay đổi. Hãy mở lại trước khi gửi bếp.";
-        if (booking.TrangThai == TrangThaiDatBan.DaXacNhan && (!booking.ChuanBiTruoc || !acknowledgeEarly))
-            return "Khách chưa nhận bàn. Cần yêu cầu chuẩn bị trước và xác nhận của nhân viên.";
-        return await ReleaseWithinTransaction(booking, staffId);
+        // Bếp chỉ làm món khi khách đã có mặt: món đặt trước tự xuống bếp lúc nhận bàn.
+        if (booking.TrangThai != TrangThaiDatBan.DaNhanBan) return "Khách chưa nhận bàn. Món đặt trước sẽ tự gửi bếp khi khách nhận bàn.";
+        var sentBefore = await SentLineIds(id);
+        var error = await ReleaseWithinTransaction(booking, staffId);
+        if (error is not null || khoService is null) return error;
+        // Món gửi sau khi đã nhận bàn không đi qua bước trừ kho lúc nhận bàn, nên trừ kho ngay tại đây.
+        await db.SaveChangesAsync();
+        var bill = await db.HoaDon.Where(x => x.DatBanId == id && x.TrangThai == TrangThaiHoaDon.ChuaThanhToan).Select(x => (int?)x.Id).FirstOrDefaultAsync();
+        var newLines = await db.MonDatTruoc.Where(x => x.DatBanId == id && !sentBefore.Contains(x.Id))
+            .Select(x => new OrderItemInputModel { MonAnId = x.MonAnId, MonAnSizeId = x.MonAnSizeId ?? 0, SoLuong = x.SoLuong }).ToListAsync();
+        if (bill is int billId && newLines.Count > 0) await khoService.DeductInventoryForOrderDishesAsync(billId, newLines, staffId);
+        return null;
     });
+
+    private Task<List<int>> SentLineIds(int bookingId) => db.ChiTietHoaDon
+        .Where(x => x.MonDatTruocId != null && x.MonDatTruoc!.DatBanId == bookingId).Select(x => x.MonDatTruocId!.Value).ToListAsync();
 
     public async Task<string?> ReleaseWithinTransaction(DatBan booking, int staffId)
     {
-        if (!CanEdit(booking) || booking.TrangThai is not (TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.DaNhanBan))
-            return "Chỉ gửi bếp cho lịch đã xác nhận hoặc đang phục vụ, chưa yêu cầu hủy.";
+        if (!CanEdit(booking) || booking.TrangThai != TrangThaiDatBan.DaNhanBan)
+            return "Chỉ gửi bếp cho lượt khách đang phục vụ.";
         if (!await db.NhanVien.AnyAsync(x => x.Id == staffId && x.DangLamViec)) return "Chọn nhân viên đang làm việc phụ trách phiếu gọi món.";
-        if (booking.TrangThai == TrangThaiDatBan.DaXacNhan && booking.YeuCauCoc
-            && (booking.TienCocYeuCau <= 0 || booking.TienCocDaNop - booking.TienCocDaHoan - booking.TienCocDaGiu < booking.TienCocYeuCau))
-            return "Chưa nhận đủ cọc đã thỏa thuận, chưa thể chuẩn bị món trước.";
         var linked = db.ChiTietHoaDon.Where(x => x.MonDatTruocId != null).Select(x => x.MonDatTruocId!.Value);
         var lines = await db.MonDatTruoc.Where(x => x.DatBanId == booking.Id && !linked.Contains(x.Id)).ToListAsync();
         if (lines.Count == 0) return null;
@@ -220,9 +233,10 @@ public class PreorderService(RestaurantDbContext db, OrderService orders)
             bill.ChiTiet.Add(new ChiTietHoaDon { MonDatTruocId = line.Id, MonAnId = line.MonAnId,
                 MonAnSizeId = line.MonAnSizeId, TenMonLucBan = line.TenMonLucDat, TenSizeLucBan = line.TenSizeLucDat,
                 DonGia = line.DonGiaThoaThuan, SoLuong = line.SoLuong, YeuCauCheBien = line.YeuCauCheBien,
-                ChiTietComboSnapshot = line.ChiTietComboSnapshot, ThoiDiemGoi = now, TrangThai = TrangThaiCheBien.DangCheBien });
+                ChiTietComboSnapshot = line.ChiTietComboSnapshot, ThoiDiemGoi = now, TrangThai = TrangThaiCheBien.ChoCheBien });
         }
         bill.TongTienHang = bill.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).Sum(x => x.DonGia * x.SoLuong);
+        // Đánh dấu lịch đã đổi để RowVersion tăng, dù lần gửi bếp này không sửa cột nào của lịch.
         db.Entry(booking).Property("ChuanBiTruoc").IsModified = true;
         return null;
     }

@@ -24,6 +24,7 @@
     var promoEval = ViewBag.PromotionEvaluation as RestaurantManagement.Web.Services.PromotionEvaluationResult;
     var effectiveDiscount = unpaid && ViewBag.EffectiveDiscount is decimal effective ? effective : Model.TienGiam;
     var manualDiscount = ViewBag.ManualDiscount is decimal manual ? manual : 0;
+    var canDiscount = User.IsInRole("Admin") || User.IsInRole("ThuNgan");
     var activeTotal = unpaid && ViewBag.ActiveTotal is decimal total ? total : Model.TongTienHang;
     var depositDeduction = unpaid && ViewBag.DepositDeduction is decimal deposit ? deposit : Model.TienCocDaTru;
     var paymentAmount = unpaid && ViewBag.PaymentAmount is decimal due ? due : Model.TongThanhToan;
@@ -412,7 +413,7 @@
                                     <div class="mb-3">
                                         <label class="form-label small fw-semibold">Giảm thủ công thêm (nếu có):</label>
                                         <div class="input-group">
-                                            <input type="number" name="TienGiamThuCong" id="cash-discount" value="@manualDiscount.ToString(invariant)" min="0" max="@Math.Max(0, activeTotal - (effectiveDiscount - manualDiscount)).ToString(invariant)" step="0.01" class="form-control" oninput="calculateCash()" />
+                                            <input type="number" name="TienGiamThuCong" id="cash-discount" value="@manualDiscount.ToString(invariant)" min="0" max="@Math.Max(0, activeTotal - (effectiveDiscount - manualDiscount)).ToString(invariant)" step="0.01" class="form-control" oninput="calculateCash()" readonly="@(!canDiscount)" title="@(canDiscount ? null : "Chỉ thu ngân hoặc quản lý được giảm giá thủ công")" />
                                             <div class="form-text">Giảm thủ công thêm, không nhập lại phần ưu đãi tự động/voucher đã tính.</div>
                                             <span class="input-group-text">đ</span>
                                         </div>

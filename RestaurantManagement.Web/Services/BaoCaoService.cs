@@ -357,7 +357,7 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             .ToListAsync();
 
         var importTotal = await db.PhieuNhap.AsNoTracking()
-            .Where(x => x.TrangThai == TrangThaiPhieu.DaGhiSo && x.ThoiDiem >= startOffset && x.ThoiDiem < endOffset)
+            .Where(x => x.TrangThai == TrangThaiPhieu.DaGhiSo && x.LyDo != LyDoNhap.DieuChinhTang && x.ThoiDiem >= startOffset && x.ThoiDiem < endOffset)
             .SumAsync(x => x.TongTien);
 
         var exportTotal = await db.PhieuXuat.AsNoTracking()

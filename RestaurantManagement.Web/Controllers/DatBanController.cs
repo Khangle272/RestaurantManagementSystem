@@ -102,7 +102,6 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                         ThoiDiemTao = DateTimeOffset.UtcNow, GioDen = thoiGianDenUtc,
                         GioKetThucDuKien = ReservationSchedule.EndOf(model.ThoiGianDen), SoNguoiLon = model.SoNguoi - model.SoTreEm,
                         SoTreEm = model.SoTreEm, YeuCau = ghiChuDayDu, YeuCauTrangTri = model.YeuCauTrangTri,
-                        ChuanBiTruoc = model.ChuanBiTruoc,
                         YeuCauTaoId = model.RequestId, MonDatTruoc = lines,
                         TrangThai = TrangThaiDatBan.ChoCoc,
                         TrangThaiCoc = TrangThaiCoc.ChuaCoc, LaKhachTrucTiep = false
@@ -147,7 +146,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             && model.ThoiGianDen >= DateTime.MinValue.AddHours(7) && booking.GioDen == TableService.VietnamTime(model.ThoiGianDen)
             && booking.SoNguoiLon + booking.SoTreEm == model.SoNguoi && booking.SoTreEm == model.SoTreEm
             && (model.MaKhuVuc is null || booking.KhuVucUuTienId == model.MaKhuVuc) && (booking.YeuCau ?? "") == (ContactNote(model) ?? "")
-            && booking.ChuanBiTruoc == model.ChuanBiTruoc && booking.YeuCauTrangTri == model.YeuCauTrangTri
+            && booking.YeuCauTrangTri == model.YeuCauTrangTri
             && submitted.SequenceEqual(original)) return CreateSuccess(booking.Id);
         ModelState.AddModelError(nameof(model.RequestId), "Mã gửi này đã tạo một lịch với nội dung khác. Hãy xem lịch đã tạo; nếu cần lịch mới, hãy điều chỉnh biểu mẫu rồi gửi lại.");
         return await CreateFailure(model);
@@ -176,7 +175,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         if (booking is null) return NotFound();
         return Json(new { bookingId = booking.Id, code = booking.MaDatBan, arrival = booking.GioDen,
             version = preorders.Version(booking), canEdit = PreorderService.CanEdit(booking) && booking.ThoiDiemBaoChuyenKhoan is null,
-            requiresDeposit = booking.YeuCauCoc, chuanBiTruoc = booking.ChuanBiTruoc,
+            requiresDeposit = booking.YeuCauCoc,
             status = booking.TrangThai.ToString(), depositRemaining = ReservationDepositPolicy.Remaining(booking),
             paymentPending = booking.ThoiDiemBaoChuyenKhoan is not null,
             paymentExpired = ReservationDepositPolicy.Expired(booking),

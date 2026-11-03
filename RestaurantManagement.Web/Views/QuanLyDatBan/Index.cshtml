@@ -123,10 +123,10 @@
                                         }
 
                                         <!-- Nút Check-in Nhận bàn (Khi đã xác nhận và có bàn) -->
-                                        @if (item.TrangThai == "Đã xác nhận")
+                                        @if (item.TrangThai == "Đã xác nhận" || (item.TrangThai == "Chờ cọc" && item.BanAnId > 0))
                                         {
                                             <form asp-action="NhanBan" method="post" class="d-inline" 
-                                                  data-confirm="Khách @item.HoTen (@item.BookingCode) đã đến và nhận bàn? Bàn sẽ chuyển sang Đang phục vụ." data-confirm-title="Xác nhận khách đến" data-confirm-ok="Khách đã đến" data-confirm-variant="primary">
+                                                  data-confirm="Khách @item.HoTen (@item.BookingCode) đã đến và nhận bàn? Bàn sẽ chuyển sang Đang phục vụ.@(item.TrangThai == "Chờ cọc" ? " Phần cọc chưa nộp sẽ không thu trước nữa." : "")" data-confirm-title="Xác nhận khách đến" data-confirm-ok="Khách đã đến" data-confirm-variant="primary">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="datBanId" value="@item.MaDatBan" />
                                                 <input type="hidden" name="rowVersion" value="@item.RowVersion" />
@@ -145,8 +145,21 @@
                                             </a>
                                         }
 
+                                        <!-- Nút Không đến: chỉ hiện khi đã quá giờ hẹn -->
+                                        @if ((item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Chờ cọc" || item.TrangThai == "Đã xác nhận")
+                                            && item.ThoiGianDen.AddMinutes(RestaurantManagement.Web.Services.TableService.NoShowGraceMinutes) <= DateTimeOffset.UtcNow)
+                                        {
+                                            <form asp-action="KhongDen" method="post" class="d-inline"
+                                                  data-confirm="Ghi nhận khách @item.HoTen (@item.BookingCode) không đến? Bàn được trả cho lượt khác." data-confirm-title="Khách không đến" data-confirm-ok="Ghi nhận" data-confirm-variant="danger">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="datBanId" value="@item.MaDatBan" />
+                                                <input type="hidden" name="rowVersion" value="@item.RowVersion" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">Không đến</button>
+                                            </form>
+                                        }
+
                                         <!-- Nút Hủy đơn -->
-                                        @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Đã xác nhận")
+                                        @if (item.TrangThai == "Chờ xác nhận" || item.TrangThai == "Chờ cọc" || item.TrangThai == "Đã xác nhận")
                                         {
                                             <button type="button" class="btn btn-sm btn-outline-danger" 
                                                     data-bs-toggle="modal" data-bs-target="#modalHuyBan" 

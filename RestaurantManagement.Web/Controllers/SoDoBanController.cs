@@ -51,8 +51,8 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
         var from = booking?.GioDen ?? (slot is not null ? TableService.VietnamTime(slot.Arrival(day))
             : TableService.VietnamTime(day.ToDateTime(time)));
         var until = booking?.GioKetThucDuKien ?? (slot is not null
-            ? TableService.VietnamTime(day.ToDateTime(slot.End)) : gio.HasValue ? from.AddHours(TableService.MaxDiningHours) : from.AddTicks(1));
-        var checkUntil = ReservationSchedule.Window(from).Until;
+            ? TableService.VietnamTime(day.ToDateTime(slot.End)) : gio.HasValue ? ReservationSchedule.Window(from).Until : from.AddTicks(1));
+        var checkUntil = until > from.AddMinutes(1) ? until : ReservationSchedule.Window(from).Until;
         var isLive = booking is null && slot is null && !gio.HasValue && day == DateOnly.FromDateTime(TableService.VietnamNow);
         var bookingSlot = booking is null ? null : ReservationSchedule.Match(local.DateTime);
         if (bookingSlot is not null && ReservationSchedule.EndOf(local.DateTime) != booking!.GioKetThucDuKien) bookingSlot = null;
@@ -93,10 +93,10 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
         foreach (var card in model.Tables)
         {
             card.UnavailableReason = !card.Table.KhuVuc.DangSuDung || card.Table.TrangThai == TrangThaiBan.NgungSuDung ? "Bàn hoặc khu vực ngừng sử dụng."
-                : card.Conflicts.FirstOrDefault() is { } conflict ? $"Bàn đã có lượt lúc {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm} trong ca này. Mỗi bàn nhận một lượt mỗi ca; chọn bàn khác."
+                : card.Conflicts.FirstOrDefault() is { } conflict ? $"Bàn đã có lượt lúc {conflict.GioDen.ToOffset(TimeSpan.FromHours(7)):HH:mm} trùng giờ này. Chọn bàn khác hoặc chờ lượt đó kết thúc."
                 : booking is not null && booking.YeuCauVip != card.Table.KhuVuc.LaPhongVip ? "Không đúng loại khu vực khách yêu cầu."
                 : booking is not null && card.Table.SoChoNgoi < booking.SoNguoiLon + booking.SoTreEm ? "Bàn không đủ chỗ cho số khách; chọn một bàn lớn hơn."
-                : physicalBusy.Contains(card.Table.Id) ? "Bàn còn khách hoặc chưa được nhân viên xác nhận hoàn tất. Kiểm tra bàn sẵn sàng trước khi nhận lượt mới." : null;
+                : physicalBusy.Contains(card.Table.Id) ? "Bàn còn khách hoặc chưa dọn xong. Chờ bàn sẵn sàng trước khi nhận khách mới." : null;
             card.CanChoose = model.CanAssign && card.UnavailableReason is null;
             card.IsSelected = card.CanChoose && (links.Any(x => x.BanAnId == card.Table.Id && x.DatBanId == datBanId)
                 || preferredTableId == card.Table.Id);
@@ -145,7 +145,8 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
     public async Task<IActionResult> TrangThai(int id, string? rowVersion, bool clean)
     {
         var error = await tables.ChangeTable(id, rowVersion, clean);
-        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã xác nhận hoàn tất, bàn sẵn sàng. Không cần bước dọn riêng.";
+        var dirty = error is null && await Db.BanAn.AnyAsync(x => x.Id == id && x.TrangThai == TrangThaiBan.CanDon);
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? (dirty ? "Đã kết thúc lượt khách, bàn chuyển sang chờ dọn." : "Đã dọn xong, bàn sẵn sàng đón khách.");
         return RedirectToAction(nameof(Index));
     }
 

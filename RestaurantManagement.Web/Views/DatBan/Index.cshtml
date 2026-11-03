@@ -22,7 +22,7 @@
             </div>
         </div>
 
-        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-table-picker-url="@Url.Action("SoDoBanTrong")" data-preorder-rate="@ReservationDepositPolicy.PreorderRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-slot-url="@Url.Action("KhungGio")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="30" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")">
+        <form asp-action="Index" method="post" id="formDatBan" data-ajax-form="true" data-table-picker-url="@Url.Action("SoDoBanTrong")" data-preorder-rate="@ReservationDepositPolicy.PreorderRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-slot-url="@Url.Action("KhungGio")" data-server-now="@DateTimeOffset.UtcNow.ToString("O")" data-lead-minutes="30" data-open-time="@ReservationSchedule.OpeningTime.ToString("HH:mm")" data-close-time="@ReservationSchedule.ClosingTime.ToString("HH:mm")" data-last-time="@ReservationSchedule.LastBookingArrival.ToString("HH:mm")">
             @Html.AntiForgeryToken()
             <input type="hidden" name="RequestId" value="@Model.RequestId" />
             <div data-cart-inputs></div>
@@ -33,8 +33,7 @@
                 <ul id="booking-cart-summary" class="mb-2"></ul>
                 <p class="mb-2" data-cart-filled hidden>Tiền món tham khảo: <strong id="booking-cart-total">0 đ</strong></p>
                 <p class="mb-2">Tiền đặt cọc dự kiến: <strong id="booking-deposit-preview">—</strong></p>
-                <div class="form-check mb-2" data-cart-filled hidden><input asp-for="ChuanBiTruoc" class="form-check-input" id="booking-prepare" /><label class="form-check-label" for="booking-prepare">Muốn chuẩn bị trước</label></div>
-                <p class="small text-muted mb-0" data-cart-filled hidden>Tiền đặt cọc = @ReservationDepositPolicy.PreorderRateText tổng giá trị món. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
+                <p class="small text-muted mb-0" data-cart-filled hidden>Tiền đặt cọc = @ReservationDepositPolicy.PreorderRateText tổng giá trị món, tối thiểu bằng mức giữ chỗ. Nhà hàng đối chiếu tiền thực nhận rồi xác nhận lịch.</p>
                 <p class="small text-muted mb-0" data-cart-empty>Tiền đặt cọc theo khu vực/loại bàn bạn chọn bên dưới.</p>
                 <button type="button" class="btn btn-link p-0 mt-2" data-cart-filled hidden data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer">Sửa số lượng / ghi chú món</button>
             </section>
@@ -64,7 +63,7 @@
                                 <p class="small text-muted mb-2">Mỗi ca gợi ý một giờ sớm nhất còn nhận được theo thời gian hiện tại, số khách và khu vực. Bấm để điền giờ, hoặc tự nhập giờ khác bên dưới.</p>
                                 <label for="inputThoiGianDen" class="form-label fw-semibold">Giờ đến tự chọn</label>
                                 <input asp-for="ThoiGianDen" id="inputThoiGianDen" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" value="@(Context.Request.Method == "GET" ? "" : Model.ThoiGianDen.ToString("yyyy-MM-ddTHH:mm"))" class="form-control" required />
-                                <p class="small text-muted mt-2 mb-1">Phục vụ liên tục @ReservationSchedule.ServiceHours; đặt trước ít nhất 30 phút. Ca chỉ dùng quản lý lượt bàn, không giới hạn giờ tự chọn.</p>
+                                <p class="small text-muted mt-2 mb-1">Phục vụ liên tục @ReservationSchedule.ServiceHours; đặt trước ít nhất 30 phút, nhận khách muộn nhất @ReservationSchedule.LastBookingArrival.ToString("HH:mm"). Mỗi lịch giữ bàn 2 tiếng kể từ giờ đến.</p>
                                 <p data-time-error class="small text-danger mb-1" role="alert" hidden></p>
                                 <span asp-validation-for="ThoiGianDen" class="text-danger small"></span>
                                 <p id="slot-status" class="form-text" role="status" aria-live="polite">Đang kiểm tra bàn theo ngày, giờ và số khách đã chọn…</p>

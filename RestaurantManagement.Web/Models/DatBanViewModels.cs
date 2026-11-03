@@ -41,7 +41,6 @@ public class DatBanCreateVM : IValidatableObject
     // Bàn/phòng khách tự chọn trên sơ đồ.
     public int? BanAnId { get; set; }
     public Guid? RequestId { get; set; }
-    public bool ChuanBiTruoc { get; set; }
     public bool YeuCauTrangTri { get; set; }
     [Range(0, 49)] public int SoTreEm { get; set; }
     public List<OrderItemInputModel> Items { get; set; } = [];

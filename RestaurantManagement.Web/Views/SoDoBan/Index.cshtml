@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = "Sơ đồ bàn"; var reception = User.IsInRole("Admin") || User.IsInRole("TiepTan"); }
 @section Styles { <link rel="stylesheet" href="~/css/tables.css" asp-append-version="true" /> }
 <div class="page-header">
-    <div><h1 class="h3">Sơ đồ bàn</h1><p class="text-muted">Phục vụ liên tục @ReservationSchedule.ServiceHours. Chia ca quản lý trước 17h và từ 17h; mỗi bàn nhận một lượt mỗi ca.</p></div>
+    <div><h1 class="h3">Sơ đồ bàn</h1><p class="text-muted">Phục vụ liên tục @ReservationSchedule.ServiceHours. Chia ca quản lý trước 17h và từ 17h; mỗi bàn phục vụ một lượt tại một thời điểm, xong lượt có thể nhận khách mới.</p></div>
     <div class="page-actions">
         @if (User.IsInRole("Admin") || User.IsInRole("TiepTan")) {
             <a asp-controller="QuanLyDatBan" asp-action="Create" class="btn btn-primary"><i class="bi bi-calendar-plus me-1" aria-hidden="true"></i>Đặt bàn cho khách</a>
@@ -66,7 +66,8 @@
             <summary>Quy tắc</summary>
             <ul class="mb-0 ps-3">
                 <li>Lịch xét đúng ngày đang xem; khi nhận khách, bàn phải được xác nhận sẵn sàng.</li>
-                <li>Xác nhận hoàn tất là xác nhận khách đã dùng xong và bàn sẵn sàng. Không có bước chờ dọn riêng; quá 3 tiếng chỉ nhắc kiểm tra.</li>
+                <li>Mỗi lịch giữ bàn 2 tiếng kể từ giờ đến; ngoài khoảng đó bàn nhận được lượt khác.</li>
+                <li>Khách rời bàn thì bàn chuyển sang Chờ dọn; bấm "Đã dọn xong" để bàn sẵn sàng. Quá 3 tiếng chỉ nhắc kiểm tra.</li>
                 <li>Nhân viên kết thúc lượt sau khi khách dùng bữa xong; hệ thống không tự đóng theo số tiếng.</li>
             </ul>
         </details>

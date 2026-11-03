@@ -47,7 +47,7 @@ public static class ReservationDepositSmoke
             await new TableService(context, new PreorderService(context, new OrderService(context))).ExpireUnpaidHold(id);
         }
 
-        var area = new KhuVuc { TenKhuVuc = "PAYMENT-AREA", DangSuDung = true, Tang = 7 };
+        var area = new KhuVuc { TenKhuVuc = "PAYMENT-AREA", DangSuDung = true, Tang = 7, TienCocGiuCho = 50000m };
         var table = new BanAn { MaBan = "PAYMENT-TABLE", KhuVuc = area, SoChoNgoi = 4, TrangThai = TrangThaiBan.SanSang };
         var dish = new MonAn { TenMon = "PAYMENT-DISH", DanhMuc = new DanhMuc { TenDanhMuc = "PAYMENT-MENU", DangSuDung = true },
             Loai = LoaiMon.MonLe, DaDuyet = true, TrangThai = TrangThaiMon.DangPhucVu,

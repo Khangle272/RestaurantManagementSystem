@@ -606,6 +606,7 @@ try
     await Management.SmokeTests.ReviewSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.PaymentLedgerSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.KitchenStockSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.RealWorldRulesSmoke.Run(db, client, NewClient, Hidden, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch

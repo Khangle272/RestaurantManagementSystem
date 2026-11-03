@@ -1,3 +1,4 @@
+using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
@@ -16,4 +17,5 @@ public interface IKhoService
 {
     Task<InventoryDeductionResult> DeductInventoryForOrderDishesAsync(int hoaDonId, List<OrderItemInputModel> items, int? staffId = null);
     Task<InventoryDeductionResult> DeductInventoryForBookingPreOrdersAsync(int datBanId, int hoaDonId, int? staffId = null);
+    Task ReturnInventoryForCancelledDishAsync(ChiTietHoaDon line);
 }

@@ -27,14 +27,14 @@
     }
     let items = cleanItems(draft?.items), sent = [], version = '', canEdit = !bookingId;
     let requestId = typeof draft?.requestId === 'string' && /^[a-f0-9-]{36}$/i.test(draft.requestId) ? draft.requestId : newRequestId();
-    let prepare = Boolean(draft?.prepare), loading = true, selectedDish = null, conflict = false, submitting = false;
+    let loading = true, selectedDish = null, conflict = false, submitting = false;
     const dishes = new Map();
     const initial = byId('customer-menu');
     if (initial) { try { JSON.parse(initial.textContent).forEach(x => dishes.set(x.id, x)); } catch { /* Fetch selected dishes below. */ } }
 
     function persist(changed = false) {
         if (changed) requestId = newRequestId();
-        storage.set(key(), { items: cleanItems(items), version, requestId, prepare });
+        storage.set(key(), { items: cleanItems(items), version, requestId });
         try { sessionStorage.setItem(contextKey, String(bookingId)); } catch { /* Context remains on this page. */ }
         sync();
     }
@@ -90,8 +90,6 @@
             if (!submitting) bookingForm.querySelector('[type="submit"]').disabled = loading || Boolean(bookingId) || items.some(item => !details(item).available);
         }
         if (!submitting) byId('cart-save-button').disabled = loading || conflict || !canEdit || items.some(item => !details(item).available);
-        byId('cart-prepare').disabled = !canEdit || loading;
-        if (byId('booking-prepare')) byId('booking-prepare').checked = prepare;
     }
     function renderRow(item, index, readonly) {
         const info = readonly ? item : details(item);
@@ -146,7 +144,6 @@
                 version = draft?.version || context.version || '';
                 sent = (context.items || []).filter(x => x.sent);
                 if (!draft) items = cleanItems((context.items || []).filter(x => !x.sent));
-                prepare = draft ? prepare : Boolean(context.chuanBiTruoc ?? context.requestedEarly);
                 const label = byId('cart-context'); label.hidden = false;
                 label.textContent = `Đang chọn cho lịch ${context.code || '#' + bookingId}${context.arrival ? ' · ' + new Date(context.arrival).toLocaleString('vi-VN') : ''}. `;
                 const detailLink = document.createElement('a'); detailLink.href = root.dataset.detailUrl + '/' + bookingId; detailLink.textContent = 'Xem chi tiết'; label.append(detailLink);
@@ -162,7 +159,7 @@
             }
             await Promise.all([...new Set(items.map(x => x.monAnId))].map(async id => { try { await loadDish(id); } catch { dishes.delete(id); } }));
         } catch (err) { canEdit = false; error(err.message); }
-        loading = false; byId('cart-prepare').checked = prepare; persist(); render(); keepContextLinks();
+        loading = false; persist(); render(); keepContextLinks();
     }
     document.querySelectorAll('[data-cart-dish]').forEach(button => button.addEventListener('click', async () => {
         if (loading || submitting || !canEdit) { error('Vui lòng đợi giỏ tải / gửi xong hoặc chọn món cho lịch mới.'); bootstrap.Offcanvas.getOrCreateInstance(byId('cartDrawer')).show(); return; }
@@ -195,7 +192,6 @@
         clearTimeout(feedback.hideTimer);
         feedback.hideTimer = setTimeout(() => feedback.classList.remove('show'), 2500);
     });
-    [byId('cart-prepare'), byId('booking-prepare')].filter(Boolean).forEach(checkbox => checkbox.addEventListener('change', () => { if (submitting) { checkbox.checked = prepare; return; } prepare = checkbox.checked; byId('cart-prepare').checked = prepare; persist(true); }));
     byId('cart-switch-new').addEventListener('click', () => { if (submitting) return; try { sessionStorage.setItem(contextKey, '0'); } catch { /* Query selects the new context. */ } location.href = '/Home?cart=new#thuc-don'; });
     byId('cart-reload').addEventListener('click', async () => {
         if (submitting || loading) return;
@@ -207,7 +203,7 @@
         await initialize();
     });
     [byId('cart-save-form'), byId('formDatBan')].filter(Boolean).forEach(form => {
-        if (form.id === 'formDatBan') form.addEventListener('input', event => { if (!submitting && event.target?.type !== 'hidden' && event.target?.id !== 'booking-prepare') persist(true); });
+        if (form.id === 'formDatBan') form.addEventListener('input', event => { if (!submitting && event.target?.type !== 'hidden') persist(true); });
         form.addEventListener('submit', event => {
             if (loading || submitting || conflict || !canEdit || (form.id === 'formDatBan' && bookingId) || items.some(item => !details(item).available)) { event.preventDefault(); event.stopImmediatePropagation(); error('Giỏ chưa sẵn sàng gửi. Vui lòng kiểm tra món và lịch đặt bàn.'); return; }
             sync(); persist();

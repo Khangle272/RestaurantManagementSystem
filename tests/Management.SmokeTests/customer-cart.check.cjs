@@ -22,7 +22,7 @@ const walk = node => [node, ...node.children.flatMap(walk)];
 const settle = () => new Promise(resolve => setImmediate(resolve));
 async function start({ search = '?cart=new', draft, context, owner = '7', store = new Map() } = {}) {
     const ids = new Map(), element = id => { if (!ids.has(id)) { const node = new Element(); node.id = id; ids.set(id, node); } return ids.get(id); };
-    ['customer-cart', 'cart-context', 'cart-count', 'cart-total', 'cart-version', 'cart-request-id', 'cart-prepare', 'cart-items', 'cart-errors', 'cart-save-form', 'cart-save-button', 'cart-description', 'cart-new-checkout', 'cart-details', 'cart-switch-new', 'cartDrawer', 'dishModal', 'cart-dish-form', 'dish-title', 'dish-image', 'dish-description', 'dish-extras', 'dish-size', 'dish-quantity', 'dish-note', 'dish-error', 'dish-add', 'cart-feedback', 'formDatBan', 'booking-cart-summary', 'booking-cart-total', 'booking-prepare', 'cart-reload'].forEach(element);
+    ['customer-cart', 'cart-context', 'cart-count', 'cart-total', 'cart-version', 'cart-request-id', 'cart-items', 'cart-errors', 'cart-save-form', 'cart-save-button', 'cart-description', 'cart-new-checkout', 'cart-details', 'cart-switch-new', 'cartDrawer', 'dishModal', 'cart-dish-form', 'dish-title', 'dish-image', 'dish-description', 'dish-extras', 'dish-size', 'dish-quantity', 'dish-note', 'dish-error', 'dish-add', 'cart-feedback', 'formDatBan', 'booking-cart-summary', 'booking-cart-total', 'cart-reload'].forEach(element);
     element('customer-cart').dataset = { owner, dishUrl: '/Home/CartDish', contextUrl: '/DatBan/CartContext', bookingUrl: '/DatBan', saveUrl: '/DatBan/SavePreorder', detailUrl: '/DatBan/ChiTiet' };
     const filled = new Element(), empty = new Element(), hidden = [new Element(), new Element()], createRequest = new Element(), createSubmit = new Element(), choose = new Element('button');
     choose.dataset.cartDish = '1';
@@ -90,12 +90,11 @@ async function start({ search = '?cart=new', draft, context, owner = '7', store 
     assert.equal(JSON.parse(loggedIn.store.get(loggedIn.key)).items[0].note, note);
     assert.equal(loggedIn.store.has('customer-cart:v1:guest:new'), false, 'Transferred guest drafts must not leak into another account');
 
-    const existing = await start({ search: '?datBanId=42', context: { bookingId: 42, code: 'BK-42', version: 'v2', canEdit: true, chuanBiTruoc: true, items: [{ monAnId: 1, sizeId: 11, name: 'Đã gửi', sizeName: 'Nhỏ', price: 125000, quantity: 1, note: 'Giữ nguyên', sent: true }, { monAnId: 1, sizeId: 11, quantity: 3, note: 'Chưa gửi', sent: false }] } });
+    const existing = await start({ search: '?datBanId=42', context: { bookingId: 42, code: 'BK-42', version: 'v2', canEdit: true, items: [{ monAnId: 1, sizeId: 11, name: 'Đã gửi', sizeName: 'Nhỏ', price: 125000, quantity: 1, note: 'Giữ nguyên', sent: true }, { monAnId: 1, sizeId: 11, quantity: 3, note: 'Chưa gửi', sent: false }] } });
     assert.equal(walk(existing.element('cart-items')).filter(x => x.tagName === 'textarea').length, 1, 'Sent rows must be read-only');
     assert.equal(existing.element('cart-save-form').action, '/DatBan/SavePreorder/42');
     assert.equal(existing.hidden[0].children.length, 3, 'Only unsent rows can be posted');
     assert.equal(existing.element('cart-request-id').value, JSON.parse(existing.store.get(existing.key)).requestId);
-    assert.equal(existing.element('cart-prepare').checked, true);
     assert.equal(existing.createSubmit.disabled, true, 'An existing booking context cannot create another booking');
     assert.equal((await existing.element('formDatBan').fire('submit')).defaultPrevented, true);
 

@@ -15,8 +15,9 @@
 
     const current = () => tables.find(x => String(x.id) === selected.value);
     window.bookingDepositPreview = foodTotal => {
-        if (foodTotal > 0) return money(Math.ceil(foodTotal * rate)) + ` (${Math.round(rate * 100)}% tiền món)`;
         const table = current() || tables.find(x => area?.value && String(x.khuVucId) === area.value);
+        const food = Math.ceil(foodTotal * rate);
+        if (food > 0 && (!table || food >= table.tienCoc)) return money(food) + ` (${Math.round(rate * 100)}% tiền món)`;
         return table ? money(table.tienCoc) + ' (giữ chỗ ' + table.khuVuc + ')' : 'Chọn bàn để xem tiền đặt cọc';
     };
     const updateDeposit = () => {

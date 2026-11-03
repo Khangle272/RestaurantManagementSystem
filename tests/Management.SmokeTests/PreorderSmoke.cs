@@ -69,7 +69,7 @@ public static class PreorderSmoke
         var createFields = new Dictionary<string, string>
         {
             ["RequestId"] = createId.ToString(), ["HoTen"] = "PREORDER-TEST-CUSTOMER", ["SoDienThoai"] = "0901234567",
-            ["ThoiGianDen"] = ReservationSchedule.NextArrival(TableService.VietnamNow.AddHours(4)).ToString("yyyy-MM-ddTHH:mm"), ["SoNguoi"] = "2", ["ChuanBiTruoc"] = "true",
+            ["ThoiGianDen"] = ReservationSchedule.NextArrival(TableService.VietnamNow.AddHours(4)).ToString("yyyy-MM-ddTHH:mm"), ["SoNguoi"] = "2",
             ["Items[0].MonAnId"] = dish.Id.ToString(), ["Items[0].MonAnSizeId"] = size.Id.ToString(), ["Items[0].SoLuong"] = "1",
             ["Items[0].YeuCauCheBien"] = "PREORDER-FIFO-FIRST", ["Items[0].DonGiaThoaThuan"] = "1"
         };
@@ -114,7 +114,7 @@ public static class PreorderSmoke
         var originalVersion = await Version(earlyId);
         var saveFields = new Dictionary<string, string>
         {
-            ["RowVersion"] = originalVersion, ["RequestId"] = Guid.NewGuid().ToString(), ["ChuanBiTruoc"] = "true",
+            ["RowVersion"] = originalVersion, ["RequestId"] = Guid.NewGuid().ToString(),
             ["Items[0].MonAnId"] = dish.Id.ToString(), ["Items[0].MonAnSizeId"] = size.Id.ToString(), ["Items[0].SoLuong"] = "1", ["Items[0].YeuCauCheBien"] = "PREORDER-FIFO-FIRST",
             ["Items[1].MonAnId"] = dish.Id.ToString(), ["Items[1].MonAnSizeId"] = size.Id.ToString(), ["Items[1].SoLuong"] = "2", ["Items[1].YeuCauCheBien"] = "Ít cay \"không hành\""
         };
@@ -139,9 +139,8 @@ public static class PreorderSmoke
         await db.SaveChangesAsync();
         var internalForm = await Get(admin, $"/DatTruoc/ChiTiet/{earlyId}");
         async Task ReleaseEarly(HttpStatusCode expected) => await Ajax(admin, $"/DatTruoc/GuiBep/{earlyId}", internalForm, new()
-        { ["RowVersion"] = await Version(earlyId), ["nhanVienId"] = staffId.ToString(), ["xacNhanLamTruoc"] = "true" }, expected);
+        { ["RowVersion"] = await Version(earlyId), ["nhanVienId"] = staffId.ToString() }, expected);
         await ReleaseEarly(HttpStatusCode.BadRequest);
-        check(!await db.HoaDon.AnyAsync(x => x.DatBanId == earlyId), "Early prep is blocked before a deposit agreement/payment");
         await Ajax(admin, $"/DatTruoc/ThoaThuan/{earlyId}", internalForm, new()
         { ["RowVersion"] = await Version(earlyId), ["SoTien"] = "50000", ["DieuKien"] = "Hoàn trước khi nấu; xử lý chi phí khi đã nấu." });
         await ReleaseEarly(HttpStatusCode.BadRequest);
@@ -151,11 +150,17 @@ public static class PreorderSmoke
         await Ajax(admin, $"/DatTruoc/GiaoDichCoc/{earlyId}", internalForm, depositFields);
         await Ajax(admin, $"/DatTruoc/GiaoDichCoc/{earlyId}", internalForm, new(depositFields) { ["SoTien"] = "1" }, HttpStatusCode.BadRequest);
         check(await db.GiaoDichCoc.CountAsync(x => x.DatBanId == earlyId) == 1, "Deposit GUID replay records one transaction and rejects modified amount");
-        await ReleaseEarly(HttpStatusCode.OK);
-        await ReleaseEarly(HttpStatusCode.OK);
-        check(await db.ChiTietHoaDon.CountAsync(x => x.MonDatTruoc != null && x.MonDatTruoc.DatBanId == earlyId) == 2, "Repeated kitchen release sends each preorder once");
+        await ReleaseEarly(HttpStatusCode.BadRequest);
+        check(!await db.HoaDon.AnyAsync(x => x.DatBanId == earlyId), "Preorders never go to the kitchen before the party is seated, even with a full deposit");
+        // Dữ liệu cũ: lịch từng gửi bếp trước giờ đến khi còn tính năng chuẩn bị trước; xử lý hủy vẫn phải giữ món bếp đã làm.
+        var earlyPreorders = await db.MonDatTruoc.AsNoTracking().Where(x => x.DatBanId == earlyId).ToListAsync();
+        db.HoaDon.Add(new HoaDon { MaHoaDon = "HD-PREORDER-EARLY", DatBanId = earlyId, KhachHangId = customerId, NhanVienId = staffId, ThoiDiemLap = DateTimeOffset.UtcNow,
+            TrangThai = TrangThaiHoaDon.ChuaThanhToan, LoaiDonHang = LoaiDonHang.TaiBan, TongTienHang = earlyPreorders.Sum(x => x.SoLuong * x.DonGiaThoaThuan),
+            ChiTiet = earlyPreorders.Select(x => new ChiTietHoaDon { MonDatTruocId = x.Id, MonAnId = x.MonAnId, MonAnSizeId = x.MonAnSizeId, TenMonLucBan = x.TenMonLucDat,
+                TenSizeLucBan = x.TenSizeLucDat, SoLuong = x.SoLuong, DonGia = x.DonGiaThoaThuan, YeuCauCheBien = x.YeuCauCheBien, ThoiDiemGoi = DateTimeOffset.UtcNow,
+                TrangThai = TrangThaiCheBien.DangCheBien }).ToList() });
+        await db.SaveChangesAsync();
         var earlyLines = await db.ChiTietHoaDon.AsNoTracking().Where(x => x.MonDatTruoc != null && x.MonDatTruoc.DatBanId == earlyId).OrderBy(x => x.Id).ToListAsync();
-        check(earlyLines.All(x => x.DonGia == 125000m && x.ThoiDiemGoi > DateTimeOffset.UtcNow.AddMinutes(-2)), "Kitchen uses agreed prices and actual release timestamps");
 
         var late = new DatBan { MaDatBan = "PREORDER-LATE", KhachHangId = customerId, HoTenLienHe = "PREORDER-LATE",
             SoDienThoaiLienHe = "0901234567", SoNguoiLon = 2, TrangThai = TrangThaiDatBan.DaXacNhan,
@@ -173,10 +178,11 @@ public static class PreorderSmoke
         check(await preorders.RecordDeposit(lateId, actorId, new() { RowVersion = await Version(lateId), RequestId = Guid.NewGuid(), Loai = LoaiGiaoDichCoc.Thu,
             SoTien = 10000m, LyDo = "Đã nhận tiền" }) is null, "Late booking deposit receipt");
         check(await tables.CheckIn(lateId, await Version(lateId), staffId) is null, "Check-in releases unsent preorders in its transaction");
-        check(await preorders.Release(lateId, await Version(lateId), staffId, false) is null, "Release after check-in is idempotent");
+        check(await preorders.Release(lateId, await Version(lateId), staffId) is null, "Release after check-in is idempotent");
         check(await db.ChiTietHoaDon.CountAsync(x => x.MonDatTruoc != null && x.MonDatTruoc.DatBanId == lateId) == 1, "Check-in plus manual release produces one kitchen line");
         var lateLine = await db.ChiTietHoaDon.AsNoTracking().SingleAsync(x => x.MonDatTruoc != null && x.MonDatTruoc.DatBanId == lateId);
         check(lateLine.DonGia == 225000m, "New additions use the current server price while already agreed lines retain their snapshot");
+        check(lateLine.TrangThai == TrangThaiCheBien.ChoCheBien, "Preorders sent at seating wait for the kitchen to accept them");
         check(lateLine.ThoiDiemGoi >= earlyLines.Max(x => x.ThoiDiemGoi), "Older booking released later joins the queue later");
         using var cook = newClient();
         var cookLogin = await Get(cook, "/admin");
@@ -188,7 +194,6 @@ public static class PreorderSmoke
         var secondPosition = kitchen.IndexOf("PREORDER-FIFO-SECOND", StringComparison.Ordinal);
         check(firstPosition >= 0 && secondPosition > firstPosition, "Actual KDS renders FIFO by kitchen release, not booking/draft creation");
 
-        check(earlyLines.All(x => x.TrangThai == TrangThaiCheBien.DangCheBien), "Released early-prep lines go straight into cooking");
         await Ajax(customer, $"/DatBan/YeuCauHuy/{earlyId}", customerForm, new()
         { ["RowVersion"] = await Version(earlyId), ["LyDo"] = "Khách xin hủy sau khi bếp bắt đầu" });
         var requested = await db.DatBan.AsNoTracking().SingleAsync(x => x.Id == earlyId);

@@ -152,6 +152,14 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> KhongDen(int datBanId, string? rowVersion)
+    {
+        var error = await tables.MarkNoShow(datBanId, rowVersion, await StaffId());
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Đã ghi nhận khách không đến, bàn được trả cho lượt khác. Tiền đặt cọc (nếu có) xử lý trong mục Món & cọc.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> HuyBan(int datBanId, string? lyDoHuy, string? rowVersion)
     {
         var error = await tables.Cancel(datBanId, rowVersion, lyDoHuy, await StaffId());
@@ -218,6 +226,14 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     public async Task<IActionResult> Create(ReceptionBookingViewModel model)
     {
         model.Areas = await Db.KhuVuc.Where(x => x.DangSuDung).ToListAsync();
+        if (model.KhachDenNgay)
+        {
+            // Khách đã có mặt: giờ đến là lúc này, không lấy giờ còn sót lại trên biểu mẫu.
+            var current = TableService.VietnamNow;
+            model.GioDen = current.Date.AddHours(current.Hour).AddMinutes(current.Minute);
+            model.NgayDat = null;
+            ModelState.Remove(nameof(model.GioDen));
+        }
         var arrival = TableService.VietnamTime(model.GioDen);
         var until = arrival.AddMinutes(1);
         {
@@ -231,7 +247,8 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             ModelState.AddModelError(nameof(model.GioDen), "Chọn giờ đến từ hiện tại đến tối đa 180 ngày.");
         if (model.KhuVucId.HasValue && !model.Areas.Any(x => x.Id == model.KhuVucId))
             ModelState.AddModelError(nameof(model.KhuVucId), "Khu vực không còn sử dụng.");
-        if (string.IsNullOrWhiteSpace(model.HoTen)) ModelState.AddModelError(nameof(model.HoTen), "Nhập họ tên khách.");
+        if (!model.KhachDenNgay && string.IsNullOrWhiteSpace(model.HoTen)) ModelState.AddModelError(nameof(model.HoTen), "Nhập họ tên khách.");
+        if (!model.KhachDenNgay && string.IsNullOrWhiteSpace(model.SoDienThoai)) ModelState.AddModelError(nameof(model.SoDienThoai), "Nhập số điện thoại để liên hệ khi khách đặt trước.");
         BanAn? chosen = null;
         if (model.BanAnId is not int requestedId) ModelState.AddModelError(nameof(model.BanAnId), "Chọn bàn/phòng khách muốn trên sơ đồ.");
         else if ((chosen = await RequestedTable(requestedId)) is null)
@@ -250,9 +267,11 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             }
         }
         if (!ModelState.IsValid) return View(model);
-        var customerId = await Db.KhachHang.Where(x => x.SoDienThoai == model.SoDienThoai).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+        var phone = string.IsNullOrWhiteSpace(model.SoDienThoai) ? null : model.SoDienThoai.Trim();
+        int? customerId = phone is null ? null : await Db.KhachHang.Where(x => x.SoDienThoai == phone).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+        var staffId = await StaffId();
         var booking = new DatBan {
-            MaDatBan = await TableService.NewBookingCode(Db), HoTenLienHe = model.HoTen.Trim(), SoDienThoaiLienHe = model.SoDienThoai,
+            MaDatBan = await TableService.NewBookingCode(Db), HoTenLienHe = string.IsNullOrWhiteSpace(model.HoTen) ? "Khách lẻ" : model.HoTen.Trim(), SoDienThoaiLienHe = phone,
             KhachHangId = customerId, LaKhachTrucTiep = true, ThoiDiemTao = DateTimeOffset.UtcNow,
             GioDen = arrival, GioKetThucDuKien = until, SoNguoiLon = model.SoNguoi,
             KhuVucUuTienId = model.KhuVucId, YeuCau = model.GhiChu?.Trim(),
@@ -261,18 +280,27 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             YeuCauCoc = !model.KhachDenNgay && chosen.KhuVuc.TienCocGiuCho > 0,
             TienCocYeuCau = model.KhachDenNgay ? 0 : chosen.KhuVuc.TienCocGiuCho,
             DieuKienCocDaThoaThuan = model.KhachDenNgay ? null : ReservationDepositPolicy.Terms(chosen.KhuVuc.TienCocGiuCho, false),
-            NhanVienTiepNhanId = await StaffId()
+            NhanVienTiepNhanId = staffId
         };
         booking.TrangThai = booking.YeuCauCoc ? TrangThaiDatBan.ChoCoc : TrangThaiDatBan.DaXacNhan;
-        booking.Ban.Add(new ChiTietDatBan { BanAnId = chosen.Id });
-        Db.DatBan.Add(booking);
-        if (!await SaveAsync("", "Không tạo được yêu cầu. Vui lòng thử lại.")) return View(model);
-        TempData["SuccessMessage"] = booking.YeuCauCoc
+        // Giữ bàn trong giao dịch serializable: hai lễ tân cùng chọn một bàn thì chỉ một người thành công.
+        if (await tables.SaveReceptionBooking(booking, chosen.Id) is { } saveError)
+        {
+            ModelState.AddModelError(nameof(model.BanAnId), saveError);
+            return View(model);
+        }
+        var seatError = !model.KhachDenNgay ? null
+            : await tables.CheckIn(booking.Id, Convert.ToBase64String(Db.Entry(booking).Property<byte[]>("RowVersion").CurrentValue ?? []), staffId);
+        if (seatError is not null) TempData["ErrorMessage"] = $"Đã tạo lịch {booking.MaDatBan} nhưng chưa nhận bàn được: {seatError}";
+        else TempData["SuccessMessage"] = model.KhachDenNgay
+            ? $"Đã nhận {chosen.MaBan} cho {booking.HoTenLienHe}. Bàn đang phục vụ."
+            : booking.YeuCauCoc
             ? $"Đã giữ {chosen.MaBan} cho {booking.HoTenLienHe}. Chưa đặt cọc — cần cọc {booking.TienCocYeuCau:N0} đ."
             : $"Đã xếp {chosen.MaBan} cho {booking.HoTenLienHe}.";
+        var nextTab = model.KhachDenNgay && seatError is null ? "DangPhucVu" : null;
         if (Request.Headers.XRequestedWith == "XMLHttpRequest")
-            return Json(new { ok = true, redirectUrl = Url.Action(nameof(Index)) });
-        return RedirectToAction(nameof(Index));
+            return Json(new { ok = true, redirectUrl = Url.Action(nameof(Index), new { tab = nextTab }) });
+        return RedirectToAction(nameof(Index), new { tab = nextTab });
     }
 
     private Task<BanAn?> RequestedTable(int id) => Db.BanAn.AsNoTracking().Include(x => x.KhuVuc)
