@@ -6,16 +6,21 @@
     ViewData["Title"] = admin ? "Quản lý món ăn" : "Chuẩn bị món & công thức";
 }
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div><h2 class="h3 mb-1">@ViewData["Title"]</h2><p class="text-muted mb-0">@(admin ? "Kiểm tra món, duyệt giá theo size và quản lý trạng thái phục vụ." : "Chuẩn bị thông tin kỹ thuật của món; Quản lý duyệt trước khi mở bán.")</p></div>
-        <div class="d-flex gap-2">
-            <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm món ăn</a>
-            @if (admin) { <a asp-action="CreateCombo" class="btn btn-outline-primary">+ Thêm Set / Combo</a> }
+    <div class="page-header">
+        <div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">@(admin ? "Kiểm tra món, duyệt giá theo size và quản lý trạng thái phục vụ." : "Chuẩn bị thông tin kỹ thuật của món; Quản lý duyệt trước khi mở bán.")</p></div>
+        <div class="page-actions">
+            <a asp-action="Create" class="btn btn-primary btn-brand-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm món ăn</a>
+            @if (admin) { <a asp-action="CreateCombo" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm Set / Combo</a> }
         </div>
     </div>
-    <div class="row g-3 mb-4">
-        @foreach (var stat in new[] { ("Tổng số món", Model.TotalCount), ("Chờ duyệt", Model.ChoDuyetCount), ("Đang phục vụ", Model.DangPhucVuCount), ("Tạm hết", Model.TamHetCount), ("Ngừng kinh doanh", Model.NgungKinhDoanhCount) })
-        { <div class="col-md col-6"><div class="card border-0 shadow-sm"><div class="card-body">@stat.Item1<strong class="d-block fs-3">@stat.Item2</strong></div></div></div> }
+    <div class="stat-grid">
+        @foreach (var stat in new[] {
+            ("Tổng số món", Model.TotalCount, "bi-egg-fried", "stat-muted"),
+            ("Chờ duyệt", Model.ChoDuyetCount, "bi-hourglass-split", Model.ChoDuyetCount > 0 ? "stat-warning" : "stat-muted"),
+            ("Đang phục vụ", Model.DangPhucVuCount, "bi-check2-circle", "stat-success"),
+            ("Tạm hết", Model.TamHetCount, "bi-pause-circle", Model.TamHetCount > 0 ? "stat-warning" : "stat-muted"),
+            ("Ngừng kinh doanh", Model.NgungKinhDoanhCount, "bi-slash-circle", "stat-muted") })
+        { <div class="stat-tile stat-plain @stat.Item4"><span class="stat-icon"><i class="bi @stat.Item3" aria-hidden="true"></i></span><span class="stat-body"><span class="stat-label">@stat.Item1</span><strong class="stat-value">@stat.Item2</strong></span></div> }
     </div>
     <form asp-action="Index" method="get" class="card border-0 shadow-sm mb-4">
         <div class="card-body row g-3 align-items-end">
@@ -34,30 +39,35 @@
             <div class="col-md-2 d-flex gap-2"><button type="submit" class="btn btn-primary">Lọc</button><a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a></div>
         </div>
     </form>
-    @if (!Model.Items.Any()) { <div class="alert alert-light border text-center py-5">Không tìm thấy món ăn phù hợp.</div> }
-    <div class="row g-4 mb-4">
+    @if (!Model.Items.Any()) { <div class="data-card empty-state"><i class="bi bi-egg-fried" aria-hidden="true"></i>Không tìm thấy món ăn phù hợp.</div> }
+    <div class="row g-3 mb-3">
         @foreach (var item in Model.Items)
         {
-            <div class="col-xl-4 col-md-6"><article class="card h-100 border-0 shadow-sm">
+            var (statusLabel, statusClass) = !item.DaDuyet ? ("Chờ duyệt", "badge-status-warning")
+                : item.TrangThai == TrangThaiMon.DangPhucVu ? ("Đang phục vụ", "badge-status-success")
+                : item.TrangThai == TrangThaiMon.TamHet ? ("Tạm hết", "badge-status-warning") : ("Ngừng kinh doanh", "badge-status-muted");
+            <div class="col-xl-3 col-lg-4 col-sm-6"><article class="dish-card">
                 @if (!string.IsNullOrEmpty(item.HinhAnh))
-                { <img src="@item.HinhAnh" alt="@item.TenMon" class="card-img-top" style="aspect-ratio:16/9;object-fit:cover;" /> }
-                <div class="card-body">
-                    <div class="d-flex justify-content-between gap-2 mb-3">
+                { <img src="@item.HinhAnh" alt="@item.TenMon" class="dish-card-thumb" loading="lazy" /> }
+                else
+                { <div class="dish-card-thumb is-empty" aria-hidden="true"><i class="bi bi-image"></i></div> }
+                <div class="dish-card-body">
+                    <div class="d-flex justify-content-between align-items-center gap-2">
                         <span class="text-muted small">@item.TenDanhMuc</span>
-                        <span class="badge @(!item.DaDuyet ? "bg-warning text-dark" : item.TrangThai == TrangThaiMon.DangPhucVu ? "bg-success" : "bg-secondary")">@(!item.DaDuyet ? "Chờ duyệt" : item.TrangThai == TrangThaiMon.DangPhucVu ? "Đang phục vụ" : item.TrangThai == TrangThaiMon.TamHet ? "Tạm hết" : "Ngừng kinh doanh")</span>
+                        <span class="@statusClass">@statusLabel</span>
                     </div>
-                    <h3 class="h5">@item.TenMon</h3>
-                    @if (admin) { <strong class="text-primary">@(item.GiaBan.HasValue ? (item.SoSize > 1 ? "Từ " : "") + item.GiaBan.Value.ToString("N0") + " đ" : "Chưa có giá đang sử dụng")</strong> }
+                    <h2>@item.TenMon</h2>
+                    @if (admin) { <span class="dish-card-price">@(item.GiaBan.HasValue ? (item.SoSize > 1 ? "Từ " : "") + item.GiaBan.Value.ToString("N0") + " đ" : "Chưa có giá đang sử dụng")</span> }
                     @if (item.SoSize > 1) { <small class="text-muted d-block">@item.SoSize lựa chọn size</small> }
                 </div>
-                <div class="card-footer bg-white d-flex flex-wrap gap-2">
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1"></i>Sửa</a>
-                    @if (admin) { <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa</a> }
+                <div class="dish-card-footer">
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Sửa</a>
+                    @if (admin) { <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1" aria-hidden="true"></i>Xóa</a> }
                 </div>
             </article></div>
         }
     </div>
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="data-card-footer data-card">
         <span class="text-muted">@Model.TotalItems kết quả · Trang @Model.CurrentPage / @Model.TotalPages</span>
         <div class="d-flex gap-2">
             @if (Model.CurrentPage > 1) { <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-search="@Model.Search" asp-route-danhMucId="@Model.DanhMucId" asp-route-trangThai="@Model.TrangThai">Trước</a> }

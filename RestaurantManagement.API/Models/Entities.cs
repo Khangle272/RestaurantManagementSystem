@@ -18,6 +18,8 @@ public enum PhamViUuDai { MonAn, HoaDon }
 public enum KieuGiam { PhanTram, SoTien }
 public enum LoaiDonHang { TaiBan, MangDi, GiaoHang }
 public enum LoaiGiaoDichCoc { Thu, Hoan, Giu }
+// Đợt tiền thực thu/chi của một hóa đơn: cọc trước, thanh toán dứt điểm hoặc hoàn cọc.
+public enum LoaiGiaoDichThanhToan { DatCoc, ThanhToan, HoanCoc }
 
 public class TaiKhoan : IdentityUser<int> { }
 
@@ -107,6 +109,8 @@ public class KhuVuc
     public int Tang { get; set; } = 1;
     public bool LaPhongVip { get; set; }
     public bool DangSuDung { get; set; } = true;
+    // Tiền đặt cọc giữ chỗ khi khách không đặt món trước (theo khu vực / loại bàn).
+    public decimal TienCocGiuCho { get; set; } = 200000m;
 }
 
 public class BanAn
@@ -245,6 +249,28 @@ public class HoaDon
     public PhuongThucThanhToan PhuongThucThanhToan { get; set; }
     public DateTimeOffset? ThoiDiemThanhToan { get; set; }
     public ICollection<ChiTietHoaDon> ChiTiet { get; set; } = new List<ChiTietHoaDon>();
+    public ICollection<ChiTietThanhToan> ThanhToan { get; set; } = new List<ChiTietThanhToan>();
+}
+
+// 1 HoaDon – N ChiTietThanhToan. Cọc nhận trước khi có hóa đơn được gắn DatBanId và nối vào hóa đơn khi thanh toán.
+public class ChiTietThanhToan
+{
+    public int Id { get; set; }
+    [MaxLength(30)] public string MaThanhToan { get; set; } = "";
+    public int? HoaDonId { get; set; }
+    public HoaDon? HoaDon { get; set; }
+    public int? DatBanId { get; set; }
+    public DatBan? DatBan { get; set; }
+    // Ngày/giờ theo giờ Việt Nam để hạch toán doanh thu đúng ngày và ca thu tiền.
+    public DateOnly NgayThanhToan { get; set; }
+    public TimeOnly GioThanhToan { get; set; }
+    public decimal SoTien { get; set; }
+    public LoaiGiaoDichThanhToan LoaiGiaoDich { get; set; }
+    public PhuongThucThanhToan HinhThuc { get; set; }
+    [MaxLength(100)] public string? MaThamChieu { get; set; }
+    public int? NhanVienId { get; set; }
+    public NhanVien? NhanVien { get; set; }
+    [MaxLength(300)] public string? GhiChu { get; set; }
 }
 
 public class ChiTietHoaDon
@@ -264,6 +290,7 @@ public class ChiTietHoaDon
     [MaxLength(500)] public string? YeuCauCheBien { get; set; }
     [MaxLength(4000)] public string? ChiTietComboSnapshot { get; set; }
     public TrangThaiCheBien TrangThai { get; set; }
+    public DateTimeOffset? ThoiDiemHuy { get; set; }
     public int? MonDatTruocId { get; set; }
     public MonDatTruoc? MonDatTruoc { get; set; }
 }

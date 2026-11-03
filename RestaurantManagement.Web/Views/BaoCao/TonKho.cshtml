@@ -1,15 +1,15 @@
 @model RestaurantManagement.Web.Models.BaoCaoTonKhoTongHopViewModel
 @{
-    ViewData["Title"] = "Báo cáo Tình hình Tồn kho & Cung ứng";
+    ViewData["Title"] = "Tổng hợp giá trị tồn kho";
     ViewData["ActiveMenu"] = "BaoCaoTonKho";
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+<div class="page-header">
     <div>
-        <h1 class="h3 fw-bold mb-1">📦 Tình Hình Nhập - Xuất - Tồn Kho</h1>
+        <h1 class="h3">Tổng hợp giá trị tồn kho</h1>
         <p class="text-muted mb-0">Tổng hợp giá trị hàng tồn kho, biến động nhập/xuất chế biến/thanh lý và cảnh báo ngưỡng an toàn nguyên liệu.</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="page-actions">
         <a asp-controller="Kho" asp-action="BaoCao" class="btn btn-outline-primary d-inline-flex align-items-center gap-1 shadow-sm">
             <i class="bi bi-file-earmark-spreadsheet"></i> Báo cáo Nhập-Xuất-Tồn chi tiết
         </a>
@@ -20,24 +20,11 @@
 </div>
 
 <!-- Lọc ngày -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-3">
-        <form method="get" class="row g-2 align-items-center">
-            <div class="col-auto"><span class="small fw-semibold text-muted"><i class="bi bi-calendar3 me-1"></i> Kỳ chứng từ:</span></div>
-            <div class="col-md-3">
-                <input type="date" name="tuNgay" value="@Model.TuNgay.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-            </div>
-            <div class="col-auto text-muted">đến</div>
-            <div class="col-md-3">
-                <input type="date" name="denNgay" value="@Model.DenNgay.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-primary">Lọc chứng từ</button>
-                <a asp-action="TonKho" class="btn btn-sm btn-light">Đặt lại (30 ngày)</a>
-            </div>
-        </form>
-    </div>
-</div>
+<form method="get" class="filter-bar">
+    <div class="filter-field"><label class="form-label" for="filter-from">Chứng từ từ ngày</label><input id="filter-from" type="date" name="tuNgay" value="@Model.TuNgay.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="filter-field"><label class="form-label" for="filter-to">Đến ngày</label><input id="filter-to" type="date" name="denNgay" value="@Model.DenNgay.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="filter-actions"><button type="submit" class="btn btn-primary">Lọc chứng từ</button><a asp-action="TonKho" class="btn btn-outline-secondary">Đặt lại (30 ngày)</a></div>
+</form>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
@@ -126,7 +113,7 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light small">
                 <tr>
-                    <th style="width: 50px;">#</th>
+                    <th>#</th>
                     <th>Tên nguyên liệu</th>
                     <th>Phân loại</th>
                     <th class="text-end">Số lượng tồn</th>
@@ -156,7 +143,7 @@
                             }
                             else
                             {
-                                <span class="badge bg-success rounded-pill">🟢 An toàn</span>
+                                <span class="badge bg-success rounded-pill">An toàn</span>
                             }
                         </td>
                     </tr>

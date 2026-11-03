@@ -1,0 +1,65 @@
+/* UX dùng chung cho cả trang khách và khu quản trị: thông báo nổi, hộp xác nhận, nút đang xử lý,
+   nút lên đầu trang và trang báo lỗi. Chỉ dùng màu trung tính + biến có sẵn để hợp cả hai giao diện. */
+
+/* Thông báo nổi (toast) — không đẩy nội dung trang xuống */
+.flash-stack { position: fixed; top: 1rem; right: 1rem; z-index: 1090; display: flex; flex-direction: column; gap: .6rem; width: min(400px, calc(100vw - 2rem)); pointer-events: none; }
+.flash-stack .alert { position: relative; overflow: hidden; margin: 0 !important; pointer-events: auto; border: 0; border-left: 4px solid; border-radius: .65rem; background: #fff; color: #1E293B; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, .18), 0 4px 8px -4px rgba(15, 23, 42, .1); animation: flash-in .25s ease-out; }
+.flash-stack .alert-success { border-left-color: #10B981; }
+.flash-stack .alert-success > .bi { color: #059669; }
+.flash-stack .alert-danger { border-left-color: #EF4444; }
+.flash-stack .alert-danger > .bi { color: #DC2626; }
+.flash-stack .alert > div { overflow-wrap: anywhere; }
+.flash-progress { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #10B981; opacity: .35; transform-origin: left; animation: flash-progress linear forwards; }
+.flash-stack .alert:hover .flash-progress { animation-play-state: paused; }
+@keyframes flash-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes flash-progress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+body:has(.admin-topbar) .flash-stack { top: 4.75rem; }
+@media (max-width: 575.98px) { .flash-stack { left: .75rem; right: .75rem; width: auto; } }
+
+/* Nút đang xử lý: hiện vòng xoay, chặn bấm lặp */
+.btn.is-loading { position: relative; pointer-events: none; color: transparent !important; }
+.btn.is-loading > * { visibility: hidden; }
+.btn.is-loading::after { content: ""; position: absolute; inset: 0; margin: auto; width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: btn-spin .7s linear infinite; }
+.btn-primary.is-loading::after, .btn-danger.is-loading::after, .btn-success.is-loading::after, .btn-dark.is-loading::after { border-color: #fff; border-right-color: transparent; }
+.btn-outline-primary.is-loading::after, .btn-outline-danger.is-loading::after, .btn-outline-secondary.is-loading::after, .btn-outline-success.is-loading::after, .btn-light.is-loading::after, .btn-link.is-loading::after { border-color: #64748B; border-right-color: transparent; }
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+/* Hộp xác nhận */
+.ux-confirm .modal-content { border: 0; border-radius: .9rem; box-shadow: 0 20px 40px -12px rgba(15, 23, 42, .3); }
+.ux-confirm .modal-body { display: flex; gap: 1rem; align-items: flex-start; padding: 1.5rem 1.5rem 1rem; }
+.ux-confirm-icon { flex: 0 0 auto; width: 2.75rem; height: 2.75rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.3rem; background: #FEE2E2; color: #DC2626; }
+.ux-confirm[data-variant="primary"] .ux-confirm-icon { background: #E0F2FE; color: #0369A1; }
+.ux-confirm[data-variant="warning"] .ux-confirm-icon { background: #FEF3C7; color: #B45309; }
+.ux-confirm-title { font-size: 1.05rem; font-weight: 700; margin: .15rem 0 .35rem; color: #0F172A; }
+.ux-confirm-message { color: #475569; margin: 0; white-space: pre-line; }
+.ux-confirm .modal-footer { border-top: 0; padding: .5rem 1.5rem 1.25rem; gap: .5rem; }
+.ux-confirm .modal-footer > * { margin: 0; }
+
+/* Nút lên đầu trang */
+.back-to-top { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 1020; width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 1px solid #E2E8F0; background: #fff; color: #334155; display: inline-flex; align-items: center; justify-content: center; font-size: 1.15rem; box-shadow: 0 6px 16px rgba(15, 23, 42, .15); opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .2s, transform .2s, background .15s; }
+.back-to-top.show { opacity: 1; transform: none; pointer-events: auto; }
+.back-to-top:hover { background: #F1F5F9; }
+body:has(.cart-launcher) .back-to-top { right: auto; left: 1.25rem; }
+body:has(.pos-page) .back-to-top { display: none; }
+
+/* Trang trạng thái: 404, 403, 500 */
+.status-page { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; text-align: center; }
+.status-page-inner { max-width: 32rem; }
+.status-page-icon { width: 5rem; height: 5rem; margin: 0 auto 1.25rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; background: #F1F5F9; color: #475569; }
+.status-page-icon.is-danger { background: #FEE2E2; color: #DC2626; }
+.status-page-icon.is-warning { background: #FEF3C7; color: #B45309; }
+.status-page-code { font-size: .8rem; font-weight: 700; letter-spacing: .12em; color: #94A3B8; margin-bottom: .35rem; }
+.status-page h1 { font-size: 1.6rem; font-weight: 750; margin-bottom: .6rem; }
+.status-page p { color: #64748B; margin-bottom: 1.5rem; }
+.status-page-actions { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
+.status-page-ref { margin-top: 1.5rem; font-size: .75rem; color: #94A3B8; }
+
+/* Trang xác nhận xóa */
+.delete-confirm-card { max-width: 40rem; }
+.delete-confirm-card .card-body { display: flex; gap: 1.25rem; align-items: flex-start; }
+.delete-confirm-icon { flex: 0 0 auto; width: 3rem; height: 3rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; background: #FEE2E2; color: #DC2626; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-stack .alert, .flash-progress, .btn.is-loading::after { animation: none !important; }
+}
+@media print { .flash-stack, .back-to-top { display: none !important; } }

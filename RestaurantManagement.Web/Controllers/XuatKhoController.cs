@@ -5,6 +5,7 @@ using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -88,6 +89,10 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
             try
             {
                 // Validate stock availability for all items before modifying
+                // Load every ingredient on the slip in one query instead of one lookup per line.
+                var ingredientIds = model.ChiTiets.Select(c => c.MaNguyenLieu).Distinct().ToList();
+                var ingredients = await Db.NguyenLieu.Where(x => ingredientIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id);
+
                 var requiredTotals = model.ChiTiets
                     .GroupBy(c => c.MaNguyenLieu)
                     .Select(g => new { MaNguyenLieu = g.Key, TongSoLuong = g.Sum(x => x.SoLuong) })
@@ -95,7 +100,7 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
 
                 foreach (var req in requiredTotals)
                 {
-                    var nl = await Db.NguyenLieu.FindAsync(req.MaNguyenLieu);
+                    var nl = ingredients.GetValueOrDefault(req.MaNguyenLieu);
                     if (nl == null || nl.SoLuongTon < req.TongSoLuong)
                     {
                         throw new InvalidOperationException($"Nguyên liệu '{nl?.TenNguyenLieu ?? "N/A"}' không đủ tồn kho để xuất (Hiện tồn: {nl?.SoLuongTon.ToString("0.##") ?? "0"}, Yêu cầu xuất: {req.TongSoLuong.ToString("0.##")}).");
@@ -107,7 +112,7 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
                 {
                     MaPhieu = "PX-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
                     NhanVienId = staffId,
-                    ThoiDiem = new DateTimeOffset(model.NgayXuat),
+                    ThoiDiem = TableService.VietnamTime(model.NgayXuat),
                     TrangThai = TrangThaiPhieu.DaGhiSo,
                     LyDo = LyDoXuat.CheBien,
                     BoPhanNhan = model.BoPhanNhan,
@@ -118,7 +123,7 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
                 decimal totalVal = 0;
                 foreach (var item in model.ChiTiets)
                 {
-                    var nl = await Db.NguyenLieu.FindAsync(item.MaNguyenLieu);
+                    var nl = ingredients.GetValueOrDefault(item.MaNguyenLieu);
                     if (nl != null)
                     {
                         nl.SoLuongTon -= item.SoLuong;
@@ -152,7 +157,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
             catch (Exception ex)
             {
                 await trans.RollbackAsync();
-                ModelState.AddModelError("", "Lỗi khi lưu phiếu xuất: " + ex.Message);
+                LogUnexpected(ex, "saving stock issue");
+                ModelState.AddModelError("", "Chưa lưu được phiếu xuất do lỗi hệ thống. Dữ liệu chưa thay đổi, vui lòng thử lại.");
             }
         }
 

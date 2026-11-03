@@ -1,17 +1,27 @@
 @model RestaurantManagement.Web.Models.DanhGiaCreateVM
 @{
     ViewData["Title"] = "Đánh giá chất lượng dịch vụ";
+
+    void StarRating(string name, int value, string textId)
+    {
+        <div class="star-rating d-flex justify-content-center gap-2 fs-2" data-rating-text="@textId">
+            @for (var i = 1; i <= 5; i++)
+            {
+                <input type="radio" class="visually-hidden rating-input" name="@name" id="@(name)-@i" value="@i" checked="@(value == i)" />
+                <label for="@(name)-@i" class="rating-star bi bi-star-fill" title="@i sao"><span class="visually-hidden">@i sao</span></label>
+            }
+        </div>
+    }
 }
 
 <div class="row justify-content-center py-3">
     <div class="col-lg-8 col-md-10">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
-            <div class="p-4 p-md-5 text-white" 
-                 style="background: linear-gradient(135deg, #0F172A 0%, #E11D48 100%);">
+            <div class="p-4 p-md-5 text-white review-hero">
                 <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-semibold mb-2">
-                    <i class="bi bi-star-fill me-1"></i>Ý kiến khách hàng
+                    <i class="bi bi-star-fill me-1" aria-hidden="true"></i>Ý kiến khách hàng
                 </span>
-                <h2 class="fw-bold mb-1">Đánh Giá Chất Lượng Dịch Vụ</h2>
+                <h1 class="h2 fw-bold mb-1">Đánh giá chất lượng dịch vụ</h1>
                 <p class="mb-0 opacity-90">
                     Cảm nhận thực tế của quý khách là động lực để nhà hàng không ngừng nâng cao chất lượng ẩm thực và cung cách phục vụ.
                 </p>
@@ -22,7 +32,7 @@
                 <div class="p-3 rounded-3 mb-4 d-flex flex-wrap justify-content-between align-items-center bg-light border">
                     <div>
                         <span class="text-muted small">Mã đặt bàn:</span>
-                        <strong class="font-monospace text-danger fs-6 ms-1">@Model.MaDatBan</strong>
+                        <strong class="font-monospace text-success fs-6 ms-1">@Model.MaDatBan</strong>
                     </div>
                     @if (!string.IsNullOrEmpty(Model.TenKhachHang))
                     {
@@ -35,7 +45,7 @@
                     {
                         <div>
                             <span class="text-muted small">Thời gian:</span>
-                            <span class="text-secondary ms-1">@Model.ThoiGianDen.Value.ToLocalTime().ToString("HH:mm dd/MM/yyyy")</span>
+                            <span class="text-secondary ms-1">@Model.ThoiGianDen.Value.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy")</span>
                         </div>
                     }
                 </div>
@@ -49,43 +59,29 @@
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm mb-4"></div>
 
                     <!-- 1. ĐÁNH GIÁ MÓN ĂN -->
-                    <div class="mb-4 text-center p-3 rounded-3 border bg-light">
-                        <label class="form-label fw-bold text-dark fs-6 mb-2">
-                            <i class="bi bi-egg-fried text-danger me-1"></i>Chất lượng Món ăn & Đồ uống
-                        </label>
-                        <input type="hidden" asp-for="SoSaoMonAn" id="inputSaoMonAn" value="@Model.SoSaoMonAn" />
-                        <div class="star-rating d-flex justify-content-center gap-2 fs-2 text-warning" id="ratingMonAn" role="radiogroup">
-                            <i class="bi bi-star-fill rating-star" data-rating="1" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="2" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="3" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="4" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="5" role="button"></i>
-                        </div>
-                        <div class="small fw-semibold text-secondary mt-1" id="textRatingMonAn">5 sao - Rất tuyệt vời</div>
+                    <fieldset class="mb-4 text-center p-3 rounded-3 border bg-light">
+                        <legend class="form-label fw-bold text-dark fs-6 mb-2 float-none w-auto mx-auto">
+                            <i class="bi bi-egg-fried text-success me-1" aria-hidden="true"></i>Chất lượng món ăn và đồ uống
+                        </legend>
+                        @{ StarRating(nameof(Model.SoSaoMonAn), Model.SoSaoMonAn, "textRatingMonAn"); }
+                        <div class="small fw-semibold text-secondary mt-1" id="textRatingMonAn" aria-live="polite"></div>
                         <span asp-validation-for="SoSaoMonAn" class="text-danger small"></span>
-                    </div>
+                    </fieldset>
 
                     <!-- 2. ĐÁNH GIÁ DỊCH VỤ -->
-                    <div class="mb-4 text-center p-3 rounded-3 border bg-light">
-                        <label class="form-label fw-bold text-dark fs-6 mb-2">
-                            <i class="bi bi-person-heart text-danger me-1"></i>Thái độ Phục vụ & Không gian nhà hàng
-                        </label>
-                        <input type="hidden" asp-for="SoSaoDichVu" id="inputSaoDichVu" value="@Model.SoSaoDichVu" />
-                        <div class="star-rating d-flex justify-content-center gap-2 fs-2 text-warning" id="ratingDichVu" role="radiogroup">
-                            <i class="bi bi-star-fill rating-star" data-rating="1" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="2" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="3" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="4" role="button"></i>
-                            <i class="bi bi-star-fill rating-star" data-rating="5" role="button"></i>
-                        </div>
-                        <div class="small fw-semibold text-secondary mt-1" id="textRatingDichVu">5 sao - Rất hài lòng</div>
+                    <fieldset class="mb-4 text-center p-3 rounded-3 border bg-light">
+                        <legend class="form-label fw-bold text-dark fs-6 mb-2 float-none w-auto mx-auto">
+                            <i class="bi bi-person-heart text-success me-1" aria-hidden="true"></i>Thái độ phục vụ và không gian nhà hàng
+                        </legend>
+                        @{ StarRating(nameof(Model.SoSaoDichVu), Model.SoSaoDichVu, "textRatingDichVu"); }
+                        <div class="small fw-semibold text-secondary mt-1" id="textRatingDichVu" aria-live="polite"></div>
                         <span asp-validation-for="SoSaoDichVu" class="text-danger small"></span>
-                    </div>
+                    </fieldset>
 
                     <!-- 3. NHẬN XÉT CHI TIẾT -->
                     <div class="mb-4">
                         <label asp-for="NoiDung" class="form-label fw-semibold text-dark">
-                            <i class="bi bi-chat-quote me-1"></i>Chia sẻ cảm nhận chi tiết của quý khách <span class="text-danger">*</span>
+                            <i class="bi bi-chat-quote me-1" aria-hidden="true"></i>Chia sẻ cảm nhận chi tiết của quý khách <span class="text-danger">*</span>
                         </label>
                         <textarea asp-for="NoiDung" rows="4" class="form-control border-2" 
                                   placeholder="Món ăn có vừa vị không? Nhân viên phục vụ ra sao? Có điểm gì nhà hàng nên cải thiện để phục vụ quý khách tốt hơn?"></textarea>
@@ -95,9 +91,9 @@
                     <!-- 4. UPLOAD ẢNH -->
                     <div class="mb-4">
                         <label asp-for="HinhAnhFile" class="form-label fw-semibold text-dark">
-                            <i class="bi bi-camera me-1"></i>Tải lên hình ảnh món ăn hoặc hóa đơn (không bắt buộc)
+                            <i class="bi bi-camera me-1" aria-hidden="true"></i>Tải lên hình ảnh món ăn hoặc hóa đơn (PNG/JPEG, tối đa 2 MB, không bắt buộc)
                         </label>
-                        <input asp-for="HinhAnhFile" type="file" class="form-control" accept="image/*" id="inputImage" />
+                        <input asp-for="HinhAnhFile" type="file" class="form-control" accept="image/png,image/jpeg" id="inputImage" />
                         <span asp-validation-for="HinhAnhFile" class="text-danger small"></span>
                         <div id="imagePreviewContainer" class="mt-3 d-none">
                             <img id="imagePreview" src="#" alt="Xem trước ảnh" class="img-thumbnail rounded-3 shadow-sm" style="max-height: 200px;" />
@@ -106,9 +102,8 @@
 
                     <!-- NÚT GỬI -->
                     <div class="d-grid gap-2 pt-2">
-                        <button type="submit" class="btn btn-lg py-3 fw-bold text-white shadow"
-                                style="background-color: #E11D48; border-color: #E11D48;">
-                            <i class="bi bi-send-fill me-2"></i>GỬI ĐÁNH GIÁ NGAY
+                        <button type="submit" class="btn btn-restaurant btn-lg">
+                            <i class="bi bi-send-fill" aria-hidden="true"></i>Gửi đánh giá
                         </button>
                         <a asp-action="LichSu" asp-route-bookingCode="@Model.MaDatBan" class="btn btn-light border py-2">
                             Quay lại lịch sử đặt bàn
@@ -132,41 +127,23 @@
                 5: "5 sao - Rất tuyệt vời"
             };
 
-            function setupRating(containerId, inputId, textId) {
-                const container = document.getElementById(containerId);
-                const input = document.getElementById(inputId);
-                const text = document.getElementById(textId);
-                const stars = container.querySelectorAll(".rating-star");
+            document.querySelectorAll(".star-rating").forEach(function (group) {
+                const text = document.getElementById(group.dataset.ratingText);
+                const inputs = group.querySelectorAll(".rating-input");
 
-                function render(val) {
-                    stars.forEach(s => {
-                        const r = parseInt(s.getAttribute("data-rating"));
-                        if (r <= val) {
-                            s.classList.remove("bi-star");
-                            s.classList.add("bi-star-fill");
-                        } else {
-                            s.classList.remove("bi-star-fill");
-                            s.classList.add("bi-star");
-                        }
+                function render() {
+                    const checked = group.querySelector(".rating-input:checked");
+                    const val = checked ? parseInt(checked.value) : 0;
+                    group.querySelectorAll(".rating-star").forEach(function (star, index) {
+                        star.classList.toggle("bi-star-fill", index < val);
+                        star.classList.toggle("bi-star", index >= val);
                     });
-                    if (text && descriptions[val]) {
-                        text.innerText = descriptions[val];
-                    }
+                    if (text) text.innerText = descriptions[val] || "";
                 }
 
-                stars.forEach(s => {
-                    s.addEventListener("click", function () {
-                        const r = parseInt(this.getAttribute("data-rating"));
-                        input.value = r;
-                        render(r);
-                    });
-                });
-
-                render(parseInt(input.value) || 5);
-            }
-
-            setupRating("ratingMonAn", "inputSaoMonAn", "textRatingMonAn");
-            setupRating("ratingDichVu", "inputSaoDichVu", "textRatingDichVu");
+                inputs.forEach(function (input) { input.addEventListener("change", render); });
+                render();
+            });
 
             // Preview ảnh
             const inputImage = document.getElementById("inputImage");

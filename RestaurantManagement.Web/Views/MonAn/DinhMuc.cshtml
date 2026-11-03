@@ -31,10 +31,9 @@
         </a>
     </div>
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1">
-                <i class="bi bi-diagram-3 text-danger me-2"></i>Định Mức Đa Kích Cỡ (BOM): @Model.TenMon
+            <h1 class="h3">Định mức nguyên liệu theo kích cỡ (BOM): @Model.TenMon
             </h1>
             <p class="text-muted mb-0">
                 Khai báo định lượng nguyên thủy một lần; mỗi size nhân theo hệ số tỷ lệ riêng, kèm nguyên liệu phụ và ghi chú khác biệt. Kho tự động trừ theo đúng size khi phục vụ.
@@ -75,7 +74,7 @@
         <div class="d-flex justify-content-end gap-2 mb-5">
             <a asp-action="Edit" asp-route-id="@Model.MonAnId" class="btn btn-brand-outline">Hủy bỏ</a>
             <button type="submit" class="btn btn-brand-primary btn-lg shadow-sm" id="btnSaveBOM">
-                <i class="bi bi-check2-circle me-1"></i> Lưu Toàn Bộ Định Mức
+                <i class="bi bi-check2-circle me-1"></i> Lưu toàn bộ định mức
             </button>
         </div>
     </form>

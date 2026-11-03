@@ -167,8 +167,10 @@ public class DonHangController(
         }
 
         TempData["Success"] = "Đã ghi nhận gọi món thành công và gửi thông tin chế biến vào bếp.";
+        var stockWarning = InventoryWarning();
+        if (stockWarning != null) TempData["Warning"] = stockWarning;
         return IsAjaxRequest
-            ? Json(new { ok = true, message = "Đã ghi nhận gọi món và gửi vào bếp.", redirectUrl = Url.Action(nameof(AddDishes), new { id = hoaDonId!.Value }) })
+            ? Json(new { ok = true, message = "Đã ghi nhận gọi món và gửi vào bếp." + (stockWarning == null ? "" : " " + stockWarning), redirectUrl = Url.Action(nameof(AddDishes), new { id = hoaDonId!.Value }) })
             : RedirectToAction(nameof(AddDishes), new { id = hoaDonId!.Value });
     }
 
@@ -230,6 +232,9 @@ public class DonHangController(
         return View(prep);
     }
 
+    private string? InventoryWarning() => orderService.InventoryWarnings.Count == 0 ? null
+        : "Lưu ý kho: " + string.Join(" ", orderService.InventoryWarnings);
+
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AddDishes(int id, List<OrderItemInputModel> items)
     {
@@ -241,7 +246,9 @@ public class DonHangController(
         }
         else
         {
-            if (IsAjaxRequest) return Json(new { ok = true, message = "Đã gửi món gọi thêm xuống bếp.", redirectUrl = Url.Action(nameof(AddDishes), new { id }) });
+            var stockWarning = InventoryWarning();
+            if (stockWarning != null) TempData["Warning"] = stockWarning;
+            if (IsAjaxRequest) return Json(new { ok = true, message = "Đã gửi món gọi thêm xuống bếp." + (stockWarning == null ? "" : " " + stockWarning), redirectUrl = Url.Action(nameof(AddDishes), new { id }) });
             TempData["Success"] = "Đã gọi thêm món thành công và gửi thông tin vào bếp.";
         }
 

@@ -86,10 +86,6 @@ body {
   border-left: 4px solid var(--brand-primary);
 }
 
-.admin-sidebar-nav .nav-link .material-symbols-outlined {
-  font-size: 20px;
-}
-
 .management-menu-group summary {
   padding: .8rem 1.5rem;
   cursor: pointer;
@@ -237,16 +233,6 @@ html.sidebar-preload-collapsed body .admin-main {
 }
 .btn-brand-primary:hover {
   background-color: var(--brand-primary-dark);
-  color: white;
-}
-
-.btn-brand-danger {
-  background-color: var(--state-danger);
-  color: white;
-  border: none;
-}
-.btn-brand-danger:hover {
-  background-color: #DC2626;
   color: white;
 }
 

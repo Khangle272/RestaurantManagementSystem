@@ -97,6 +97,8 @@ public static class WebsiteDemoSetup
         await BillAsync(db, $"WEB-H-{today:yyyyMMdd}", customer, cashier.Id, sizes,
             now.AddMinutes(-Math.Min(60, minutesToday / 2)), true, cash, 0, null);
 
+        // Script SQL nạp khu vực sau migration nên các khu vực này chưa có mức cọc giữ chỗ.
+        await db.KhuVuc.Where(x => x.TienCocGiuCho == 0).ExecuteUpdateAsync(s => s.SetProperty(x => x.TienCocGiuCho, x => x.LaPhongVip ? 500000m : 200000m));
         var area = await db.KhuVuc.SingleOrDefaultAsync(x => x.TenKhuVuc == AreaName);
         if (area is null) { area = new KhuVuc { TenKhuVuc = AreaName, Tang = 1 }; db.KhuVuc.Add(area); await db.SaveChangesAsync(); }
         var tables = new List<BanAn>();
@@ -124,7 +126,7 @@ public static class WebsiteDemoSetup
                 tables[i].TrangThai = TrangThaiBan.DangPhucVu;
                 if (i == 1) { booking.TienCocYeuCau = booking.TienCocDaNop = 100000; booking.YeuCauCoc = true; booking.TrangThaiCoc = TrangThaiCoc.DaCoc; booking.ThoiDiemCoc = now.AddHours(-1); }
                 db.DatBan.Add(booking); await db.SaveChangesAsync();
-                if (i == 1) { AddDeposit(db, booking, cashierAccount, 100000, now.AddHours(-1)); await db.SaveChangesAsync(); }
+                if (i == 1) { AddDeposit(db, booking, cashierAccount, cashier.Id, 100000, now.AddHours(-1)); await db.SaveChangesAsync(); }
             }
             if (booking.TrangThai == TrangThaiDatBan.DaNhanBan && booking.ThoiDiemKetThuc is null)
                 await BillAsync(db, $"{prefix}-POS{i + 1}", customer, cashier.Id, sizes, now.AddMinutes(-15), false, null, i == 0 ? 3 : 4, booking);
@@ -142,7 +144,8 @@ public static class WebsiteDemoSetup
             if (i == 0) booking.TrangThai = TrangThaiDatBan.ChoXacNhan;
             if (i is 1 or 2)
             {
-                booking.TrangThai = TrangThaiDatBan.ChoCoc; ReservationDepositPolicy.Apply(booking, 0);
+                // Hạn cọc thật chỉ 60 phút; lịch mẫu giữ một ngày để dữ liệu nạp từ sáng vẫn dùng được cho buổi demo.
+                booking.TrangThai = TrangThaiDatBan.ChoCoc; booking.HanThanhToanCoc = now.AddDays(1); ReservationDepositPolicy.Apply(booking, 0, area.TienCocGiuCho);
                 if (i == 2) { booking.ThoiDiemBaoChuyenKhoan = now; booking.SoTienKhachBao = booking.TienCocYeuCau; booking.MaGiaoDichKhachBao = $"DEMO-{today:MMdd}-COC"; }
             }
             if (i is 3 or 4)
@@ -151,18 +154,34 @@ public static class WebsiteDemoSetup
                 foreach (var size in sizes.Take(2)) booking.MonDatTruoc.Add(new MonDatTruoc { MonAnId = size.MonAnId, MonAnSizeId = size.Id,
                     TenMonLucDat = size.MonAn.TenMon, TenSizeLucDat = size.TenSize, SoLuong = 2, DonGiaThoaThuan = size.GiaBan, YeuCauCheBien = "Ít cay, nước sốt để riêng" });
                 booking.YeuCauCoc = booking.CocTuDong = true;
-                booking.TienCocYeuCau = booking.TienCocDaNop = ReservationDepositPolicy.Calculate(booking.MonDatTruoc.Sum(x => x.SoLuong * x.DonGiaThoaThuan));
+                booking.TienCocYeuCau = booking.TienCocDaNop = ReservationDepositPolicy.Calculate(booking.MonDatTruoc.Sum(x => x.SoLuong * x.DonGiaThoaThuan), area.TienCocGiuCho);
                 booking.TrangThaiCoc = TrangThaiCoc.DaCoc; booking.ThoiDiemCoc = now;
             }
             if (i == 5) { booking.TrangThai = TrangThaiDatBan.DaHuy; booking.ThoiDiemHuy = now; booking.LyDoHuy = "Khách đổi kế hoạch (demo)"; booking.NhanVienHuyId = reception.Id; }
             if (i == 6) { booking.TrangThai = TrangThaiDatBan.KhongDen; booking.GioDen = PromotionTime.FromLocal(today.AddDays(-1).AddHours(18)); booking.GioKetThucDuKien = booking.GioDen.AddHours(3); }
             db.DatBan.Add(booking); await db.SaveChangesAsync();
-            if (booking.TienCocDaNop > 0) { AddDeposit(db, booking, cashierAccount, booking.TienCocDaNop, now); await db.SaveChangesAsync(); }
+            if (booking.TienCocDaNop > 0) { AddDeposit(db, booking, cashierAccount, cashier.Id, booking.TienCocDaNop, now); await db.SaveChangesAsync(); }
         }
         if (!await db.MonAn.AnyAsync(x => x.TenMon == "Salad rau sốt mè (chờ duyệt demo)"))
             db.MonAn.Add(new MonAn { TenMon = "Salad rau sốt mè (chờ duyệt demo)", DanhMucId = dishes[0].DanhMucId,
                 DaDuyet = false, Loai = LoaiMon.MonLe, TrangThai = TrangThaiMon.DangPhucVu, MoTa = Marker,
                 Sizes = [new MonAnSize { TenSize = "Phần", GiaBan = 69000 }] });
+        // Lịch mẫu cố định từ script SQL đã qua ngày: chuyển sang Không đến để danh sách đang xử lý chỉ còn lịch thật sự sắp tới.
+        var startOfToday = PromotionTime.FromLocal(today);
+        await db.DatBan.Where(x => x.GioDen < startOfToday && (x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc || x.TrangThai == TrangThaiDatBan.DaXacNhan))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, TrangThaiDatBan.KhongDen));
+        // Hai nguyên liệu chạm ngưỡng để trang Tồn kho có cảnh báo và nút nhập nhanh.
+        var lowStock = await db.NguyenLieu.OrderByDescending(x => x.Id).Take(2).Select(x => x.Id).ToListAsync();
+        await db.NguyenLieu.Where(x => lowStock.Contains(x.Id)).ExecuteUpdateAsync(s => s.SetProperty(x => x.NguongCanhBao, x => x.SoLuongTon));
+        // Hóa đơn cũ từ script SQL chưa có dòng trong sổ thanh toán.
+        var unlogged = await db.HoaDon.AsNoTracking().Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan && x.TongThanhToan > 0
+            && !db.ChiTietThanhToan.Any(p => p.HoaDonId == x.Id)).ToListAsync();
+        foreach (var bill in unlogged)
+        {
+            var paidAt = bill.ThoiDiemThanhToan ?? bill.ThoiDiemLap;
+            if (bill.TienCocDaTru > 0) AddLedger(db, $"TT-CO-HD{bill.Id}", bill.Id, bill.DatBanId, bill.NhanVienId, paidAt, bill.TienCocDaTru, LoaiGiaoDichThanhToan.DatCoc, PhuongThucThanhToan.ChuyenKhoan, bill.MaHoaDon);
+            AddLedger(db, $"TT-HD-{bill.Id}", bill.Id, bill.DatBanId, bill.NhanVienId, paidAt, bill.TongThanhToan, LoaiGiaoDichThanhToan.ThanhToan, bill.PhuongThucThanhToan, bill.MaGiaoDich);
+        }
         await db.SaveChangesAsync();
         Console.WriteLine($"Đã chuẩn bị {prefix}; chương trình {programName}.");
         Console.WriteLine("Tài khoản demo đã sẵn sàng. Xem DEMO_WEBSITE.md để chạy từng luồng.");
@@ -174,9 +193,22 @@ public static class WebsiteDemoSetup
         SoNguoiLon = 4, NhanVienTiepNhanId = staffId, YeuCau = Marker
     };
 
-    private static void AddDeposit(RestaurantDbContext db, DatBan booking, int actorId, decimal amount, DateTimeOffset at) =>
+    private static void AddDeposit(RestaurantDbContext db, DatBan booking, int actorId, int staffId, decimal amount, DateTimeOffset at)
+    {
         db.GiaoDichCoc.Add(new GiaoDichCoc { DatBanId = booking.Id, TaiKhoanXuLyId = actorId, Loai = LoaiGiaoDichCoc.Thu,
             SoTien = amount, ThoiDiem = at, YeuCauId = Guid.NewGuid(), MaThamChieu = booking.MaDatBan, LyDo = Marker });
+        AddLedger(db, $"TT-CO-{booking.MaDatBan}", null, booking.Id, staffId, at, amount, LoaiGiaoDichThanhToan.DatCoc, PhuongThucThanhToan.ChuyenKhoan, booking.MaDatBan);
+    }
+
+    // Sổ thanh toán là nguồn của báo cáo nộp ca và phần lịch sử trả tiền trên hóa đơn.
+    private static void AddLedger(RestaurantDbContext db, string code, int? billId, int? bookingId, int staffId, DateTimeOffset at, decimal amount,
+        LoaiGiaoDichThanhToan type, PhuongThucThanhToan method, string? reference)
+    {
+        var local = PromotionTime.Local(at);
+        db.ChiTietThanhToan.Add(new ChiTietThanhToan { MaThanhToan = code, HoaDonId = billId, DatBanId = bookingId, NhanVienId = staffId,
+            NgayThanhToan = DateOnly.FromDateTime(local), GioThanhToan = new TimeOnly(local.Hour, local.Minute, local.Second),
+            SoTien = amount, LoaiGiaoDich = type, HinhThuc = method, MaThamChieu = reference, GhiChu = Marker });
+    }
 
     private static async Task BillAsync(RestaurantDbContext db, string code, KhachHang customer, int staffId, List<MonAnSize> sizes,
         DateTimeOffset at, bool paid, Voucher? voucher, int variant, DatBan? booking)
@@ -214,9 +246,10 @@ public static class WebsiteDemoSetup
         {
             var current = DateTimeOffset.UtcNow;
             bill.TrangThai = TrangThaiHoaDon.DaThanhToan; bill.ThoiDiemThanhToan = at.AddMinutes(45) > current ? current : at.AddMinutes(45);
-            bill.PhuongThucThanhToan = (PhuongThucThanhToan)(variant % 3);
+            bill.PhuongThucThanhToan = variant == 1 ? PhuongThucThanhToan.ChuyenKhoan : PhuongThucThanhToan.TienMat;
             bill.TienKhachDua = bill.TongTienHang - bill.TienGiam;
             if (bill.PhuongThucThanhToan != PhuongThucThanhToan.TienMat) bill.MaGiaoDich = "DEMO-" + code;
+            AddLedger(db, $"TT-HD-{code}", bill.Id, null, staffId, bill.ThoiDiemThanhToan.Value, bill.TienKhachDua, LoaiGiaoDichThanhToan.ThanhToan, bill.PhuongThucThanhToan, bill.MaGiaoDich);
             CustomerHistoryService.EarnPoints(db, bill);
             db.DanhGia.Add(new DanhGia { HoaDon = bill, KhachHangId = customer.Id, Diem = variant == 0 ? 4 : 5,
                 NoiDung = variant == 0 ? "Món ngon, phục vụ chu đáo (đánh giá mẫu)." : "Không gian dễ chịu, món ăn hợp khẩu vị (đánh giá mẫu).", ThoiDiem = bill.ThoiDiemThanhToan.Value.AddMinutes(5) > current ? current : bill.ThoiDiemThanhToan.Value.AddMinutes(5) });

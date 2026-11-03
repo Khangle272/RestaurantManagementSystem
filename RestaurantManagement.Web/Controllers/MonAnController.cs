@@ -356,10 +356,6 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                 ModelState.AddModelError("", "Size đã có trong đặt bàn/hóa đơn. Hãy ngừng sử dụng size thay vì xóa.");
             if (entity.Loai != model.Loai && await Db.ChiTietCombo.AnyAsync(x => x.MonAnId == entity.Id) && model.Loai == LoaiMon.Set)
                 ModelState.AddModelError(nameof(model.Loai), "Món đang là thành phần combo nên không thể chuyển thành set.");
-            if (model.TrangThai == TrangThaiMon.NgungKinhDoanh
-                && await Db.ChiTietHoaDon.AnyAsync(x => x.MonAnId == entity.Id && x.TrangThai != TrangThaiCheBien.DaHuy
-                    && (x.HoaDon.TrangThai == TrangThaiHoaDon.ChuaThanhToan || x.HoaDon.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan)))
-                ModelState.AddModelError(nameof(model.TrangThai), "Món đang có trong hóa đơn chưa thanh toán, chưa thể ngừng phục vụ.");
         }
 
         var allDinhMuc = model.Sizes.SelectMany(s => s.DinhMucItems).Concat(model.DinhMucItems).ToList();
@@ -600,7 +596,8 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
         catch (Exception ex)
         {
             await tx.RollbackAsync();
-            TempData["Error"] = "Không thể lưu định mức: " + ex.Message;
+            LogUnexpected(ex, "saving dish recipe");
+            TempData["Error"] = "Chưa lưu được định mức do lỗi hệ thống. Định mức cũ vẫn giữ nguyên, vui lòng thử lại.";
             return RedirectToAction(nameof(DinhMuc), new { id = model.MonAnId });
         }
     }

@@ -45,8 +45,10 @@
                 <td>@item.Quantity</td><td>@Money(item.Price * item.Quantity)</td><td>@DishStatus(item.Status)</td></tr> }
             </tbody></table></div><p class="mb-0 text-end">Tạm tính: <strong>@Money(Model.Items.Where(x => x.Status != "DaHuy").Sum(x => x.Price * x.Quantity))</strong></p>
         }
-        @if (b.ChuanBiTruoc) { <p class="small mt-3 mb-0">Có yêu cầu chuẩn bị trước giờ đến. Nhà hàng phải xác nhận thời điểm và thỏa thuận cọc trước khi gửi bếp.</p> }
-        @if (waiter && Model.CanEdit && Model.Items.Any(x => !x.Sent) && b.TrangThai is TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.DaNhanBan) {
+        @if (Model.CanEdit && Model.Items.Any(x => !x.Sent) && b.TrangThai != TrangThaiDatBan.DaNhanBan) {
+            <p class="small text-muted mt-3 mb-0">Món sẽ tự gửi bếp khi khách nhận bàn.</p>
+        }
+        @if (waiter && Model.CanEdit && Model.Items.Any(x => !x.Sent) && b.TrangThai == TrangThaiDatBan.DaNhanBan) {
             <form asp-controller="DatTruoc" asp-action="GuiBep" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="mt-3">
                 <input type="hidden" name="rowVersion" value="@Model.Version" />
                 @if (admin && Model.ActorStaffId is null) {
@@ -54,16 +56,14 @@
                     <select id="responsible-staff" name="nhanVienId" class="form-select mb-2" required><option value="">Chọn nhân viên</option>
                         @foreach (var staff in Model.Staff) { <option value="@staff.Id">@staff.HoTen (@staff.MaNhanVien)</option> }</select>
                 }
-                @if (b.TrangThai == TrangThaiDatBan.DaXacNhan) {
-                    <label class="d-block mb-2"><input type="checkbox" name="xacNhanLamTruoc" value="true" required /> Đã xác nhận với khách về chuẩn bị trước giờ đến và điều kiện cọc.</label>
-                }
                 <button class="btn btn-success">Gửi các món chưa gửi xuống bếp</button>
             </form>
         }
     </div></div>
     <div class="card mb-4"><div class="card-body">
-        <h2 class="h5">Tiền cọc & điều kiện đặt bàn</h2>
-        <p>@(b.CocTuDong ? "Cọc được tính tự động theo chính sách, cấn trừ vào hóa đơn cuối." : b.YeuCauCoc ? "Lịch này cần thỏa thuận cọc với nhà hàng." : "Không bắt buộc cọc theo thông tin hiện tại.")</p>
+        <h2 class="h5">Tiền đặt cọc</h2>
+        <p class="mb-2"><span class="badge fs-6 @(ReservationDepositPolicy.HasDeposit(b) ? "bg-success" : "bg-warning text-dark")">@ReservationDepositPolicy.StatusText(b)</span></p>
+        <p class="small text-muted">Có đặt món trước: tiền đặt cọc = @ReservationDepositPolicy.PreorderRateText tổng giá trị món, tối thiểu bằng mức giữ chỗ. Chỉ đặt giữ chỗ: tiền đặt cọc theo khu vực/loại bàn (bàn thường, phòng VIP có mức khác nhau). Tiền đặt cọc được trừ vào hóa đơn khi thanh toán.</p>
         @if (!Model.Internal && Model.CanEdit) {
             if (b.TienCocYeuCau > 0) {
                 <a class="btn btn-success mb-3" asp-action="ThanhToanCoc" asp-route-id="@b.Id">@(ReservationDepositPolicy.Remaining(b) > 0 ? "Thanh toán / xem trạng thái cọc" : "Xem xác nhận tiền cọc")</a>
@@ -75,8 +75,8 @@
             }
         }
         @if (Model.Internal || b.TienCocYeuCau > 0 || b.TienCocDaNop > 0) {
-        <dl class="row mb-2"><dt class="col-sm-5">Số cọc cần nộp</dt><dd class="col-sm-7">@(b.TienCocYeuCau > 0 ? Money(b.TienCocYeuCau) : b.YeuCauCoc ? "Chờ nhà hàng báo số tiền" : "Không yêu cầu")</dd>
-            <dt class="col-sm-5">Đã thực nhận</dt><dd class="col-sm-7">@Money(b.TienCocDaNop)</dd>
+        <dl class="row mb-2"><dt class="col-sm-5">Tiền đặt cọc yêu cầu</dt><dd class="col-sm-7">@(b.TienCocYeuCau > 0 ? Money(b.TienCocYeuCau) : b.YeuCauCoc ? "Chờ nhà hàng báo số tiền" : "Không yêu cầu")</dd>
+            <dt class="col-sm-5">Tiền đặt cọc đã nhận</dt><dd class="col-sm-7">@Money(b.TienCocDaNop)</dd>
             <dt class="col-sm-5">Đã hoàn / giữ theo điều kiện</dt><dd class="col-sm-7">@Money(b.TienCocDaHoan) / @Money(b.TienCocDaGiu)</dd>
             <dt class="col-sm-5">Còn có thể đối trừ / xử lý</dt><dd class="col-sm-7">@Money(Model.AvailableDeposit)</dd></dl>
         } else if (b.YeuCauCoc) {
@@ -88,11 +88,11 @@
             <p class="small mb-0">Nhà hàng sẽ liên hệ thống nhất mức cọc, cách thanh toán và điều kiện hủy. Bạn chưa cần thanh toán ở bước này.</p>
         }
         @if (reception && Model.CanEdit && !b.CocTuDong) {
-            <details class="mt-3"><summary>Thỏa thuận số tiền và điều kiện cọc</summary>
+            <details class="mt-3"><summary>Điều chỉnh tiền đặt cọc và điều kiện</summary>
                 <form asp-controller="DatTruoc" asp-action="ThoaThuan" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="mt-2">
                     <input type="hidden" name="RowVersion" value="@Model.Version" />
-                    <label class="form-label" for="deposit-quote">Số cọc (đ)</label><input id="deposit-quote" class="form-control" name="SoTien" type="number" min="@(b.YeuCauCoc ? 1 : 0)" max="1000000000" step="1" value="@(b.TienCocYeuCau > 0 ? b.TienCocYeuCau.ToString("0") : "")" placeholder="Nhập số cọc đã thống nhất" required />
-                    <label class="form-label mt-2" for="deposit-terms">Điều kiện hủy / hoàn / chuẩn bị món đã thống nhất</label><textarea id="deposit-terms" class="form-control" name="DieuKien" maxlength="1000" required>@b.DieuKienCocDaThoaThuan</textarea>
+                    <label class="form-label" for="deposit-quote">Tiền đặt cọc (đ)</label><input id="deposit-quote" class="form-control" name="SoTien" type="number" min="@(b.YeuCauCoc ? 1 : 0)" max="1000000000" step="1" value="@(b.TienCocYeuCau > 0 ? b.TienCocYeuCau.ToString("0") : "")" placeholder="Nhập số cọc đã thống nhất" required />
+                    <label class="form-label mt-2" for="deposit-terms">Điều kiện hủy / hoàn cọc đã thống nhất</label><textarea id="deposit-terms" class="form-control" name="DieuKien" maxlength="1000" required>@b.DieuKienCocDaThoaThuan</textarea>
                     <button class="btn btn-outline-success mt-2">Lưu thỏa thuận</button>
                 </form>
             </details>
@@ -105,7 +105,7 @@
             </div>
             <form asp-controller="DatTruoc" asp-action="GiaoDichCoc" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="mt-2">
                 <input type="hidden" name="RowVersion" value="@Model.Version" /><input type="hidden" name="RequestId" value="@Guid.NewGuid()" />
-                <input type="hidden" name="Loai" value="Thu" /><input type="hidden" name="SoTien" value="@b.SoTienKhachBao.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" />
+                <input type="hidden" name="Loai" value="Thu" /><input type="hidden" name="HinhThuc" value="ChuyenKhoan" /><input type="hidden" name="SoTien" value="@b.SoTienKhachBao.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" />
                 <input type="hidden" name="LyDo" value="Đối chiếu khoản chuyển tiền theo mã @b.MaDatBan" />
                 <label class="d-block my-3"><input type="checkbox" name="DaDoiChieuNganHang" value="true" required /> Đã kiểm tra tiền vào ngân hàng, đúng @Money(b.SoTienKhachBao) và nội dung @b.MaDatBan.</label>
                 <button class="btn btn-success">Xác nhận nhận @Money(b.SoTienKhachBao)</button>
@@ -118,12 +118,13 @@
                 </form>
             </details>
         }
-        @if ((!b.CocTuDong && cashier && (Model.CanEdit || Model.AvailableDeposit > 0 || b.ThoiDiemBaoChuyenKhoan is not null)) || (b.CocTuDong && admin && Model.AvailableDeposit > 0)) {
+        @if ((!b.CocTuDong && cashier && (Model.CanEdit || Model.AvailableDeposit > 0 || b.ThoiDiemBaoChuyenKhoan is not null)) || (b.CocTuDong && (admin || (cashier && b.TrangThai == TrangThaiDatBan.DaNhanBan)) && Model.AvailableDeposit > 0)) {
             <details class="mt-3"><summary>Ghi nhận khoản tiền đã xử lý thực tế</summary>
                 <form asp-controller="DatTruoc" asp-action="GiaoDichCoc" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="mt-2">
                     <input type="hidden" name="RowVersion" value="@Model.Version" /><input type="hidden" name="RequestId" value="@Guid.NewGuid()" />
-                    <label class="form-label" for="deposit-kind">Loại giao dịch</label><select id="deposit-kind" name="Loai" class="form-select">@if (!b.CocTuDong) { <option value="Thu">Đã nhận cọc</option> }
-                        @if (admin) { <option value="Hoan">Đã hoàn cho khách</option><option value="Giu">Giữ theo điều kiện đã thỏa thuận</option> }</select>
+                    <label class="form-label" for="deposit-kind">Loại giao dịch</label><select id="deposit-kind" name="Loai" class="form-select">@if (!b.CocTuDong) { <option value="Thu">Đã nhận tiền đặt cọc</option> }
+                        @if (admin || b.TrangThai == TrangThaiDatBan.DaNhanBan) { <option value="Hoan">Đã hoàn cho khách</option> }@if (admin) { <option value="Giu">Giữ theo điều kiện đã thỏa thuận</option> }</select>
+                    <label class="form-label mt-2" for="deposit-method">Hình thức</label><select id="deposit-method" name="HinhThuc" class="form-select"><option value="TienMat">Tiền mặt</option><option value="ChuyenKhoan">Chuyển khoản ngân hàng</option></select>
                     <label class="form-label mt-2" for="deposit-amount">Số tiền (đ)</label><input id="deposit-amount" class="form-control" name="SoTien" type="number" min="1" max="1000000000" step="1" required />
                     <label class="form-label mt-2" for="deposit-reference">Mã tham chiếu / biên nhận (nếu có)</label><input id="deposit-reference" class="form-control" name="MaThamChieu" maxlength="100" />
                     <label class="form-label mt-2" for="deposit-reason">Nội dung đối chiếu</label><textarea id="deposit-reason" class="form-control" name="LyDo" maxlength="500" required></textarea>
@@ -133,7 +134,7 @@
             </details>
         }
         @if (Model.Transactions.Any()) {
-            <details class="mt-3"><summary>Lịch sử xử lý cọc (@Model.Transactions.Count)</summary>
+            <details class="mt-3"><summary>Lịch sử tiền đặt cọc (@Model.Transactions.Count)</summary>
                 <ul class="mt-2">@foreach (var t in Model.Transactions) {
                     <li>@t.ThoiDiem.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM HH:mm") · @(t.Loai == LoaiGiaoDichCoc.Thu ? "Nhận" : t.Loai == LoaiGiaoDichCoc.Hoan ? "Hoàn" : "Giữ") @Money(t.SoTien) — @t.LyDo</li>
                 }</ul>
@@ -141,10 +142,11 @@
         }
     </div></div>
     @if (!Model.Internal && Model.CanEdit && b.TrangThai != TrangThaiDatBan.DaNhanBan) {
-        <details><summary>Gửi yêu cầu hủy lịch</summary><p class="small mt-2">Nhà hàng đối chiếu món đã chuẩn bị và điều kiện cọc trước khi xác nhận hủy; thao tác này không tự hoàn tiền.</p>
+        var cancelNow = b.TienCocDaNop == 0 && b.ThoiDiemBaoChuyenKhoan is null;
+        <details><summary>@(cancelNow ? "Hủy lịch" : "Gửi yêu cầu hủy lịch")</summary><p class="small mt-2">@(cancelNow ? "Lịch chưa có tiền đặt cọc nên được hủy ngay." : "Nhà hàng đối chiếu điều kiện cọc trước khi xác nhận hủy; thao tác này không tự hoàn tiền.")</p>
             <form asp-controller="DatBan" asp-action="YeuCauHuy" asp-route-id="@b.Id" method="post" data-ajax-form="true">
                 <input type="hidden" name="rowVersion" value="@Model.Version" /><label for="cancel-reason" class="form-label">Lý do</label><textarea id="cancel-reason" name="lyDo" class="form-control" maxlength="500" required></textarea>
-                <button class="btn btn-outline-danger mt-2">Gửi yêu cầu hủy</button>
+                <button class="btn btn-outline-danger mt-2">@(cancelNow ? "Hủy lịch" : "Gửi yêu cầu hủy")</button>
             </form>
         </details>
     }

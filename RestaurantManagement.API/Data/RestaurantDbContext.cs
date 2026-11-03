@@ -22,6 +22,7 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
     public DbSet<GiaoDichCoc> GiaoDichCoc => Set<GiaoDichCoc>();
     public DbSet<HoaDon> HoaDon => Set<HoaDon>();
     public DbSet<ChiTietHoaDon> ChiTietHoaDon => Set<ChiTietHoaDon>();
+    public DbSet<ChiTietThanhToan> ChiTietThanhToan => Set<ChiTietThanhToan>();
     public DbSet<NguyenLieu> NguyenLieu => Set<NguyenLieu>();
     public DbSet<DinhMucMon> DinhMucMon => Set<DinhMucMon>();
     public DbSet<NhaCungCap> NhaCungCap => Set<NhaCungCap>();
@@ -88,6 +89,11 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         b.Entity<ChiTietHoaDon>().HasOne(x => x.MonAnSize).WithMany().HasForeignKey(x => x.MonAnSizeId);
         b.Entity<ChiTietHoaDon>().HasOne(x => x.MonDatTruoc).WithOne().HasForeignKey<ChiTietHoaDon>(x => x.MonDatTruocId);
         b.Entity<ChiTietHoaDon>().HasAlternateKey(x => new { x.Id, x.HoaDonId });
+        b.Entity<ChiTietThanhToan>().HasIndex(x => x.MaThanhToan).IsUnique();
+        b.Entity<ChiTietThanhToan>().HasIndex(x => new { x.NgayThanhToan, x.GioThanhToan });
+        b.Entity<ChiTietThanhToan>().HasOne(x => x.HoaDon).WithMany(x => x.ThanhToan).HasForeignKey(x => x.HoaDonId);
+        b.Entity<ChiTietThanhToan>().HasOne(x => x.DatBan).WithMany().HasForeignKey(x => x.DatBanId);
+        b.Entity<ChiTietThanhToan>().HasOne(x => x.NhanVien).WithMany().HasForeignKey(x => x.NhanVienId);
         b.Entity<NguyenLieu>().HasIndex(x => x.TenNguyenLieu).IsUnique();
         b.Entity<DinhMucMon>().HasKey(x => new { x.MonAnId, x.MaKichCo, x.NguyenLieuId });
         b.Entity<DinhMucMon>().HasOne(x => x.MonAn).WithMany().HasForeignKey(x => x.MonAnId);
@@ -133,6 +139,9 @@ public class RestaurantDbContext(DbContextOptions<RestaurantDbContext> options)
         Check<MonDatTruoc>(b, "LuongGia", "[SoLuong]>0 AND [DonGiaThoaThuan]>=0");
         Check<HoaDon>(b, "SoTien", "[TongTienHang]>=0 AND [TienGiam]>=0 AND [TienGiam]<=[TongTienHang] AND [TienCocDaTru]>=0 AND [TienCocDaTru]<=[TongTienHang]-[TienGiam]");
         Check<ChiTietHoaDon>(b, "LuongGia", "[SoLuong]>0 AND [DonGia]>=0");
+        Check<ChiTietThanhToan>(b, "SoTien", "[SoTien]>0");
+        Check<ChiTietThanhToan>(b, "Nguon", "[HoaDonId] IS NOT NULL OR [DatBanId] IS NOT NULL");
+        Check<KhuVuc>(b, "TienCoc", "[TienCocGiuCho]>=0");
         Check<NguyenLieu>(b, "Nguong", "[NguongCanhBao]>=0");
         Check<DinhMucMon>(b, "SoLuong", "[SoLuong]>0");
         Check<NhaCungCapNguyenLieu>(b, "DonGia", "[DonGiaCungUng]>=0");

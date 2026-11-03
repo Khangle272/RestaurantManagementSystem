@@ -216,9 +216,11 @@
                         <div id="cart-items-list" class="d-flex flex-column gap-2"></div>
                     </div>
                     <div class="card-footer bg-light p-3">
-                        <label asp-for="GhiChuDonHang" class="form-label small">Ghi chú đơn hàng</label><input asp-for="GhiChuDonHang" class="form-control form-control-sm mb-2" maxlength="500" />
-                        <div class="d-flex justify-content-between small mb-1"><span>Số lượng</span><strong id="cart-total-qty">0 phần</strong></div>
-                        <div class="d-flex justify-content-between mb-2"><strong>Tạm tính</strong><strong class="text-danger" id="cart-total-amount">0 đ</strong></div>
+                        <label asp-for="GhiChuDonHang" class="visually-hidden">Ghi chú đơn hàng</label><input asp-for="GhiChuDonHang" class="form-control form-control-sm mb-2" maxlength="500" placeholder="Ghi chú đơn hàng" />
+                        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                            <span class="small">Số lượng: <strong id="cart-total-qty">0 phần</strong></span>
+                            <span><strong>Tạm tính:</strong> <strong class="text-danger" id="cart-total-amount">0 đ</strong></span>
+                        </div>
                         <button type="submit" id="btn-submit-order" class="btn btn-success w-100 fw-bold" disabled>Gửi bếp &amp; tạo đơn</button>
                     </div>
                 </div>

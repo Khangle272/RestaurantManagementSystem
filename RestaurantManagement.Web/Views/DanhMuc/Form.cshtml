@@ -5,9 +5,9 @@
     ViewData["Title"] = editing ? "Cập nhật danh mục" : "Thêm danh mục";
 }
 
-<div class="container-fluid py-4">
-    <a asp-action="Index" class="text-decoration-none text-muted d-inline-block mb-3">← Quay lại danh sách</a>
-    <h2 class="h3 mb-4">@ViewData["Title"]</h2>
+<div class="container-fluid py-4 form-narrow">
+    <a asp-action="Index" class="page-back"><i class="bi bi-arrow-left" aria-hidden="true"></i>Quay lại danh sách</a>
+    <div class="page-header"><h1 class="h3">@ViewData["Title"]</h1></div>
     <div class="card shadow-sm border-0">
         <div class="card-body p-4">
             <form asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : (int?)null)" method="post">

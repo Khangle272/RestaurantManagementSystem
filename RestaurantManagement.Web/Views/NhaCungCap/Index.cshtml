@@ -1,20 +1,20 @@
 @model NhaCungCapIndexVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Quản lý Nhà cung cấp";
+    ViewData["Title"] = "Nhà cung cấp";
     var p = Model.Pagination;
 }
 
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-truck me-2 text-danger"></i>Quản lý Nhà cung cấp</h1>
+            <h1 class="h3">Nhà cung cấp</h1>
             <p class="text-muted mb-0">Quản lý danh sách đối tác cung ứng thực phẩm, đồ uống và gia vị cho nhà hàng.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="page-actions">
             <a asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-plus-circle"></i> Thêm Nhà Cung Cấp
+                <i class="bi bi-plus-circle"></i> Thêm nhà cung cấp
             </a>
         </div>
     </div>
@@ -25,7 +25,7 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Tổng Nhà Cung Cấp</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng nhà cung cấp</div>
                         <div class="fs-2 fw-bold text-dark mt-1">@Model.TotalCount</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-primary fs-3">
@@ -38,7 +38,7 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Đang Hợp Tác</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Đang hợp tác</div>
                         <div class="fs-2 fw-bold text-success mt-1">@Model.ActiveCount</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-success fs-3">
@@ -51,7 +51,7 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Tạm Ngưng Hợp Tác</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tạm ngưng hợp tác</div>
                         <div class="fs-2 fw-bold text-secondary mt-1">@Model.InactiveCount</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-secondary fs-3">
@@ -85,7 +85,7 @@
                     <button class="btn btn-brand-primary w-100" type="submit">
                         <i class="bi bi-funnel me-1"></i> Lọc
                     </button>
-                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc">
+                    <a asp-action="Index" class="btn btn-brand-outline" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </a>
                 </div>
@@ -99,22 +99,20 @@
             <table class="table table-admin align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 100px;">Mã NCC</th>
-                        <th>Tên Nhà Cung Cấp</th>
-                        <th>Người Liên Hệ</th>
-                        <th>Điện Thoại</th>
-                        <th>Email</th>
-                        <th>Địa Chỉ Kho</th>
-                        <th>Trạng Thái</th>
-                        <th class="text-end" style="width: 180px;">Thao Tác</th>
+                        <th>Mã NCC</th>
+                        <th>Tên nhà cung cấp</th>
+                        <th>Liên hệ</th>
+                        <th>Địa chỉ kho</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Items.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            <td colspan="6" class="empty-state">
+                                <i class="bi bi-truck" aria-hidden="true"></i>
                                 Không tìm thấy nhà cung cấp nào phù hợp với điều kiện tìm kiếm.
                             </td>
                         </tr>
@@ -122,37 +120,23 @@
                     @foreach (var item in Model.Items)
                     {
                         <tr>
-                            <td class="fw-bold text-secondary">@($"#NCC{item.Id:D3}")</td>
+                            <td class="cell-code">@($"#NCC{item.Id:D3}")</td>
                             <td>
                                 <div class="fw-bold text-dark">@item.TenNhaCungCap</div>
                                 @if (!string.IsNullOrEmpty(item.MaSoThue))
                                 {
-                                    <small class="text-muted"><i class="bi bi-hash"></i> MST: @item.MaSoThue</small>
+                                    <span class="cell-sub">MST: @item.MaSoThue</span>
                                 }
                             </td>
-                            <td>@(item.NguoiLienHe ?? "—")</td>
                             <td>
+                                <div>@(item.NguoiLienHe ?? "—")</div>
                                 @if (!string.IsNullOrEmpty(item.SoDienThoai))
                                 {
-                                    <a href="tel:@item.SoDienThoai" class="text-decoration-none text-body">
-                                        <i class="bi bi-telephone me-1 text-primary"></i>@item.SoDienThoai
-                                    </a>
+                                    <a href="tel:@item.SoDienThoai" class="cell-sub text-decoration-none"><i class="bi bi-telephone me-1" aria-hidden="true"></i>@item.SoDienThoai</a>
                                 }
-                                else
-                                {
-                                    <span class="text-muted">—</span>
-                                }
-                            </td>
-                            <td>
                                 @if (!string.IsNullOrEmpty(item.Email))
                                 {
-                                    <a href="mailto:@item.Email" class="text-decoration-none text-body">
-                                        <i class="bi bi-envelope me-1 text-muted"></i>@item.Email
-                                    </a>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">—</span>
+                                    <a href="mailto:@item.Email" class="cell-sub text-decoration-none"><i class="bi bi-envelope me-1" aria-hidden="true"></i>@item.Email</a>
                                 }
                             </td>
                             <td>
@@ -170,21 +154,21 @@
                                 else
                                 {
                                     <span class="badge-status-danger d-inline-flex align-items-center gap-1">
-                                        <span class="badge-dot bg-secondary"></span> Ngừng hợp tác
+                                        <span class="badge-dot bg-danger"></span> Ngừng hợp tác
                                     </span>
                                 }
                             </td>
                             <td class="text-end text-nowrap">
                                 <div class="btn-group btn-group-sm">
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Chỉnh sửa thông tin">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Chỉnh sửa thông tin" aria-label="Chỉnh sửa thông tin">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái hợp tác của nhà cung cấp này?');">
+                                    <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline" data-confirm="Bạn có chắc muốn đổi trạng thái hợp tác của nhà cung cấp này?" data-confirm-title="Đổi trạng thái hợp tác" data-confirm-variant="warning">
                                         <button type="submit" class="btn @(item.DangSuDung ? "btn-outline-secondary" : "btn-outline-success")" title="@(item.DangSuDung ? "Tạm ngưng hợp tác" : "Kích hoạt hợp tác")">
                                             <i class="bi @(item.DangSuDung ? "bi-pause-fill" : "bi-play-fill")"></i>
                                         </button>
                                     </form>
-                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa nhà cung cấp này? Chỉ xóa được khi chưa có lịch sử nhập hàng.');">
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" data-confirm="Chỉ xóa được khi nhà cung cấp chưa có lịch sử nhập hàng. Thao tác này không thể hoàn tác." data-confirm-title="Xóa nhà cung cấp?" data-confirm-ok="Xóa">
                                         <button type="submit" class="btn btn-outline-danger" title="Xóa nhà cung cấp">
                                             <i class="bi bi-trash"></i>
                                         </button>

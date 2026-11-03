@@ -1,18 +1,18 @@
 @model NguyenLieuIndexViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Kho nguyên liệu";
+    ViewData["Title"] = "Danh mục nguyên liệu";
     var p = Model.Pagination;
 }
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div><h2 class="h3 mb-1">Kho nguyên liệu</h2><p class="text-muted mb-0">Tồn kho tính từ phiếu nhập và phiếu xuất đã ghi sổ.</p></div>
-        <a asp-action="Create" class="btn btn-primary btn-brand-primary">+ Thêm nguyên liệu</a>
+    <div class="page-header">
+        <div><h1 class="h3">Danh mục nguyên liệu</h1><p class="text-muted mb-0">Tồn kho tính từ phiếu nhập và phiếu xuất đã ghi sổ.</p></div>
+        <a asp-action="Create" class="btn btn-primary btn-brand-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm nguyên liệu</a>
     </div>
-    <div class="row g-3 mb-4">
-        <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body">Tổng nguyên liệu<strong class="d-block fs-3">@Model.TotalCount</strong></div></div></div>
-        <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body">Đang sử dụng<strong class="d-block fs-3 text-success">@Model.ActiveCount</strong></div></div></div>
-        <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body">Ngừng sử dụng<strong class="d-block fs-3 text-secondary">@Model.InactiveCount</strong></div></div></div>
+    <div class="stat-grid">
+        <div class="stat-tile stat-plain stat-muted"><span class="stat-icon"><i class="bi bi-basket2" aria-hidden="true"></i></span><span class="stat-body"><span class="stat-label">Tổng nguyên liệu</span><strong class="stat-value">@Model.TotalCount</strong></span></div>
+        <div class="stat-tile stat-plain stat-success"><span class="stat-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span class="stat-body"><span class="stat-label">Đang sử dụng</span><strong class="stat-value">@Model.ActiveCount</strong></span></div>
+        <div class="stat-tile stat-plain stat-muted"><span class="stat-icon"><i class="bi bi-pause-circle" aria-hidden="true"></i></span><span class="stat-body"><span class="stat-label">Ngừng sử dụng</span><strong class="stat-value">@Model.InactiveCount</strong></span></div>
     </div>
     <form asp-action="Index" method="get" class="card border-0 shadow-sm mb-4">
         <div class="card-body row g-3 align-items-end">
@@ -38,7 +38,7 @@
             {
                 var item = row.Item;
                 <tr>
-                    <td>NL@(item.Id.ToString("D3"))</td><td class="fw-medium">@item.TenNguyenLieu</td><td>@item.DonViTinh</td>
+                    <td class="cell-code">NL@(item.Id.ToString("D3"))</td><td class="fw-medium">@item.TenNguyenLieu</td><td>@item.DonViTinh</td>
                     <td><span class="@(item.DangSuDung && row.TonKho <= item.NguongCanhBao ? "text-danger fw-bold" : "")">@row.TonKho.ToString("0.######")</span>
                     @if (item.DangSuDung && row.TonKho <= item.NguongCanhBao) { <small class="d-block text-danger">Cần bổ sung</small> }</td>
                     <td>@item.NguongCanhBao.ToString("0.######")</td>

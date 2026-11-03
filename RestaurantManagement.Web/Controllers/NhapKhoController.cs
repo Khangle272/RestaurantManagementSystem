@@ -5,6 +5,7 @@ using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -95,7 +96,7 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
                     MaPhieu = "PN-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
                     NhaCungCapId = model.MaNhaCungCap,
                     NhanVienId = staffId,
-                    ThoiDiem = new DateTimeOffset(model.NgayNhap),
+                    ThoiDiem = TableService.VietnamTime(model.NgayNhap),
                     TrangThai = TrangThaiPhieu.DaGhiSo,
                     LyDo = LyDoNhap.MuaHang,
                     SoHoaDon = model.SoHoaDon?.Trim(),
@@ -106,9 +107,13 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
                 Db.PhieuNhap.Add(phieuNhap);
                 await Db.SaveChangesAsync();
 
+                // Load every ingredient on the slip in one query instead of one lookup per line.
+                var ingredientIds = model.ChiTiets.Select(c => c.MaNguyenLieu).Distinct().ToList();
+                var ingredients = await Db.NguyenLieu.Where(x => ingredientIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id);
+
                 foreach (var item in model.ChiTiets)
                 {
-                    var nl = await Db.NguyenLieu.FindAsync(item.MaNguyenLieu);
+                    var nl = ingredients.GetValueOrDefault(item.MaNguyenLieu);
                     if (nl != null)
                     {
                         nl.SoLuongTon += item.SoLuong;
@@ -136,7 +141,8 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
             catch (Exception ex)
             {
                 await trans.RollbackAsync();
-                ModelState.AddModelError("", "Có lỗi xảy ra trong quá trình lưu phiếu nhập: " + ex.Message);
+                LogUnexpected(ex, "saving stock receipt");
+                ModelState.AddModelError("", "Chưa lưu được phiếu nhập do lỗi hệ thống. Dữ liệu chưa thay đổi, vui lòng thử lại.");
             }
         }
 

@@ -12,7 +12,7 @@ namespace RestaurantManagement.Web.Controllers;
 public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> users, RestaurantManagement.Web.Services.OrderService orderService, RestaurantManagement.Web.Services.IPromotionService promotionService) : Controller
 {
     [Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
-    public async Task<IActionResult> Index(bool daThanhToan = false)
+    public async Task<IActionResult> Index(bool daThanhToan = false, string? search = null, int page = 1)
     {
         ViewData["AutoCollapseSidebar"] = true;
         var query = db.HoaDon.AsNoTracking();
@@ -20,9 +20,24 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
             ? query.Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan)
             : query.Where(x => x.TrangThai == TrangThaiHoaDon.ChuaThanhToan
                 || x.TrangThai == TrangThaiHoaDon.ThanhToanMotPhan);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            search = search.Trim();
+            query = query.Where(x => x.MaHoaDon.Contains(search)
+                || (x.TenNguoiNhan != null && x.TenNguoiNhan.Contains(search))
+                || (x.SoDienThoaiNhan != null && x.SoDienThoaiNhan.Contains(search))
+                || (x.DatBan != null && x.DatBan.HoTenLienHe.Contains(search))
+                || (x.DatBan != null && x.DatBan.Ban.Any(b => b.BanAn.MaBan.Contains(search))));
+        }
 
+        const int pageSize = 20;
+        var count = await query.CountAsync();
+        var pages = Math.Max(1, (int)Math.Ceiling(count / (double)pageSize));
+        page = Math.Clamp(page, 1, pages);
         ViewBag.DaThanhToan = daThanhToan;
-        return View(await query.OrderByDescending(x => x.ThoiDiemLap).Take(100).ToListAsync());
+        ViewBag.Search = search;
+        ViewBag.Pagination = new RestaurantManagement.Web.Models.PaginationViewModel { CurrentPage = page, TotalPages = pages, TotalItems = count };
+        return View(await query.OrderByDescending(x => x.ThoiDiemLap).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync());
     }
 
     public async Task<IActionResult> Details(int id)
@@ -59,6 +74,10 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
             ? await new RestaurantManagement.Web.Services.CustomerVoucherService(db, promotionService).ListAsync(invoice.KhachHangId.Value, true)
             : new List<RestaurantManagement.Web.Services.CustomerVoucherItem>();
         ViewBag.Customer = invoice.KhachHangId.HasValue ? await db.KhachHang.AsNoTracking().SingleOrDefaultAsync(x => x.Id == invoice.KhachHangId) : null;
+        // Các đợt thanh toán của hóa đơn: cọc nhận trước (theo lịch đặt bàn) + thanh toán dứt điểm.
+        ViewBag.Payments = await db.ChiTietThanhToan.AsNoTracking()
+            .Where(x => x.HoaDonId == id || (invoice.DatBanId != null && x.DatBanId == invoice.DatBanId && x.HoaDonId == null))
+            .OrderBy(x => x.NgayThanhToan).ThenBy(x => x.GioThanhToan).ToListAsync();
         return View(invoice);
     }
 
@@ -68,15 +87,24 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
     {
         var bill = await db.HoaDon.SingleOrDefaultAsync(x => x.Id == id);
         if (bill is null) return NotFound();
-        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.KhachHangId.HasValue || bill.VoucherId.HasValue) return BadRequest();
+        if (bill.TrangThai != TrangThaiHoaDon.ChuaThanhToan || bill.VoucherId.HasValue)
+        {
+            TempData["Error"] = "Hóa đơn đã thanh toán hoặc đã áp voucher nên không đổi được khách hàng.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
         var bytes = new byte[8];
         if (rowVersion is null || !Convert.TryFromBase64String(rowVersion, bytes, out var length) || length != 8
-            || !bytes.SequenceEqual(db.Entry(bill).Property<byte[]>("RowVersion").CurrentValue ?? [])) return Conflict("Hóa đơn đã thay đổi. Vui lòng tải lại.");
-        var customer = await db.KhachHang.SingleOrDefaultAsync(x => x.SoDienThoai == phone.Trim() && x.DangSuDung);
-        if (customer is null) TempData["Error"] = "Chưa có hồ sơ khách hàng với số điện thoại này.";
+            || !bytes.SequenceEqual(db.Entry(bill).Property<byte[]>("RowVersion").CurrentValue ?? []))
+        {
+            TempData["Error"] = "Hóa đơn vừa được thay đổi ở nơi khác. Hãy kiểm tra lại rồi nhập số điện thoại lần nữa.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        // Số điện thoại là duy nhất: tra ra mã khách hàng và mở ví voucher, không cần khách đăng nhập tại quầy.
+        var customer = await db.KhachHang.SingleOrDefaultAsync(x => x.SoDienThoai == (phone ?? "").Trim() && x.DangSuDung);
+        if (customer is null) TempData["Error"] = $"Số {phone} chưa là khách hàng thành viên. Thanh toán bình thường, không áp mã.";
         else {
             bill.KhachHangId = customer.Id;
-            try { await db.SaveChangesAsync(); TempData["Success"] = "Đã gắn khách hàng để sử dụng ví voucher và tích điểm."; }
+            try { await db.SaveChangesAsync(); TempData["Success"] = $"Khách hàng: {customer.HoTen} (mã KH {customer.Id}). Chọn voucher trong ví bên dưới nếu có."; }
             catch (DbUpdateConcurrencyException) { TempData["Error"] = "Hóa đơn đã thay đổi. Vui lòng tải lại."; }
         }
         return RedirectToAction(nameof(Details), new { id });
@@ -163,6 +191,15 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         }
 
         if (cashierId == 0) return Forbid();
+        if (!User.IsInRole(AppRoles.Admin) && !User.IsInRole(AppRoles.ThuNgan))
+        {
+            var voucher = await db.HoaDon.AsNoTracking().Where(x => x.Id == form.Id).Select(x => x.Voucher != null ? x.Voucher.Ma : null).SingleOrDefaultAsync();
+            if (form.TienGiamThuCong != (await promotionService.EvaluatePromotionsAsync(form.Id, voucher)).TienGiamThuCong)
+            {
+                TempData["Error"] = "Chỉ thu ngân hoặc quản lý mới được giảm giá thủ công.";
+                return RedirectToAction(nameof(Details), new { id = form.Id });
+            }
+        }
 
         var error = await orderService.ProcessPaymentAsync(form, cashierId);
         if (error != null)
@@ -171,7 +208,10 @@ public class HoaDonController(RestaurantDbContext db, UserManager<TaiKhoan> user
         }
         else
         {
-            TempData["Success"] = $"Đã thanh toán hóa đơn thành công bằng hình thức {form.PhuongThuc}.";
+            TempData["Success"] = $"Đã thanh toán hóa đơn thành công bằng hình thức {RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(form.PhuongThuc).ToLower()}.";
+            var paidBooking = await db.HoaDon.AsNoTracking().Where(x => x.Id == form.Id).Select(x => x.DatBanId).SingleOrDefaultAsync();
+            if (paidBooking is int bookingId && await orderService.AvailableDepositAsync(bookingId) is > 0 and var excess)
+                TempData["Success"] += $" Còn {excess:N0} đ tiền đặt cọc dư: hoàn cho khách ở mục Món & cọc rồi xác nhận hoàn tất bàn.";
         }
 
         return RedirectToAction(nameof(Details), new { id = form.Id });

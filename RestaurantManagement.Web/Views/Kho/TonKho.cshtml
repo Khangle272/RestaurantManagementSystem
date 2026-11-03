@@ -1,24 +1,24 @@
 @model TonKhoFilterVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Theo dõi Tồn kho & Cảnh báo";
+    ViewData["Title"] = "Tồn kho & cảnh báo";
     var p = Model.Pagination;
     var hasAlerts = Model.SoNguyenLieuSapHet > 0 || Model.SoNguyenLieuCanKho > 0;
 }
 
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-boxes me-2 text-danger"></i>Theo dõi Tồn kho & Cảnh báo</h1>
+            <h1 class="h3">Tồn kho & cảnh báo</h1>
             <p class="text-muted mb-0">Giám sát số lượng tồn thực tế, theo dõi định mức an toàn và kích hoạt nhập hàng kịp thời.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="page-actions">
             <a asp-controller="NhapKho" asp-action="Create" class="btn btn-brand-primary d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-cart-plus"></i> Lập Phiếu Nhập Hàng
+                <i class="bi bi-cart-plus"></i> Lập phiếu nhập hàng
             </a>
             <a asp-action="BaoCao" class="btn btn-brand-outline d-inline-flex align-items-center gap-2">
-                <i class="bi bi-file-earmark-bar-graph"></i> Báo Cáo Nhập - Xuất - Tồn
+                <i class="bi bi-file-earmark-bar-graph"></i> Báo cáo nhập – xuất – tồn
             </a>
         </div>
     </div>
@@ -26,19 +26,17 @@
     <!-- Stock Alert Banner (Design Token Amber / Red) -->
     @if (hasAlerts)
     {
-        <div class="alert alert-warning border-0 shadow-sm d-flex flex-wrap justify-content-between align-items-center p-3 mb-4 rounded-3" style="background-color: #FEF3C7; border-left: 5px solid #F59E0B !important;">
+        <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 mb-4">
             <div class="d-flex align-items-center gap-3">
-                <div class="rounded-circle bg-warning bg-opacity-25 p-2 text-warning fs-3">
-                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                </div>
+                <i class="bi bi-exclamation-triangle-fill fs-4" aria-hidden="true"></i>
                 <div>
-                    <h5 class="alert-heading fw-bold mb-1 text-dark">Cảnh báo nguyên vật liệu kho chạm ngưỡng an toàn!</h5>
-                    <div class="text-secondary small">
+                    <div class="fw-semibold">Nguyên vật liệu chạm ngưỡng an toàn</div>
+                    <div class="small">
                         Hiện có <strong>@Model.SoNguyenLieuSapHet</strong> nguyên liệu sắp hết và <strong>@Model.SoNguyenLieuCanKho</strong> nguyên liệu đã cạn kho hoàn toàn. Vui lòng lập phiếu nhập để không gián đoạn khâu chế biến!
                     </div>
                 </div>
             </div>
-            <a asp-controller="NhapKho" asp-action="Create" class="btn btn-warning text-dark fw-bold px-3 shadow-sm mt-2 mt-md-0">
+            <a asp-controller="NhapKho" asp-action="Create" class="btn btn-warning btn-sm fw-semibold">
                 <i class="bi bi-box-arrow-in-down me-1"></i> Nhập hàng ngay
             </a>
         </div>
@@ -50,7 +48,7 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Tổng Mặt Hàng</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng mặt hàng</div>
                         <div class="fs-2 fw-bold text-dark mt-1">@Model.TongSoNguyenLieu</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-primary fs-3">
@@ -63,7 +61,7 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Cần Nhập Gấp</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Cần nhập gấp</div>
                         <div class="fs-2 fw-bold text-warning mt-1">@Model.SoNguyenLieuSapHet</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-warning fs-3">
@@ -76,7 +74,7 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Đã Cạn Kho</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Đã cạn kho</div>
                         <div class="fs-2 fw-bold text-danger mt-1">@Model.SoNguyenLieuCanKho</div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-danger fs-3">
@@ -89,8 +87,8 @@
             <div class="card card-stat border-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-semibold text-uppercase">Tổng Giá Trị Tồn Kho</div>
-                        <div class="fs-2 fw-bold text-success mt-1">@Model.TongGiaTriTonKho.ToString("N0") <small class="fs-6 text-muted">VNĐ</small></div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng giá trị tồn kho</div>
+                        <div class="fs-2 fw-bold text-success mt-1">@Model.TongGiaTriTonKho.ToString("N0") <small class="fs-6 text-muted">đ</small></div>
                     </div>
                     <div class="rounded-circle p-3 bg-light text-success fs-3">
                         <i class="bi bi-wallet2"></i>
@@ -133,7 +131,7 @@
                     <button class="btn btn-brand-primary w-100" type="submit">
                         <i class="bi bi-funnel me-1"></i> Lọc
                     </button>
-                    <a asp-action="TonKho" class="btn btn-brand-outline" title="Đặt lại bộ lọc">
+                    <a asp-action="TonKho" class="btn btn-brand-outline" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </a>
                 </div>
@@ -147,24 +145,23 @@
             <table class="table table-admin align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 78px;">Mã NL</th>
+                        <th>Mã NL</th>
                         <th>Tên nguyên liệu</th>
-                        <th class="d-none d-xl-table-cell">Phân nhóm</th>
-                        <th style="width: 56px;">ĐVT</th>
+                                                <th>ĐVT</th>
                         <th class="text-center">Tồn khả dụng</th>
                         <th class="text-center d-none d-md-table-cell">Tối thiểu</th>
                         <th class="text-end d-none d-lg-table-cell">Đơn giá</th>
                         <th class="text-end">Giá trị</th>
                         <th>Trạng thái</th>
-                        <th class="text-end" style="width: 120px;">Thao tác</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.DanhSachTon.Any())
                     {
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            <td colspan="9" class="empty-state">
+                                <i class="bi bi-boxes" aria-hidden="true"></i>
                                 Không tìm thấy nguyên liệu nào phù hợp với bộ lọc.
                             </td>
                         </tr>
@@ -174,12 +171,10 @@
                         var isZero = item.SoLuongTon <= 0;
                         var isWarning = item.SoLuongTon > 0 && item.SoLuongTon <= item.DinhMucToiThieu;
                         <tr>
-                            <td class="fw-bold text-secondary">@($"#NL{item.MaNguyenLieu:D3}")</td>
+                            <td class="cell-code">@($"#NL{item.MaNguyenLieu:D3}")</td>
                             <td>
-                                <div class="fw-bold text-dark">@item.TenNguyenLieu</div>
-                            </td>
-                            <td class="d-none d-xl-table-cell">
-                                <span class="badge bg-light text-dark border">@(item.DanhMuc ?? "Gia vị / Khác")</span>
+                                <div class="fw-semibold">@item.TenNguyenLieu</div>
+                                <span class="cell-sub">@(item.DanhMuc ?? "Gia vị / Khác")</span>
                             </td>
                             <td>@item.DonViTinh</td>
                             <td class="text-center">
@@ -191,10 +186,10 @@
                                 @item.DinhMucToiThieu.ToString("0.##")
                             </td>
                             <td class="text-end d-none d-lg-table-cell">
-                                @item.DonGia.ToString("N0") VNĐ
+                                @item.DonGia.ToString("N0") đ
                             </td>
-                            <td class="text-end fw-bold text-dark">
-                                @item.GiaTriTonKho.ToString("N0") VNĐ
+                            <td class="text-end fw-semibold cell-nowrap">
+                                @item.GiaTriTonKho.ToString("N0") đ
                             </td>
                             <td class="text-nowrap">
                                 @if (isZero)
@@ -217,7 +212,7 @@
                                 }
                             </td>
                             <td class="text-end text-nowrap">
-                                <a asp-controller="NhapKho" asp-action="Create" class="btn btn-sm btn-outline-danger" title="Nhập bổ sung ngay">
+                                <a asp-controller="NhapKho" asp-action="Create" asp-route-nguyenLieu="@item.MaNguyenLieu" class="btn btn-sm btn-outline-danger" title="Lập phiếu nhập cho @item.TenNguyenLieu">
                                     <i class="bi bi-cart-plus me-1"></i>Nhập thêm
                                 </a>
                             </td>

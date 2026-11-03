@@ -49,7 +49,9 @@ public class DatTruocController(RestaurantDbContext db, PreorderService preorder
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     public async Task<IActionResult> GiaoDichCoc(int id, DepositTransactionModel model)
     {
-        if (model.Loai != LoaiGiaoDichCoc.Thu && !User.IsInRole(AppRoles.Admin)) return Forbid();
+        // Giữ cọc là quyết định của quản lý; hoàn phần dư khi khách đang ở bàn là việc thu ngân tự làm được.
+        var cashierRefund = model.Loai == LoaiGiaoDichCoc.Hoan && await db.DatBan.AnyAsync(x => x.Id == id && x.TrangThai == TrangThaiDatBan.DaNhanBan);
+        if (model.Loai != LoaiGiaoDichCoc.Thu && !cashierRefund && !User.IsInRole(AppRoles.Admin)) return Forbid();
         return Result(id, ModelState.IsValid ? await preorders.RecordDeposit(id, AccountId, model) : ValidationError());
     }
 
@@ -58,12 +60,12 @@ public class DatTruocController(RestaurantDbContext db, PreorderService preorder
         => Result(id, await preorders.RejectPaymentNotice(id, rowVersion, lyDo));
 
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.TiepTan + "," + AppRoles.BoiBan)]
-    public async Task<IActionResult> GuiBep(int id, string rowVersion, int? nhanVienId, bool xacNhanLamTruoc)
+    public async Task<IActionResult> GuiBep(int id, string rowVersion, int? nhanVienId)
     {
         var employeeId = await StaffId();
         if (employeeId is null && User.IsInRole(AppRoles.Admin)) employeeId = nhanVienId;
         return Result(id, employeeId is int staffId
-            ? await preorders.Release(id, rowVersion, staffId, xacNhanLamTruoc)
+            ? await preorders.Release(id, rowVersion, staffId)
             : "Chọn nhân viên đang làm việc phụ trách phiếu gọi món.");
     }
 

@@ -28,7 +28,7 @@
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div class="d-flex align-items-center gap-2">
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left" aria-hidden="true"></i> Danh sách</a>
             <h1 class="h3 mb-0">Đơn hàng @Model.MaHoaDon</h1>
             <span class="badge @typeBadge">@typeText</span>
             @if (Model.TrangThai == TrangThaiHoaDon.DaThanhToan)
@@ -55,7 +55,7 @@
                 {
                     <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success d-inline-flex align-items-center gap-1 shadow-sm">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                        Thanh toán đa hình thức
+                        Thanh toán
                     </a>
                 }
             }
@@ -125,13 +125,13 @@
                                     @switch (item.TrangThai)
                                     {
                                         case TrangThaiCheBien.ChoCheBien:
-                                            <span class="badge bg-secondary">⏳ Chờ nấu</span>
+                                            <span class="badge bg-secondary"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Chờ nấu</span>
                                             break;
                                         case TrangThaiCheBien.DangCheBien:
-                                            <span class="badge bg-warning text-dark">🔥 Đang nấu</span>
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-fire me-1" aria-hidden="true"></i>Đang nấu</span>
                                             break;
                                         case TrangThaiCheBien.SanSang:
-                                            <span class="badge bg-success">⚡ Đã xong (Sẵn sàng)</span>
+                                            <span class="badge bg-success"><i class="bi bi-bell me-1" aria-hidden="true"></i>Sẵn sàng phục vụ</span>
                                             break;
                                         case TrangThaiCheBien.DaPhucVu:
                                             <span class="badge bg-light text-success border border-success">✓ Đã phục vụ</span>
@@ -157,9 +157,9 @@
                                                     </button>
                                                 </form>
                                             }
-                                            @if (item.TrangThai == TrangThaiCheBien.ChoCheBien && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
+                                            @if (item.TrangThai is TrangThaiCheBien.ChoCheBien or TrangThaiCheBien.DangCheBien && Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
                                             {
-                                                <form asp-action="CapNhatMon" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn hủy món này không?');">
+                                                <form asp-action="CapNhatMon" method="post" class="d-inline" data-confirm="Màn hình bếp sẽ báo ngay để bếp dừng chế biến." data-confirm-title="Hủy món này?" data-confirm-ok="Hủy món" data-confirm-cancel="Giữ món">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="id" value="@item.Id" />
                                                     <input type="hidden" name="hoaDonId" value="@Model.Id" />
@@ -275,7 +275,7 @@
                     else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan && canPay)
                     {
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
-                            💳 Thanh toán ngay (Tiền mặt / QR / Thẻ)
+                            <i class="bi bi-credit-card me-1" aria-hidden="true"></i>Thanh toán (tiền mặt / chuyển khoản)
                         </a>
                     }
                     else if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)

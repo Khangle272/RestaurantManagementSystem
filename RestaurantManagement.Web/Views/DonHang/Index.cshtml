@@ -7,9 +7,9 @@
 }
 
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div class="page-header">
         <div>
-            <h1 class="h3 mb-1">Quản lý đơn hàng</h1>
+            <h1 class="h3">Quản lý đơn hàng</h1>
             <p class="text-muted mb-0">Theo dõi, cập nhật tiến độ phục vụ và xử lý đơn hàng tại bàn, mang đi và giao hàng.</p>
         </div>
         <div>
@@ -52,7 +52,7 @@
                     <button type="submit" class="btn btn-outline-primary w-100">Lọc</button>
                     @if (Model.LoaiDonHang.HasValue || Model.TrangThai.HasValue || !string.IsNullOrEmpty(Model.Search))
                     {
-                        <a asp-action="Index" class="btn btn-outline-secondary" title="Đặt lại bộ lọc">✕</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">✕</a>
                     }
                 </div>
             </form>

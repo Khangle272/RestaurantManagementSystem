@@ -819,3 +819,62 @@ Hướng dẫn tài khoản, mã, đơn/lịch và trình tự demo: **DEMO_WEBS
 - Web và SQL Server tiếp tục chạy trên máy; URL công khai thay đổi mỗi lần tạo tunnel. Hướng dẫn đủ hai cửa sổ chạy Web/tunnel, truy cập khách/admin/mobile, dừng chia sẻ và xử lý lỗi thường gặp.
 - Giữ sửa lỗi publish chung NETSDK1152 trong project Web: loại appsettings của API khỏi gói publish Web. Sửa này không phụ thuộc nhà cung cấp hosting.
 - Chưa tạo tài nguyên cloud hoặc tự mở tunnel công khai trong lượt dọn file này; giữ nguyên dữ liệu demo và các thay đổi giao diện đang có.
+
+## Cải thiện trang khách, độ chắc chắn code và test tự động — 31/10/2026
+
+### Trang khách hàng
+- Nút "Đánh giá ngay" chỉ hiện khi khách đã nhận bàn và hóa đơn đã thanh toán; trang lịch sử và trang đánh giá dùng chung một điều kiện (`DatBanController.ReviewableInvoice`).
+- Trang đánh giá: tìm đơn theo mã hoặc số Id; kiểm tra quyền sở hữu trước khi hiện lại form lỗi; tên/giờ/mã trên form lấy từ đơn thật, không lấy giá trị gửi lên; ảnh chỉ ghi sau khi hợp lệ và bị xóa nếu lưu thất bại; chỉ nhận PNG/JPEG; chọn sao bằng radio dùng được bàn phím.
+- Lịch sử đặt bàn: placeholder đúng mã `DB-…`, có trạng thái trống, label gắn ô nhập. Form đặt bàn: nút chọn nhanh số khách là `<button>`, sửa thứ tự heading. Bỏ màu hồng/xanh than viết cứng, dùng theme xanh của site.
+- Giờ trên trang khách và trang đánh giá quản trị hiển thị theo UTC+7; thêm `meta description` (trang món dùng mô tả món). Xóa trang `DatBan/Success` không còn được dùng.
+
+### Độ chắc chắn của code
+- Xuất kho sau khi gọi món không còn bị nuốt lỗi: ghi log và hiện cảnh báo vàng "Lưu ý kho: …" cho thu ngân; đơn vẫn được lưu.
+- Phiếu nhập/xuất/thanh lý/định mức không còn hiện `ex.Message` cho người dùng; chi tiết ghi log qua `ManagementControllerBase.LogUnexpected`.
+- Bỏ `DateTime.Now/Today` trong Web: báo cáo, phiếu kho, trang chủ quản trị dùng `TableService.VietnamNow`/`VietnamTime`.
+- Danh sách hóa đơn phân trang 20 dòng; trang sửa khuyến mãi đếm vé bằng 2 truy vấn (`VoucherInventory.IssuedByVoucherAsync`); phiếu kho nạp nguyên liệu một lần.
+- Sửa lỗi trang báo lỗi 400 lấy nhầm `id` từ form gửi lên (hiện 404 thay vì 400): `HomeController.HttpStatus` đọc mã từ route.
+
+### Test tự động
+- Sửa các kiểm tra đã cũ sau đợt đổi chữ giao diện 30/10 (bếp, kho, nhà cung cấp, BOM, menu quản trị dạng ngăn kéo) và `PreorderSmoke` theo hành vi hiện tại (món đặt trước phát hành thẳng vào "Đang chế biến").
+- Thêm `ReviewSmoke` (`--reviews-only`), `PaymentLedgerSmoke` (`--payments-only`), `KitchenStockSmoke` (`--kitchen-only`) và đưa vào bộ mặc định: đánh giá đúng điều kiện/chủ sở hữu/ảnh, một hóa đơn nhiều đợt tiền + trừ cọc + chỉ tiền mặt/chuyển khoản + báo cáo nộp ca, phân trang hóa đơn, bếp chỉ thấy món trong ngày + đóng sổ ngày cũ, cảnh báo thiếu nguyên liệu.
+- Kết quả: **bộ mặc định đạt 1085 kiểm tra HTTP/database**; riêng `--deposits-only` 77, `--website-demo-only` 60, `--orders-only` 95, `--inventory-only` 81, `--promotions-only` 182.
+- Lưu ý: `TableSmoke`, `BookingSlotSmoke`, `TableExpirySmoke`, `Week8DemoSmoke` không được gọi từ `Program.cs` nên không chạy; một số chữ trong đó đã cũ.
+
+## Cho bàn nhận lượt mới trong cùng ca — 02/11/2026
+
+- Đổi quy tắc "mỗi bàn một lượt mỗi ca" của feedback W10: lượt đã kết thúc (`ThoiDiemKetThuc` có giá trị) không còn giữ bàn, nên bàn đặt và xếp lại được ngay trong ca đó, đúng với cách nhà hàng quay vòng bàn.
+- Vẫn giữ: bàn có lịch chưa kết thúc trong ca thì không nhận lịch thứ hai cùng ca; bàn đang phục vụ trong ngày vẫn chặn theo trạng thái thực tế. Chưa chuyển sang giữ bàn theo khung giờ 90–120 phút.
+
+## Rà soát quy tắc nghiệp vụ theo thực tế vận hành — 02/11/2026
+
+Rà toàn bộ chức năng, sửa các quy tắc không khớp cách nhà hàng thật vận hành. Một số thay đổi đi ngược feedback W10 nên cần báo lại cô khi bảo vệ.
+
+- **Giữ bàn:** mỗi lịch giữ bàn 2 tiếng kể từ giờ đến (tối đa tới 22:00), thay vì cả ca. Bàn nhận được nhiều lượt trong một ca. Lịch cũ được rút khung một lần khi ứng dụng khởi động.
+- **Giờ đến muộn nhất:** online 21:00, tại quầy 21:30.
+- **Bàn đang có khách/chưa dọn:** chỉ chặn lượt đến trong 30 phút tới, không chặn cả ngày.
+- **Nhận bàn:** nhận bất kỳ lúc nào trong ngày nếu bàn trống và không vướng lịch khác; lịch **Chờ cọc** cũng nhận được và bỏ phần cọc chưa nộp. Lịch đang chờ đối chiếu chuyển khoản vẫn phải đối chiếu trước.
+- **Không đến:** thêm nút cho tiếp tân sau giờ hẹn 15 phút; lịch hết khung giờ tự đóng thành Không đến. Cọc giữ nguyên chờ xử lý.
+- **Khách đến ăn ngay:** không bắt tên và số điện thoại, nhận bàn luôn khi lưu. Tạo lịch tại quầy chạy trong giao dịch serializable để chống trùng bàn.
+- **Tiền cọc:** lấy mức cao hơn giữa 50% tiền món và mức giữ chỗ của khu vực (trước đây một ly nước 20.000 đ làm cọc phòng VIP giảm từ 500.000 đ còn 10.000 đ). Hạn báo cọc không vượt giờ đến.
+- **Khách hủy lịch:** chưa có tiền và bếp chưa làm thì hủy ngay, không phải chờ nhân viên.
+- **Dọn bàn:** sau lượt khách bàn sang **Chờ dọn**, bồi bàn bấm **Đã dọn xong** mới về **Sẵn sàng**.
+- **Quyền:** thu ngân được hoàn cọc dư khi khách đang ngồi; bồi bàn không được sửa giảm giá thủ công.
+- **Kho và bếp:** hủy món chưa nấu thì trả nguyên liệu về kho bằng phiếu điều chỉnh tăng (không tính vào tiền nhập hàng trong báo cáo). Món đặt trước gửi sau khi đã nhận bàn cũng được trừ kho. Món đặt trước vào bếp lúc nhận bàn ở trạng thái Chờ chế biến.
+- **Khác:** ngừng bán món được kể cả khi món còn trong hóa đơn mở; khách đang ngồi quá 2 tiếng vẫn gọi thêm được; đổi giờ tại quầy dùng cùng hạn với đặt tại quầy; nhóm lớn hơn bàn lớn nhất được báo gọi nhà hàng.
+
+**Chưa làm (cần tính năng mới, không phải sửa quy tắc):** ghép nhiều bàn cho nhóm đông, chuyển bàn khi khách đang ngồi, khách tự đổi giờ, quên mật khẩu (chưa có dịch vụ email), đặt bàn không cần tài khoản.
+
+**Kiểm chứng:** smoke **1126 HTTP/database checks** đạt (có `RealWorldRulesSmoke.cs` mới), các kiểm thử Node đạt. Thử trên trình duyệt với CSDL tạm: khách đến ăn ngay, nhận bàn sớm, không đến, chờ dọn → đã dọn xong, thu ngân hoàn cọc, bồi bàn bị chặn giảm giá.
+
+## Trang Ghi nhận gọi món vừa một màn hình — 02/11/2026
+
+- Bỏ quy tắc cho giỏ cao 6 dòng món khiến trang phải cuộn dọc; trên màn hình từ 992px trở lên trang không cuộn, danh mục, danh sách món và giỏ tự cuộn bên trong, chân giỏ luôn hiện.
+- Thu gọn đầu trang, khung chọn bàn và chân giỏ để dành chỗ cho danh sách món. Kiểm chứng ở 1366×680 và 1570×1000.
+
+## Bỏ tính năng làm món trước giờ khách đến — 03/11/2026
+
+- Món đặt trước chỉ xuống bếp khi khách nhận bàn (trạng thái Chờ chế biến). Khách vẫn chọn món trước và đặt cọc như cũ.
+- Bỏ ô "Muốn chuẩn bị trước" ở trang khách, ô xác nhận của nhân viên, và chặn gửi bếp phía server khi khách chưa nhận bàn.
+- Lý do: món làm sẵn dễ nguội; kho chỉ trừ lúc nhận bàn nên khách không đến thì nguyên liệu đã dùng không được trừ; quy trình có thêm một nhánh rắc rối.
+- Giữ cột `DatBan.ChuanBiTruoc` để không cần migration. Lịch cũ đã gửi bếp sớm vẫn được xử lý hủy và giữ món bếp đã làm.

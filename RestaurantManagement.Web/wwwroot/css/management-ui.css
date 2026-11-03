@@ -78,17 +78,11 @@
         max-width: none; padding: 0;
         height: calc(100dvh - 5.5rem); display: flex; flex-direction: column; gap: .5rem;
     }
-    /* Trang Ghi nhận gọi món: giỏ cao thêm khoảng 5 dòng món nên trang được cuộn dọc. */
-    .admin-main .container-fluid.pos-page.pos-page-create {
-        height: auto; min-height: calc(100dvh - 5.5rem);
-    }
-    /* Workspace lấp đầy phần còn lại của màn hình; trang Ghi nhận gọi món được dài thêm cho giỏ cao hơn. */
+    /* Workspace lấp đầy phần còn lại của màn hình; trang không cuộn, từng vùng tự cuộn bên trong. */
     .pos-layout { flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(9.5rem, 11rem) minmax(0, 1fr) minmax(23rem, min(40%, 35rem)); grid-template-rows: minmax(0, 1fr); align-items: stretch; }
-    /* Danh sách món trong giỏ tự cuộn; trang Gọi thêm món giữ chân giỏ trong khung nhìn. */
+    /* Danh sách món trong giỏ tự cuộn, chân giỏ luôn nằm trong khung nhìn. */
     .pos-order { min-height: 0; }
     .pos-cart { min-height: 0; }
-    /* Đủ chỗ cho khoảng 6 dòng món (khoảng 5 dòng so với khung cũ), các món dư cuộn trong giỏ. */
-    .pos-page-create .pos-cart #cart-container { height: calc(6 * 9.25rem); }
     /* Trang Gọi thêm món: danh sách đã gửi cuộn riêng để nhường chỗ cho giỏ món mới. */
     .pos-order > .pos-table-panel { max-height: 42%; display: flex; flex-direction: column; }
     .pos-order > .pos-table-panel > .card-body { min-height: 0; overflow-y: auto; }
@@ -98,11 +92,17 @@
     .pos-layout.pos-focus-cart.pos-menu-collapsed,
     .pos-layout.pos-focus-cart.pos-menu-collapsed.pos-menu-open { grid-template-columns: minmax(0, 1fr); }
     .pos-categories .pos-category-list { max-height: none; }
+    /* Gọi món vừa một màn hình: thu gọn phần đầu trang và chân giỏ để nhường chỗ cho danh sách món. */
+    .pos-page-create .pos-page-header { margin-bottom: 0; }
+    .pos-page-create .pos-page-header .text-muted { display: none; }
+    .pos-page-create #pos-menu-placeholder { padding: .35rem .75rem; margin-bottom: .4rem !important; font-size: .85rem; }
+    .pos-page-create .pos-table-panel > .card-header { padding: .35rem .75rem; }
+    .pos-page-create .table-select-card { padding: .3rem .5rem; }
+    .pos-page-create .pos-config-collapsed .pos-table-panel > .card-header { display: none !important; }
+    .pos-page-create .pos-cart #cart-container { min-height: 3.5rem; }
+    .pos-page-create .pos-cart > .card-footer { padding: .5rem .75rem !important; }
     /* Danh sách món đã order hiển thị trọn trong giỏ; giỏ tự cuộn, không khóa trong khung nhỏ. */
     .pos-cart .pos-existing-list, .pos-table-panel .pos-existing-list { max-height: none; overflow-y: visible; padding-right: .25rem; }
-    /* Danh mục/danh sách món cuộn trong khoảng 6 dòng để không kéo giỏ cao thêm. */
-    .pos-page-create .pos-categories .pos-category-list,
-    .pos-page-create .pos-dish-scroll { max-height: calc(6 * 9.25rem); }
 }
 @media (max-width: 991.98px) {
     .pos-layout { grid-template-columns: 1fr; }
@@ -123,7 +123,9 @@
 }
 
 /* --- Admin declutter layer (giữ nguyên navigation, chỉ giảm nhiễu thị giác) --- */
-.admin-main .container-fluid { max-width: 1120px; margin-inline: auto; padding-top: 1.25rem; padding-bottom: 2rem; }
+.admin-main .container-fluid { max-width: 1400px; margin-inline: auto; padding-top: 1.25rem; padding-bottom: 2rem; }
+/* Trang tự bọc container-fluid thêm một lớp: bỏ khoảng đệm thừa để tiêu đề mọi trang thẳng hàng nhau. */
+.admin-main > .container-fluid > .container-fluid:not(.pos-page) { padding: 0 !important; }
 .admin-main h1.h3, .admin-main h2.h3, .admin-main h1.h4 { font-size: 1.3rem; font-weight: 650; letter-spacing: -.01em; margin-bottom: .2rem; }
 .admin-main .text-muted.mb-0 { font-size: .9rem; max-width: 68ch; }
 /* Một lớp card duy nhất: bỏ shadow nổi, chỉ giữ viền mảnh */
@@ -135,7 +137,7 @@
 .admin-main .btn { border-radius: .5rem; }
 /* Bảng nhẹ hơn: header nhỏ, cho phép xuống dòng để không tràn trang */
 .admin-main .table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .02em; font-weight: 600; color: #64748b; background: #f8fafc; white-space: normal; line-height: 1.35; vertical-align: bottom; }
-.admin-main .table tbody td { padding: .65rem .75rem; font-size: .9rem; vertical-align: middle; overflow-wrap: anywhere; }
+.admin-main .table tbody td { padding: .65rem .75rem; font-size: .9rem; vertical-align: middle; overflow-wrap: break-word; }
 /* Badge trạng thái và nút thao tác không được rớt dòng */
 .admin-main .badge, .admin-main .badge-status-success, .admin-main .badge-status-warning, .admin-main .badge-status-danger { white-space: nowrap; }
 .admin-main td.text-end, .admin-main th.text-end { white-space: nowrap; }

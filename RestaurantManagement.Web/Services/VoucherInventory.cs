@@ -16,6 +16,17 @@ public static class VoucherInventory
         await db.VoucherKhachHang.CountAsync(x => x.VoucherId == voucherId)
         + await DirectTickets(db, excludeInvoiceId).CountAsync(x => x.VoucherId == voucherId);
 
+    /// <summary>Same count as <see cref="IssuedAsync"/> for many vouchers, in two queries.</summary>
+    public static async Task<Dictionary<int, int>> IssuedByVoucherAsync(RestaurantDbContext db, IReadOnlyCollection<int> voucherIds)
+    {
+        var saved = await db.VoucherKhachHang.Where(x => voucherIds.Contains(x.VoucherId))
+            .GroupBy(x => x.VoucherId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
+        var direct = await DirectTickets(db).Where(x => voucherIds.Contains(x.VoucherId!.Value))
+            .GroupBy(x => x.VoucherId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
+        return voucherIds.ToDictionary(id => id,
+            id => (saved.FirstOrDefault(x => x.Key == id)?.Count ?? 0) + (direct.FirstOrDefault(x => x.Key == id)?.Count ?? 0));
+    }
+
     public static async Task<int> ProgramIssuedAsync(RestaurantDbContext db, int programId, int excludeInvoiceId = 0) =>
         await db.VoucherKhachHang.CountAsync(x => x.Voucher.KhuyenMaiId == programId)
         + await DirectTickets(db, excludeInvoiceId).CountAsync(x => x.Voucher!.KhuyenMaiId == programId);

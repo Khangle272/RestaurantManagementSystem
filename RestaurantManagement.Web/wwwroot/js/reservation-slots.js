@@ -18,6 +18,7 @@
             ? (lead > 0 ? 'Giờ này đã qua hoặc chưa đủ 30 phút đặt trước. Vui lòng chọn giờ khác.' : 'Giờ nhận khách đã quá 15 phút. Vui lòng chọn lại.')
             : value > arrival.max ? 'Chỉ nhận đặt bàn trong 180 ngày tới.'
             : clock < form.dataset.openTime || clock >= form.dataset.closeTime ? `Chọn giờ trong ${form.dataset.openTime}–${form.dataset.closeTime}, trước giờ đóng cửa.`
+            : form.dataset.lastTime && clock > form.dataset.lastTime ? `Nhà hàng nhận khách muộn nhất lúc ${form.dataset.lastTime} để kịp phục vụ trước giờ đóng cửa.`
             : value.slice(0, 10) !== day.value ? 'Ngày đặt và giờ đến chưa khớp.' : '';
         arrival.setCustomValidity(error); arrival.setAttribute('aria-invalid', String(Boolean(error)));
         arrival.classList.toggle('is-invalid', Boolean(error));
@@ -62,7 +63,7 @@
             ready = data.available && validateTime(); status.textContent = data.message;
         } catch (error) {
             if (current === sequence) status.textContent = error.name === 'AbortError' ? 'Kết nối chậm. Thông tin vẫn được giữ; bấm kiểm tra lại.' : error.message;
-        } finally { clearTimeout(timeout); }
+        } finally { clearTimeout(timeout); if (current === sequence) form.dispatchEvent(new CustomEvent('slots:refreshed')); }
     }
     day.addEventListener('change', () => { if (arrival.value) arrival.value = day.value + 'T' + arrival.value.split('T')[1]; refresh(); });
     arrival.addEventListener('input', () => { ready = false; sequence++; controller?.abort(); if (arrival.value) day.value = arrival.value.split('T')[0]; validateTime(); });
@@ -75,4 +76,14 @@
     form.addEventListener('submit', e => { if (!validateTime()) { e.preventDefault(); arrival.reportValidity(); } }, true);
     form.addEventListener('ajax:before', e => { if (!ready || !validateTime()) { e.preventDefault(); status.textContent = timeError.textContent || 'Kiểm tra và chọn giờ còn bàn trước khi gửi.'; } });
     refresh();
+    // Khách đến ăn ngay: giờ đến là lúc này nên khóa ô chọn giờ, sơ đồ bàn hiện đúng tình trạng hiện tại.
+    const walkIn = form.querySelector('[name="KhachDenNgay"][type="checkbox"]');
+    walkIn?.addEventListener('change', () => {
+        if (walkIn.checked) {
+            const value = localValue(serverNow + Date.now() - started);
+            arrival.value = value; day.value = value.slice(0, 10);
+        }
+        arrival.readOnly = day.readOnly = walkIn.checked;
+        arrival.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 })();

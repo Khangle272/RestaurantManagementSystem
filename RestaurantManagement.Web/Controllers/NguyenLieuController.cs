@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -266,7 +267,7 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
                     DonGiaCungUng = s.DonGiaCungUng,
                     MaHangNCC = s.MaHangNCC?.Trim(),
                     GhiChu = s.GhiChu?.Trim(),
-                    NgayLienKet = DateTime.Now,
+                    NgayLienKet = TableService.VietnamNow,
                     TrangThai = true
                 });
             }

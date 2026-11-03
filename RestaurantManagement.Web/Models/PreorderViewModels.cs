@@ -7,7 +7,6 @@ public class SavePreorderModel
 {
     [Required] public string RowVersion { get; set; } = "";
     [Required] public Guid? RequestId { get; set; }
-    public bool ChuanBiTruoc { get; set; }
     public List<OrderItemInputModel> Items { get; set; } = [];
 }
 
@@ -52,6 +51,7 @@ public class DepositTransactionModel
     [Required] public string RowVersion { get; set; } = "";
     public Guid RequestId { get; set; }
     public LoaiGiaoDichCoc Loai { get; set; }
+    public PhuongThucThanhToan HinhThuc { get; set; } = PhuongThucThanhToan.ChuyenKhoan;
     [Range(typeof(decimal), "1", "1000000000")] public decimal SoTien { get; set; }
     [StringLength(100)] public string? MaThamChieu { get; set; }
     [Required, StringLength(500)] public string LyDo { get; set; } = "";

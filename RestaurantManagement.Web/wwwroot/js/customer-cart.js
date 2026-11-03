@@ -3,7 +3,7 @@
     const root = document.getElementById('customer-cart');
     if (!root) return;
     const byId = id => document.getElementById(id);
-    const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
+    const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' đ';
     const statuses = { ChoCheBien: 'Chờ chế biến', DangCheBien: 'Đang chế biến', SanSang: 'Sẵn sàng', DaPhucVu: 'Đã phục vụ', DaHuy: 'Đã hủy', 0: 'Chờ chế biến', 1: 'Đang chế biến', 2: 'Sẵn sàng', 3: 'Đã phục vụ', 4: 'Đã hủy' };
     const storage = { get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Draft remains available for this page. */ } }, remove(key) { try { localStorage.removeItem(key); } catch { /* Storage may be disabled. */ } } };
     const owner = root.dataset.owner;
@@ -27,14 +27,14 @@
     }
     let items = cleanItems(draft?.items), sent = [], version = '', canEdit = !bookingId;
     let requestId = typeof draft?.requestId === 'string' && /^[a-f0-9-]{36}$/i.test(draft.requestId) ? draft.requestId : newRequestId();
-    let prepare = Boolean(draft?.prepare), loading = true, selectedDish = null, conflict = false, submitting = false;
+    let loading = true, selectedDish = null, conflict = false, submitting = false;
     const dishes = new Map();
     const initial = byId('customer-menu');
     if (initial) { try { JSON.parse(initial.textContent).forEach(x => dishes.set(x.id, x)); } catch { /* Fetch selected dishes below. */ } }
 
     function persist(changed = false) {
         if (changed) requestId = newRequestId();
-        storage.set(key(), { items: cleanItems(items), version, requestId, prepare });
+        storage.set(key(), { items: cleanItems(items), version, requestId });
         try { sessionStorage.setItem(contextKey, String(bookingId)); } catch { /* Context remains on this page. */ }
         sync();
     }
@@ -63,7 +63,7 @@
         const total = items.reduce((sum, item) => sum + details(item).price * item.quantity, 0) + sent.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
         byId('cart-count').textContent = items.reduce((sum, item) => sum + item.quantity, 0) + sent.reduce((sum, item) => sum + Number(item.quantity), 0);
         byId('cart-total').textContent = money(total);
-        if (byId('booking-deposit-preview')) byId('booking-deposit-preview').textContent = loading ? 'Đang tính…' : money(total > 0 ? Math.ceil(total * .5) : 299000);
+        if (byId('booking-deposit-preview')) byId('booking-deposit-preview').textContent = loading ? 'Đang tính…' : (window.bookingDepositPreview ? window.bookingDepositPreview(total) : money(total > 0 ? Math.ceil(total * .5) : 0));
         byId('cart-version').value = version;
         byId('cart-request-id').value = requestId;
         document.querySelectorAll('[data-cart-inputs]').forEach(container => {
@@ -85,11 +85,11 @@
                 items.forEach(item => { const line = document.createElement('li'); const info = details(item); line.textContent = `${item.quantity} × ${info.name} (${info.sizeName})${item.note ? ' — ' + item.note : ''}${!loading && !info.available ? ' — Không còn phục vụ, vui lòng chọn lại' : ''}`; if (!loading && !info.available) line.className = 'text-danger'; summary.append(line); });
             }
             if (byId('booking-cart-total')) byId('booking-cart-total').textContent = money(total);
+            document.querySelectorAll('[data-cart-filled]').forEach(node => { node.hidden = !items.length; });
+            document.querySelectorAll('[data-cart-empty]').forEach(node => { node.hidden = Boolean(items.length); });
             if (!submitting) bookingForm.querySelector('[type="submit"]').disabled = loading || Boolean(bookingId) || items.some(item => !details(item).available);
         }
         if (!submitting) byId('cart-save-button').disabled = loading || conflict || !canEdit || items.some(item => !details(item).available);
-        byId('cart-prepare').disabled = !canEdit || loading;
-        if (byId('booking-prepare')) byId('booking-prepare').checked = prepare;
     }
     function renderRow(item, index, readonly) {
         const info = readonly ? item : details(item);
@@ -144,7 +144,6 @@
                 version = draft?.version || context.version || '';
                 sent = (context.items || []).filter(x => x.sent);
                 if (!draft) items = cleanItems((context.items || []).filter(x => !x.sent));
-                prepare = draft ? prepare : Boolean(context.chuanBiTruoc ?? context.requestedEarly);
                 const label = byId('cart-context'); label.hidden = false;
                 label.textContent = `Đang chọn cho lịch ${context.code || '#' + bookingId}${context.arrival ? ' · ' + new Date(context.arrival).toLocaleString('vi-VN') : ''}. `;
                 const detailLink = document.createElement('a'); detailLink.href = root.dataset.detailUrl + '/' + bookingId; detailLink.textContent = 'Xem chi tiết'; label.append(detailLink);
@@ -160,7 +159,7 @@
             }
             await Promise.all([...new Set(items.map(x => x.monAnId))].map(async id => { try { await loadDish(id); } catch { dishes.delete(id); } }));
         } catch (err) { canEdit = false; error(err.message); }
-        loading = false; byId('cart-prepare').checked = prepare; persist(); render(); keepContextLinks();
+        loading = false; persist(); render(); keepContextLinks();
     }
     document.querySelectorAll('[data-cart-dish]').forEach(button => button.addEventListener('click', async () => {
         if (loading || submitting || !canEdit) { error('Vui lòng đợi giỏ tải / gửi xong hoặc chọn món cho lịch mới.'); bootstrap.Offcanvas.getOrCreateInstance(byId('cartDrawer')).show(); return; }
@@ -193,17 +192,18 @@
         clearTimeout(feedback.hideTimer);
         feedback.hideTimer = setTimeout(() => feedback.classList.remove('show'), 2500);
     });
-    [byId('cart-prepare'), byId('booking-prepare')].filter(Boolean).forEach(checkbox => checkbox.addEventListener('change', () => { if (submitting) { checkbox.checked = prepare; return; } prepare = checkbox.checked; byId('cart-prepare').checked = prepare; persist(true); }));
     byId('cart-switch-new').addEventListener('click', () => { if (submitting) return; try { sessionStorage.setItem(contextKey, '0'); } catch { /* Query selects the new context. */ } location.href = '/Home?cart=new#thuc-don'; });
     byId('cart-reload').addEventListener('click', async () => {
         if (submitting || loading) return;
-        if (!confirm('Thay giỏ nháp bằng danh sách món chưa gửi bếp của lịch hiện tại?')) return;
+        const ask = window.uxConfirm ?? (message => Promise.resolve(window.confirm(message)));
+        if (!await ask('Giỏ nháp hiện tại sẽ được thay bằng danh sách món chưa gửi bếp của lịch này.', { title: 'Tải lại giỏ món?', ok: 'Tải lại', variant: 'warning' })) return;
+        if (submitting || loading) return;
         draft = null; items = []; sent = []; version = ''; loading = true; conflict = false;
         byId('cart-reload').hidden = true; error(''); requestId = newRequestId();
         await initialize();
     });
     [byId('cart-save-form'), byId('formDatBan')].filter(Boolean).forEach(form => {
-        if (form.id === 'formDatBan') form.addEventListener('input', event => { if (!submitting && event.target?.type !== 'hidden' && event.target?.id !== 'booking-prepare') persist(true); });
+        if (form.id === 'formDatBan') form.addEventListener('input', event => { if (!submitting && event.target?.type !== 'hidden') persist(true); });
         form.addEventListener('submit', event => {
             if (loading || submitting || conflict || !canEdit || (form.id === 'formDatBan' && bookingId) || items.some(item => !details(item).available)) { event.preventDefault(); event.stopImmediatePropagation(); error('Giỏ chưa sẵn sàng gửi. Vui lòng kiểm tra món và lịch đặt bàn.'); return; }
             sync(); persist();

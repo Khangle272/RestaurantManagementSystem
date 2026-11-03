@@ -5,7 +5,7 @@ using RestaurantManagement.Web.Models;
 
 namespace RestaurantManagement.Web.Services;
 
-public class InventoryService(RestaurantDbContext db) : IKhoService
+public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>? logger = null) : IKhoService
 {
     public async Task<InventoryDeductionResult> DeductInventoryForOrderDishesAsync(int hoaDonId, List<OrderItemInputModel> items, int? staffId = null)
     {
@@ -97,7 +97,7 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
             if (nguyenLieu.SoLuongTon < qty)
             {
                 result.Success = false;
-                result.Warnings.Add($"Không đủ tồn kho [{nguyenLieu.TenNguyenLieu}] (còn {nguyenLieu.SoLuongTon:N2} {nguyenLieu.DonViTinh}, cần {qty:N2}). Đã ghi nhận thiếu và giữ tồn về 0.");
+                result.Warnings.Add($"Không đủ tồn kho [{nguyenLieu.TenNguyenLieu}] (còn {nguyenLieu.SoLuongTon:0.##} {nguyenLieu.DonViTinh}, cần {qty:0.##}). Đã ghi nhận thiếu và giữ tồn về 0.");
             }
 
             nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - qty);
@@ -117,7 +117,7 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
             if (nguyenLieu.SoLuongTon <= nguyenLieu.NguongCanhBao)
             {
                 result.LowStockIngredients.Add(nguyenLieu.TenNguyenLieu);
-                result.Warnings.Add($"Cảnh báo: Nguyên liệu [{nguyenLieu.TenNguyenLieu}] tồn kho còn {nguyenLieu.SoLuongTon:N2} {nguyenLieu.DonViTinh}, dưới ngưỡng an toàn ({nguyenLieu.NguongCanhBao:N2})!");
+                result.Warnings.Add($"Cảnh báo: Nguyên liệu [{nguyenLieu.TenNguyenLieu}] tồn kho còn {nguyenLieu.SoLuongTon:0.##} {nguyenLieu.DonViTinh}, dưới ngưỡng an toàn ({nguyenLieu.NguongCanhBao:0.##})!");
             }
         }
 
@@ -145,14 +145,16 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
             catch (Exception ex)
             {
                 result.Success = false;
-                result.Warnings.Add("Không thể hoàn tất tự động xuất kho do xung đột dữ liệu: " + ex.Message);
+                logger?.LogError(ex, "Inventory deduction retry failed for invoice {HoaDonId}", hoaDon.Id);
+                result.Warnings.Add("Không thể hoàn tất tự động xuất kho do xung đột dữ liệu. Vui lòng kiểm tra lại phiếu xuất của hóa đơn này.");
                 return result;
             }
         }
         catch (Exception ex)
         {
             result.Success = false;
-            result.Warnings.Add("Không thể hoàn tất tự động xuất kho: " + ex.Message);
+            logger?.LogError(ex, "Inventory deduction failed for invoice {HoaDonId}", hoaDon.Id);
+            result.Warnings.Add("Không thể hoàn tất tự động xuất kho. Vui lòng kiểm tra lại phiếu xuất của hóa đơn này.");
             return result;
         }
 
@@ -164,8 +166,9 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
 
     public async Task<InventoryDeductionResult> DeductInventoryForBookingPreOrdersAsync(int datBanId, int hoaDonId, int? staffId = null)
     {
+        var cancelled = db.ChiTietHoaDon.Where(x => x.MonDatTruocId != null && x.TrangThai == TrangThaiCheBien.DaHuy).Select(x => x.MonDatTruocId!.Value);
         var preOrders = await db.MonDatTruoc
-            .Where(x => x.DatBanId == datBanId && x.SoLuong > 0)
+            .Where(x => x.DatBanId == datBanId && x.SoLuong > 0 && !cancelled.Contains(x.Id))
             .ToListAsync();
 
         if (preOrders.Count == 0)
@@ -182,6 +185,32 @@ public class InventoryService(RestaurantDbContext db) : IKhoService
         }).ToList();
 
         return await DeductInventoryForOrderDishesAsync(hoaDonId, orderItems, staffId);
+    }
+
+    // Món hủy khi bếp chưa nấu: nguyên liệu còn nguyên, nhập lại kho bằng phiếu điều chỉnh tăng để đối chiếu được.
+    public async Task ReturnInventoryForCancelledDishAsync(ChiTietHoaDon line)
+    {
+        var requirements = new Dictionary<int, decimal>();
+        var dish = await db.MonAn.Include(x => x.ThanhPhanCombo).SingleOrDefaultAsync(x => x.Id == line.MonAnId);
+        if (dish is null) return;
+        if (dish.Loai == LoaiMon.Set && dish.ThanhPhanCombo.Count > 0)
+            foreach (var part in dish.ThanhPhanCombo) await AddDishIngredientsAsync(requirements, part.MonAnId, null, part.SoLuong * line.SoLuong);
+        else await AddDishIngredientsAsync(requirements, line.MonAnId, line.MonAnSizeId, line.SoLuong);
+        if (requirements.Count == 0) return;
+        var ids = requirements.Keys.ToList();
+        var ingredients = await db.NguyenLieu.Where(x => ids.Contains(x.Id)).ToListAsync();
+        var slip = new PhieuNhap { MaPhieu = TableService.NewCode("PN-HM"), NhanVienId = line.HoaDon.NhanVienId,
+            ThoiDiem = DateTimeOffset.UtcNow, TrangThai = TrangThaiPhieu.DaGhiSo, LyDo = LyDoNhap.DieuChinhTang,
+            GhiChu = $"Trả kho món hủy chưa nấu: {line.TenMonLucBan} x{line.SoLuong} - Hóa đơn #{line.HoaDon.MaHoaDon}" };
+        foreach (var ingredient in ingredients)
+        {
+            var quantity = requirements[ingredient.Id];
+            ingredient.SoLuongTon += quantity;
+            slip.ChiTiet.Add(new ChiTietPhieuNhap { NguyenLieuId = ingredient.Id, SoLuong = quantity,
+                DonGia = ingredient.DonGia, ThanhTien = quantity * ingredient.DonGia });
+        }
+        slip.TongTien = slip.ChiTiet.Sum(x => x.ThanhTien);
+        db.PhieuNhap.Add(slip);
     }
 
     private async Task AddDishIngredientsAsync(Dictionary<int, decimal> requirements, int dishId, int? sizeId, int dishQuantity)

@@ -1,15 +1,15 @@
 @model PhieuNhapCreateVM
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Lập Phiếu Nhập Kho";
+    ViewData["Title"] = "Lập phiếu nhập kho";
     var nccList = ViewBag.NhaCungCapList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
     var nguyenLieuList = ViewBag.NguyenLieuList as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
 
 <div class="container-fluid py-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="h3 fw-bold text-heading mb-1"><i class="bi bi-cart-plus me-2 text-danger"></i>Lập Phiếu Nhập Kho</h1>
+            <h1 class="h3">Lập phiếu nhập kho</h1>
             <p class="text-muted mb-0">Tạo phiếu nhập Master-Detail, cập nhật số lượng tồn kho và điều chỉnh đơn giá vốn tức thời.</p>
         </div>
         <a asp-action="Index" class="btn btn-brand-outline">
@@ -17,7 +17,7 @@
         </a>
     </div>
 
-    <form asp-action="Create" method="post" id="formNhapKho">
+    <form asp-action="Create" method="post" id="formNhapKho" data-confirm="Phiếu nhập sẽ được ghi sổ và tăng tồn kho ngay, không sửa được sau khi lưu. Tiếp tục?" data-confirm-title="Xác nhận nhập kho" data-confirm-ok="Nhập kho">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
         <!-- Master Card -->
@@ -46,7 +46,7 @@
 
                     <div class="col-12 col-md-3">
                         <label asp-for="NgayNhap" class="form-label fw-semibold"></label> <span class="text-danger">*</span>
-                        <input asp-for="NgayNhap" type="datetime-local" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" required />
+                        <input asp-for="NgayNhap" type="datetime-local" class="form-control" value="@RestaurantManagement.Web.Services.TableService.VietnamNow.ToString("yyyy-MM-ddTHH:mm")" required />
                         <span asp-validation-for="NgayNhap" class="text-danger small"></span>
                     </div>
 
@@ -109,7 +109,7 @@
                                     Tổng giá trị nhập:
                                 </td>
                                 <td class="text-end fw-bold text-danger fs-4 py-3" id="lblTongTien">
-                                    0 VNĐ
+                                    0 đ
                                 </td>
                                 <td colspan="3"></td>
                             </tr>
@@ -126,7 +126,7 @@
         <div class="d-flex justify-content-end gap-2 mb-5">
             <a asp-action="Index" class="btn btn-brand-outline">Hủy bỏ</a>
             <button type="submit" class="btn btn-brand-primary btn-lg shadow-sm" id="btnSubmit">
-                <i class="bi bi-check2-circle me-1"></i> Xác Nhận Nhập Kho & Tăng Tồn
+                <i class="bi bi-check2-circle me-1"></i> Xác nhận nhập kho & tăng tồn
             </button>
         </div>
     </form>
@@ -182,7 +182,7 @@
                     </div>
                 </td>
                 <td class="text-end fw-bold text-dark text-thanhtien">
-                    0 VNĐ
+                    0 đ
                 </td>
                 <td>
                     <input type="date" name="ChiTiets[${rowIndex}].HanSuDung" class="form-control form-control-sm" />
@@ -253,7 +253,7 @@
             const qty = parseFloat(tr.querySelector(".input-soluong").value) || 0;
             const price = parseFloat(tr.querySelector(".input-dongia").value) || 0;
             const total = qty * price;
-            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " VNĐ";
+            tr.querySelector(".text-thanhtien").textContent = total.toLocaleString("vi-VN") + " đ";
             updateTotals();
         }
 
@@ -279,17 +279,16 @@
                 const price = parseFloat(tr.querySelector(".input-dongia").value) || 0;
                 sum += qty * price;
             });
-            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " VNĐ";
+            lblTongTien.textContent = sum.toLocaleString("vi-VN") + " đ";
         }
 
         btnThemDong.addEventListener("click", () => addRow());
 
-        // Add 2 default initial rows for quick entry
-        if (rawData.length > 0) {
-            addRow(rawData[0].Id, 10, rawData[0].DonGia);
-            if (rawData.length > 1) {
-                addRow(rawData[1].Id, 5, rawData[1].DonGia);
-            }
+        // Dòng đầu để trống; đi từ nút "Nhập thêm" ở Tồn kho thì chọn sẵn đúng nguyên liệu đó.
+        const preselectId = Number(new URLSearchParams(location.search).get("nguyenLieu"));
+        const preselected = rawData.find(item => item.Id === preselectId);
+        if (preselected) {
+            addRow(preselected.Id, 1, preselected.DonGia);
         } else {
             addRow();
         }
@@ -497,7 +496,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-subtle">
                 <h5 class="modal-title fw-bold" id="modalQuickAddSupplierLabel">
-                    <i class="bi bi-truck text-danger me-2"></i>Thêm Nhanh Nhà Cung Cấp
+                    <i class="bi bi-truck text-danger me-2"></i>Thêm nhanh nhà cung cấp
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
@@ -530,7 +529,7 @@
                 <div class="modal-footer border-subtle">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                     <button type="submit" class="btn btn-brand-primary" id="btnSaveQuickSupplier">
-                        <i class="bi bi-check2-circle me-1"></i> Lưu Nhà Cung Cấp
+                        <i class="bi bi-check2-circle me-1"></i> Lưu nhà cung cấp
                     </button>
                 </div>
             </form>
@@ -544,7 +543,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-subtle">
                 <h5 class="modal-title fw-bold" id="modalQuickAddIngredientLabel">
-                    <i class="bi bi-egg-fried text-danger me-2"></i>Thêm Nhanh Nguyên Liệu Vào Kho
+                    <i class="bi bi-egg-fried text-danger me-2"></i>Thêm nhanh nguyên liệu vào kho
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
@@ -585,7 +584,7 @@
                 <div class="modal-footer border-subtle">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
                     <button type="submit" class="btn btn-brand-primary" id="btnSaveQuickIngredient">
-                        <i class="bi bi-check2-circle me-1"></i> Lưu Nguyên Liệu
+                        <i class="bi bi-check2-circle me-1"></i> Lưu nguyên liệu
                     </button>
                 </div>
             </form>
