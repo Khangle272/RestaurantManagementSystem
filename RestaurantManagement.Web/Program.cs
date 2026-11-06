@@ -1,9 +1,11 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
+using RestaurantManagement.Web.Api;
 using RestaurantManagement.Web.Security;
 using RestaurantManagement.Web.Services;
 
@@ -47,6 +49,19 @@ builder.Services.ConfigureApplicationCookie(options =>
         context.Response.Redirect(login + "?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
         return Task.CompletedTask;
     };
+});
+// REST API /api cho ứng dụng mobile dùng bearer token của ASP.NET Core Identity; website giữ cookie.
+// Chọn scheme theo đường dẫn để API không bao giờ đọc cookie (tránh CSRF) và trả 401/403 thay vì chuyển trang.
+builder.Services.AddAuthentication()
+    .AddBearerToken(IdentityConstants.BearerScheme, options => options.BearerTokenExpiration = TimeSpan.FromHours(8))
+    .AddPolicyScheme(MobileApi.AuthScheme, "Website hoặc API mobile", options =>
+        options.ForwardDefaultSelector = context => MobileApi.IsApiRequest(context.Request)
+            ? IdentityConstants.BearerScheme : IdentityConstants.ApplicationScheme);
+builder.Services.Configure<AuthenticationOptions>(options =>
+{
+    options.DefaultAuthenticateScheme = MobileApi.AuthScheme;
+    options.DefaultChallengeScheme = MobileApi.AuthScheme;
+    options.DefaultForbidScheme = MobileApi.AuthScheme;
 });
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
     options.ValidationInterval = TimeSpan.Zero);
@@ -155,7 +170,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Lỗi 404/403/400... (không có nội dung) hiển thị trang báo lỗi tiếng Việt thay vì trang trắng.
-app.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}");
+// API mobile trả JSON, không đổi sang trang lỗi HTML.
+app.UseWhen(context => !MobileApi.IsApiRequest(context.Request),
+    branch => branch.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}"));
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();

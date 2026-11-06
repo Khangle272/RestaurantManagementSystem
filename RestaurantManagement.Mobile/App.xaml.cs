@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using RestaurantManagement.Mobile.Views;
 
 namespace RestaurantManagement.Mobile
 {
@@ -11,7 +11,8 @@ namespace RestaurantManagement.Mobile
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            // Mở màn đăng nhập; sau khi đăng nhập AppNavigator chuyển sang màn nhân viên hoặc khách.
+            return new Window(new NavigationPage(new LoginPage())) { Title = "Quản lý nhà hàng" };
         }
     }
 }

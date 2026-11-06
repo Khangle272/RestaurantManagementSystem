@@ -878,3 +878,15 @@ Rà toàn bộ chức năng, sửa các quy tắc không khớp cách nhà hàng
 - Bỏ ô "Muốn chuẩn bị trước" ở trang khách, ô xác nhận của nhân viên, và chặn gửi bếp phía server khi khách chưa nhận bàn.
 - Lý do: món làm sẵn dễ nguội; kho chỉ trừ lúc nhận bàn nên khách không đến thì nguyên liệu đã dùng không được trừ; quy trình có thêm một nhánh rắc rối.
 - Giữ cột `DatBan.ChuanBiTruoc` để không cần migration. Lịch cũ đã gửi bếp sớm vẫn được xử lý hủy và giữ món bếp đã làm.
+
+## REST API và app mobile native — 06/11/2026
+
+Đối chiếu đề cương KL066: thiếu "Xây dựng API hệ thống" (project API chỉ có tầng dữ liệu, không có endpoint) và chức năng mobile (app cũ chỉ là WebView mở website). Lượt này bổ sung cả hai. Chi tiết endpoint và cách chạy: **API_MOBILE.md**.
+
+- **API trong Web (`RestaurantManagement.Web/Api`)**, không viết lại logic: gọi lại `OrderService`, `TableService`, `IPromotionService`, `CustomerHistoryService`, nên quy tắc trên web và mobile giống nhau. Project `RestaurantManagement.API` vẫn là tầng dữ liệu (entity, DbContext, migrations).
+- **Xác thực:** bearer token Identity (8 giờ) cho `/api`, cookie cho website. Policy scheme chọn theo đường dẫn: API không đọc cookie và trả 401/403 JSON. Trang lỗi HTML không áp dụng cho `/api`. Bếp/Kho không đăng nhập app.
+- **Project mới `RestaurantManagement.Shared`:** DTO dùng chung giữa API và app.
+- **App MAUI native:** đăng nhập; sơ đồ bàn (Trống/Đã đặt/Đang phục vụ/Chờ dọn); gọi món tại bàn, mang đi, giao hàng; gọi thêm; mang món ra/hủy món; thanh toán tiền mặt/chuyển khoản; kết thúc phục vụ, dọn bàn; tiếp tân xác nhận đặt bàn bằng bàn gợi ý và nhận bàn. Khách: điểm, đơn đang phục vụ (tự cập nhật 15 giây), lịch sử mua, lịch sử điểm. Bỏ màn WebView cũ; voucher và đổi điểm vẫn làm trên website. Màu app theo màu xanh của website.
+- **Giới hạn có chủ ý:** mobile không sửa giảm giá thủ công, không hoàn cọc dư (thu ngân làm trên web), không thu thẻ (server chỉ nhận tiền mặt/chuyển khoản). Chưa có refresh token: hết 8 giờ thì đăng nhập lại.
+
+**Kiểm chứng:** `MobileApiSmoke` (`--mobile-api-only`) đạt **55 kiểm tra**; bộ mặc định (đã gồm bộ API) đạt **1170 kiểm tra HTTP/database**. Build Web 0 cảnh báo; build MAUI Windows sạch; app Windows mở được màn đăng nhập. Chưa bấm thử giao diện app với dữ liệu thật và chưa chạy trên emulator/điện thoại.

@@ -129,7 +129,7 @@ Web tự áp dụng migration `20261025134614_CampaignVoucherWalletAndCustomerPo
 
 Migration tiếp theo `20261026132015_LoyaltyVoucherRedemption` bổ sung mức điểm (mã cũ mặc định 0), mở rộng sổ điểm cho giao dịch đổi và giữ nguyên điểm đã tích. Web tự áp dụng khi khởi động; nâng cấp thủ công từ bản ví voucher bằng `RestaurantManagement.API/Scripts/UpgradeLoyaltyVoucherRedemption.sql`. Không thể rollback về schema cũ nếu đã có giao dịch đổi điểm. Chạy bộ kiểm thử ví và đổi điểm trên database tạm bằng `dotnet run --project tests/Management.SmokeTests -- --customer-promotions-only`.
 
-Ứng dụng MAUI hiện dùng **WebView HTTPS** để chia sẻ luồng khách với Web. Mở ứng dụng, nhập địa chỉ gốc HTTPS của Web (thiết bị phải truy cập được và tin cậy chứng chỉ), bấm **Mở tài khoản khách hàng**. Đăng nhập cùng tài khoản website để thu thập mã, chọn mã, theo dõi đơn và xem điểm. Đây là giao diện Web trong app, chưa phải bộ API/mobile native riêng; không giả lập việc thanh toán thành công trên thiết bị.
+Ứng dụng MAUI là **app native gọi REST API `/api`** của Web (bearer token). Nhân viên dùng sơ đồ bàn, gọi món, phục vụ, thanh toán và tiếp nhận đặt bàn; khách theo dõi đơn, lịch sử mua và điểm. Danh sách endpoint, phân quyền và cách chạy app: **[API_MOBILE.md](API_MOBILE.md)**.
 
 Kiểm thử các luồng mới và hồi quy khuyến mãi:
 
@@ -138,6 +138,7 @@ dotnet run --project tests/Management.SmokeTests -- --customer-promotions-only
 dotnet run --project tests/Management.SmokeTests -- --promotions-only
 dotnet run --project tests/Management.SmokeTests -- --orders-only
 dotnet run --project tests/Management.SmokeTests -- --deposits-only
+dotnet run --project tests/Management.SmokeTests -- --mobile-api-only
 ```
 
 Các bộ test dùng database tạm tự tạo/xóa. Có thể đặt `CRUD_TEST_SQL_SERVER` theo instance cục bộ. Khi môi trường không cho MSBuild chạy song song, biên dịch với `-m:1 -p:BuildInParallel=false`.

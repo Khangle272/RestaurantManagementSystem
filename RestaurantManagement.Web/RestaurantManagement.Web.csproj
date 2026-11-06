@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RestaurantManagement.API\RestaurantManagement.API.csproj" />
+    <ProjectReference Include="..\RestaurantManagement.Shared\RestaurantManagement.Shared.csproj" />
   </ItemGroup>
 
   <!-- Web owns host configuration. Keep the API assembly, but do not publish its
