@@ -204,6 +204,13 @@ public static class MobileApiSmoke
         check(await db.DatBan.Where(x => x.Id == request.Id).Select(x => x.TrangThai).SingleAsync() == TrangThaiDatBan.DaXacNhan
             && await db.ChiTietDatBan.AnyAsync(x => x.DatBanId == request.Id && x.BanAnId == pending.GoiYBan[0].Id),
             "Confirmed booking is stored with its table");
+
+        // 11. Đặt lại mật khẩu/đổi quyền làm mới dấu bảo mật: token bearer cấp trước đó phải mất hiệu lực ngay.
+        await Expect(reception, "/api/auth/me", HttpStatusCode.OK, "API token works before the account is changed", check);
+        var receptionUser = await db.Users.SingleAsync(x => x.Email == "tieptan.demo@example.test");
+        receptionUser.SecurityStamp = Guid.NewGuid().ToString();
+        await db.SaveChangesAsync();
+        await Expect(reception, "/api/auth/me", HttpStatusCode.Unauthorized, "API token is revoked once the security stamp changes", check);
     }
 
     private static async Task<HttpClient> Login(Func<HttpClient> newClient, string email)

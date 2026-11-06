@@ -17,12 +17,26 @@ public static class KitchenDayClosing
             .ToListAsync();
         if (pending.Count == 0) return 0;
         var now = DateTimeOffset.UtcNow;
+        var neverCooked = new List<ChiTietHoaDon>();
         foreach (var item in pending)
         {
             // Món đã nấu xong, hoặc bill đã thu tiền: coi như đã giao; món chưa nấu của bill chưa thu tiền: hủy.
             if (item.TrangThai == TrangThaiCheBien.SanSang || item.HoaDon.TrangThai != TrangThaiHoaDon.ChuaThanhToan)
                 item.TrangThai = TrangThaiCheBien.DaPhucVu;
-            else { item.TrangThai = TrangThaiCheBien.DaHuy; item.ThoiDiemHuy = now; }
+            else
+            {
+                if (item.TrangThai == TrangThaiCheBien.ChoCheBien) neverCooked.Add(item);
+                item.TrangThai = TrangThaiCheBien.DaHuy; item.ThoiDiemHuy = now;
+            }
+        }
+        // Món chưa được nấu thì nguyên liệu còn nguyên: trả kho như khi nhân viên hủy món (cùng điều kiện với OrderService).
+        // Món đặt trước của khách chưa nhận bàn chưa bị trừ kho nên không có gì để trả.
+        var stock = new InventoryService(db);
+        foreach (var item in neverCooked)
+        {
+            var deducted = item.MonDatTruocId is null || (item.HoaDon.DatBanId is int bookingId
+                && await db.DatBan.AnyAsync(x => x.Id == bookingId && x.TrangThai == TrangThaiDatBan.DaNhanBan));
+            if (deducted) await stock.ReturnInventoryForCancelledDishAsync(item);
         }
         var billIds = pending.Where(x => x.HoaDon.TrangThai == TrangThaiHoaDon.ChuaThanhToan).Select(x => x.HoaDonId).Distinct().ToList();
         var bills = await db.HoaDon.Include(x => x.ChiTiet).Where(x => billIds.Contains(x.Id)).ToListAsync();

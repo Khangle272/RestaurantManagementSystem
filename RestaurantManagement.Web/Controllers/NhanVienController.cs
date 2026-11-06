@@ -95,6 +95,12 @@ public class NhanVienController(RestaurantDbContext context, UserManager<TaiKhoa
                     ModelState.AddModelError("", "Không thay đổi tài khoản quản lý/khách qua hồ sơ nhân viên.");
                     return View("Form", model);
                 }
+                // Hồ sơ ngừng làm việc khiến tài khoản Admin bị đăng xuất và không đăng nhập lại được: tránh tự khóa hệ thống.
+                if (roles.Contains(AppRoles.Admin) && !model.DangLamViec)
+                {
+                    ModelState.AddModelError(nameof(model.DangLamViec), "Không thể ngừng làm việc hồ sơ gắn với tài khoản quản trị, vì sẽ không ai đăng nhập quản trị được.");
+                    return View("Form", model);
+                }
                 // Hồ sơ cũ liên kết tài khoản chưa có quyền vẫn được sửa; không tự cấp quyền cho tài khoản đó.
                 if (roles.Count > 0 && (roles.Count != 1 || roles[0] != model.ChucVu))
                 {

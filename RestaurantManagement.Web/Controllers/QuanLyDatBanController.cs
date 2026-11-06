@@ -161,7 +161,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> NhanBan(int datBanId, string? rowVersion)
     {
-        var error = await tables.CheckIn(datBanId, rowVersion, await StaffId());
+        var error = await tables.CheckIn(datBanId, rowVersion, await CheckInStaffId());
         TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error ?? "Khách đã nhận bàn. Bàn chuyển sang đang phục vụ.";
         return RedirectToAction(nameof(Index), new { tab = error is null ? "DangPhucVu" : "DaXacNhan" });
     }
@@ -207,6 +207,16 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
     {
         int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var accountId);
         return Db.NhanVien.Where(x => x.TaiKhoanId == accountId && x.DangLamViec).Select(x => (int?)x.Id).SingleOrDefaultAsync();
+    }
+
+    // Nhận bàn gửi món đặt trước xuống bếp và trừ kho dưới tên một nhân viên. Admin chưa có hồ sơ nhân viên được ghi nhận
+    // bằng một nhân viên đang làm việc (như màn gọi món/thu ngân và API mobile); không thì món đặt trước bị bỏ sót âm thầm.
+    private async Task<int?> CheckInStaffId()
+    {
+        var staffId = await StaffId();
+        if (staffId is null && User.IsInRole(AppRoles.Admin))
+            staffId = await Db.NhanVien.Where(x => x.DangLamViec).Select(x => (int?)x.Id).FirstOrDefaultAsync();
+        return staffId;
     }
 
     private static HoaDon? ResolveBookingInvoice(DatBan booking)
@@ -305,7 +315,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
             return View(model);
         }
         var seatError = !model.KhachDenNgay ? null
-            : await tables.CheckIn(booking.Id, Convert.ToBase64String(Db.Entry(booking).Property<byte[]>("RowVersion").CurrentValue ?? []), staffId);
+            : await tables.CheckIn(booking.Id, Convert.ToBase64String(Db.Entry(booking).Property<byte[]>("RowVersion").CurrentValue ?? []), staffId ?? await CheckInStaffId());
         if (seatError is not null) TempData["ErrorMessage"] = $"Đã tạo lịch {booking.MaDatBan} nhưng chưa nhận bàn được: {seatError}";
         else TempData["SuccessMessage"] = model.KhachDenNgay
             ? $"Đã nhận {chosen.MaBan} cho {booking.HoTenLienHe}. Bàn đang phục vụ."
@@ -415,7 +425,9 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         var imgMatch = Regex.Match(clean, @"\[Ảnh:\s*([^\]]+)\]");
         if (imgMatch.Success)
         {
-            hinhAnh = imgMatch.Groups[1].Value.Trim();
+            // Chỉ nhận ảnh do hệ thống lưu; đường dẫn khác (javascript:, trang ngoài) bị bỏ để không thành liên kết độc hại.
+            var candidate = imgMatch.Groups[1].Value.Trim();
+            if (Regex.IsMatch(candidate, @"\A/uploads/reviews/rev_[0-9a-f]{32}\.(png|jpg)\z")) hinhAnh = candidate;
             clean = clean.Replace(imgMatch.Value, "").Trim();
         }
 

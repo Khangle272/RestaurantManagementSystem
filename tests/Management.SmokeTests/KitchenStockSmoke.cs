@@ -60,6 +60,13 @@ public static class KitchenStockSmoke
         check(closedBill.TongTienHang == 240000m && closedBill.TrangThai == TrangThaiHoaDon.ChuaThanhToan,
             "Bill total drops the cancelled dish and the bill stays open for today's dish");
 
+        // The uncooked dish was cancelled by day closing, so its ingredients go back to the warehouse with a traceable slip.
+        var returned = await db.NguyenLieu.AsNoTracking().Where(x => x.Id == ingredient.Id).Select(x => x.SoLuongTon).SingleAsync();
+        check(returned == 0.9m && await db.PhieuNhap.AnyAsync(x => x.LyDo == LyDoNhap.DieuChinhTang && x.GhiChu!.Contains("KDS-YESTERDAY-WAITING")),
+            "Day closing returns stock of the dish it cancelled before cooking, with an adjustment slip");
+        var resetStock = await db.NguyenLieu.SingleAsync(x => x.Id == ingredient.Id);
+        resetStock.SoLuongTon = 0.5m; await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+
         // 2. Ordering with too little stock keeps the order but warns the cashier.
         var form = await Get(admin, "/DonHang/Create");
         using (var response = await admin.PostAsync("/DonHang/Create", new FormUrlEncodedContent(new Dictionary<string, string>

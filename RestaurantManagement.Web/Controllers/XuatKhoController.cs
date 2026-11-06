@@ -117,7 +117,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
                     LyDo = LyDoXuat.CheBien,
                     BoPhanNhan = model.BoPhanNhan,
                     NguoiNhan = model.NguoiNhan?.Trim(),
-                    GhiChu = model.GhiChu?.Trim()
+                    // Lý do/ca xuất người dùng chọn không có cột riêng: ghi vào ghi chú để không mất khi lưu phiếu.
+                    GhiChu = Truncate(string.IsNullOrWhiteSpace(model.GhiChu) ? model.LyDoXuat.Trim() : $"{model.LyDoXuat.Trim()} — {model.GhiChu.Trim()}", 500)
                 };
 
                 decimal totalVal = 0;
@@ -179,6 +180,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
 
         return View(new PhieuXuatDetailsVM { PhieuXuat = phieu });
     }
+
+    private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
 
     private async Task LoadDropdownsAsync()
     {

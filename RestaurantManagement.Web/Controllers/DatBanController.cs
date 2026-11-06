@@ -474,7 +474,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         var score = Math.Clamp((int)Math.Round((model.SoSaoMonAn + model.SoSaoDichVu) / 2.0), 1, 5);
         var metaTag = $"[Món ăn: {model.SoSaoMonAn}★ | Dịch vụ: {model.SoSaoDichVu}★]";
         var imgTag = string.IsNullOrEmpty(hinhAnhUrl) ? "" : $"\n[Ảnh: {hinhAnhUrl}]";
-        var fullNoiDung = $"{model.NoiDung.Trim()}\n{metaTag}{imgTag}";
+        // Dấu [ ] là thẻ hệ thống (điểm, ảnh, phản hồi của nhà hàng): khách không được tự chèn để giả mạo chúng.
+        var fullNoiDung = $"{model.NoiDung.Trim().Replace('[', '(').Replace(']', ')')}\n{metaTag}{imgTag}";
 
         var danhGia = new DanhGia
         {
