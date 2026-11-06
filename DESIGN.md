@@ -344,13 +344,11 @@ Tuân thủ chặt chẽ Design Tokens: Màu chủ đạo Rose (`#E11D48`), ph�
     * Ghi chú bổ sung (Yêu cầu trẻ em, ghế ăn dặm, trang trí sinh nhật, dị ứng thức ăn).
     * Nút CTA Đặt bàn: Nền `#E11D48`, chữ trắng in đậm, hiệu ứng chuyển màu khi hover sang `#BE123C`.
 
-### 6.2. Màn hình Xác nhận Đặt bàn thành công (`Views/DatBan/Success.cshtml`)
-* **Thẻ thành công (Success Receipt Card):**
-  * Biểu tượng dấu tích xanh lục `#10B981` cỡ lớn kèm thông điệp chúc mừng.
-  * **Mã đặt chỗ (Booking Code):** Kích thước chữ `28px`, phông monospace hoặc font đậm, dạng `BK-YYYYMMDD-XXXX`, có nút copy nhanh.
-  * Tóm tắt chi tiết: Họ tên, Số điện thoại, Thời gian đến, Số lượng khách, Khu vực mong muốn.
-  * Hướng dẫn đến nhà hàng: Giữ bàn trong vòng 15 phút, hotline hỗ trợ, nút in hoặc lưu biên nhận.
-  * Nút điều hướng phụ: "Tra cứu lịch sử đặt bàn" và "Quay về trang chủ".
+### 6.2. Màn hình Thanh toán cọc sau khi đặt bàn (`Views/DatBan/ThanhToanCoc.cshtml`)
+* Gửi form đặt bàn xong, khách được chuyển thẳng tới trang này (trang "đặt bàn thành công" riêng đã gỡ ngày 31/10/2026). Tiêu đề đổi theo trạng thái: chờ thanh toán cọc, đã xác nhận hoặc đã hủy.
+* **Thông tin tiền đặt cọc:** mã lịch có nút "Sao chép mã", số tiền cọc và nội dung chuyển khoản.
+* **Chuyển khoản tiền cọc:** nút "Tôi đã chuyển khoản" gửi thông báo cho thu ngân đối chiếu; lịch chỉ được chốt khi thu ngân xác nhận đã nhận tiền. Nút "Kiểm tra trạng thái" tải lại trạng thái từ server.
+* Nút điều hướng phụ: xem chi tiết lịch (`ChiTiet.cshtml`), đặt bàn mới và lịch sử đặt bàn.
 
 ### 6.3. Màn hình Tra cứu Lịch sử đặt bàn (`Views/DatBan/LichSu.cshtml`)
 * **Thanh tìm kiếm:** Ô nhập số điện thoại hoặc mã Booking Code kèm nút tra cứu tức thì.
@@ -525,7 +523,7 @@ Tuân thủ toàn bộ Design Tokens tại Mục 1 và Layout Shell tại Mục 
 ### 10. ĐẶC TẢ GIAO DIỆN & UI/UX TUẦN 9 (W9 REVISION)
 Tuân thủ toàn bộ Design Tokens tại Mục 1 và Layout Shell tại Mục 2. Đợt cập nhật Tuần 9 giải quyết 3 trải nghiệm trọng tâm của Thành viên 1: **Tối giản hóa Form Tạo/Sửa Món**, **Thiết kế Bố cục Định mức Chia đôi (Split Layout BOM) với Bảng đối chiếu 3 Size**, và **Chuẩn hóa Thông tin Chế biến Màn hình Bếp (KDS)**.
 
-#### 10.1. Tối ưu Form Tạo/Sửa Món Ăn (`Views/MonAn/Create.cshtml` & `Form.cshtml`)
+#### 10.1. Tối ưu Form Tạo/Sửa Món Ăn (`Views/MonAn/Form.cshtml`)
 - **Loại bỏ lựa chọn loại món:**
   + Không hiển thị trường chọn hoặc radio `Món lẻ / Món Combo`. Form này chuyên biệt 100% cho việc tạo món lẻ.
   + Giao diện tạo Combo được phân tách sang trang quản lý riêng biệt.
@@ -680,4 +678,4 @@ Phần này bổ sung cho đặc tả W9 tại Mục 11. Khi yêu cầu trùng n
 - `GioiHanPhatHanh` nullable trên cha/con là hạn số vé; `GioiHanTongLuot` nullable trên mã là hạn dùng/giữ hóa đơn. `VoucherInventory` đếm vé trong ví + hóa đơn nhập tay chưa có vé tương ứng; không đếm đôi vé lưu đã được dùng. Thu thập, sửa và áp mã dùng giao dịch Serializable với khóa chương trình rồi mã để bảo vệ hạn chung giữa các mã con.
 - Khách thấy hai tab khám phá/ví, lựa chọn mã hoặc nhập tay trên hóa đơn, và lịch sử đơn/điểm riêng. Tiến độ món cập nhật 15 giây qua endpoint kiểm tra chủ sở hữu; thanh toán vẫn do thu ngân xác nhận. Hồ sơ quản trị hỗ trợ khách có/không có tài khoản, cấp tài khoản vào hồ sơ cũ, phân trang lịch sử mua và sổ điểm độc lập.
 - Sổ điểm chỉ thêm khi thanh toán thành công, cùng transaction hóa đơn/cấn cọc. Mỗi hóa đơn tối đa một dòng. 10.000đ sau giảm = 1 điểm (làm tròn xuống), phần đã trả cọc vẫn tính là tiền mua. Không suy đoán điểm cho hóa đơn cũ.
-- App MAUI dùng WebView HTTPS cùng origin do người dùng cấu hình; dùng luồng đăng nhập/ví/đơn hàng của Web. Chỉ điều hướng trong máy chủ đã chọn, không chấp nhận HTTP hoặc URL chứa thông tin đăng nhập.
+- App MAUI (06/11/2026) là app native gọi REST API `/api` bằng bearer token, không còn WebView. Thu thập/đổi voucher vẫn làm trên website; app khách xem đơn, lịch sử và điểm. Kiến trúc và endpoint: [API_MOBILE.md](API_MOBILE.md).

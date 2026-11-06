@@ -1,5 +1,7 @@
 # Cập nhật schema 24 bảng nghiệp vụ
 
+> Ghi chú lịch sử ngày 19/09/2026 về lần rút gọn schema theo góp ý giảng viên. Schema hiện tại đã mở rộng qua các migration sau đó; xem [RestaurantManagement.API/README.md](RestaurantManagement.API/README.md).
+
 Ngày 19/09/2026, nhánh `thanhvien1-3.1-database` đã cập nhật schema theo góp ý giảng viên.
 
 ## Thay đổi chính

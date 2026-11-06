@@ -17,8 +17,6 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
     public const int PhysicalBusyMinutes = 30;
     // Quá giờ hẹn chừng này mà khách chưa đến thì lễ tân được ghi nhận "Không đến" để trả bàn.
     public const int NoShowGraceMinutes = 15;
-    public static bool ReadyForSchedule(BanAn table, DateTimeOffset arrival) => table.TrangThai == TrangThaiBan.SanSang
-        || DateOnly.FromDateTime(arrival.ToOffset(TimeSpan.FromHours(7)).DateTime) > DateOnly.FromDateTime(VietnamNow);
     public static DateTimeOffset VietnamTime(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.FromHours(7));
     public static DateTime VietnamNow => DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).DateTime;
     public static IQueryable<ChiTietDatBan> CurrentServices(RestaurantDbContext db)

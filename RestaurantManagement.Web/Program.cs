@@ -129,26 +129,6 @@ if (args.Contains("--init-week10-demo", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
-if (args.Contains("--init-week9-demo", StringComparer.OrdinalIgnoreCase))
-{
-    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Chỉ tạo dữ liệu tuần 9 trong Development.");
-    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
-    using var scope = app.Services.CreateScope();
-    await RestaurantManagement.Web.Services.Week9DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>(),
-        scope.ServiceProvider.GetRequiredService<RestaurantManagement.Web.Services.TableService>());
-    return;
-}
-
-if (args.Contains("--init-week8-demo", StringComparer.OrdinalIgnoreCase))
-{
-    if (!app.Environment.IsDevelopment())
-        throw new InvalidOperationException("Chỉ được tạo dữ liệu tuần 8 trong môi trường Development.");
-    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
-    using var scope = app.Services.CreateScope();
-    await RestaurantManagement.Web.Services.Week8DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>());
-    return;
-}
-
 if (args.Contains("--remove-retired-menu-roles", StringComparer.OrdinalIgnoreCase))
 {
     if (!app.Environment.IsDevelopment())

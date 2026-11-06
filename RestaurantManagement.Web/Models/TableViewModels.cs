@@ -51,11 +51,8 @@ public class ReceptionBookingViewModel
     public string? SoDienThoai { get; set; }
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
     public DateTime GioDen { get; set; } = Services.ReservationSchedule.NextArrival(Services.TableService.VietnamNow);
-    public bool DatTheoCa { get; set; }
     public DateOnly? NgayDat { get; set; }
     [Range(1, 50)] public int SoNguoi { get; set; } = 2;
-    // Compatibility with old form payloads; W10 does not use a per-party countdown.
-    public int SoPhut { get; set; } = 120;
     public int? KhuVucId { get; set; }
     [StringLength(1000)] public string? GhiChu { get; set; }
     public List<KhuVuc> Areas { get; set; } = [];

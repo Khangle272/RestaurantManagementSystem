@@ -70,7 +70,6 @@ public abstract class AppPage : ContentPage
 
     protected Task Info(string message) => DisplayAlertAsync("Thông báo", message, "OK");
 
-    protected static Label Heading(string text) => new() { Text = text, FontSize = 20, FontAttributes = FontAttributes.Bold };
     protected static Label Muted(string text) => new() { Text = text, FontSize = 13, TextColor = Colors.Gray };
 
     public static Color StatusColor(string code) => code switch

@@ -11,8 +11,6 @@ public sealed record LoginRequest(string Email, string Password);
 // Định dạng do ASP.NET Core Identity bearer token trả về.
 public sealed record TokenResponse(string TokenType, string AccessToken, long ExpiresIn, string? RefreshToken);
 
-public sealed record RefreshRequest(string RefreshToken);
-
 public sealed record UserProfileDto(string Email, string HoTen, string Role, string RoleLabel, bool IsCustomer,
     bool CanOrder, bool CanServe, bool CanPay, bool CanReceive);
 

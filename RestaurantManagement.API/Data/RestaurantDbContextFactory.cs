@@ -9,7 +9,8 @@ public class RestaurantDbContextFactory : IDesignTimeDbContextFactory<Restaurant
     {
         // Design-time fallback permits script generation without connecting to a server.
         // Set the environment variable to the verified instance before database update.
-        var connection = Environment.GetEnvironmentVariable("ConnectionStrings__RestaurantDb")
+        var connection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__RestaurantDb")
             ?? "Server=localhost;Database=RestaurantManagement;Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
         return new RestaurantDbContext(new DbContextOptionsBuilder<RestaurantDbContext>().UseSqlServer(connection).Options);
     }
