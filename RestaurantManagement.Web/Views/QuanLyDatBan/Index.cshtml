@@ -36,8 +36,8 @@
             <!-- Bộ lọc ngày -->
             <form asp-action="Index" method="get" class="d-flex align-items-center gap-2">
                 <input type="hidden" name="tab" value="@currentTab" />
-                <label class="small text-muted text-nowrap">Lọc ngày:</label>
-                <input type="date" name="filterNgay" class="form-control form-control-sm" 
+                <label for="filterNgay" class="small text-muted text-nowrap">Lọc ngày:</label>
+                <input type="date" id="filterNgay" name="filterNgay" class="form-control form-control-sm" 
                        value="@(Model.FilterNgay.HasValue ? Model.FilterNgay.Value.ToString("yyyy-MM-dd") : "")" 
                        onchange="this.form.submit()" />
                 @if (Model.FilterNgay.HasValue)
@@ -184,7 +184,24 @@
                         <tr>
                             <td colspan="6" class="empty-state">
                                 <i class="bi bi-calendar-x" aria-hidden="true"></i>
-                                Không có yêu cầu đặt bàn nào trong danh mục này.
+                                Không có yêu cầu đặt bàn nào trong danh mục này@(Model.FilterNgay.HasValue ? $" vào ngày {Model.FilterNgay.Value:dd/MM/yyyy}" : "").
+                                @{
+                                    // Gợi ý nhóm khác đang có lịch để không phải bấm thử từng tab.
+                                    var others = new (string Tab, string Label, int Count)[] {
+                                        ("ChoXacNhan", "Chờ xác nhận", Model.ChoXacNhanCount), ("ChoDoiChieu", "Chờ đối chiếu cọc", Model.ChoDoiChieuCount),
+                                        ("DaXacNhan", "Đã xác nhận", Model.DaXacNhanCount), ("DangPhucVu", "Đang phục vụ", Model.DangPhucVuCount)
+                                    }.Where(x => x.Tab != currentTab && x.Count > 0).ToList();
+                                }
+                                @if (others.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                                        <span class="small text-muted align-self-center">Xem nhóm khác:</span>
+                                        @foreach (var other in others)
+                                        {
+                                            <a asp-action="Index" asp-route-tab="@other.Tab" asp-route-filterNgay="@Model.FilterNgay?.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-secondary">@other.Label (@other.Count)</a>
+                                        }
+                                    </div>
+                                }
                             </td>
                         </tr>
                     }
@@ -223,8 +240,8 @@
                     </p>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
-                        <textarea name="LyDoHuy" class="form-control" rows="3" required
+                        <label for="huyBanLyDo" class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
+                        <textarea id="huyBanLyDo" name="LyDoHuy" class="form-control" rows="3" required
                                   placeholder="Ví dụ: Khách gọi báo bận đột xuất, hết bàn trống, không liên lạc được..."></textarea>
                     </div>
                 </div>

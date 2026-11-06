@@ -29,11 +29,11 @@
                         <span class="input-group-text bg-white border-end-0 text-muted">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo mã HĐ, tên bàn, tên khách, SĐT..." />
+                        <input type="text" name="search" aria-label="Tìm đơn hàng" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo mã HĐ, tên bàn, tên khách, SĐT..." />
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <select name="loaiDonHang" class="form-select">
+                    <select name="loaiDonHang" class="form-select" aria-label="Loại đơn">
                         <option value="">-- Tất cả loại đơn --</option>
                         <option value="TaiBan" selected="@(Model.LoaiDonHang == LoaiDonHang.TaiBan)">Tại bàn</option>
                         <option value="MangDi" selected="@(Model.LoaiDonHang == LoaiDonHang.MangDi)">Mang đi</option>
@@ -41,7 +41,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
-                    <select name="trangThai" class="form-select">
+                    <select name="trangThai" class="form-select" aria-label="Trạng thái thanh toán">
                         <option value="">-- Tất cả trạng thái --</option>
                         <option value="ChuaThanhToan" selected="@(Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)">Chờ thanh toán</option>
                         <option value="DaThanhToan" selected="@(Model.TrangThai == TrangThaiHoaDon.DaThanhToan)">Đã thanh toán</option>
@@ -174,7 +174,7 @@
                             <span class="badge rounded-pill @payBadge px-2 py-1">@payLabel</span>
                             @if (order.TrangThai == TrangThaiHoaDon.DaThanhToan)
                             {
-                                <div class="small text-muted">@order.PhuongThucThanhToan</div>
+                                <div class="small text-muted">@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(order.PhuongThucThanhToan)</div>
                             }
                         </td>
                         <td class="text-end pe-3">

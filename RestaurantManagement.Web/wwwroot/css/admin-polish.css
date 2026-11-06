@@ -293,6 +293,12 @@ div.stat-tile:hover { transform: none; box-shadow: var(--shadow-card); }
   .admin-main .card-stat > .d-flex { gap: .65rem; }
   .segmented a { padding: .35rem .6rem; }
 }
+/* Điện thoại nhỏ: thẻ số liệu kho xếp 2 cột như stat-grid, bỏ biểu tượng để đủ chỗ cho con số. */
+@media (max-width: 575.98px) {
+  .admin-main .row > .col-12.col-sm-6:has(> .card-stat) { flex: 0 0 50%; max-width: 50%; }
+  .admin-main .card-stat .rounded-circle { display: none !important; }
+  .admin-main .card-stat .fs-2, .admin-main .card-stat .fs-3 { font-size: 1.15rem !important; }
+}
 
 /* Nhãn thẻ số liệu ở các trang báo cáo: viết thường, cùng cỡ với thẻ số liệu khác. */
 .admin-main .card-body .text-uppercase.small { text-transform: none; letter-spacing: 0; font-size: .8rem !important; color: var(--text-secondary) !important; }

@@ -41,7 +41,7 @@
             }
             else
             {
-                <span class="badge bg-secondary">@Model.TrangThai</span>
+                <span class="badge bg-secondary">@(Model.TrangThai switch { TrangThaiHoaDon.ThanhToanMotPhan => "Thanh toán một phần", TrangThaiHoaDon.DaHuy => "Đã hủy", _ => Model.TrangThai.ToString() })</span>
             }
         </div>
         <div class="d-flex gap-2">
@@ -264,7 +264,7 @@
                     {
                         <div class="alert alert-success mb-0 py-2 small">
                             <strong>Đã thanh toán xong</strong><br />
-                            Phương thức: <strong>@Model.PhuongThucThanhToan</strong><br />
+                            Phương thức: <strong>@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(Model.PhuongThucThanhToan)</strong><br />
                             Thời gian: @VnTime.NgayGio(Model.ThoiDiemThanhToan)<br />
                             @if (!string.IsNullOrEmpty(Model.MaGiaoDich))
                             {

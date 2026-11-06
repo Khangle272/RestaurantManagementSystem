@@ -40,13 +40,13 @@
     </select></div>
     <div class="filter-actions"><button class="btn btn-primary">Lọc sơ đồ</button><a asp-action="Index" asp-route-datBanId="@Model.Booking?.Id" asp-route-preferredTableId="@Model.PreferredTableId" class="btn btn-outline-secondary">Bỏ lọc</a></div>
 </form>
-@if (reception) { <div class="d-flex d-lg-none gap-2 mb-3"><a href="#booking-context" class="btn btn-sm btn-outline-success">Yêu cầu đặt bàn</a><a href="#table-board" class="btn btn-sm btn-outline-success">Xem sơ đồ</a></div> }
+@if (reception) { <div class="d-flex d-lg-none gap-2 mb-3"><a href="#booking-context" class="btn btn-sm btn-outline-success"><i class="bi bi-arrow-down-short" aria-hidden="true"></i>Lịch chờ chọn bàn (@Model.Requests.Count)</a><a href="#table-board" class="btn btn-sm btn-outline-success"><i class="bi bi-arrow-down-short" aria-hidden="true"></i>Xuống sơ đồ</a></div> }
 <div class="@(reception ? "booking-workspace" : "")">
 @if (reception) {
     <aside id="booking-context" class="booking-context">
     <partial name="_BookingContext" model="Model" />
-    <details class="card border-0 shadow-sm" open="@(Model.Booking is null)">
-        <summary class="p-3 fw-semibold">Yêu cầu chờ chọn bàn</summary>
+    <details class="card border-0 shadow-sm" open="@(Model.Booking is null && Model.Requests.Count > 0)">
+        <summary class="p-3 fw-semibold">Yêu cầu chờ chọn bàn <span class="badge rounded-pill @(Model.Requests.Count > 0 ? "text-bg-warning" : "text-bg-light border")">@Model.Requests.Count</span></summary>
         <div class="booking-request-list">
         @foreach (var request in Model.Requests) {
             <a asp-action="Index" asp-route-datBanId="@request.Id" asp-route-khuVucId="@request.KhuVucUuTienId" class="booking-request @(request.Id == Model.Booking?.Id ? "selected" : "")">

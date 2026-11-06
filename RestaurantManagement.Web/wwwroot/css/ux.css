@@ -59,7 +59,12 @@ body:has(.pos-page) .back-to-top { display: none; }
 .delete-confirm-card .card-body { display: flex; gap: 1.25rem; align-items: flex-start; }
 .delete-confirm-icon { flex: 0 0 auto; width: 3rem; height: 3rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; background: #FEE2E2; color: #DC2626; }
 
+/* Bảng rộng hơn màn hình: làm mờ mép còn nội dung để người dùng biết vuốt ngang được (ux.js gắn lớp). */
+.table-responsive.has-overflow-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+.table-responsive.has-overflow-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+.table-responsive.has-overflow-start.has-overflow-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
+
 @media (prefers-reduced-motion: reduce) {
   .flash-stack .alert, .flash-progress, .btn.is-loading::after { animation: none !important; }
 }
-@media print { .flash-stack, .back-to-top { display: none !important; } }
+@media print { .flash-stack, .back-to-top { display: none !important; } .table-responsive { -webkit-mask-image: none !important; mask-image: none !important; } }

@@ -48,6 +48,15 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             RequestId = Guid.NewGuid(),
             KhuVucOptions = await GetKhuVucOptionsAsync()
         };
+        // Điền sẵn thông tin liên hệ từ hồ sơ khách; khách vẫn sửa được nếu đặt hộ người khác.
+        var profile = await db.KhachHang.AsNoTracking().Where(x => x.TaiKhoanId == AccountId)
+            .Select(x => new { x.HoTen, x.SoDienThoai, x.Email }).FirstOrDefaultAsync();
+        if (profile is not null)
+        {
+            model.HoTen = profile.HoTen;
+            model.SoDienThoai = profile.SoDienThoai;
+            model.Email = profile.Email;
+        }
         return View(model);
     }
 

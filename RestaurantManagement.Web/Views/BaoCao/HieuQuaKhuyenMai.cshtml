@@ -9,10 +9,10 @@
     <div>
         <h1 class="h3">Hiệu quả khuyến mãi & voucher</h1>
         <p class="text-muted mb-0">Thống kê ưu đãi thực tế đã chốt trên hóa đơn, theo ngày thanh toán (giờ Việt Nam).</p>
-        <p class="small text-muted mb-0">Giảm thủ công đã ghi nhận: @Model.TongGiamThuCong.ToString("N0") đ, không gán cho chương trình. Bill có nhiều ưu đãi có thể xuất hiện ở nhiều dòng; tổng bill đếm một lần. Chỉ số doanh thu/giảm không phải lợi nhuận hay ROI đầu tư.</p>
+        <p class="small text-muted mb-0">Giảm thủ công đã ghi nhận: @Model.TongGiamThuCong.ToString("N0") đ, không gán cho chương trình. Hóa đơn có nhiều ưu đãi có thể xuất hiện ở nhiều dòng; tổng hóa đơn đếm một lần. Chỉ số doanh thu/giảm không phải lợi nhuận hay ROI đầu tư.</p>
         @if (Model.SoHoaDonThieuLichSu > 0)
         {
-            <div class="alert alert-warning mt-2">@Model.SoHoaDonThieuLichSu hóa đơn cũ có giảm giá nhưng thiếu lịch sử chương trình. Không phân bổ đoán vào khuyến mãi; số tiền gốc của bill vẫn được giữ nguyên.</div>
+            <div class="alert alert-warning mt-2">@Model.SoHoaDonThieuLichSu hóa đơn cũ có giảm giá nhưng thiếu lịch sử chương trình. Không phân bổ đoán vào khuyến mãi; số tiền gốc của hóa đơn vẫn được giữ nguyên.</div>
         }
     </div>
     <div class="page-actions">
@@ -57,14 +57,14 @@
             <div class="card-body">
                 <span class="text-muted small fw-semibold text-uppercase">Tỷ lệ giảm bình quân</span>
                 <div class="fs-3 fw-bold text-primary my-1">@Model.TyLeChietKhauTrungBinh.ToString("0.##")%</div>
-                <div class="small text-muted">% giảm giá trên tổng tiền bill</div>
+                <div class="small text-muted">% giảm giá trên tổng tiền hóa đơn</div>
             </div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="card border-0 shadow-sm h-100 bg-white">
             <div class="card-body">
-                <span class="text-muted small fw-semibold text-uppercase">Doanh thu bill / tiền giảm</span>
+                <span class="text-muted small fw-semibold text-uppercase">Doanh thu hóa đơn / tiền giảm</span>
                 <div class="fs-3 fw-bold text-warning my-1">@Model.TySuatHieuQuaROI.ToString("0.##")x</div>
                 <div class="small text-muted">Doanh thu tạo ra / Chi phí giảm</div>
             </div>
@@ -113,7 +113,7 @@
                 @foreach (var item in Model.DanhSachChuongTrinh)
                 {
                     var uuDai = item.KieuGiam == KieuGiam.PhanTram ? $"{item.GiaTri:0.##}%" : $"{item.GiaTri:N0} đ";
-                    var phamVi = item.PhamVi == PhamViUuDai.MonAn ? "Theo món" : "Toàn bill";
+                    var phamVi = item.PhamVi == PhamViUuDai.MonAn ? "Theo món" : "Toàn hóa đơn";
 
                     <tr>
                         <td>

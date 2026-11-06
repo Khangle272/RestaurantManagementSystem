@@ -48,7 +48,7 @@
         <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div class="d-flex align-items-center gap-3">
                 <span class="badge bg-primary px-3 py-2 fs-6">Danh mục: @Model.TenDanhMuc</span>
-                <span class="badge bg-secondary px-3 py-2 fs-6">Loại món: @Model.Loai</span>
+                <span class="badge bg-secondary px-3 py-2 fs-6">Loại món: @(Model.Loai switch { RestaurantManagement.API.Models.LoaiMon.Set => "Set / Combo", RestaurantManagement.API.Models.LoaiMon.ThucUong => "Thức uống", _ => "Món lẻ" })</span>
                 <span class="badge bg-info text-dark px-3 py-2 fs-6">@Model.Sizes.Count kích cỡ khả dụng</span>
             </div>
             <div class="small text-muted">
