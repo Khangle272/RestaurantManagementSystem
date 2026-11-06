@@ -12,9 +12,10 @@
         @if (Model.Id > 0) { <p class="small text-muted">Đã phát hành / giữ trực tiếp: @Model.SoVeDaPhatHanh vé trong toàn chương trình.</p> }
         <div class="mb-3"><label asp-for="TenChuongTrinh" class="form-label">Tên chương trình</label><input asp-for="TenChuongTrinh" class="form-control" placeholder="Tháng 10 · Chào mừng 20/10" /></div>
         <div class="row g-3 mb-3">
-            <div class="col-md-4"><label asp-for="BatDau" class="form-label">Bắt đầu (giờ Việt Nam)</label><input asp-for="BatDau" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control" /></div>
-            <div class="col-md-4"><label asp-for="KetThuc" class="form-label">Kết thúc (bao gồm thời điểm này)</label><input asp-for="KetThuc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control" /></div>
-            <div class="col-md-4"><label asp-for="GioiHanPhatHanh" class="form-label">Tổng vé phát hành (ví + nhập mã)</label><input asp-for="GioiHanPhatHanh" class="form-control" type="number" min="1" placeholder="Để trống: không giới hạn" /></div>
+            <div class="col-6 col-lg-4"><label asp-for="BatDau" class="form-label">Ngày bắt đầu</label><input asp-for="BatDau" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control" /></div>
+            <div class="col-6 col-lg-4"><label asp-for="KetThuc" class="form-label">Ngày kết thúc</label><input asp-for="KetThuc" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm:ss}" step="1" class="form-control" /></div>
+            <div class="col-12 order-lg-last form-text mt-1">Giờ Việt Nam (UTC+7); chương trình còn hiệu lực đến hết thời điểm kết thúc.</div>
+            <div class="col-12 col-lg-4"><label asp-for="GioiHanPhatHanh" class="form-label">Tổng vé phát hành (ví + nhập mã)</label><input asp-for="GioiHanPhatHanh" class="form-control" type="number" min="1" placeholder="Để trống: không giới hạn" /></div>
         </div>
         <div class="row g-3 mb-3"><div class="col-md-6"><label asp-for="CanVoucher" class="form-label">Cách áp dụng</label><select asp-for="CanVoucher" class="form-select"><option value="true">Phát hành nhiều mã voucher</option><option value="false">Ưu đãi tự động trên hóa đơn</option></select></div><div class="col-md-3"><label asp-for="ThuTuApDung" class="form-label">Thứ tự áp dụng</label><input asp-for="ThuTuApDung" type="number" min="0" class="form-control" /></div></div>
         <div class="form-check"><input asp-for="ChoPhepKetHop" class="form-check-input" /><label asp-for="ChoPhepKetHop" class="form-check-label">Cho phép kết hợp với ưu đãi khác</label></div>

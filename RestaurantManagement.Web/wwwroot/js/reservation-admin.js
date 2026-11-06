@@ -35,7 +35,7 @@
         e.preventDefault();
         content.replaceChildren();
         content.textContent = 'Đang tải sơ đồ đúng ngày và ca của khách…';
-        document.getElementById('assignment-modal-title').textContent = link.hasAttribute('data-reschedule-booking') ? 'Đổi giờ đặt bàn' : 'Xếp bàn cho yêu cầu đặt chỗ';
+        document.getElementById('assignment-modal-title').textContent = link.hasAttribute('data-reschedule-booking') ? 'Đổi giờ đặt bàn' : (link.dataset.assignTitle || 'Chọn bàn cho lịch đặt');
         const url = new URL(link.href); url.searchParams.set('dialog', 'true');
         const preferred = new URL(location.href).searchParams.get('preferredTableId');
         if (preferred && /^\d+$/.test(preferred)) url.searchParams.set('preferredTableId', preferred);
@@ -65,7 +65,7 @@
                 const next = page.getElementById('reservation-list');
                 if (!response.ok || response.redirected || !next) throw new Error();
                 document.getElementById('reservation-list').replaceWith(next);
-            } catch { feedback.textContent += ' Đã lưu nhưng chưa cập nhật được danh sách. Tải lại danh sách để xem, không cần gửi lại xếp bàn.'; }
+            } catch { feedback.textContent += ' Đã lưu nhưng chưa cập nhật được danh sách. Tải lại danh sách để xem, không cần gửi lại.'; }
         })();
     });
     const newlyCreated = new URL(location.href).searchParams.get('xepBanId');

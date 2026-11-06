@@ -1,5 +1,6 @@
 using RestaurantManagement.Mobile.Services;
 using RestaurantManagement.Shared.Mobile;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Mobile.Views;
 
@@ -98,7 +99,7 @@ public sealed class PointsPage : AppPage
                 ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
                 Children =
                 {
-                    new VerticalStackLayout { Children = { new Label { Text = p.NoiDung }, Muted(ApiClient.Time(p.ThoiDiem) + (p.MaHoaDon is null ? "" : $" · {p.MaHoaDon}")) } },
+                    new VerticalStackLayout { Children = { new Label { Text = p.NoiDung }, Muted(VnTime.NgayGio(p.ThoiDiem) + (p.MaHoaDon is null ? "" : $" · {p.MaHoaDon}")) } },
                     new Label
                     {
                         Text = (p.SoDiem > 0 ? "+" : "") + p.SoDiem.ToString("N0"), FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center,

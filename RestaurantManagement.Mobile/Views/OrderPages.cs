@@ -1,6 +1,7 @@
 using System.Globalization;
 using RestaurantManagement.Mobile.Services;
 using RestaurantManagement.Shared.Mobile;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Mobile.Views;
 
@@ -265,7 +266,7 @@ public sealed class OrderDetailPage : AppPage
                             new Label { Text = line.TrangThaiText, TextColor = StatusColor(line.TrangThai) }.Column(1)
                         }
                     },
-                    Muted($"{ApiClient.Money(line.SoLuong * line.DonGia)} · gọi lúc {ApiClient.Time(line.ThoiDiemGoi)}" + (line.GhiChu is null ? "" : $" · {line.GhiChu}")),
+                    Muted($"{ApiClient.Money(line.SoLuong * line.DonGia)} · gọi lúc {VnTime.NgayGio(line.ThoiDiemGoi)}" + (line.GhiChu is null ? "" : $" · {line.GhiChu}")),
                     actions
                 }
             }));

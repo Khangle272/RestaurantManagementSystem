@@ -225,7 +225,7 @@
                         <dd class="col-7">@Model.NhanVien.HoTen</dd>
 
                         <dt class="col-5 text-muted">Thời điểm lập:</dt>
-                        <dd class="col-7">@Model.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</dd>
+                        <dd class="col-7">@VnTime.NgayGio(Model.ThoiDiemLap)</dd>
 
                         @if (!string.IsNullOrEmpty(Model.GhiChuDonHang))
                         {
@@ -265,7 +265,7 @@
                         <div class="alert alert-success mb-0 py-2 small">
                             <strong>Đã thanh toán xong</strong><br />
                             Phương thức: <strong>@Model.PhuongThucThanhToan</strong><br />
-                            Thời gian: @Model.ThoiDiemThanhToan?.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")<br />
+                            Thời gian: @VnTime.NgayGio(Model.ThoiDiemThanhToan)<br />
                             @if (!string.IsNullOrEmpty(Model.MaGiaoDich))
                             {
                                 <span>Mã giao dịch: @Model.MaGiaoDich</span>

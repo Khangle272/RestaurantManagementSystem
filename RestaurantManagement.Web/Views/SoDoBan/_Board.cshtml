@@ -12,7 +12,7 @@
             var old = review.Booking;
             <div class="border-top pt-2 mb-2" data-service-review="@old.Id">
                 <strong>@old.MaDatBan · @old.HoTenLienHe</strong>
-                <div class="small">@old.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") · @string.Join(", ", old.Ban.Select(x => x.BanAn.MaBan))</div>
+                <div class="small">@VnTime.NgayGio(old.GioDen) · @string.Join(", ", old.Ban.Select(x => x.BanAn.MaBan))</div>
                 <div class="d-flex gap-2 flex-wrap mt-1">
                     @foreach (var bill in old.HoaDon.Where(x => x.TrangThai != TrangThaiHoaDon.DaHuy)) {
                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-secondary">Hóa đơn @bill.MaHoaDon</a>
@@ -54,20 +54,20 @@
             else if (card.NeedsInspection) { <p class="small text-warning-emphasis mb-2 table-note" title="Trạng thái cũ hoặc chưa có lượt khách hôm nay. Kiểm tra bàn đã trống, sẵn sàng rồi xác nhận hoàn tất; không tự coi khoản nợ cũ là đã thanh toán.">Trạng thái cũ hoặc chưa có lượt khách hôm nay. Kiểm tra bàn đã trống, sẵn sàng rồi xác nhận hoàn tất; không tự coi khoản nợ cũ là đã thanh toán.</p> }
             @if (card.Attention is not null) { <p class="small text-danger" role="status">@card.Attention</p> }
             @if (card.Occupant is { } guest) {
-                <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @guest.ThoiDiemNhanBan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span></p>
+                <p class="small mb-2">@guest.HoTenLienHe · @(guest.SoNguoiLon + guest.SoTreEm) khách<br /><span class="text-muted">Nhận lúc @VnTime.NgayGio(guest.ThoiDiemNhanBan)</span></p>
             }
-            @if (card.ScheduledBookings.Count > 0) { <div class="table-bookings small"><strong>Lịch ngày @Model.ScheduleDay.ToString("dd/MM/yyyy")</strong>
+            @if (card.ScheduledBookings.Count > 0) { <div class="table-bookings small"><strong>Lịch ngày @VnTime.Ngay(Model.ScheduleDay)</strong>
                 @foreach (var scheduled in card.ScheduledBookings) {
                     var own = scheduled.Id == Model.Booking?.Id;
                     var overlaps = card.Conflicts.Any(x => x.Id == scheduled.Id);
-                    <div class="@(own ? "text-success" : overlaps ? "fw-semibold text-danger" : "text-muted")">@scheduled.MaDatBan · @scheduled.HoTenLienHe · @(scheduled.SoNguoiLon + scheduled.SoTreEm) khách · @scheduled.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm") – @scheduled.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm") @(own ? "· Lịch đang xếp" : overlaps ? "· Trùng giờ đang xếp" : "")</div>
+                    <div class="@(own ? "text-success" : overlaps ? "fw-semibold text-danger" : "text-muted")">@scheduled.MaDatBan · @scheduled.HoTenLienHe · @(scheduled.SoNguoiLon + scheduled.SoTreEm) khách · @VnTime.Gio(scheduled.GioDen) – @VnTime.Gio(scheduled.GioKetThucDuKien) @(own ? "· Lịch đang xếp" : overlaps ? "· Trùng giờ đang xếp" : "")</div>
                 }
             </div> }
             @if (card.IsSuggested) { <span class="small text-success fw-semibold mb-2">Gợi ý · đủ chỗ, không trùng lịch</span> }
             @if (Model.CanAssign && reception) {
                 <label class="table-select small"><input class="form-check-input me-2" type="radio" name="banAnIds" value="@table.Id" form="assign-booking"
                     data-seats="@table.SoChoNgoi" data-area="@table.KhuVucId" data-suggested="@(card.IsSuggested ? "true" : "false")" checked="@card.IsSelected" disabled="@(!card.CanChoose)" />Chọn bàn này</label>
-                @if (!card.CanChoose) { <button type="button" class="btn btn-sm btn-outline-secondary" data-table-warning="@(card.UnavailableReason ?? "Yêu cầu không còn được xếp bàn.")">Vì sao không chọn được?</button> }
+                @if (!card.CanChoose) { <button type="button" class="btn btn-sm btn-outline-secondary" data-table-warning="@(card.UnavailableReason ?? "Lịch này không còn chọn hoặc đổi bàn được.")">Vì sao không chọn được?</button> }
             } else if (Model.Booking is null && Model.IsLive && (User.IsInRole("Admin") || User.IsInRole("BoiBan")) && (card.DisplayStatus == TrangThaiBan.CanDon || card.DisplayStatus == TrangThaiBan.DangPhucVu)) {
                 <div class="mt-auto pt-2 d-flex flex-column gap-1">
                 @if (card.DisplayStatus == TrangThaiBan.DangPhucVu && !card.NeedsInspection) {

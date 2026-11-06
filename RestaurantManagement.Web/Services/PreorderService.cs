@@ -125,7 +125,7 @@ public class PreorderService(RestaurantDbContext db, OrderService orders, IKhoSe
         if (!CanEdit(booking) || booking.TrangThai == TrangThaiDatBan.DaNhanBan || booking.TienCocYeuCau <= 0)
             return "Lịch đã hết hạn hoặc không còn cần thanh toán cọc.";
         if (!await db.ChiTietDatBan.AnyAsync(x => x.DatBanId == id))
-            return "Lịch chưa được kiểm tra và xếp bàn. Liên hệ nhà hàng trước khi chuyển tiền.";
+            return "Lịch chưa được kiểm tra và chọn bàn. Liên hệ nhà hàng trước khi chuyển tiền.";
         var reference = model.MaGiaoDich?.Trim();
         if (booking.ThoiDiemBaoChuyenKhoan is not null)
             return booking.SoTienKhachBao == model.SoTien && booking.MaGiaoDichKhachBao == reference

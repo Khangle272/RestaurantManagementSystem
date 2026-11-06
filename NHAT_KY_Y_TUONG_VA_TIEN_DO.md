@@ -898,3 +898,19 @@ Rà toàn bộ chức năng, sửa các quy tắc không khớp cách nhà hàng
 - Lệnh `dotnet ef` đọc `ConnectionStrings__DefaultConnection` (vẫn nhận biến cũ `ConnectionStrings__RestaurantDb`).
 - Viết lại README và README của API theo hiện trạng: bỏ mô tả quẹt thẻ/ảnh QR, script tunnel không còn, chuỗi kết nối sai tên; sửa tham chiếu view đã gỡ trong DESIGN.md; thêm bước app mobile vào DEMO_WEBSITE.md.
 - **Kiểm chứng:** bộ mặc định đạt **1170 kiểm tra HTTP/database** sau khi dọn; build Web, test, MAUI Windows 0 cảnh báo; `has-pending-model-changes` không có thay đổi model.
+
+### Định dạng ngày giờ thống nhất — 06/11/2026
+
+- Mọi ngày hiển thị dùng `dd/MM/yyyy`, có giờ thì `dd/MM/yyyy HH:mm`, luôn theo giờ Việt Nam (UTC+7): website (Razor/C#) và app mobile qua `RestaurantManagement.Shared/VnTime.cs`, JavaScript qua `wwwroot/js/vn-time.js` (không phụ thuộc múi giờ máy người xem). Nhãn chỉ có giờ trong cùng một ngày đã hiện (giờ gọi món, giờ kết thúc lượt, ca) giữ `HH:mm`.
+- Culture mặc định của Web đặt ngày ngắn `dd/MM/yyyy`, giờ 24h để chỗ in ngày không ghi định dạng cũng đúng kiểu Việt Nam; ô nhập date/datetime-local vẫn gửi ISO nên không ảnh hưởng lưu dữ liệu.
+- Ghi chú đổi giờ đã lưu trong database trước ngày này vẫn giữ chữ cũ (`dd/MM HH:mm`); ghi chú mới dùng định dạng đầy đủ.
+- **Kiểm chứng:** bộ mặc định đạt 1170 kiểm tra; build Web/MAUI Windows sạch; rà trên trình duyệt các trang hóa đơn, đơn hàng, sơ đồ bàn, kho, khuyến mãi, báo cáo, nhân viên, khách hàng, lịch sử đặt bàn, ví voucher, chi tiết lịch.
+
+### Nhãn đổi bàn, tách trạng thái cọc, thống kê giờ đến, form khuyến mãi — 06/11/2026
+
+- **Đổi nhãn thao tác:** lịch đã có bàn hiện nút/tiêu đề/thông báo "Đổi bàn" (popup ghi "Bàn đang giữ: …", nút "Xác nhận đổi bàn"); lịch chưa có bàn dùng "Chọn bàn". Bỏ hết chữ "xếp bàn" trên web, API nhân viên và app mobile.
+- **Tách trạng thái cọc:** trang Quản lý đặt bàn có thêm tab "Chờ đối chiếu cọc" (khách đã báo chuyển khoản) nằm giữa "Chờ xác nhận" (chưa nộp cọc) và "Đã xác nhận" (đã đóng cọc); mỗi dòng có nhãn giai đoạn cọc (Chưa nộp cọc / Khách báo chuyển · chờ đối chiếu / Đã cọc một phần / Đã đóng cọc / Không cần cọc). Lịch sử của khách hiện "Đã báo chuyển cọc · chờ nhà hàng đối chiếu".
+- **Nút xác nhận thu cọc:** hàng đợi Thu ngân (`DatTruoc/Index`) và tab chờ đối chiếu có nút "Xác nhận thu cọc X đ" (hỏi lại trước khi ghi), gọi `DatTruoc/XacNhanCoc` → ghi phiếu thu chuyển khoản đã đối chiếu ngân hàng; chống bấm đúp bằng `requestId`, chống ghi đè bằng RowVersion.
+- **Thống kê theo giờ đến:** trang Thống kê đặt bàn thêm bảng "Số lượt đặt theo giờ đến" (giờ hẹn thực tế `DatBan.GioDen`, UTC+7): mỗi mốc giờ tách số lượt đã xác nhận và chờ cọc/chờ xác nhận, số bàn đã giữ, số khách; không tính lịch đã hủy/không đến.
+- **Form khuyến mãi:** ô Ngày bắt đầu và Ngày kết thúc nằm cạnh nhau trên cùng một hàng (cả form chương trình lẫn dòng voucher), kể cả trên điện thoại.
+- **Kiểm chứng:** bộ mặc định đạt **1184 kiểm tra** (thêm kiểm tra tab chờ đối chiếu, nút thu cọc sai/đúng số tiền, bấm đúp chỉ ghi một phiếu, gom lượt theo giờ đến bỏ lịch hủy/không đến); build MAUI Windows 0 lỗi; rà trên trình duyệt popup đổi bàn, tab trạng thái, bảng giờ đến và form khuyến mãi ở màn rộng/điện thoại.

@@ -12,7 +12,7 @@
                 return;
             }
             const order = await response.json();
-            document.getElementById('order-update-note').textContent = 'Cập nhật lúc ' + new Date().toLocaleTimeString('vi-VN');
+            document.getElementById('order-update-note').textContent = 'Cập nhật lúc ' + window.vnTime.time();
             document.getElementById('order-status').textContent = order.status;
             for (const line of order.lines) {
                 const cell = document.querySelector(`[data-line-status="${Number(line.id)}"]`);

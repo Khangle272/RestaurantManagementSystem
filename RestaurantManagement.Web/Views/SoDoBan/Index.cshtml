@@ -46,14 +46,14 @@
     <aside id="booking-context" class="booking-context">
     <partial name="_BookingContext" model="Model" />
     <details class="card border-0 shadow-sm" open="@(Model.Booking is null)">
-        <summary class="p-3 fw-semibold">Yêu cầu chờ xếp bàn</summary>
+        <summary class="p-3 fw-semibold">Yêu cầu chờ chọn bàn</summary>
         <div class="booking-request-list">
         @foreach (var request in Model.Requests) {
             <a asp-action="Index" asp-route-datBanId="@request.Id" asp-route-khuVucId="@request.KhuVucUuTienId" class="booking-request @(request.Id == Model.Booking?.Id ? "selected" : "")">
-                <strong>@request.HoTenLienHe</strong><span class="small">@(request.SoNguoiLon + request.SoTreEm) khách · @request.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span><span class="small text-muted">@request.MaDatBan</span>
+                <strong>@request.HoTenLienHe</strong><span class="small">@(request.SoNguoiLon + request.SoTreEm) khách · @VnTime.NgayGio(request.GioDen)</span><span class="small text-muted">@request.MaDatBan</span>
             </a>
         }
-        @if (Model.Requests.Count == 0) { <p class="small text-muted px-3">Không có yêu cầu đang chờ xếp bàn.</p> }
+        @if (Model.Requests.Count == 0) { <p class="small text-muted px-3">Không có yêu cầu đang chờ chọn bàn.</p> }
         </div>
         <a asp-controller="QuanLyDatBan" asp-action="Index" class="small p-3">Xem toàn bộ yêu cầu và trạng thái</a>
     </details>
@@ -61,7 +61,7 @@
 }
 <section class="booking-board-panel" aria-label="Sơ đồ bàn và lịch đặt">
     <div class="board-caption">
-        <span>@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ngày và ca") · @Model.From.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") – @Model.CheckUntil.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") · <span id="board-refresh" role="status">Tự cập nhật mỗi 10 giây</span></span>
+        <span>@(Model.IsLive ? "Đang xem tình trạng hiện tại" : "Đang xem lịch theo ngày và ca") · @VnTime.NgayGio(Model.From) – @VnTime.NgayGio(Model.CheckUntil) · <span id="board-refresh" role="status">Tự cập nhật mỗi 10 giây</span></span>
         <details class="board-rules">
             <summary>Quy tắc</summary>
             <ul class="mb-0 ps-3">

@@ -1,5 +1,6 @@
 using RestaurantManagement.Mobile.Services;
 using RestaurantManagement.Shared.Mobile;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Mobile.Views;
 
@@ -155,7 +156,7 @@ public sealed class OpenOrdersPage : AppPage
                         new Label { Text = o.TrangThaiText, TextColor = StatusColor(o.TrangThai), FontAttributes = FontAttributes.Bold }.Column(1)
                     }
                 },
-                Muted($"{o.MaHoaDon} · {ApiClient.Time(o.ThoiDiemLap)}" + (o.KhachHang is null ? "" : $" · {o.KhachHang}")),
+                Muted($"{o.MaHoaDon} · {VnTime.NgayGio(o.ThoiDiemLap)}" + (o.KhachHang is null ? "" : $" · {o.KhachHang}")),
                 new Label { Text = $"{o.SoMon} món · {ApiClient.Money(o.TongTien)}" + (o.MonSanSang > 0 ? $" · {o.MonSanSang} món sẵn sàng" : "") }
             }
         });
@@ -202,12 +203,12 @@ public sealed class ReservationsPage : AppPage
                         ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
                         Children =
                         {
-                            new Label { Text = $"{ApiClient.Time(b.GioDen)} · {b.HoTen}", FontAttributes = FontAttributes.Bold, FontSize = 16 },
+                            new Label { Text = $"{VnTime.NgayGio(b.GioDen)} · {b.HoTen}", FontAttributes = FontAttributes.Bold, FontSize = 16 },
                             new Label { Text = b.TrangThaiText, TextColor = StatusColor(b.TrangThai), FontAttributes = FontAttributes.Bold }.Column(1)
                         }
                     },
                     Muted($"{b.MaDatBan} · {b.SoKhach} khách" + (b.YeuCauVip ? " · VIP" : "") + (b.SoDienThoai is null ? "" : $" · {b.SoDienThoai}")),
-                    new Label { Text = b.Ban is null ? "Chưa xếp bàn" : $"Bàn {b.Ban}" },
+                    new Label { Text = b.Ban is null ? "Chưa chọn bàn" : $"Bàn {b.Ban}" },
                     Muted(b.YeuCau ?? "")
                 }
             });
@@ -220,10 +221,12 @@ public sealed class ReservationsPage : AppPage
     {
         var options = new List<string>();
         if (b.CoTheNhanBan) options.Add("Nhận bàn (khách đã đến)");
-        options.AddRange(b.GoiYBan.Select(t => $"Xếp bàn {t.MaBan} · {t.KhuVuc} · {t.SoCho} chỗ"));
+        // Lịch đã có bàn: "Đổi sang bàn ..."; lịch chưa có bàn: "Chọn bàn ...".
+        var verb = b.Ban is null ? "Chọn bàn" : "Đổi sang bàn";
+        options.AddRange(b.GoiYBan.Select(t => $"{verb} {t.MaBan} · {t.KhuVuc} · {t.SoCho} chỗ"));
         if (options.Count == 0)
         {
-            await Info(b.Ban is null ? "Không còn bàn trống phù hợp. Đổi giờ hoặc xếp bàn trên website." : "Lịch đã xếp bàn; nhận bàn khi khách đến trong ngày.");
+            await Info(b.Ban is null ? "Không còn bàn trống phù hợp. Đổi giờ hoặc chọn bàn trên website." : "Lịch đã có bàn; nhận bàn khi khách đến trong ngày, đổi bàn trên website nếu cần.");
             return;
         }
         var choice = await DisplayActionSheetAsync($"{b.MaDatBan} · {b.HoTen}", "Đóng", null, options.ToArray());
@@ -231,7 +234,7 @@ public sealed class ReservationsPage : AppPage
         bool ok;
         if (choice == "Nhận bàn (khách đã đến)")
             ok = await RunAsync(async () => result = await ApiClient.Current.CheckInAsync(b.Id, b.RowVersion));
-        else if (b.GoiYBan.FirstOrDefault(t => choice == $"Xếp bàn {t.MaBan} · {t.KhuVuc} · {t.SoCho} chỗ") is { } table)
+        else if (b.GoiYBan.FirstOrDefault(t => choice == $"{verb} {t.MaBan} · {t.KhuVuc} · {t.SoCho} chỗ") is { } table)
             ok = await RunAsync(async () => result = await ApiClient.Current.AssignAsync(b.Id, table.Id, b.RowVersion));
         else return;
         if (ok) await Info(result!.Message);

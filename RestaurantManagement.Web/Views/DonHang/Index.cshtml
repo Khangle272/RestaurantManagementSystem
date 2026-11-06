@@ -114,7 +114,7 @@
                             <a asp-action="Details" asp-route-id="@order.Id" class="fw-bold text-decoration-none text-dark">
                                 @order.MaHoaDon
                             </a>
-                            <div class="small text-muted">@order.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") · @order.TenLoaiDon</div>
+                            <div class="small text-muted">@VnTime.NgayGio(order.ThoiDiemLap) · @order.TenLoaiDon</div>
                         </td>
                         <td>
                             @if (order.LoaiDonHang == LoaiDonHang.TaiBan)

@@ -316,6 +316,11 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                 trangThaiText = "Đã xác nhận";
                 badgeClass = "badge-status-info text-white bg-primary";
             }
+            else if ((d.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc) && d.ThoiDiemBaoChuyenKhoan is not null)
+            {
+                trangThaiText = "Đã báo chuyển cọc · chờ nhà hàng đối chiếu";
+                badgeClass = "bg-info-subtle text-info-emphasis";
+            }
             else if (d.TrangThai == TrangThaiDatBan.ChoCoc)
             {
                 trangThaiText = d.TienCocYeuCau > 0 ? "Chưa đặt cọc" : "Chờ nhà hàng liên hệ về tiền đặt cọc";
@@ -346,7 +351,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                 SoDienThoai = d.SoDienThoaiLienHe ?? "",
                 ThoiGianDen = d.GioDen,
                 SoNguoi = d.SoNguoiLon + d.SoTreEm,
-                TenBan = d.Ban.Any() ? string.Join(", ", d.Ban.Select(b => b.BanAn.MaBan)) : "Chưa xếp bàn",
+                TenBan = d.Ban.Any() ? string.Join(", ", d.Ban.Select(b => b.BanAn.MaBan)) : "Chưa chọn bàn",
                 TrangThai = trangThaiText,
                 TrangThaiBadgeClass = badgeClass,
                 HoaDonId = activeInvoice?.Id,

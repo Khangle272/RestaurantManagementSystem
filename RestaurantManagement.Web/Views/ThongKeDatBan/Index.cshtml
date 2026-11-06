@@ -25,8 +25,25 @@
         <thead><tr><th>Ngày</th><th>Ca</th><th>Loại</th><th class="text-end">Lịch</th><th class="text-end">Lượt bàn</th><th class="text-end">Khách</th></tr></thead>
         <tbody>
         @if (Model.Rows.Count == 0) { <tr><td colspan="6" class="empty-state"><i class="bi bi-calendar-x" aria-hidden="true"></i>Không có lịch đã xác nhận trong bộ lọc này.</td></tr> }
-        @foreach(var row in Model.Rows) { <tr><td class="cell-nowrap">@row.Day.ToString("dd/MM/yyyy")</td><td>@row.Shift</td><td>@if (row.Vip) { <span class="badge-status-warning">VIP</span> } else { <span>Thường</span> }</td><td class="text-end">@row.Reservations</td><td class="text-end">@row.Tables</td><td class="text-end">@row.Guests</td></tr> }
+        @foreach(var row in Model.Rows) { <tr><td class="cell-nowrap">@VnTime.Ngay(row.Day)</td><td>@row.Shift</td><td>@if (row.Vip) { <span class="badge-status-warning">VIP</span> } else { <span>Thường</span> }</td><td class="text-end">@row.Reservations</td><td class="text-end">@row.Tables</td><td class="text-end">@row.Guests</td></tr> }
         </tbody>
+    </table></div>
+</section>
+<section class="data-card" id="theo-gio-den">
+    <div class="data-card-header"><div><h2>Số lượt đặt theo giờ đến</h2><p class="small text-muted mb-0 mt-1">Đếm theo đúng giờ hẹn của từng lịch (giờ Việt Nam). Lịch đã xác nhận và lịch còn chờ cọc/chờ xác nhận tách riêng; không tính lịch đã hủy hoặc khách không đến.</p></div></div>
+    <div class="table-responsive"><table class="table table-hover align-middle">
+        <thead><tr><th>Ngày</th><th>Giờ đến</th><th class="text-end">Đã xác nhận</th><th class="text-end">Chờ cọc / chờ xác nhận</th><th class="text-end">Tổng lượt</th><th class="text-end">Bàn đã giữ</th><th class="text-end">Khách</th></tr></thead>
+        <tbody>
+        @if (Model.ArrivalTimes.Count == 0) { <tr><td colspan="7" class="empty-state"><i class="bi bi-clock" aria-hidden="true"></i>Không có lịch đặt nào trong bộ lọc này.</td></tr> }
+        @foreach (var row in Model.ArrivalTimes) {
+            <tr><td class="cell-nowrap">@VnTime.Ngay(row.Day)</td><td class="fw-semibold">@VnTime.Gio(row.Time)</td>
+                <td class="text-end">@row.Confirmed</td><td class="text-end @(row.Waiting > 0 ? "text-warning-emphasis fw-semibold" : "")">@row.Waiting</td>
+                <td class="text-end fw-semibold">@row.Total</td><td class="text-end">@row.Tables</td><td class="text-end">@row.Guests</td></tr>
+        }
+        </tbody>
+        @if (Model.ArrivalTimes.Count > 0) {
+            <tfoot><tr class="fw-semibold"><td colspan="2">Tổng</td><td class="text-end">@Model.ArrivalTimes.Sum(x => x.Confirmed)</td><td class="text-end">@Model.ArrivalTimes.Sum(x => x.Waiting)</td><td class="text-end">@Model.ArrivalTimes.Sum(x => x.Total)</td><td class="text-end">@Model.ArrivalTimes.Sum(x => x.Tables)</td><td class="text-end">@Model.ArrivalTimes.Sum(x => x.Guests)</td></tr></tfoot>
+        }
     </table></div>
 </section>
 <section class="data-card">

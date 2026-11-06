@@ -4,17 +4,18 @@
     var suggested = Model.Tables.Where(x => x.IsSuggested).ToList();
     var inDialog = ViewData["AssignmentDialog"] is true;
     <section class="card border-0 shadow-sm mb-3"><div class="card-body">
-        <p class="small text-success fw-semibold mb-1">YÊU CẦU ĐANG XỬ LÝ · @booking.MaDatBan</p>
+        <p class="small text-success fw-semibold mb-1">@(Model.BookingHasTables ? "ĐỔI BÀN" : "CHỌN BÀN") · @booking.MaDatBan</p>
+        @if (Model.BookingHasTables) { <p class="small mb-2">Bàn đang giữ: <strong>@Model.BookingTableNames</strong>. Chọn bàn mới trên sơ đồ để chuyển lịch sang bàn khác.</p> }
         <h2 class="h4 mb-2">@booking.HoTenLienHe</h2>
         <p class="fs-5 fw-semibold mb-1">@(booking.SoNguoiLon + booking.SoTreEm) khách · @booking.SoDienThoaiLienHe</p>
-        <p class="fw-semibold">@booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")–@booking.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</p>
+        <p class="fw-semibold">@VnTime.NgayGio(booking.GioDen)–@VnTime.Gio(booking.GioKetThucDuKien)</p>
         <p class="small text-muted">Mỗi bàn phục vụ một lượt tại một thời điểm, xong lượt có thể nhận khách mới. Mỗi lịch giữ bàn 2 tiếng kể từ giờ đến; đây không phải bộ đếm tự kết thúc phục vụ.</p>
         <p class="small mb-2">Khu vực: @(Model.Areas.FirstOrDefault(x => x.Id == booking.KhuVucUuTienId)?.TenKhuVuc ?? "Bàn chung, không yêu cầu VIP")</p>
         @if (booking.YeuCauVip) { <p class="fw-semibold">Khách yêu cầu VIP.</p> }
         @if (!string.IsNullOrWhiteSpace(booking.YeuCau)) { <p class="bg-light rounded p-2">@booking.YeuCau</p> }
         <p class="small">Tiền đặt cọc: <span class="badge @(ReservationDepositPolicy.HasDeposit(booking) ? "bg-success" : "bg-warning text-dark")">@ReservationDepositPolicy.StatusText(booking)</span></p>
         @if (booking.ThoiDiemBaoChuyenKhoan is not null && ReservationDepositPolicy.Remaining(booking) > 0) {
-            <p class="small text-warning-emphasis">Khách đã báo chuyển, chưa đối chiếu đủ tiền. Xếp bàn không thay cho xác nhận cọc.</p>
+            <p class="small text-warning-emphasis">Khách đã báo chuyển, chưa đối chiếu đủ tiền. @(Model.BookingHasTables ? "Đổi bàn" : "Chọn bàn") không thay cho xác nhận cọc.</p>
         }
         @if (Model.CanAssign) {
             @if (suggested.Count > 0) {
@@ -24,9 +25,9 @@
             <form id="assign-booking" asp-controller="QuanLyDatBan" asp-action="XacNhan" method="post" data-ajax-form="@(inDialog ? "true" : "false")" data-guests="@(booking.SoNguoiLon + booking.SoTreEm)">
                 <input type="hidden" name="datBanId" value="@booking.Id" /><input type="hidden" name="rowVersion" value="@Model.BookingVersion" />
                 <p id="table-selection-summary" class="small text-muted" role="status">Chọn bàn trên sơ đồ.</p>
-                <button type="submit" class="btn btn-success w-100">Xác nhận bàn đã chọn</button>
+                <button type="submit" class="btn btn-success w-100">@(Model.BookingHasTables ? "Xác nhận đổi bàn" : "Xác nhận chọn bàn")</button>
             </form>
             <p class="small text-muted mt-2">Gợi ý chưa giữ bàn. Khi lưu, hệ thống kiểm tra lại lịch, sức chứa và tiền cọc.</p>
-        } else { <p class="alert alert-light border">Yêu cầu đã thay đổi hoặc không còn được xếp bàn. Kiểm tra trạng thái trong danh sách.</p> }
+        } else { <p class="alert alert-light border">Lịch đã thay đổi hoặc không còn chọn/đổi bàn được. Kiểm tra trạng thái trong danh sách.</p> }
     </div></section>
 }

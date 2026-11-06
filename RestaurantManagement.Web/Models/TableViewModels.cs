@@ -9,6 +9,9 @@ public class TableBoardViewModel
     public List<TableCard> Tables { get; set; } = [];
     public DatBan? Booking { get; set; }
     public string BookingVersion { get; set; } = "";
+    // Lịch đang xử lý đã có bàn chưa: có thì thao tác là "Đổi bàn", chưa có là "Chọn bàn".
+    public bool BookingHasTables => !string.IsNullOrEmpty(BookingTableNames);
+    public string BookingTableNames { get; set; } = "";
     public int? AreaId { get; set; }
     public int? Floor { get; set; }
     public int? PreferredTableId { get; set; }

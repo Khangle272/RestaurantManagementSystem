@@ -116,16 +116,18 @@ public class StaffTablesApiController(RestaurantDbContext db, UserManager<TaiKho
             .Select(x => new SuggestedTableDto(x.Id, x.MaBan, x.KhuVuc.TenKhuVuc, x.SoChoNgoi)).ToListAsync();
     }
 
-    // Xác nhận yêu cầu bằng cách xếp một bàn (Chờ xác nhận → Đã xác nhận hoặc Chờ cọc).
+    // Chọn bàn cho lịch chưa có bàn hoặc đổi bàn cho lịch đã có bàn (Chờ xác nhận → Đã xác nhận hoặc Chờ cọc).
     [HttpPost("reservations/{id:int}/assign"), Authorize(Roles = MobileApi.ReceptionRoles)]
     public async Task<IActionResult> Assign(int id, AssignTableRequest request)
     {
+        var hadTables = await Db.ChiTietDatBan.AnyAsync(x => x.DatBanId == id);
         var error = await tables.Assign(id, [request.BanAnId], request.RowVersion, await CurrentStaffIdAsync());
         if (error is not null) return Fail(error, StatusCodes.Status409Conflict);
         var status = await Db.DatBan.Where(x => x.Id == id).Select(x => x.TrangThai).SingleAsync();
+        var done = hadTables ? "Đã đổi bàn" : "Đã chọn bàn";
         return Ok(new MessageDto(status == TrangThaiDatBan.ChoCoc
-            ? "Đã xếp bàn. Lịch cần cọc nên đang chờ khách thanh toán cọc."
-            : "Đã xác nhận đặt bàn và xếp bàn cho khách."));
+            ? $"{done}. Lịch cần cọc nên đang chờ khách thanh toán cọc."
+            : $"{done}. Lịch đã được xác nhận."));
     }
 
     [HttpPost("reservations/{id:int}/checkin"), Authorize(Roles = MobileApi.ReceptionRoles)]

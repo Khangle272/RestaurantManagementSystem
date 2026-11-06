@@ -21,6 +21,17 @@ public class ReservationPlanningService(RestaurantDbContext db)
             Shift = ReservationSchedule.Match(x.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime)?.Label ?? "Ngoài giờ (lịch cũ)", Vip = x.YeuCauVip })
             .OrderBy(x => x.Key.Day).ThenBy(x => x.Key.Shift).ThenBy(x => x.Key.Vip)
             .Select(g => new ReservationPlanningRow(g.Key.Day, g.Key.Shift, g.Key.Vip, g.Count(), g.Sum(x => x.Ban.Count), g.Sum(x => x.SoNguoiLon + x.SoTreEm))).ToList();
+        // Tổng hợp theo từng mốc giờ hẹn thực tế: tách lượt đã xác nhận và lượt còn chờ cọc/chờ xác nhận.
+        model.ArrivalTimes = all.GroupBy(x =>
+            {
+                var local = x.GioDen.ToOffset(TimeSpan.FromHours(7)).DateTime;
+                return (Day: DateOnly.FromDateTime(local), Time: new TimeOnly(local.Hour, local.Minute));
+            })
+            .OrderBy(g => g.Key.Day).ThenBy(g => g.Key.Time)
+            .Select(g => new ArrivalTimeRow(g.Key.Day, g.Key.Time,
+                g.Count(x => x.TrangThai is TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.DaNhanBan),
+                g.Count(x => x.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc),
+                g.Sum(x => x.Ban.Count), g.Sum(x => x.SoNguoiLon + x.SoTreEm))).ToList();
         // Only pre-arrival food needs purchasing plans; received orders already pass through stock deduction.
         var lines = upcoming.SelectMany(x => x.MonDatTruoc.Select(line => (Code: x.MaDatBan, Line: line))).ToList();
         var sizeIds = lines.Where(x => x.Line.MonAnSizeId.HasValue).Select(x => x.Line.MonAnSizeId!.Value).Distinct().ToArray();

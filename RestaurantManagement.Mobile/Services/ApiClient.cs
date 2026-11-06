@@ -26,7 +26,6 @@ public sealed class ApiClient
     public Uri? Server => http?.BaseAddress;
 
     public static string Money(decimal value) => value.ToString("N0", Vietnamese) + " đ";
-    public static string Time(DateTimeOffset value) => value.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM", Vietnamese);
 
     public static Uri? ParseServer(string? text, out string? error)
     {

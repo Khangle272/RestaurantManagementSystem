@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Web.Services;
 
@@ -92,7 +93,7 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 
             model.DoanhThuTheoNgay.Add(new DoanhThuTimelineRow
             {
-                NhanThoiGian = day.ToString("dd/MM"),
+                NhanThoiGian = VnTime.Ngay(day),
                 SoDonThanhCong = dayInvoices.Count,
                 DoanhThuThuc = dayInvoices.Sum(Revenue)
             });
@@ -235,7 +236,7 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 
                 model.ChiTietTimeline.Add(new DoanhThuTimelineRow
                 {
-                    NhanThoiGian = currentDay.ToString("dd/MM/yyyy"),
+                    NhanThoiGian = VnTime.Ngay(currentDay),
                     SoDonThanhCong = dayPaid.Count,
                     SoDonHuy = dayCancelled,
                     TongTienHang = dayPaid.Sum(x => x.TongTienHang),

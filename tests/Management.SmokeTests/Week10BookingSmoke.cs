@@ -110,6 +110,16 @@ public static class Week10BookingSmoke
         past.MonDatTruoc.Add(new(){MonAnId=dish.Id,MonAnSizeId=size.Id,TenMonLucDat=dish.TenMon,TenSizeLucDat=size.TenSize,SoLuong=2,DonGiaThoaThuan=size.GiaBan});db.DatBan.Add(past);await db.SaveChangesAsync();
         var pastPlan=await new ReservationPlanningService(db).Build(pastDay,pastDay,"toi",false);
         check(pastPlan.Rows.Sum(x=>x.Reservations)==1&&pastPlan.Ingredients.Count==0,"Past unreceived reservations remain in historical counts but never create a new purchasing demand");
+        // Thống kê theo giờ đến: đếm đúng mốc giờ hẹn UTC+7, tách lượt đã xác nhận / còn chờ, bỏ lịch đã hủy và không đến.
+        var cancelledAt1800=Booking("W10-PAST-CANCEL",pastDay.ToDateTime(new(18,0)),TrangThaiDatBan.DaHuy); cancelledAt1800.ThoiDiemHuy=DateTimeOffset.UtcNow;
+        var timeExtras=new[]{Booking("W10-PAST-WAIT",pastDay.ToDateTime(new(18,0)),TrangThaiDatBan.ChoXacNhan),cancelledAt1800,
+            Booking("W10-PAST-NOSHOW",pastDay.ToDateTime(new(18,30)),TrangThaiDatBan.KhongDen),Booking("W10-PAST-1830",pastDay.ToDateTime(new(18,30)),TrangThaiDatBan.DaXacNhan)};
+        db.DatBan.AddRange(timeExtras);await db.SaveChangesAsync();
+        var timePlan=await new ReservationPlanningService(db).Build(pastDay,pastDay,"toi",false);
+        check(timePlan.ArrivalTimes.Count==2&&timePlan.ArrivalTimes[0] is {Time.Hour:18,Time.Minute:0,Confirmed:1,Waiting:1,Total:2}&&timePlan.ArrivalTimes[1] is {Time.Hour:18,Time.Minute:30,Confirmed:1,Waiting:0},
+            "Arrival-time summary groups by Vietnam appointment time, separates confirmed and waiting, and skips cancelled/no-show bookings");
+        check(WebUtility.HtmlDecode(await Get(admin,$"/ThongKeDatBan?tuNgay={pastDay:yyyy-MM-dd}&ca=toi&vip=false")).Contains("Số lượt đặt theo giờ đến"),"Arrival-time summary is shown on the existing planning page");
+        db.DatBan.RemoveRange(timeExtras);await db.SaveChangesAsync();
         await Get(admin,$"/ThongKeDatBan?tuNgay={day:yyyy-MM-dd}&ca=toi");
         using(var invalid=await admin.GetAsync("/ThongKeDatBan?tuNgay=9999-12-31&cheDo=tuan"))check(invalid.StatusCode==HttpStatusCode.BadRequest,"Out-of-range week filter returns validation error rather than a server crash");
         using var customer=newClient(); var login=await Get(customer,"/Account/Login");

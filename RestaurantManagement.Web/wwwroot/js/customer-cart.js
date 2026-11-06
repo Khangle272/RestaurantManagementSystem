@@ -145,7 +145,7 @@
                 sent = (context.items || []).filter(x => x.sent);
                 if (!draft) items = cleanItems((context.items || []).filter(x => !x.sent));
                 const label = byId('cart-context'); label.hidden = false;
-                label.textContent = `Đang chọn cho lịch ${context.code || '#' + bookingId}${context.arrival ? ' · ' + new Date(context.arrival).toLocaleString('vi-VN') : ''}. `;
+                label.textContent = `Đang chọn cho lịch ${context.code || '#' + bookingId}${context.arrival ? ' · ' + window.vnTime.dateTime(context.arrival) : ''}. `;
                 const detailLink = document.createElement('a'); detailLink.href = root.dataset.detailUrl + '/' + bookingId; detailLink.textContent = 'Xem chi tiết'; label.append(detailLink);
                 byId('cart-description').textContent = canEdit ? 'Bổ sung hoặc sửa món chưa gửi bếp cho lịch này. Món đã gửi bếp được giữ để theo dõi.' : 'Lịch này không còn nhận thay đổi món. Bạn có thể xem chi tiết bên dưới.';
                 byId('cart-new-checkout').hidden = true;

@@ -1,6 +1,6 @@
 @model List<RestaurantManagement.Web.Controllers.BepRow>
 @using RestaurantManagement.API.Models
-@functions { private static string TableServiceToday() => RestaurantManagement.Web.Services.TableService.VietnamNow.ToString("dd/MM/yyyy"); }
+@functions { private static string TableServiceToday() => VnTime.Ngay(RestaurantManagement.Web.Services.TableService.VietnamNow); }
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Màn hình bếp (KDS)";
@@ -58,7 +58,7 @@
             <div class="page-actions">
                 @foreach (var c in cancelled)
                 {
-                    <span class="badge bg-danger fs-6 fw-semibold">@c.Ban · @c.Mon (@c.Size) x@c.SoLuong · hủy lúc @c.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                    <span class="badge bg-danger fs-6 fw-semibold">@c.Ban · @c.Mon (@c.Size) x@c.SoLuong · hủy lúc @VnTime.Gio(c.ThoiDiemGoi)</span>
                 }
             </div>
         </div>
@@ -92,7 +92,7 @@
                                 </div>
                             </div>
                             <div class="kds-meta">
-                                <i class="bi bi-calendar3 me-1"></i>@thoiDiem.ToString("dd/MM/yyyy")
+                                <i class="bi bi-calendar3 me-1"></i>@VnTime.Ngay(thoiDiem)
                                 <span class="mx-1">•</span>
                                 <i class="bi bi-clock me-1"></i>Giờ gọi @thoiDiem.ToString("HH:mm")
                             </div>
@@ -161,7 +161,7 @@
                     if (!response.ok) throw new Error('snapshot');
                     const next = JSON.stringify(await response.json());
                     if (next !== current) window.location.reload();
-                    else status.textContent = `Đã đồng bộ lúc ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}.`;
+                    else status.textContent = `Đã đồng bộ lúc ${window.vnTime.time()}.`;
                 } catch {
                     status.textContent = 'Mất kết nối cập nhật. Trạng thái có thể chưa mới nhất.';
                 }

@@ -24,8 +24,8 @@
 <section class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div><h1 class="h3">Lịch @b.MaDatBan</h1><p class="text-muted mb-1">@status · @b.HoTenLienHe · @(b.SoNguoiLon + b.SoTreEm) khách</p>
-        <p class="mb-0">@b.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") – @b.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")
-            · @(b.Ban.Any() ? string.Join(", ", b.Ban.Select(x => x.BanAn.MaBan)) : "Chưa xếp bàn")</p></div>
+        <p class="mb-0">@VnTime.NgayGio(b.GioDen) – @VnTime.Gio(b.GioKetThucDuKien)
+            · @(b.Ban.Any() ? string.Join(", ", b.Ban.Select(x => x.BanAn.MaBan)) : "Chưa chọn bàn")</p></div>
         @if (!Model.Internal && Model.CanEdit && b.ThoiDiemBaoChuyenKhoan is null) {
             <a class="btn btn-success" asp-controller="Home" asp-action="Index" asp-route-datBanId="@b.Id" asp-fragment="thuc-don">Chọn / bổ sung món</a>
         } else if (reception) {
@@ -99,7 +99,7 @@
         }
         @if (cashier && b.CocTuDong && b.ThoiDiemBaoChuyenKhoan is not null) {
             <div class="alert alert-info mt-3">
-                Khách báo chuyển <strong>@Money(b.SoTienKhachBao)</strong> lúc @b.ThoiDiemBaoChuyenKhoan.Value.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM").
+                Khách báo chuyển <strong>@Money(b.SoTienKhachBao)</strong> lúc @VnTime.NgayGio(b.ThoiDiemBaoChuyenKhoan).
                 Nội dung chuyển khoản: <strong>@b.MaDatBan</strong>.
                 @if (!string.IsNullOrWhiteSpace(b.MaGiaoDichKhachBao)) { <div>Mã giao dịch khách cung cấp: @b.MaGiaoDichKhachBao</div> }
             </div>
@@ -136,7 +136,7 @@
         @if (Model.Transactions.Any()) {
             <details class="mt-3"><summary>Lịch sử tiền đặt cọc (@Model.Transactions.Count)</summary>
                 <ul class="mt-2">@foreach (var t in Model.Transactions) {
-                    <li>@t.ThoiDiem.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM HH:mm") · @(t.Loai == LoaiGiaoDichCoc.Thu ? "Nhận" : t.Loai == LoaiGiaoDichCoc.Hoan ? "Hoàn" : "Giữ") @Money(t.SoTien) — @t.LyDo</li>
+                    <li>@VnTime.NgayGio(t.ThoiDiem) · @(t.Loai == LoaiGiaoDichCoc.Thu ? "Nhận" : t.Loai == LoaiGiaoDichCoc.Hoan ? "Hoàn" : "Giữ") @Money(t.SoTien) — @t.LyDo</li>
                 }</ul>
             </details>
         }
