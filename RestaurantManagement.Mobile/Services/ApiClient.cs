@@ -39,24 +39,73 @@ public sealed class ApiClient
         return new Uri(uri.GetLeftPart(UriPartial.Authority));
     }
 
+    // Thời điểm token hết hạn (server cấp 8 giờ); dùng để hiện ở trang Tài khoản và bỏ phiên đã lưu khi quá hạn.
+    public DateTimeOffset? ExpiresAt { get; private set; }
+
+    private const string SessionKey = "RestaurantSession";
+
+    // Phiên đăng nhập lưu trong SecureStorage (Keystore/Keychain) để mở lại app không phải đăng nhập lại.
+    private sealed record SavedSession(string Server, string AccessToken, DateTimeOffset ExpiresAt);
+
     public async Task<UserProfileDto> LoginAsync(Uri server, string email, string password)
     {
         Logout();
         var client = new HttpClient(CreateHandler(server)) { BaseAddress = server, Timeout = TimeSpan.FromSeconds(20) };
         try
         {
-            using var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email.Trim(), password), Json);
+            using var response = await Send(() => client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email.Trim(), password), Json));
             var token = await Read<TokenResponse>(response);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
             http = client;
             User = await GetAsync<UserProfileDto>("/api/auth/me");
+            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(token.ExpiresIn);
+            await SaveSessionAsync(new SavedSession(server.AbsoluteUri, token.AccessToken, ExpiresAt.Value));
             return User;
         }
         catch
         {
-            http = null; User = null; client.Dispose();
+            http = null; User = null; ExpiresAt = null; client.Dispose();
             throw;
         }
+    }
+
+    // Khôi phục phiên đã lưu: còn hạn và server xác nhận token thì vào thẳng màn chính.
+    // Trả về null nếu không có phiên; ném ApiException nếu không kết nối được (giữ phiên để thử lại).
+    public async Task<UserProfileDto?> RestoreAsync()
+    {
+        SavedSession? saved = null;
+        try
+        {
+            var json = await SecureStorage.Default.GetAsync(SessionKey);
+            if (!string.IsNullOrEmpty(json)) saved = JsonSerializer.Deserialize<SavedSession>(json, Json);
+        }
+        catch (Exception) { SecureStorage.Default.Remove(SessionKey); }
+        if (saved is null || saved.ExpiresAt <= DateTimeOffset.UtcNow.AddMinutes(5) || ParseServer(saved.Server, out _) is not { } server)
+        {
+            SecureStorage.Default.Remove(SessionKey);
+            return null;
+        }
+        var client = new HttpClient(CreateHandler(server)) { BaseAddress = server, Timeout = TimeSpan.FromSeconds(15) };
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", saved.AccessToken);
+        http = client;
+        try
+        {
+            User = await GetAsync<UserProfileDto>("/api/auth/me");
+            ExpiresAt = saved.ExpiresAt;
+            return User;
+        }
+        catch (ApiException ex)
+        {
+            http = null; User = null; client.Dispose();
+            if (ex.Status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden) { SecureStorage.Default.Remove(SessionKey); return null; }
+            throw;
+        }
+    }
+
+    private static async Task SaveSessionAsync(SavedSession session)
+    {
+        // Máy không hỗ trợ lưu bảo mật thì chỉ bỏ qua tính năng nhớ đăng nhập.
+        try { await SecureStorage.Default.SetAsync(SessionKey, JsonSerializer.Serialize(session, Json)); } catch (Exception) { }
     }
 
     public void Logout()
@@ -64,6 +113,8 @@ public sealed class ApiClient
         http?.Dispose();
         http = null;
         User = null;
+        ExpiresAt = null;
+        try { SecureStorage.Default.Remove(SessionKey); } catch (Exception) { }
     }
 
     // ----- Nhân viên -----
@@ -105,6 +156,8 @@ public sealed class ApiClient
 
     private static async Task<HttpResponseMessage> Send(Func<Task<HttpResponseMessage>> request)
     {
+        if (Connectivity.Current.NetworkAccess is NetworkAccess.None)
+            throw new ApiException("Thiết bị đang mất kết nối mạng. Bật Wi-Fi hoặc dữ liệu di động rồi thử lại.");
         try { return await request(); }
         catch (TaskCanceledException) { throw new ApiException("Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi thử lại."); }
         catch (HttpRequestException) { throw new ApiException("Không kết nối được máy chủ nhà hàng. Kiểm tra địa chỉ, mạng và chứng chỉ HTTPS."); }

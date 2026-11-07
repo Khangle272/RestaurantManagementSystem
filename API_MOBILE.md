@@ -45,14 +45,24 @@ Các thao tác ghi gửi kèm `rowVersion` mà server đã trả. Nếu dữ li�
 
 ## Chức năng trên app
 
-**Nhân viên**
-- **Sơ đồ bàn:** nhóm theo tầng và khu vực, màu theo trạng thái, kéo xuống để làm mới. Bấm vào bàn để gọi món, xem đơn, kết thúc phục vụ hoặc báo đã dọn.
-- **Gọi món:** tìm theo tên, lọc theo danh mục, chọn size, ghi chú cho từng món, giỏ món, gửi bếp. Có đơn mang đi và đơn giao hàng.
-- **Đơn hàng:** theo dõi trạng thái món (chờ chế biến → đang chế biến → sẵn sàng → đã phục vụ), xác nhận mang món ra, hủy món, gọi thêm.
-- **Thanh toán:** tiền mặt (tính tiền thối) hoặc chuyển khoản (nhập mã giao dịch). Tự áp dụng ưu đãi và trừ cọc. Mobile không cho sửa giảm giá thủ công.
-- **Đặt bàn** (tiếp tân, quản lý): xác nhận yêu cầu bằng bàn gợi ý, nhận bàn khi khách đến.
+**Chung**
+- **Khởi động và phiên đăng nhập:** token lưu trong SecureStorage (Keystore trên Android). Mở lại app sẽ vào thẳng màn chính cho tới khi token hết hạn (8 giờ) hoặc người dùng đăng xuất. Nếu server trả `401` thì app xóa phiên đã lưu và quay về màn đăng nhập.
+- **Đăng nhập:** lỗi hiện ngay trên form, có nút Hiện/Ẩn mật khẩu. Địa chỉ máy chủ đã lưu được thu gọn thành một dòng, bấm "Đổi" để sửa.
+- **Tài khoản (tab cuối):** họ tên, email, vai trò, danh sách quyền trên app (lấy từ `/api/auth/me`), máy chủ, giờ hết phiên, chọn giao diện Theo máy / Sáng / Tối, phiên bản app, nút đăng xuất có xác nhận.
+- **Tự làm mới:** sơ đồ bàn, đơn hàng và đơn của khách tự làm mới mỗi 30 giây, đặt bàn mỗi 60 giây, chi tiết đơn của khách mỗi 15 giây. Chỉ chạy khi màn đang hiển thị. App chỉ vẽ lại khi dữ liệu đổi nên không làm nhảy vị trí cuộn. Lần làm mới ngầm không bật hộp thoại lỗi.
+- **Mất mạng:** app báo ngay "Thiết bị đang mất kết nối mạng" thay vì chờ hết thời gian gọi API.
+- **Giao diện:** màu xanh thương hiệu giống website, hỗ trợ chế độ sáng và tối. Trên Android, thanh tab nằm ở đáy màn hình kèm biểu tượng. Nhãn trạng thái có màu theo nhóm: xanh lá là xong hoặc trống, vàng là đang xử lý, đỏ là cần xử lý, xanh dương là đã đặt hoặc sẵn sàng. Màn trống có hướng dẫn.
 
-**Khách hàng:** xem điểm hiện có, đơn đang phục vụ (tự cập nhật trạng thái món mỗi 15 giây), lịch sử mua hàng và lịch sử tích điểm. Thu thập voucher và đổi điểm vẫn làm trên website.
+**Nhân viên**
+- **Sơ đồ bàn:** lưới 2 cột, nhóm theo tầng và khu vực, vạch màu theo trạng thái. Có chip lọc theo trạng thái kèm số lượng. Thanh nhắc "🔔 X món sẵn sàng chờ mang ra" kèm mã bàn. Bấm vào bàn để gọi món, xem đơn, kết thúc phục vụ hoặc báo đã dọn (hai thao tác cuối có hỏi xác nhận).
+- **Gọi món:** tìm theo tên, chip danh mục, ảnh món (chưa có ảnh thì hiện chữ cái đầu), chọn size, ghi chú cho từng món. Giỏ món có bộ đếm −/+ và có thể thu gọn. Đơn mang đi và đơn giao hàng chọn bằng chip, đơn giao hàng bắt buộc có địa chỉ. Bấm nút quay lại khi giỏ còn món thì app hỏi trước khi bỏ.
+- **Đơn hàng:** chip lọc Tại bàn / Mang đi / Giao hàng. Chi tiết đơn có thanh tiến độ "Đã phục vụ x/y món" và trạng thái từng món (chờ chế biến → đang chế biến → sẵn sàng → đã phục vụ). Có nút "Đã mang ra" và "Hủy món". Nút "Gọi thêm món" và "Thanh toán" nằm cố định ở đáy màn.
+- **Thanh toán:** tiền mặt (tính tiền thối) hoặc chuyển khoản (nhập mã giao dịch). Tự áp dụng ưu đãi và trừ cọc. Mobile không cho sửa giảm giá thủ công.
+- **Đặt bàn** (tiếp tân, quản lý): thẻ hiện giờ đến, số khách, VIP, bàn đã xếp. Xác nhận yêu cầu bằng bàn gợi ý, nhận bàn khi khách đến.
+
+**Khách hàng:** thẻ thành viên hiện điểm hiện có, số đơn và tổng chi tiêu. Xem đơn đang phục vụ (tiến độ món tự cập nhật mỗi 15 giây), lịch sử mua hàng và lịch sử tích điểm. Thu thập voucher và đổi điểm vẫn làm trên website.
+
+**Mã nguồn giao diện** (`RestaurantManagement.Mobile/Views`): `Ui.cs` (bộ màu và thành phần dùng chung), `AppPage.cs` (lớp cơ sở: gọi API, lớp chờ, tự làm mới), `AccountPages.cs` (khởi động, tài khoản, giao diện), `LoginPage.cs`, `StaffPages.cs`, `OrderPages.cs`, `CustomerPages.cs`. App ID: `vn.nhahang.quanly`.
 
 ## Chạy thử
 

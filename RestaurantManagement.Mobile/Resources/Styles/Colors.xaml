@@ -12,6 +12,11 @@
     <Color x:Key="SecondaryDarkText">#5FA872</Color>
     <Color x:Key="Tertiary">#1F5A2D</Color>
 
+    <!-- Nền ứng dụng và nền thẻ (đồng bộ với Views/Ui.cs). -->
+    <Color x:Key="AppBackground">#F3F6F4</Color>
+    <Color x:Key="AppBackgroundDark">#0F1411</Color>
+    <Color x:Key="SurfaceDark">#1A211C</Color>
+
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
     <Color x:Key="Magenta">#D600AA</Color>
