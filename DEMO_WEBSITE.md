@@ -89,6 +89,10 @@ Tồn kho thay đổi theo phiếu; chạy nạp lại trong cùng ngày không 
 
 Admin → **Tổng quan kinh doanh**, **Doanh thu**, **Món bán chạy**, **Hiệu quả khuyến mãi**. Chọn khoảng **28 ngày vừa qua** để thấy nhiều điểm trên biểu đồ. Bộ demo có 29 hóa đơn đã thanh toán (28 ngày trước + hôm nay), snapshot ưu đãi và đánh giá, không cộng điểm giả vào hóa đơn cũ trước khi nạp.
 
+### 8. App mobile
+
+Mở app MAUI (Windows hoặc Android), nhập địa chỉ HTTPS của Web rồi đăng nhập bằng cùng tài khoản `.demo`. Bồi bàn/thu ngân/tiếp tân thấy sơ đồ bàn, gọi món, mang món ra, thanh toán và xếp bàn cho lịch đặt; khách xem đơn đang phục vụ, lịch sử và điểm. Tài khoản Bếp/Kho bị từ chối trên app. Cách chạy app và địa chỉ cho máy ảo Android: [API_MOBILE.md](API_MOBILE.md).
+
 ## Nạp lại hoặc chuẩn bị vào ngày khác
 
 Chạy tại thư mục repository:

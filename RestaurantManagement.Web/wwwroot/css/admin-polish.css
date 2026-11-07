@@ -259,8 +259,9 @@ div.stat-tile:hover { transform: none; box-shadow: var(--shadow-card); }
 .empty-state > .bi { display: block; margin-bottom: .5rem; font-size: 1.9rem; color: #CBD5E1; }
 
 /* Nhãn trạng thái: mọi kiểu nhãn cũ có cùng cỡ chữ và hình dạng. */
-.admin-main .badge-status-success, .admin-main .badge-status-warning, .admin-main .badge-status-danger, .admin-main .badge-status-muted { display: inline-flex; align-items: center; gap: .35rem; padding: .3em .75em; font-size: .75rem; font-weight: 600; line-height: 1.2; border-radius: 9999px; }
+.admin-main .badge-status-success, .admin-main .badge-status-warning, .admin-main .badge-status-danger, .admin-main .badge-status-muted, .admin-main .badge-status-info { display: inline-flex; align-items: center; gap: .35rem; padding: .3em .75em; font-size: .75rem; font-weight: 600; line-height: 1.2; border-radius: 9999px; }
 .admin-main .badge-status-muted { background: #E2E8F0; color: #475569; }
+.admin-main .badge-status-info { background: #DBEAFE; color: #1E40AF; }
 .admin-main .badge-status-warning { background: #FEF3C7; color: #92400E; }
 .badge-dot { width: .4rem; height: .4rem; border-radius: 50%; flex: 0 0 auto; }
 
@@ -291,6 +292,12 @@ div.stat-tile:hover { transform: none; box-shadow: var(--shadow-card); }
   .admin-main .card-stat .rounded-circle { width: 2.4rem; height: 2.4rem; font-size: 1.1rem !important; }
   .admin-main .card-stat > .d-flex { gap: .65rem; }
   .segmented a { padding: .35rem .6rem; }
+}
+/* Điện thoại nhỏ: thẻ số liệu kho xếp 2 cột như stat-grid, bỏ biểu tượng để đủ chỗ cho con số. */
+@media (max-width: 575.98px) {
+  .admin-main .row > .col-12.col-sm-6:has(> .card-stat) { flex: 0 0 50%; max-width: 50%; }
+  .admin-main .card-stat .rounded-circle { display: none !important; }
+  .admin-main .card-stat .fs-2, .admin-main .card-stat .fs-3 { font-size: 1.15rem !important; }
 }
 
 /* Nhãn thẻ số liệu ở các trang báo cáo: viết thường, cùng cỡ với thẻ số liệu khác. */

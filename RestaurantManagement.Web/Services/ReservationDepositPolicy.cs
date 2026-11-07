@@ -38,6 +38,16 @@ public static class ReservationDepositPolicy
         return remaining > 0 ? $"Đã đặt cọc {received:N0} đ · còn thiếu {remaining:N0} đ" : $"Đã đặt cọc {received:N0} đ";
     }
 
+    // Giai đoạn cọc dùng để tách danh sách: chưa nộp, khách báo chuyển chờ thu ngân đối chiếu, đã đóng đủ, không cần cọc.
+    public static (string Text, string Css) Stage(DatBan booking)
+    {
+        if (booking.ThoiDiemBaoChuyenKhoan is not null) return ("Khách báo chuyển · chờ đối chiếu", "badge-status-info");
+        if (booking.TienCocYeuCau <= 0) return ("Không cần cọc", "badge-status-muted");
+        var received = Received(booking);
+        if (received >= booking.TienCocYeuCau) return ("Đã đóng cọc", "badge-status-success");
+        return received > 0 ? ("Đã cọc một phần", "badge-status-warning") : ("Chưa nộp cọc", "badge-status-warning");
+    }
+
     public static bool HasDeposit(DatBan booking) => booking.TienCocDaNop > 0 && booking.TrangThaiCoc != TrangThaiCoc.DaHoan;
 
     // Khu vực của bàn đã chọn quyết định mức cọc; chưa có bàn thì dùng khu vực khách chọn.

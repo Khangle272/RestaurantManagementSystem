@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using RestaurantManagement.Mobile.Views;
 
 namespace RestaurantManagement.Mobile
 {
@@ -7,11 +7,14 @@ namespace RestaurantManagement.Mobile
         public App()
         {
             InitializeComponent();
+            UserAppTheme = AppTheming.Saved;
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            // Màn khởi động khôi phục phiên đã lưu; không có phiên thì mở màn đăng nhập.
+            // Sau khi đăng nhập AppNavigator chuyển sang màn nhân viên hoặc khách.
+            return new Window(new NavigationPage(new StartupPage())) { Title = "Quản lý nhà hàng" };
         }
     }
 }

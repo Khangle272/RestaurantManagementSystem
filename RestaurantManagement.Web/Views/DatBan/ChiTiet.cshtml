@@ -16,6 +16,7 @@
             : b.CocTuDong ? "Chờ thanh toán cọc" : b.TienCocYeuCau > 0 ? "Chờ nhận cọc theo thỏa thuận" : "Chờ nhà hàng liên hệ về cọc",
         TrangThaiDatBan.DaXacNhan => "Đã xác nhận", TrangThaiDatBan.DaNhanBan => "Đang phục vụ",
         TrangThaiDatBan.DaHuy => "Đã hủy", _ => "Không đến" };
+    var statusCss = b.TrangThai switch { TrangThaiDatBan.DaXacNhan or TrangThaiDatBan.DaNhanBan => "text-bg-success", TrangThaiDatBan.DaHuy or TrangThaiDatBan.KhongDen => "text-bg-secondary", _ => "text-bg-warning" };
     string Money(decimal amount) => amount.ToString("N0") + " đ";
     string DishStatus(string value) => value switch {
         "ChoCheBien" => "Chờ bếp", "DangCheBien" => "Đang chế biến", "SanSang" => "Chờ mang ra",
@@ -23,9 +24,9 @@
 }
 <section class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-        <div><h1 class="h3">Lịch @b.MaDatBan</h1><p class="text-muted mb-1">@status · @b.HoTenLienHe · @(b.SoNguoiLon + b.SoTreEm) khách</p>
-        <p class="mb-0">@b.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") – @b.GioKetThucDuKien.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")
-            · @(b.Ban.Any() ? string.Join(", ", b.Ban.Select(x => x.BanAn.MaBan)) : "Chưa xếp bàn")</p></div>
+        <div><h1 class="h3">Lịch @b.MaDatBan</h1><p class="text-muted mb-1"><span class="badge rounded-pill @statusCss me-1">@status</span> @b.HoTenLienHe · @(b.SoNguoiLon + b.SoTreEm) khách</p>
+        <p class="mb-0"><i class="bi bi-calendar-event me-1" aria-hidden="true"></i>@VnTime.NgayGio(b.GioDen) – @VnTime.Gio(b.GioKetThucDuKien)
+            · <i class="bi bi-grid-3x3-gap me-1" aria-hidden="true"></i>@(b.Ban.Any() ? string.Join(", ", b.Ban.Select(x => x.BanAn.MaBan)) : "Chưa chọn bàn")</p></div>
         @if (!Model.Internal && Model.CanEdit && b.ThoiDiemBaoChuyenKhoan is null) {
             <a class="btn btn-success" asp-controller="Home" asp-action="Index" asp-route-datBanId="@b.Id" asp-fragment="thuc-don">Chọn / bổ sung món</a>
         } else if (reception) {
@@ -33,16 +34,16 @@
         }
     </div>
     @if (b.YeuCauHuy is not null) { <div class="alert alert-warning">Đang chờ nhà hàng xử lý yêu cầu hủy: @b.YeuCauHuy. Tạm dừng gửi thêm món xuống bếp.</div> }
-    @if (!string.IsNullOrWhiteSpace(b.YeuCau)) { <p>Yêu cầu: @b.YeuCau</p> }
+    @if (!string.IsNullOrWhiteSpace(b.YeuCau)) { <div class="alert alert-light border small"><strong><i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>Ghi chú / yêu cầu:</strong> <span class="text-break" style="white-space: pre-line">@b.YeuCau</span></div> }
     <div class="card mb-4"><div class="card-body">
         <h2 class="h5">Món đã chọn</h2>
         <p class="text-muted small">Chọn trước không có nghĩa bếp đã nấu. Món chưa gửi bếp có thể sửa trong giỏ; món đã gửi cần nhà hàng xử lý.</p>
         @if (!Model.Items.Any()) { <p class="mb-0">Chưa chọn món. Bạn vẫn có thể đặt bàn mà không cần chọn món trước.</p> }
         else {
-            <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Món / size</th><th>Số lượng</th><th>Thành tiền tạm tính</th><th>Trạng thái</th></tr></thead><tbody>
-            @foreach (var item in Model.Items) { <tr><td>@item.Name <span class="text-muted">· @item.SizeName</span>
+            <div class="table-responsive"><table class="table align-middle @(Model.Internal ? "" : "customer-table")"><thead><tr><th>Món / size</th><th>Số lượng</th><th>Thành tiền tạm tính</th><th>Trạng thái</th></tr></thead><tbody>
+            @foreach (var item in Model.Items) { <tr><td class="cell-main"><strong>@item.Name</strong> <span class="text-muted">· @item.SizeName</span>
                 @if (!string.IsNullOrWhiteSpace(item.Note)) { <div class="small text-muted">@item.Note</div> }</td>
-                <td>@item.Quantity</td><td>@Money(item.Price * item.Quantity)</td><td>@DishStatus(item.Status)</td></tr> }
+                <td data-label="Số lượng">@item.Quantity</td><td data-label="Thành tiền tạm tính">@Money(item.Price * item.Quantity)</td><td data-label="Trạng thái">@DishStatus(item.Status)</td></tr> }
             </tbody></table></div><p class="mb-0 text-end">Tạm tính: <strong>@Money(Model.Items.Where(x => x.Status != "DaHuy").Sum(x => x.Price * x.Quantity))</strong></p>
         }
         @if (Model.CanEdit && Model.Items.Any(x => !x.Sent) && b.TrangThai != TrangThaiDatBan.DaNhanBan) {
@@ -99,7 +100,7 @@
         }
         @if (cashier && b.CocTuDong && b.ThoiDiemBaoChuyenKhoan is not null) {
             <div class="alert alert-info mt-3">
-                Khách báo chuyển <strong>@Money(b.SoTienKhachBao)</strong> lúc @b.ThoiDiemBaoChuyenKhoan.Value.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM").
+                Khách báo chuyển <strong>@Money(b.SoTienKhachBao)</strong> lúc @VnTime.NgayGio(b.ThoiDiemBaoChuyenKhoan).
                 Nội dung chuyển khoản: <strong>@b.MaDatBan</strong>.
                 @if (!string.IsNullOrWhiteSpace(b.MaGiaoDichKhachBao)) { <div>Mã giao dịch khách cung cấp: @b.MaGiaoDichKhachBao</div> }
             </div>
@@ -136,7 +137,7 @@
         @if (Model.Transactions.Any()) {
             <details class="mt-3"><summary>Lịch sử tiền đặt cọc (@Model.Transactions.Count)</summary>
                 <ul class="mt-2">@foreach (var t in Model.Transactions) {
-                    <li>@t.ThoiDiem.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM HH:mm") · @(t.Loai == LoaiGiaoDichCoc.Thu ? "Nhận" : t.Loai == LoaiGiaoDichCoc.Hoan ? "Hoàn" : "Giữ") @Money(t.SoTien) — @t.LyDo</li>
+                    <li>@VnTime.NgayGio(t.ThoiDiem) · @(t.Loai == LoaiGiaoDichCoc.Thu ? "Nhận" : t.Loai == LoaiGiaoDichCoc.Hoan ? "Hoàn" : "Giữ") @Money(t.SoTien) — @t.LyDo</li>
                 }</ul>
             </details>
         }

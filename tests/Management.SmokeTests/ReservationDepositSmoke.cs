@@ -110,10 +110,27 @@ public static class ReservationDepositSmoke
         var receipt = new Dictionary<string, string> { ["RowVersion"] = Version(booking), ["RequestId"] = Guid.NewGuid().ToString(),
             ["Loai"] = "Thu", ["SoTien"] = "125000", ["LyDo"] = "Đã đối chiếu ngân hàng" };
         await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt, HttpStatusCode.BadRequest);
+        // Lịch khách báo chuyển nằm ở danh sách "Chờ đối chiếu cọc", không lẫn với lịch chưa nộp cọc.
+        check(WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=ChoDoiChieu")).Contains(booking.MaDatBan)
+            && !WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=ChoXacNhan")).Contains(booking.MaDatBan)
+            && !WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=DaXacNhan")).Contains(booking.MaDatBan),
+            "Reported transfer is listed only under awaiting reconciliation");
+        queue = WebUtility.HtmlDecode(await Get(cashier, "/DatTruoc"));
+        check(queue.Contains("Khách báo chuyển · chờ đối chiếu") && queue.Contains("Xác nhận thu cọc 125.000 đ"),
+            "Cashier queue shows the reconciliation status and a one-step deposit confirmation button");
+        // Nút xác nhận thu cọc trên danh sách: sai số tiền bị từ chối, đúng số tiền ghi một khoản thu, bấm lặp không ghi thêm.
+        var confirm = new Dictionary<string, string> { ["rowVersion"] = Version(booking), ["soTien"] = "100000",
+            ["requestId"] = Guid.NewGuid().ToString(), ["returnUrl"] = "/DatTruoc" };
+        await Post(cashier, $"/DatTruoc/XacNhanCoc/{id}", queue, confirm, HttpStatusCode.Redirect);
+        check((await Reload(id)).TienCocDaNop == 0, "Confirming an amount different from the customer's notice records nothing");
+        confirm["soTien"] = "125000";
+        await Post(cashier, $"/DatTruoc/XacNhanCoc/{id}", queue, confirm, HttpStatusCode.Redirect);
+        await Post(cashier, $"/DatTruoc/XacNhanCoc/{id}", queue, confirm, HttpStatusCode.Redirect);
         receipt["DaDoiChieuNganHang"] = "true";
-        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt);
-        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt);
+        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt, HttpStatusCode.BadRequest);
         booking = await Reload(id);
+        check(WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=DaXacNhan")).Contains(booking.MaDatBan),
+            "Confirmed deposit moves the booking to the confirmed list");
         check(booking.TienCocDaNop == 125000m && booking.TrangThai == TrangThaiDatBan.DaXacNhan
             && booking.ThoiDiemBaoChuyenKhoan == null && await db.GiaoDichCoc.CountAsync(x => x.DatBanId == id) == 1,
             "Cashier confirmation needs no bank transaction code; repeated confirmation records one receipt");

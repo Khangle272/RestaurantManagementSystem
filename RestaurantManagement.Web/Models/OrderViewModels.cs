@@ -153,6 +153,4 @@ public class PaymentFormModel
     public decimal? TienGiamThuCong { get; set; }
     public decimal? SoTienPhaiThuDuKien { get; set; }
     public string? MaGiaoDich { get; set; }
-    public string? LoaiThe { get; set; }
-    public string? SoThe4SoCuoi { get; set; }
 }

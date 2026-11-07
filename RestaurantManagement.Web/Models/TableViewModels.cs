@@ -9,6 +9,9 @@ public class TableBoardViewModel
     public List<TableCard> Tables { get; set; } = [];
     public DatBan? Booking { get; set; }
     public string BookingVersion { get; set; } = "";
+    // Lịch đang xử lý đã có bàn chưa: có thì thao tác là "Đổi bàn", chưa có là "Chọn bàn".
+    public bool BookingHasTables => !string.IsNullOrEmpty(BookingTableNames);
+    public string BookingTableNames { get; set; } = "";
     public int? AreaId { get; set; }
     public int? Floor { get; set; }
     public int? PreferredTableId { get; set; }
@@ -51,11 +54,8 @@ public class ReceptionBookingViewModel
     public string? SoDienThoai { get; set; }
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
     public DateTime GioDen { get; set; } = Services.ReservationSchedule.NextArrival(Services.TableService.VietnamNow);
-    public bool DatTheoCa { get; set; }
     public DateOnly? NgayDat { get; set; }
     [Range(1, 50)] public int SoNguoi { get; set; } = 2;
-    // Compatibility with old form payloads; W10 does not use a per-party countdown.
-    public int SoPhut { get; set; } = 120;
     public int? KhuVucId { get; set; }
     [StringLength(1000)] public string? GhiChu { get; set; }
     public List<KhuVuc> Areas { get; set; } = [];

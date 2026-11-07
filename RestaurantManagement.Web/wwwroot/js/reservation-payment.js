@@ -38,7 +38,7 @@
                 location.reload();
                 return;
             }
-            feedback.textContent = `Nhà hàng chưa xác nhận nhận tiền. Đã kiểm tra lúc ${new Date().toLocaleTimeString('vi-VN')}. Bạn không cần chuyển lại.`;
+            feedback.textContent = `Nhà hàng chưa xác nhận nhận tiền. Đã kiểm tra lúc ${window.vnTime.time()}. Bạn không cần chuyển lại.`;
         } catch (error) {
             feedback.textContent = error.name === 'AbortError' ? 'Kiểm tra quá lâu. Vui lòng thử lại; không cần chuyển tiền thêm.'
                 : error.name === 'TypeError' || error.name === 'SyntaxError' ? 'Không lấy được trạng thái. Kiểm tra mạng rồi thử lại; không cần chuyển tiền thêm.' : error.message;

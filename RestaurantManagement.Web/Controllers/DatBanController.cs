@@ -48,6 +48,15 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
             RequestId = Guid.NewGuid(),
             KhuVucOptions = await GetKhuVucOptionsAsync()
         };
+        // Điền sẵn thông tin liên hệ từ hồ sơ khách; khách vẫn sửa được nếu đặt hộ người khác.
+        var profile = await db.KhachHang.AsNoTracking().Where(x => x.TaiKhoanId == AccountId)
+            .Select(x => new { x.HoTen, x.SoDienThoai, x.Email }).FirstOrDefaultAsync();
+        if (profile is not null)
+        {
+            model.HoTen = profile.HoTen;
+            model.SoDienThoai = profile.SoDienThoai;
+            model.Email = profile.Email;
+        }
         return View(model);
     }
 
@@ -316,6 +325,11 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                 trangThaiText = "Đã xác nhận";
                 badgeClass = "badge-status-info text-white bg-primary";
             }
+            else if ((d.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc) && d.ThoiDiemBaoChuyenKhoan is not null)
+            {
+                trangThaiText = "Đã báo chuyển cọc · chờ nhà hàng đối chiếu";
+                badgeClass = "bg-info-subtle text-info-emphasis";
+            }
             else if (d.TrangThai == TrangThaiDatBan.ChoCoc)
             {
                 trangThaiText = d.TienCocYeuCau > 0 ? "Chưa đặt cọc" : "Chờ nhà hàng liên hệ về tiền đặt cọc";
@@ -346,7 +360,7 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                 SoDienThoai = d.SoDienThoaiLienHe ?? "",
                 ThoiGianDen = d.GioDen,
                 SoNguoi = d.SoNguoiLon + d.SoTreEm,
-                TenBan = d.Ban.Any() ? string.Join(", ", d.Ban.Select(b => b.BanAn.MaBan)) : "Chưa xếp bàn",
+                TenBan = d.Ban.Any() ? string.Join(", ", d.Ban.Select(b => b.BanAn.MaBan)) : "Chưa chọn bàn",
                 TrangThai = trangThaiText,
                 TrangThaiBadgeClass = badgeClass,
                 HoaDonId = activeInvoice?.Id,
@@ -469,7 +483,8 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
         var score = Math.Clamp((int)Math.Round((model.SoSaoMonAn + model.SoSaoDichVu) / 2.0), 1, 5);
         var metaTag = $"[Món ăn: {model.SoSaoMonAn}★ | Dịch vụ: {model.SoSaoDichVu}★]";
         var imgTag = string.IsNullOrEmpty(hinhAnhUrl) ? "" : $"\n[Ảnh: {hinhAnhUrl}]";
-        var fullNoiDung = $"{model.NoiDung.Trim()}\n{metaTag}{imgTag}";
+        // Dấu [ ] là thẻ hệ thống (điểm, ảnh, phản hồi của nhà hàng): khách không được tự chèn để giả mạo chúng.
+        var fullNoiDung = $"{model.NoiDung.Trim().Replace('[', '(').Replace(']', ')')}\n{metaTag}{imgTag}";
 
         var danhGia = new DanhGia
         {

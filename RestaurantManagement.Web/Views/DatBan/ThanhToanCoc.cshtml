@@ -13,7 +13,7 @@
 }
 <section class="container py-4" style="max-width: 980px">
     <h1 class="h3">@(cancelled ? "Yêu cầu đặt bàn đã hủy" : confirmed ? "Đặt bàn đã được xác nhận" : "Thanh toán cọc để hoàn tất đặt bàn")</h1>
-    <p class="text-muted">Lịch @booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM/yyyy") · @(booking.SoNguoiLon + booking.SoTreEm) khách</p>
+    <p class="text-muted">Lịch @VnTime.NgayGio(booking.GioDen) · @(booking.SoNguoiLon + booking.SoTreEm) khách</p>
     <div class="card mb-4"><div class="card-body">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div><div class="small text-muted">Mã đặt bàn / nội dung chuyển khoản</div><strong class="fs-3" id="payment-reference">@booking.MaDatBan</strong></div>
@@ -48,7 +48,7 @@
             </dl>
             <p class="small">@(booking.CocTuDong ? Model.FoodTotal > 0 ? $"Có đặt món trước: tiền đặt cọc = {ReservationDepositPolicy.PreorderRateText} tổng giá trị món đã chọn, tối thiểu bằng mức giữ chỗ." : "Chỉ đặt giữ chỗ: tiền đặt cọc theo khu vực/loại bàn đã chọn." : "Áp dụng tiền đặt cọc đã được nhà hàng thống nhất cho lịch này.")</p>
             @if (!cancelled && booking.HanThanhToanCoc is DateTimeOffset deadline && ReservationDepositPolicy.Received(booking) == 0) {
-                <p class="small">Hạn báo thanh toán: <strong>@deadline.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</strong>.</p>
+                <p class="small">Hạn báo thanh toán: <strong>@VnTime.NgayGio(deadline)</strong>.</p>
                 <p class="small">@(pending ? "Bạn đã báo chuyển khoản trong hạn. Chỗ được giữ trong lúc thu ngân đối chiếu; không chuyển lại." : "Lịch mới giữ chỗ 1 tiếng. Hết hạn chưa báo chuyển/nhận cọc thì tự hủy; không chuyển tiền sau hạn.")</p>
             }
             <details><summary>Điều kiện đặt bàn và xử lý cọc</summary><p class="small mt-2">@booking.DieuKienCocDaThoaThuan</p></details>
@@ -76,7 +76,7 @@
             } else if (canPay && !Model.IsDemo) {
                 <p class="text-muted">Nhà hàng chưa cấu hình tài khoản nhận chuyển khoản trên website. Liên hệ nhà hàng để nhận thông tin thanh toán chính thức.</p>
             } else {
-                <p class="text-muted mt-4">@(confirmed ? "Đã hoàn tất khoản cọc của lịch này." : !booking.Ban.Any() ? "Cần kiểm tra và xếp bàn trước khi thanh toán. Mở chi tiết lịch để tiếp tục hoặc liên hệ nhà hàng." : "Lịch này không nhận thanh toán cọc lúc này.")</p>
+                <p class="text-muted mt-4">@(confirmed ? "Đã hoàn tất khoản cọc của lịch này." : !booking.Ban.Any() ? "Cần kiểm tra và chọn bàn trước khi thanh toán. Mở chi tiết lịch để tiếp tục hoặc liên hệ nhà hàng." : "Lịch này không nhận thanh toán cọc lúc này.")</p>
             }
         </div></div></div>
     </div>

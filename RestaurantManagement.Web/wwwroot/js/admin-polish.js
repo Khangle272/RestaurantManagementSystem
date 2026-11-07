@@ -104,8 +104,10 @@
 
     const pad = value => String(value).padStart(2, '0');
     const iso = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    const now = new Date();
-    const [year, month, day] = [now.getFullYear(), now.getMonth(), now.getDate()];
+    // "Hôm nay" theo giờ Việt Nam, không theo múi giờ của máy người xem.
+    const today = window.vnTime.parts();
+    const [year, month, day] = [today.y, today.month, today.day];
+    const now = new Date(year, month, day);
     const presets = [
         ['Hôm nay', new Date(year, month, day), now],
         ['7 ngày qua', new Date(year, month, day - 6), now],

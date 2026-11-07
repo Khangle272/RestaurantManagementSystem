@@ -110,7 +110,6 @@ public class MonAnSelectionItem
     public int Id { get; set; }
     public string TenMon { get; set; } = "";
     public string TenDanhMuc { get; set; } = "";
-    public decimal GiaThamKhao { get; set; }
     public bool IsSelected { get; set; }
 }
 

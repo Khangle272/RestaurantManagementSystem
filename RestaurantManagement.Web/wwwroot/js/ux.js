@@ -155,6 +155,27 @@
         event.returnValue = '';
     });
 
+    // Bảng tràn ngang: đánh dấu phía còn nội dung để CSS làm mờ mép, gợi ý vuốt/cuộn ngang.
+    const markOverflow = box => {
+        const max = box.scrollWidth - box.clientWidth;
+        box.classList.toggle('has-overflow-start', max > 4 && box.scrollLeft > 4);
+        box.classList.toggle('has-overflow-end', max > 4 && box.scrollLeft < max - 4);
+    };
+    const watchTables = () => document.querySelectorAll('.table-responsive').forEach(box => {
+        markOverflow(box);
+        if (box.dataset.overflowWatch) return;
+        box.dataset.overflowWatch = 'true';
+        box.addEventListener('scroll', () => markOverflow(box), { passive: true });
+    });
+    watchTables();
+    window.addEventListener('resize', watchTables, { passive: true });
+    // Bảng được nạp lại bằng ajax (sơ đồ bàn, KDS...) cũng được theo dõi.
+    if (window.MutationObserver) {
+        let pending = 0;
+        new MutationObserver(() => { cancelAnimationFrame(pending); pending = requestAnimationFrame(watchTables); })
+            .observe(document.body, { childList: true, subtree: true });
+    }
+
     // Nút lên đầu trang cho trang dài.
     const backToTop = document.createElement('button');
     backToTop.type = 'button';

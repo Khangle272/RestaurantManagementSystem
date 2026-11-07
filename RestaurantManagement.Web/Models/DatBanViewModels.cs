@@ -88,6 +88,12 @@ public class DatBanItemVM
     public List<ChiTietMonAnItemVM> ChiTietMonAn { get; set; } = [];
     public DateTimeOffset? GioKetThuc { get; set; }
     public string TinhTrangCoc { get; set; } = "";
+    public string GiaiDoanCoc { get; set; } = "";
+    public string GiaiDoanCocClass { get; set; } = "badge-status-muted";
+    // Khách đã báo chuyển khoản cọc, đang chờ thu ngân đối chiếu ngân hàng.
+    public bool ChoDoiChieuCoc { get; set; }
+    public decimal SoTienKhachBao { get; set; }
+    public string? MaGiaoDichKhachBao { get; set; }
 }
 
 public class ChiTietMonAnItemVM
@@ -107,6 +113,7 @@ public class DatBanAdminVM
 
     // Thống kê nhanh
     public int ChoXacNhanCount { get; set; }
+    public int ChoDoiChieuCount { get; set; }
     public int DaXacNhanCount { get; set; }
     public int DangPhucVuCount { get; set; }
     public int DaHuyCount { get; set; }

@@ -1,0 +1,12 @@
+@model RestaurantManagement.Web.Models.DepositConfirmButton
+@* Nút xác nhận thu cọc cho thu ngân/Admin: chỉ bấm sau khi đã thấy tiền vào ngân hàng đúng số tiền và nội dung mã lịch. *@
+<form asp-controller="DatTruoc" asp-action="XacNhanCoc" asp-route-id="@Model.BookingId" method="post" class="d-inline"
+      data-confirm="Đã kiểm tra tài khoản ngân hàng: nhận đúng @Model.Amount.ToString("N0") đ với nội dung @Model.BookingCode? Lịch sẽ được ghi nhận đã đóng cọc."
+      data-confirm-title="Xác nhận thu cọc @Model.BookingCode" data-confirm-ok="Đã nhận tiền" data-confirm-variant="primary">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="rowVersion" value="@Model.RowVersion" />
+    <input type="hidden" name="soTien" value="@Model.Amount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" />
+    <input type="hidden" name="requestId" value="@Guid.NewGuid()" />
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    <button type="submit" class="btn btn-sm btn-success fw-semibold"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Xác nhận thu cọc @Model.Amount.ToString("N0") đ</button>
+</form>

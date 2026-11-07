@@ -1,12 +1,24 @@
 @model RestaurantManagement.API.Models.HoaDon
 @using RestaurantManagement.API.Models
 @using RestaurantManagement.Web.Services
-@{ ViewData["Title"] = $"Đơn hàng {Model.MaHoaDon}"; var evaluation = (PromotionEvaluationResult)ViewBag.Evaluation; var wallet = (List<CustomerVoucherItem>)ViewBag.Wallet; }
-<div class="d-flex flex-wrap justify-content-between gap-2 mb-4 customer-head"><div class="min-w-0"><h1 class="h3 text-break">@Model.MaHoaDon</h1><p id="order-status" aria-live="polite">@CustomerHistoryService.PaymentStatus(Model.TrangThai)</p></div><a asp-action="Index" class="btn btn-outline-secondary align-self-start">Đơn hàng của tôi</a></div>
+@{
+    ViewData["Title"] = $"Đơn hàng {Model.MaHoaDon}"; var evaluation = (PromotionEvaluationResult)ViewBag.Evaluation; var wallet = (List<CustomerVoucherItem>)ViewBag.Wallet;
+    var isOpen = Model.TrangThai is TrangThaiHoaDon.ChuaThanhToan or TrangThaiHoaDon.ThanhToanMotPhan;
+    var statusCss = Model.TrangThai switch { TrangThaiHoaDon.DaThanhToan => "text-bg-success", TrangThaiHoaDon.DaHuy => "text-bg-secondary", TrangThaiHoaDon.ThanhToanMotPhan => "text-bg-warning", _ => "text-bg-warning" };
+}
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-4 customer-head"><div class="min-w-0"><h1 class="h3 text-break mb-1">@Model.MaHoaDon</h1><p class="mb-0 small text-muted"><span id="order-status" class="badge rounded-pill @statusCss me-2" aria-live="polite">@CustomerHistoryService.PaymentStatus(Model.TrangThai)</span>@VnTime.NgayGio(Model.ThoiDiemLap) · @(Model.LoaiDonHang switch { LoaiDonHang.MangDi => "Mang đi", LoaiDonHang.GiaoHang => "Giao hàng", _ => "Tại bàn" })</p></div><a asp-action="Index" class="btn btn-outline-secondary align-self-start"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Đơn hàng của tôi</a></div>
 <div id="order-closed" class="alert alert-info" hidden>Đơn hàng đã được cập nhật. <a asp-action="Order" asp-route-id="@Model.Id">Tải lại để xem số tiền và ưu đãi đã chốt.</a></div>
-<p id="order-update-note" class="small text-muted" aria-live="polite">Tiến độ món tự cập nhật mỗi 15 giây khi đơn đang mở.</p>
-<div class="card table-responsive mb-4"><table class="table mb-0"><thead><tr><th>Món ăn</th><th>Số lượng</th><th>Thành tiền</th><th>Tiến độ</th></tr></thead><tbody>@foreach (var item in Model.ChiTiet) { <tr><td>@item.TenMonLucBan @item.TenSizeLucBan</td><td>@item.SoLuong</td><td>@((item.SoLuong * item.DonGia).ToString("N0")) đ</td><td data-line-status="@item.Id">@CustomerHistoryService.DishStatus(item.TrangThai)</td></tr> }</tbody></table></div>
-<div class="card card-body mb-4"><p>Tiền món: <strong>@evaluation.TongTienHang.ToString("N0") đ</strong></p><p>Giảm giá: <strong>@evaluation.TongTienGiam.ToString("N0") đ</strong></p><p class="mb-0">Tiền mua sau giảm: <strong>@evaluation.TongThanhToanSauGiam.ToString("N0") đ</strong></p><p class="small text-muted mt-2 mb-0">Thu ngân xác nhận số tiền còn phải trả sau cấn trừ tiền cọc.</p></div>
+@if (isOpen) { <p id="order-update-note" class="small text-muted" aria-live="polite"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Tiến độ món tự cập nhật mỗi 15 giây khi đơn đang mở.</p> }
+<div class="card table-responsive mb-4"><table class="table align-middle mb-0 customer-table"><thead><tr><th>Món ăn</th><th>Số lượng</th><th>Thành tiền</th><th>Tiến độ</th></tr></thead><tbody>@foreach (var item in Model.ChiTiet) { <tr class="@(item.TrangThai == TrangThaiCheBien.DaHuy ? "text-decoration-line-through text-muted" : "")"><td class="cell-main"><strong>@item.TenMonLucBan</strong> <span class="text-muted">@item.TenSizeLucBan</span></td><td data-label="Số lượng">@item.SoLuong</td><td data-label="Thành tiền">@((item.SoLuong * item.DonGia).ToString("N0")) đ</td><td data-label="Tiến độ" data-line-status="@item.Id">@CustomerHistoryService.DishStatus(item.TrangThai)</td></tr> }</tbody></table></div>
+<div class="card card-body mb-4 order-summary"><dl class="mb-0"><div><dt>Tiền món</dt><dd>@evaluation.TongTienHang.ToString("N0") đ</dd></div><div><dt>Giảm giá</dt><dd>@(evaluation.TongTienGiam > 0 ? "-" : "")@evaluation.TongTienGiam.ToString("N0") đ</dd></div><div class="is-total"><dt>Tiền mua sau giảm</dt><dd>@evaluation.TongThanhToanSauGiam.ToString("N0") đ</dd></div>
+    @if (Model.TrangThai == TrangThaiHoaDon.DaThanhToan) {
+        @if (Model.TienCocDaTru > 0) { <div><dt>Đã trừ tiền cọc</dt><dd>-@Model.TienCocDaTru.ToString("N0") đ</dd></div> }
+        <div><dt>Đã thanh toán</dt><dd>@Model.TongThanhToan.ToString("N0") đ · @PaymentLedger.HinhThucText(Model.PhuongThucThanhToan)</dd></div>
+        @if (Model.ThoiDiemThanhToan.HasValue) { <div><dt>Thời điểm thanh toán</dt><dd>@VnTime.NgayGio(Model.ThoiDiemThanhToan)</dd></div> }
+    }
+    </dl>
+    @if (isOpen) { <p class="small text-muted mt-2 mb-0">Thu ngân xác nhận số tiền còn phải trả sau cấn trừ tiền cọc.</p> }
+</div>
 @if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan) {
     <div class="card card-body mb-4"><h2 class="h5">Chọn mã giảm giá khi thanh toán</h2>
         <p class="small text-muted">Mã trong ví được kiểm tra theo món, giá trị đơn và thời hạn tại thời điểm áp dụng. <a asp-action="Vouchers">Thu thập thêm mã</a></p>
@@ -18,7 +30,7 @@
         @foreach (var reason in evaluation.IneligiblePromotions) { <p class="small text-danger mt-2 mb-0">@reason.LyDoKhongDuDieuKien</p> }
     </div>
 }
-<a asp-action="Order" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cập nhật trạng thái đơn hàng</a>
+@if (isOpen) { <a asp-action="Order" asp-route-id="@Model.Id" class="btn btn-outline-secondary"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Cập nhật trạng thái đơn hàng</a> }
 @if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan) {
     <div id="order-watch" data-url="@Url.Action("OrderStatus", new { id = Model.Id })"></div>
 }

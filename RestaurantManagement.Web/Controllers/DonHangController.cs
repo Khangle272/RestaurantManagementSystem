@@ -7,6 +7,7 @@ using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
 using RestaurantManagement.Web.Services;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -297,7 +298,7 @@ public class DonHangController(
             total = line.ThanhTien,
             note = line.YeuCauCheBien,
             status = (int)line.TrangThai,
-            time = line.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")
+            time = VnTime.Gio(line.ThoiDiemGoi)
         })
     };
 

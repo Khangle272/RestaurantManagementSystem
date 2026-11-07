@@ -98,7 +98,7 @@
                                 </span>
                             </div>
                             <div class="text-muted small">
-                                <i class="bi bi-calendar3 me-1"></i>@item.ThoiDiem.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm - dd/MM/yyyy")
+                                <i class="bi bi-calendar3 me-1"></i>@VnTime.NgayGio(item.ThoiDiem)
                             </div>
                         </div>
 
@@ -168,7 +168,7 @@
                                     <label class="form-label small fw-semibold text-secondary">
                                         Nội dung câu trả lời của Nhà hàng gửi tới khách hàng:
                                     </label>
-                                    <textarea name="NoiDungPhanHoi" rows="3" class="form-control mb-2" required
+                                    <textarea name="NoiDungPhanHoi" rows="3" class="form-control mb-2" aria-label="Nội dung phản hồi khách" required
                                               placeholder="Cảm ơn quý khách đã ghé thăm nhà hàng và góp ý...">@item.PhanHoiAdmin</textarea>
                                     <div class="text-end">
                                         <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold">

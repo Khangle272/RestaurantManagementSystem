@@ -133,7 +133,8 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
 
     private async Task<bool> InUseAsync(int id) => await Db.DinhMucMon.AnyAsync(x => x.NguyenLieuId == id)
         || await Db.ChiTietPhieuNhap.AnyAsync(x => x.NguyenLieuId == id)
-        || await Db.ChiTietPhieuXuat.AnyAsync(x => x.NguyenLieuId == id);
+        || await Db.ChiTietPhieuXuat.AnyAsync(x => x.NguyenLieuId == id)
+        || await Db.ChiTietPhieuThanhLy.AnyAsync(x => x.NguyenLieuId == id);
 
     private async Task ValidateAsync(NguyenLieuFormViewModel model, int id)
     {

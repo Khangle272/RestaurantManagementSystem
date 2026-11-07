@@ -233,6 +233,7 @@ a { text-underline-offset: 3px; }
 .customer-head { padding-top: 1.5rem; }
 .min-w-0 { min-width: 0; }
 body:has(.cart-launcher) .restaurant-main { padding-bottom: 5rem; }
+@media (max-width: 575.98px) { body:has(.cart-launcher) .restaurant-footer { padding-bottom: 5.5rem; } }
 /* Nhãn trạng thái dài được xuống dòng thay vì làm tràn ngang cả trang. */
 .restaurant-main .badge { max-width: 100%; white-space: normal; text-align: left; line-height: 1.35; }
 
@@ -248,3 +249,23 @@ body:has(.cart-launcher) .restaurant-main { padding-bottom: 5rem; }
   .customer-table.table > tbody > tr > td.cell-action { justify-content: flex-end; padding-top: .5rem; }
   .customer-table.table > tbody > tr > td[colspan] { display: block; text-align: center; }
 }
+
+/* Trang voucher của khách */
+.voucher-points { display: flex; flex-flow: row wrap; justify-content: space-between; align-items: end; gap: .5rem 1rem; }
+.voucher-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: #edf3ec; max-width: 100%; }
+.voucher-tabs a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px; color: var(--forest); font-weight: 600; font-size: .9rem; text-decoration: none; white-space: nowrap; }
+.voucher-tabs a:hover { background: #dce9d7; }
+.voucher-tabs a.active { background: var(--forest); color: #fff; }
+.voucher-card { border-left: 4px solid var(--leaf, #9cc27b); }
+.voucher-card.is-unavailable { border-left-color: #cbd5e1; opacity: .8; }
+.voucher-code { letter-spacing: .04em; margin: .25rem 0 .35rem; }
+.voucher-empty { padding: 2.5rem 1rem; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; background: #fff; }
+.voucher-empty > .bi { display: block; font-size: 2.2rem; color: #a3b8a0; margin-bottom: .5rem; }
+@media (max-width: 400px) { .voucher-tabs { display: flex; } .voucher-tabs a { flex: 1; justify-content: center; padding: 8px 10px; } }
+
+/* Tổng tiền đơn của khách: nhãn bên trái, số tiền bên phải */
+.order-summary dl > div { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; }
+.order-summary dt { font-weight: 400; color: var(--muted); }
+.order-summary dd { margin: 0; font-weight: 600; text-align: right; }
+.order-summary .is-total { border-top: 1px dashed var(--line); margin-top: .25rem; padding-top: .6rem; }
+.order-summary .is-total dd { font-size: 1.15rem; color: var(--forest); }

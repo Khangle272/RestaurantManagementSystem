@@ -8,7 +8,7 @@
     <div>
         <h1 class="h3">Báo cáo doanh thu & đơn hàng</h1>
         <p class="text-muted mb-0">Doanh thu tiền món sau giảm giá theo ngày thanh toán (giờ Việt Nam). Cọc là tiền đã nhận, không phải giảm giá.</p>
-        <p class="small text-muted mb-0">Tiền mặt/chuyển khoản là tiền thu thêm khi chốt bill, chưa gồm tiền đặt cọc nhận trước (xem Báo cáo nộp ca để có dòng tiền thực thu theo ngày). Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
+        <p class="small text-muted mb-0">Tiền mặt/chuyển khoản là tiền thu thêm khi chốt hóa đơn, chưa gồm tiền đặt cọc nhận trước (xem Báo cáo nộp ca để có dòng tiền thực thu theo ngày). Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
         @if (Model.SoHoaDonThieuNgayThanhToan > 0)
         {
             <div class="alert alert-warning mt-2">Có @Model.SoHoaDonThieuNgayThanhToan hóa đơn cũ chưa lưu ngày thanh toán; tạm thống kê theo ngày lập, không sửa dữ liệu gốc.</div>
@@ -74,7 +74,7 @@
         <div class="card border-0 shadow-sm h-100 bg-white">
             <div class="card-body">
                 <span class="text-muted small fw-semibold text-uppercase">Đơn hàng hoàn tất</span>
-                <div class="fs-3 fw-bold text-dark my-1">@Model.SoDonThanhCong bill thanh toán</div>
+                <div class="fs-3 fw-bold text-dark my-1">@Model.SoDonThanhCong hóa đơn đã thanh toán</div>
                 <div class="small text-muted">@Model.TongSoDonHang đơn tạo trong kỳ</div>
                 <div class="small text-muted">Hủy: @Model.SoDonDaHuy đơn</div>
             </div>

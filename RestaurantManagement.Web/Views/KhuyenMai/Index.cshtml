@@ -37,7 +37,7 @@
                 <tr>
                     <td><a asp-action="Edit" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.TenChuongTrinh</a><span class="cell-sub">@(p.CanVoucher ? "Ưu đãi riêng trên từng mã" : $"Tự động: giảm {p.GiaTri:0.##}{(p.KieuGiam == RestaurantManagement.API.Models.KieuGiam.PhanTram ? "%" : "đ")}")</span></td>
                     <td class="cell-nowrap">@p.SoVoucherDaPhatHanh mã<span class="cell-sub">@p.SoLuotDaSuDung lượt dùng / giữ</span></td>
-                    <td class="cell-nowrap small">@p.BatDau.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")<br />→ @p.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="cell-nowrap small">@VnTime.NgayGio(p.BatDau)<br />→ @VnTime.NgayGio(p.KetThuc)</td>
                     <td><span class="@statusClass">@p.TrangThaiHienThi</span></td>
                     <td class="text-end">
                         <div class="row-actions">

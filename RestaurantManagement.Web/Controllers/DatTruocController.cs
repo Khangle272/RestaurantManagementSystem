@@ -20,11 +20,33 @@ public class DatTruocController(RestaurantDbContext db, PreorderService preorder
     [HttpGet, Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     public async Task<IActionResult> Index(string? keyword)
     {
-        var query = db.DatBan.AsNoTracking().Where(x => x.ThoiDiemBaoChuyenKhoan != null);
+        // Theo dõi (không AsNoTracking) để đọc RowVersion cho nút xác nhận thu cọc trên từng dòng.
+        var query = db.DatBan.Include(x => x.Ban).ThenInclude(x => x.BanAn).Where(x => x.ThoiDiemBaoChuyenKhoan != null);
         if (!string.IsNullOrWhiteSpace(keyword)) query = query.Where(x => x.MaDatBan.Contains(keyword.Trim())
             || (x.SoDienThoaiLienHe != null && x.SoDienThoaiLienHe.Contains(keyword.Trim())));
         ViewData["Keyword"] = keyword;
-        return View(await query.OrderBy(x => x.ThoiDiemBaoChuyenKhoan).Take(100).ToListAsync());
+        var list = await query.OrderBy(x => x.ThoiDiemBaoChuyenKhoan).Take(100).ToListAsync();
+        ViewData["Versions"] = list.ToDictionary(x => x.Id, preorders.Version);
+        return View(list);
+    }
+
+    // Thu ngân xác nhận đã nhận đúng khoản khách báo chuyển, ngay trên danh sách đối chiếu.
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    public async Task<IActionResult> XacNhanCoc(int id, string? rowVersion, decimal soTien, Guid requestId, string? returnUrl)
+    {
+        var booking = await db.DatBan.AsNoTracking().Where(x => x.Id == id)
+            .Select(x => new { x.MaDatBan, x.ThoiDiemBaoChuyenKhoan }).SingleOrDefaultAsync();
+        var error = booking is null ? "Không tìm thấy lịch đặt bàn."
+            : booking.ThoiDiemBaoChuyenKhoan is null ? "Lịch không còn khoản chuyển nào chờ đối chiếu. Tải lại danh sách."
+            : await preorders.RecordDeposit(id, AccountId, new DepositTransactionModel
+            {
+                DaDoiChieuNganHang = true, RowVersion = rowVersion ?? "", RequestId = requestId,
+                Loai = LoaiGiaoDichCoc.Thu, HinhThuc = PhuongThucThanhToan.ChuyenKhoan, SoTien = soTien,
+                LyDo = $"Đối chiếu khoản chuyển tiền theo mã {booking.MaDatBan}"
+            });
+        TempData[error is null ? "SuccessMessage" : "ErrorMessage"] = error
+            ?? $"Đã xác nhận thu cọc {soTien:N0} đ cho lịch {booking!.MaDatBan}.";
+        return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : RedirectToAction(nameof(Index));
     }
 
     [HttpGet]

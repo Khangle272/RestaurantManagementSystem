@@ -195,7 +195,7 @@
                                         {
                                             <li>
                                                 <span class="fw-semibold">@line.SoLuong × @line.TenMon</span>
-                                                <span class="text-muted small">@line.TenSize · @line.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                                                <span class="text-muted small">@line.TenSize · @VnTime.Gio(line.ThoiDiemGoi)</span>
                                                 @if (!string.IsNullOrWhiteSpace(line.YeuCauCheBien)) { <span class="text-muted small">Ghi chú: @line.YeuCauCheBien</span> }
                                                 <span class="ms-auto">@line.ThanhTien.ToString("N0") đ</span>
                                                 <span class="badge @StatusClass(line.TrangThai)">@StatusLabel(line.TrangThai)</span>

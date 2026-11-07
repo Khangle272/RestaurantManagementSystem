@@ -1,6 +1,6 @@
 # Tiến độ, quyết định nghiệp vụ và bàn giao
 
-Cập nhật: **11/10/2026 — Người 3 hoàn thiện Quản lý Nhân sự & Ma trận phân quyền RBAC, Khuyến mãi & Voucher kết hợp nhiều ưu đãi, Báo cáo & Phân tích chuyên sâu (Doanh thu/Bestsellers/Tồn kho/Hiệu quả ưu đãi)**.
+Cập nhật: **06/11/2026 — REST API `/api` cho mobile, app MAUI native và dọn code/tài liệu cũ** (xem mục cuối file).
 File mô tả trạng thái của nhánh đang đọc; không mặc nhiên có nghĩa đã merge vào `master`.
 Nhánh bàn giao: `member1-week8-update`, dựng từ bản `master` sạch tại `f7695e2`, đã fetch đối chiếu GitHub ngày 09/10 trước khi bàn giao; master chưa có commit mới hơn. Bản sửa dở `member1-week8` và mốc `member1-week8-refresh` được giữ riêng để đối chiếu. Giữ giao diện và các module của nhóm; nhánh này dùng để review, chỉ nhóm trưởng/người được phân công thực hiện merge sau khi kiểm tra. Mã commit/trạng thái xuất bản đối chiếu trực tiếp trên GitHub, không suy từ ghi chú lịch sử.
 
@@ -47,7 +47,7 @@ Nhánh bàn giao: `member1-week8-update`, dựng từ bản `master` sạch tạ
 - **Tối ưu diện tích:** POS chọn bàn rồi thu danh sách bàn thành thanh tóm tắt; thực đơn và giỏ mở rộng ngay trong trang. Giỏ cuộn riêng; giữ món khi đổi qua lại các bàn. Sidebar có nút ẩn/hiện trên desktop và hành vi phù hợp điện thoại. Web khách vẫn giữ UI của nhóm, nhân viên xem được nội dung nhưng không có nút đặt bàn của khách.
 - **Giỏ món 09/10:** chọn size, số lượng, ghi chú rồi bấm Thêm vào giỏ; đóng khung chọn món và tiếp tục xem thực đơn, không tự bật giỏ. Giỏ mở khi khách chủ động bấm; có thông báo thêm món và chuyển động nhẹ, tôn trọng tùy chọn giảm chuyển động. Món không có ảnh dùng toàn bộ chiều rộng thay vì bị ép vào cột ảnh. Giữ món/ghi chú khi đăng nhập, kể cả tài khoản có giỏ rỗng lưu từ lần trước; giỏ thuộc lịch khác không bị nhập nhầm. Bỏ nhãn nội bộ “HÌNH ẢNH MINH HỌA” khỏi trang chủ.
 - **Thông báo cọc 09/10:** lịch online mới hiện số cọc và bước thanh toán ngay; phân biệt Chờ thanh toán, Chờ đối chiếu, Đã xác nhận, Hết hạn chờ worker xử lý và Đã hủy. Nút Kiểm tra trạng thái dùng AJAX chung với tự kiểm tra mỗi 10 giây: còn chờ thì hiện giờ kiểm tra, thay đổi thì tải thông tin mới, lỗi mạng/phiên đăng nhập thì báo rõ và cho thử lại. Lịch đã hủy hiện lý do và không có QR/nút thanh toán hay nút kiểm tra vô hiệu. Không tự xác nhận tiền và không bắt tiếp tân nhập mức cọc cho lịch mới. Các lịch cũ có thỏa thuận thủ công giữ nguyên; chưa có số tiền thì có bước áp dụng chính sách, không sửa ngầm dữ liệu. Chưa có tệp đề cương riêng của nhà hàng để đối chiếu ngoài ảnh góp ý/phân công đã gửi.
-- **Demo:** lệnh Development `--init-week8-demo` tạo khu vực Sảnh gia đình và ba bàn đang phục vụ cùng lúc, liên kết hồ sơ khách/tiếp tân của bộ demo. Tên “Minh họa tuần 8”/ghi chú kỹ thuật cũ được đổi có kiểm tra trên đúng bộ dữ liệu này; giữ mã và liên kết lịch/bàn. Chạy lại không nhân bản hoặc mở lại lượt phục vụ đã kết thúc. Không tự nạp demo khi mở web bình thường.
+- **Demo:** lệnh Development `--init-week8-demo` tạo khu vực Sảnh gia đình và ba bàn đang phục vụ cùng lúc, liên kết hồ sơ khách/tiếp tân của bộ demo. Tên “Minh họa tuần 8”/ghi chú kỹ thuật cũ được đổi có kiểm tra trên đúng bộ dữ liệu này; giữ mã và liên kết lịch/bàn. Chạy lại không nhân bản hoặc mở lại lượt phục vụ đã kết thúc. Không tự nạp demo khi mở web bình thường. *(Lệnh đã gỡ ngày 06/11/2026; dùng `--init-website-demo`.)*
 - **Điểm nối code:** `DatBanController` phục vụ khách sở hữu lịch; `DatTruocController` xử lý món/cọc nội bộ; `PreorderService` giữ quy tắc gửi món, phiên bản và cọc; `TableService` nhận/xếp/kết thúc/dọn bàn; `OrderService` hóa đơn và đối trừ. Migration `Week8PreordersAndDepositLedger` bổ sung trường và bảng giao dịch, giữ dữ liệu lịch cũ. Sao lưu trước khi nâng database đang dùng; không rollback migration sau khi có giao dịch cọc mới nếu chưa xuất/sao lưu lịch sử.
 - **Điểm nối thanh toán mới:** `ReservationDepositPolicy` là công thức chung; `TableService.ReserveOnlineWithinTransaction` giữ chỗ trước khi thu tiền. `ThanhToanCoc`/`BaoChuyenKhoan` chỉ cho khách sở hữu lịch; `/DatTruoc`/`GiaoDichCoc`/`TuChoiChuyenKhoan` cho Thu ngân/Admin. Hai migrations `AutomaticReservationDeposits`, `PaymentNoticeReconciliation` chỉ thêm trường, mặc định lịch cũ không chuyển sang tự tính. Không sửa khoản đã thu hoặc mã cũ khi đổi chính sách. Nếu đang có yêu cầu hủy mà tiền vẫn thực nhận, ghi nhận tiền để xử lý hoàn/giữ nhưng không chuyển lịch sang Đã xác nhận.
 - **Kiểm chứng 09/10:** build Web/bộ smoke 0 lỗi, 0 cảnh báo; mốc toàn luồng trước phần Admin tải QR đạt **787 kiểm tra HTTP/database** trên SQL LocalDB trong database GUID riêng đã tự dọn. Có ca sở hữu/CSRF, giá/snapshot/FIFO, kho/hóa đơn, cọc 50%/299.000đ, mã ngắn, giữ bàn trước thu tiền, xác nhận không cần mã ngân hàng và chống gửi lặp. Ca mới kiểm tra hạn 60 phút, lịch chưa đến hạn không bị hủy, hết hạn chưa báo/nhận tiền tự hủy và giữ lịch sử, mất khỏi danh sách chờ, không đổi trạng thái bàn vật lý, hủy lặp không đổi lịch sử, trang hủy không hiện QR; lịch đã báo chuyển đúng hạn vẫn giữ chỗ và xác nhận được sau hạn nếu khung phục vụ còn hiệu lực; không hủy tay khi chưa đối chiếu, không hủy lịch đã nhận tiền hoặc thỏa thuận cọc thủ công. `TableExpirySmoke` kiểm tra mốc theo giờ nhận thực tế, chưa đủ 3 tiếng, bàn ghép, còn nợ/món/cọc chưa xử lý, dọn từng bàn, giữ hóa đơn đã trả, hủy hóa đơn rỗng và thao tác đồng thời. JavaScript giỏ khách/POS/AJAX/trạng thái cọc đạt. Worker thật đã chuyển ba lượt W8 cũ quá 3 tiếng sang Cần dọn, giữ lịch sử và hủy đúng hóa đơn rỗng 0đ. Đã thử trình duyệt trước phần QR chọn liên tục 10 món/giữ giỏ sau đăng nhập; phần QR/thời hạn mới được kiểm chứng bằng HTML và HTTP/SQL, chưa kiểm trực quan lại. Database demo riêng `RestaurantMember1Refresh_20261009`; không lấy số ca test làm phần trăm hoàn thành nhiệm vụ Người 2/3. Phần Admin tải QR bổ sung: build 0 lỗi/cảnh báo và PASS **45 kiểm tra QR HTTP/database** tập trung trên database/thư mục GUID riêng đã dọn; gồm upload lần đầu/thay ảnh, quyền/CSRF, ảnh giả/quá lớn, phiên bản cũ, giữ ảnh cũ và trang cọc dùng ảnh mới nhưng không ghi nhận tiền. Chưa kiểm trực quan lại bằng công cụ trình duyệt; Admin tải ảnh QR trên máy/server đang triển khai. Ảnh tải lên là cấu hình riêng, không đi theo Git; người dùng đã yêu cầu bàn giao phần code tải QR trên cùng nhánh.
@@ -434,7 +434,7 @@ Mục tiêu là sửa xuyên suốt luồng **cấu hình ưu đãi → áp/gỡ
 
 - Người 1 tiếp tục đọc tên bàn, ngày/giờ hẹn và lượt phục vụ từ dữ liệu hiện có cho KDS. Không lấy màu đang xem của sơ đồ để suy ra bếp được nấu hoặc món đã phục vụ.
 - Người 3 tiếp tục dùng đúng `DatBanId`/liên kết bàn khi nhận khách, tạo bill, gọi thêm và cấn cọc. Không tính tiền cọc lại từ ca hoặc tên bàn, không coi thao tác Xếp bàn là thanh toán.
-- `--init-week9-demo` chỉ chạy Development, phải chủ động gọi; không chạy mỗi lần mở web. Tạo hai bàn trong Sảnh đặt bàn: một lịch trưa và một lịch tối cho ngày sau lúc khởi tạo, cùng một yêu cầu chờ để thử modal. Chạy lại cùng ngày không nhân đôi hoặc mở lại lịch đã sửa/kết thúc, không chèn đè lịch đang có. Đây là dữ liệu thử nội bộ, không phải chứng từ ngân hàng.
+- `--init-week9-demo` chỉ chạy Development, phải chủ động gọi; không chạy mỗi lần mở web. Tạo hai bàn trong Sảnh đặt bàn: một lịch trưa và một lịch tối cho ngày sau lúc khởi tạo, cùng một yêu cầu chờ để thử modal. Chạy lại cùng ngày không nhân đôi hoặc mở lại lịch đã sửa/kết thúc, không chèn đè lịch đang có. Đây là dữ liệu thử nội bộ, không phải chứng từ ngân hàng. *(Lệnh đã gỡ ngày 06/11/2026; dùng `--init-week10-demo` hoặc `--init-website-demo`.)*
 - Demo: mở cùng ngày, chuyển ca trưa/tối để thấy bàn khóa đúng ca; mở yêu cầu chờ, thử chọn bàn bận rồi chọn gợi ý và lưu ngay trong hộp. Ngày báo cáo cần khởi tạo dữ liệu gần buổi demo, không dùng một ngày quá khứ cố định.
 
 ### Kiểm chứng và giới hạn
@@ -733,7 +733,7 @@ Luật giờ: `Services/ReservationSchedule.cs`; sức chứa/trùng/xếp/đổ
 
 Kiểm thử SQL: chạy `dotnet run --project tests/Management.SmokeTests -- --week10-only`, rồi chạy lại không có tham số để hồi quy toàn bộ bộ test hiện hành; cấu hình `CRUD_TEST_SQL_SERVER` cho SQL test riêng. Kiểm thử phản hồi ô giờ: `node tests/Management.SmokeTests/reservation-slots.test.cjs`. Bộ SQL tự tạo/xóa database test tạm, không phải bằng chứng đã kiểm dữ liệu production.
 
-Hai file test cũ `TableSmoke.cs`/`BookingSlotSmoke.cs` vẫn giữ để đối chiếu lịch sử W9 nhưng không chạy trong bộ mặc định vì có giả định trái W10 (giờ cố định/ghép bàn/tự đóng). Bộ W10 thay thế kiểm tra các quy tắc mới; không lấy số test của bộ cũ cộng vào kết quả mới.
+Hai file test cũ `TableSmoke.cs`/`BookingSlotSmoke.cs` có giả định trái W10 (giờ cố định/ghép bàn/tự đóng) nên đã gỡ khỏi repo; bộ W10 thay thế kiểm tra các quy tắc mới. Không lấy số test của bộ cũ cộng vào kết quả mới.
 
 Kết quả bản bàn giao mục 18: **99 kiểm tra riêng W10 HTTP/database đạt; 899 kiểm tra hồi quy HTTP/database đạt** (hai lần chạy, không cộng lại). Có kiểm tra đổi bàn thay liên kết cũ, từ chối request nhiều bàn, một bàn đủ chỗ thay vì cộng bàn nhỏ, radio trên popup, gợi ý hai ca không chạy theo giờ đã nhập, nhập riêng 16:07 và request thiếu giờ. Biên dịch không lỗi, còn 6 cảnh báo dependency có sẵn (NU1902/NU1903, `System.Security.Cryptography.Pkcs 9.0.11`); không nâng package chung ngoài phạm vi. Kiểm tra cú pháp hai script và tự kiểm phản hồi giờ bằng `reservation-slots.test.cjs` đạt; `git diff --check` sạch ngoài lời nhắc Git về LF/CRLF.
 
@@ -780,7 +780,7 @@ Mốc bàn giao này phát hành trên nhánh **`member1-week10`**, không merge
 - `VoucherMon` lưu món riêng của mã; `VoucherKhachHang` lưu ví với khóa duy nhất khách–mã. Một vé thu thập dùng một lần cho khách đó. Khách mở `/KhachHang/Vouchers` để thu thập, chuyển ví để xem mã; trên đơn của mình được chọn mã trong ví hoặc gõ trực tiếp. Thu ngân dùng cùng bộ đánh giá tại trang hóa đơn, giữ thứ tự ưu đãi → cấn cọc → tiền phải thu. Lịch sử giảm thực tế tiếp tục được chốt vào snapshot.
 - `/TaiKhoanKhachHang` quản lý cả hồ sơ chưa có tài khoản, thêm/sửa hồ sơ, cấp tài khoản cho hồ sơ cũ mà không tạo trùng khách, quản lý khóa đăng nhập, xem lịch sử đơn và sổ điểm. Thu ngân có thể gắn hồ sơ bằng SĐT vào hóa đơn chưa gắn khách trước khi chọn voucher. Khách tự xem đơn/tiến độ món, lịch sử mua và tích điểm; endpoint trạng thái cập nhật 15 giây kiểm tra chủ sở hữu.
 - `LichSuTichDiem` ghi trong cùng transaction thanh toán; unique `HoaDonId` ngăn cộng trùng. Quy tắc mặc định đã chọn: **10.000đ tiền mua sau giảm = 1 điểm, làm tròn xuống**, gồm phần đã thanh toán bằng cọc. Không suy đoán/cộng lại điểm hóa đơn cũ. Chưa có đổi điểm/hoàn điểm vì chưa triển khai nghiệp vụ đổi điểm/hoàn tiền.
-- App MAUI thay màn mẫu bằng WebView HTTPS cùng origin do người dùng cấu hình; dùng chung đăng nhập, ví, chọn mã và lịch sử khách của Web. Đây là luồng Web trong app, chưa có API/mobile native riêng.
+- App MAUI thay màn mẫu bằng WebView HTTPS cùng origin do người dùng cấu hình; dùng chung đăng nhập, ví, chọn mã và lịch sử khách của Web. Đây là luồng Web trong app, chưa có API/mobile native riêng. *(Đã thay bằng app native gọi REST API ngày 06/11/2026.)*
 
 ### Nâng cấp dữ liệu
 
@@ -815,7 +815,7 @@ Hướng dẫn tài khoản, mã, đơn/lịch và trình tự demo: **DEMO_WEBS
 ## Chuyển sang Cloudflare Quick Tunnel — 26/10/2026
 
 - Theo thay đổi lựa chọn của người dùng, xóa tài liệu và script đóng gói Azure, thay liên kết README bằng `HUONG_DAN_CLOUDFLARE.md`.
-- Thêm `Start-QuickTunnel.ps1`: tìm cloudflared tại thư mục dự án hoặc PATH, kiểm tra cổng Web local rồi mở Quick Tunnel tới `https://localhost:7167`. Bỏ xác minh chứng chỉ chỉ cho origin local dùng chứng chỉ phát triển; giữ cookie Secure và HTTPS của Web.
+- Thêm `Start-QuickTunnel.ps1`: tìm cloudflared tại thư mục dự án hoặc PATH, kiểm tra cổng Web local rồi mở Quick Tunnel tới `https://localhost:7167`. Bỏ xác minh chứng chỉ chỉ cho origin local dùng chứng chỉ phát triển; giữ cookie Secure và HTTPS của Web. *(Script không còn trong repo; chạy lệnh cloudflared trực tiếp theo HUONG_DAN_CLOUDFLARE.md.)*
 - Web và SQL Server tiếp tục chạy trên máy; URL công khai thay đổi mỗi lần tạo tunnel. Hướng dẫn đủ hai cửa sổ chạy Web/tunnel, truy cập khách/admin/mobile, dừng chia sẻ và xử lý lỗi thường gặp.
 - Giữ sửa lỗi publish chung NETSDK1152 trong project Web: loại appsettings của API khỏi gói publish Web. Sửa này không phụ thuộc nhà cung cấp hosting.
 - Chưa tạo tài nguyên cloud hoặc tự mở tunnel công khai trong lượt dọn file này; giữ nguyên dữ liệu demo và các thay đổi giao diện đang có.
@@ -839,7 +839,7 @@ Hướng dẫn tài khoản, mã, đơn/lịch và trình tự demo: **DEMO_WEBS
 - Sửa các kiểm tra đã cũ sau đợt đổi chữ giao diện 30/10 (bếp, kho, nhà cung cấp, BOM, menu quản trị dạng ngăn kéo) và `PreorderSmoke` theo hành vi hiện tại (món đặt trước phát hành thẳng vào "Đang chế biến").
 - Thêm `ReviewSmoke` (`--reviews-only`), `PaymentLedgerSmoke` (`--payments-only`), `KitchenStockSmoke` (`--kitchen-only`) và đưa vào bộ mặc định: đánh giá đúng điều kiện/chủ sở hữu/ảnh, một hóa đơn nhiều đợt tiền + trừ cọc + chỉ tiền mặt/chuyển khoản + báo cáo nộp ca, phân trang hóa đơn, bếp chỉ thấy món trong ngày + đóng sổ ngày cũ, cảnh báo thiếu nguyên liệu.
 - Kết quả: **bộ mặc định đạt 1085 kiểm tra HTTP/database**; riêng `--deposits-only` 77, `--website-demo-only` 60, `--orders-only` 95, `--inventory-only` 81, `--promotions-only` 182.
-- Lưu ý: `TableSmoke`, `BookingSlotSmoke`, `TableExpirySmoke`, `Week8DemoSmoke` không được gọi từ `Program.cs` nên không chạy; một số chữ trong đó đã cũ.
+- Các file test cũ `TableSmoke`, `BookingSlotSmoke`, `TableExpirySmoke`, `Week8DemoSmoke` không chạy trong bộ mặc định và đã gỡ khỏi repo.
 
 ## Cho bàn nhận lượt mới trong cùng ca — 02/11/2026
 
@@ -878,3 +878,39 @@ Rà toàn bộ chức năng, sửa các quy tắc không khớp cách nhà hàng
 - Bỏ ô "Muốn chuẩn bị trước" ở trang khách, ô xác nhận của nhân viên, và chặn gửi bếp phía server khi khách chưa nhận bàn.
 - Lý do: món làm sẵn dễ nguội; kho chỉ trừ lúc nhận bàn nên khách không đến thì nguyên liệu đã dùng không được trừ; quy trình có thêm một nhánh rắc rối.
 - Giữ cột `DatBan.ChuanBiTruoc` để không cần migration. Lịch cũ đã gửi bếp sớm vẫn được xử lý hủy và giữ món bếp đã làm.
+
+## REST API và app mobile native — 06/11/2026
+
+Đối chiếu đề cương KL066: thiếu "Xây dựng API hệ thống" (project API chỉ có tầng dữ liệu, không có endpoint) và chức năng mobile (app cũ chỉ là WebView mở website). Lượt này bổ sung cả hai. Chi tiết endpoint và cách chạy: **API_MOBILE.md**.
+
+- **API trong Web (`RestaurantManagement.Web/Api`)**, không viết lại logic: gọi lại `OrderService`, `TableService`, `IPromotionService`, `CustomerHistoryService`, nên quy tắc trên web và mobile giống nhau. Project `RestaurantManagement.API` vẫn là tầng dữ liệu (entity, DbContext, migrations).
+- **Xác thực:** bearer token Identity (8 giờ) cho `/api`, cookie cho website. Policy scheme chọn theo đường dẫn: API không đọc cookie và trả 401/403 JSON. Trang lỗi HTML không áp dụng cho `/api`. Bếp/Kho không đăng nhập app.
+- **Project mới `RestaurantManagement.Shared`:** DTO dùng chung giữa API và app.
+- **App MAUI native:** đăng nhập; sơ đồ bàn (Trống/Đã đặt/Đang phục vụ/Chờ dọn); gọi món tại bàn, mang đi, giao hàng; gọi thêm; mang món ra/hủy món; thanh toán tiền mặt/chuyển khoản; kết thúc phục vụ, dọn bàn; tiếp tân xác nhận đặt bàn bằng bàn gợi ý và nhận bàn. Khách: điểm, đơn đang phục vụ (tự cập nhật 15 giây), lịch sử mua, lịch sử điểm. Bỏ màn WebView cũ; voucher và đổi điểm vẫn làm trên website. Màu app theo màu xanh của website.
+- **Giới hạn có chủ ý:** mobile không sửa giảm giá thủ công, không hoàn cọc dư (thu ngân làm trên web), không thu thẻ (server chỉ nhận tiền mặt/chuyển khoản). Chưa có refresh token: hết 8 giờ thì đăng nhập lại.
+
+**Kiểm chứng:** `MobileApiSmoke` (`--mobile-api-only`) đạt **55 kiểm tra**; bộ mặc định (đã gồm bộ API) đạt **1170 kiểm tra HTTP/database**. Build Web 0 cảnh báo; build MAUI Windows sạch; app Windows mở được màn đăng nhập. Chưa bấm thử giao diện app với dữ liệu thật và chưa chạy trên emulator/điện thoại.
+
+### Dọn code và tài liệu — 06/11/2026
+
+- Gỡ lệnh `--init-week8-demo`, `--init-week9-demo` cùng `Week8DemoSetup`/`Week9DemoSetup` (đã có `--init-website-demo` và `--init-week10-demo`); gỡ thuộc tính view model không còn dùng (`GiaThamKhao`, `LoaiThe`, `SoThe4SoCuoi`, `DatTheoCa`, `SoPhut`) và hàm `TableService.ReadyForSchedule`.
+- Gỡ ảnh QR MBBank không còn hiển thị (trang hóa đơn hiện thông tin chuyển khoản bằng chữ), ảnh/asset mẫu của template MAUI, `launchSettings.json` và gói OpenAPI của project API. `RestaurantManagement.API` chỉ còn lệnh `--seed`; chạy không tham số in hướng dẫn.
+- Lệnh `dotnet ef` đọc `ConnectionStrings__DefaultConnection` (vẫn nhận biến cũ `ConnectionStrings__RestaurantDb`).
+- Viết lại README và README của API theo hiện trạng: bỏ mô tả quẹt thẻ/ảnh QR, script tunnel không còn, chuỗi kết nối sai tên; sửa tham chiếu view đã gỡ trong DESIGN.md; thêm bước app mobile vào DEMO_WEBSITE.md.
+- **Kiểm chứng:** bộ mặc định đạt **1170 kiểm tra HTTP/database** sau khi dọn; build Web, test, MAUI Windows 0 cảnh báo; `has-pending-model-changes` không có thay đổi model.
+
+### Định dạng ngày giờ thống nhất — 06/11/2026
+
+- Mọi ngày hiển thị dùng `dd/MM/yyyy`, có giờ thì `dd/MM/yyyy HH:mm`, luôn theo giờ Việt Nam (UTC+7): website (Razor/C#) và app mobile qua `RestaurantManagement.Shared/VnTime.cs`, JavaScript qua `wwwroot/js/vn-time.js` (không phụ thuộc múi giờ máy người xem). Nhãn chỉ có giờ trong cùng một ngày đã hiện (giờ gọi món, giờ kết thúc lượt, ca) giữ `HH:mm`.
+- Culture mặc định của Web đặt ngày ngắn `dd/MM/yyyy`, giờ 24h để chỗ in ngày không ghi định dạng cũng đúng kiểu Việt Nam; ô nhập date/datetime-local vẫn gửi ISO nên không ảnh hưởng lưu dữ liệu.
+- Ghi chú đổi giờ đã lưu trong database trước ngày này vẫn giữ chữ cũ (`dd/MM HH:mm`); ghi chú mới dùng định dạng đầy đủ.
+- **Kiểm chứng:** bộ mặc định đạt 1170 kiểm tra; build Web/MAUI Windows sạch; rà trên trình duyệt các trang hóa đơn, đơn hàng, sơ đồ bàn, kho, khuyến mãi, báo cáo, nhân viên, khách hàng, lịch sử đặt bàn, ví voucher, chi tiết lịch.
+
+### Nhãn đổi bàn, tách trạng thái cọc, thống kê giờ đến, form khuyến mãi — 06/11/2026
+
+- **Đổi nhãn thao tác:** lịch đã có bàn hiện nút/tiêu đề/thông báo "Đổi bàn" (popup ghi "Bàn đang giữ: …", nút "Xác nhận đổi bàn"); lịch chưa có bàn dùng "Chọn bàn". Bỏ hết chữ "xếp bàn" trên web, API nhân viên và app mobile.
+- **Tách trạng thái cọc:** trang Quản lý đặt bàn có thêm tab "Chờ đối chiếu cọc" (khách đã báo chuyển khoản) nằm giữa "Chờ xác nhận" (chưa nộp cọc) và "Đã xác nhận" (đã đóng cọc); mỗi dòng có nhãn giai đoạn cọc (Chưa nộp cọc / Khách báo chuyển · chờ đối chiếu / Đã cọc một phần / Đã đóng cọc / Không cần cọc). Lịch sử của khách hiện "Đã báo chuyển cọc · chờ nhà hàng đối chiếu".
+- **Nút xác nhận thu cọc:** hàng đợi Thu ngân (`DatTruoc/Index`) và tab chờ đối chiếu có nút "Xác nhận thu cọc X đ" (hỏi lại trước khi ghi), gọi `DatTruoc/XacNhanCoc` → ghi phiếu thu chuyển khoản đã đối chiếu ngân hàng; chống bấm đúp bằng `requestId`, chống ghi đè bằng RowVersion.
+- **Thống kê theo giờ đến:** trang Thống kê đặt bàn thêm bảng "Số lượt đặt theo giờ đến" (giờ hẹn thực tế `DatBan.GioDen`, UTC+7): mỗi mốc giờ tách số lượt đã xác nhận và chờ cọc/chờ xác nhận, số bàn đã giữ, số khách; không tính lịch đã hủy/không đến.
+- **Form khuyến mãi:** ô Ngày bắt đầu và Ngày kết thúc nằm cạnh nhau trên cùng một hàng (cả form chương trình lẫn dòng voucher), kể cả trên điện thoại.
+- **Kiểm chứng:** bộ mặc định đạt **1184 kiểm tra** (thêm kiểm tra tab chờ đối chiếu, nút thu cọc sai/đúng số tiền, bấm đúp chỉ ghi một phiếu, gom lượt theo giờ đến bỏ lịch hủy/không đến); build MAUI Windows 0 lỗi; rà trên trình duyệt popup đổi bàn, tab trạng thái, bảng giờ đến và form khuyến mãi ở màn rộng/điện thoại.

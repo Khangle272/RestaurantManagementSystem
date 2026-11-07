@@ -94,11 +94,11 @@
                 }
             </div>
             <div class="col-sm-6 text-sm-end">
-                <div><strong>Lập lúc:</strong> @Model.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</div>
+                <div><strong>Lập lúc:</strong> @VnTime.NgayGio(Model.ThoiDiemLap)</div>
                 <div><strong>Trạng thái:</strong> <span class="badge @(Model.TrangThai == TrangThaiHoaDon.DaThanhToan ? "bg-success" : "bg-danger")">@status</span></div>
                 @if (Model.ThoiDiemThanhToan is not null)
                 {
-                    <div><strong>Thanh toán:</strong> @Model.ThoiDiemThanhToan.Value.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</div>
+                    <div><strong>Thanh toán:</strong> @VnTime.NgayGio(Model.ThoiDiemThanhToan)</div>
                 }
                 @if (!string.IsNullOrEmpty(Model.NhanVien?.HoTen)) { <div><strong>Thu ngân:</strong> @Model.NhanVien.HoTen</div> }
             </div>
@@ -196,7 +196,7 @@
                 else
                 {
                     <span>Đã đặt cọc @booking.TienCocDaNop.ToString("N0") đ</span>
-                    @foreach (var dp in depositPayments) { <span> · ngày @dp.NgayThanhToan.ToString("dd/MM/yyyy") @dp.GioThanhToan.ToString("HH:mm") (@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(dp.HinhThuc))</span> }
+                    @foreach (var dp in depositPayments) { <span> · ngày @VnTime.NgayGio(dp.NgayThanhToan, dp.GioThanhToan) (@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(dp.HinhThuc))</span> }
                     <span>. Đã trừ vào hóa đơn: <strong>@depositDeduction.ToString("N0") đ</strong>.</span>
                 }
             </div>
@@ -208,7 +208,7 @@
                 <tbody>
                 @foreach (var (pay, idx) in payments.Select((x, i) => (x, i + 1)))
                 {
-                    <tr><td>@idx</td><td>@pay.NgayThanhToan.ToString("dd/MM/yyyy") @pay.GioThanhToan.ToString("HH:mm")</td>
+                    <tr><td>@idx</td><td>@VnTime.NgayGio(pay.NgayThanhToan, pay.GioThanhToan)</td>
                         <td>@RestaurantManagement.Web.Services.PaymentLedger.LoaiText(pay.LoaiGiaoDich)</td>
                         <td>@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(pay.HinhThuc)</td>
                         <td class="text-end">@(pay.LoaiGiaoDich == LoaiGiaoDichThanhToan.HoanCoc ? "-" : "")@pay.SoTien.ToString("N0") đ</td></tr>
@@ -269,7 +269,7 @@
                         {
                             <form asp-action="ApplyVoucher" method="post" class="list-group-item d-flex justify-content-between align-items-center gap-2 @(Model.Voucher?.Ma == v.Ma ? "list-group-item-success" : "")">
                                 <input type="hidden" name="id" value="@Model.Id" /><input type="hidden" name="rowVersion" value="@ViewBag.RowVersion" /><input type="hidden" name="voucherCode" value="@v.Ma" />
-                                <div><div class="fw-semibold">@v.UuDai</div><div class="small text-muted"><span class="font-monospace">@v.Ma</span> · @v.ChuongTrinh · HSD @v.KetThuc.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy")</div></div>
+                                <div><div class="fw-semibold">@v.UuDai</div><div class="small text-muted"><span class="font-monospace">@v.Ma</span> · @v.ChuongTrinh · HSD @VnTime.Ngay(v.KetThuc)</div></div>
                                 @if (Model.Voucher?.Ma == v.Ma) { <span class="badge bg-success">Đang áp dụng</span> }
                                 else { <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Áp dụng</button> }
                             </form>

@@ -143,6 +143,16 @@ try
         return;
     }
 
+    if (args.Contains("--mobile-api-only"))
+    {
+        await InitDemoAccounts();
+        await using var mobileDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(mobileDb);
+        await Management.SmokeTests.MobileApiSmoke.Run(mobileDb, client, NewClient, Check);
+        Console.WriteLine($"PASS: {checks} mobile API HTTP/database checks.");
+        return;
+    }
+
     if (args.Contains("--promotions-only"))
     {
         await InitDemoAccounts();
@@ -607,6 +617,7 @@ try
     await Management.SmokeTests.PaymentLedgerSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.KitchenStockSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.RealWorldRulesSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.MobileApiSmoke.Run(db, client, NewClient, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch

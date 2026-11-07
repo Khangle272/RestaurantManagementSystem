@@ -50,7 +50,7 @@
                 <tr>
                     <td class="cell-code"><a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-reset">@item.MaHoaDon</a></td>
                     <td>@(item.LoaiDonHang switch { LoaiDonHang.MangDi => "Mang đi", LoaiDonHang.GiaoHang => "Giao hàng", _ => "Tại bàn" })</td>
-                    <td class="cell-nowrap">@item.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="cell-nowrap">@VnTime.NgayGio(item.ThoiDiemLap)</td>
                     <td><span class="@statusClass">@statusLabel</span></td>
                     <td class="text-end fw-semibold">@item.TongThanhToan.ToString("N0") đ</td>
                     <td class="text-end"><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm @(daThanhToan ? "btn-outline-secondary" : "btn-outline-primary")">@(daThanhToan ? "Xem / in" : "Thu tiền / in")</a></td>
