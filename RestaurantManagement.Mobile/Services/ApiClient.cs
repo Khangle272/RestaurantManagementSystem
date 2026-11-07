@@ -129,6 +129,16 @@ public sealed class ApiClient
     public Task<MessageDto> UpdateLineAsync(int orderId, int lineId, string status) =>
         PostAsync<MessageDto>($"/api/staff/orders/{orderId}/lines/{lineId}", new UpdateLineRequest(status));
     public Task<PaymentResultDto> PayAsync(int id, PaymentRequest request) => PostAsync<PaymentResultDto>($"/api/staff/orders/{id}/pay", request);
+    // Ảnh QR nhận chuyển khoản do admin cấu hình; null khi nhà hàng chưa cấu hình.
+    public async Task<byte[]?> PaymentQrAsync()
+    {
+        var client = http ?? throw new ApiException("Bạn cần đăng nhập lại.", HttpStatusCode.Unauthorized);
+        using var response = await Send(() => client.GetAsync("/CauHinhQr/Anh"));
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        if (!response.IsSuccessStatusCode)
+            throw new ApiException($"Không tải được ảnh QR ({(int)response.StatusCode}).", response.StatusCode);
+        return await response.Content.ReadAsByteArrayAsync();
+    }
     public Task<List<ReservationDto>> ReservationsAsync() => GetAsync<List<ReservationDto>>("/api/staff/reservations");
     public Task<MessageDto> AssignAsync(int id, int tableId, string version) =>
         PostAsync<MessageDto>($"/api/staff/reservations/{id}/assign", new AssignTableRequest(tableId, version));

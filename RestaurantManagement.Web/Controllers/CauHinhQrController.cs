@@ -53,7 +53,7 @@ public sealed class CauHinhQrController(PaymentQrStore store, ILogger<CauHinhQrC
     [HttpGet, AllowAnonymous, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public IActionResult Anh(string? v)
     {
-        var bytes = store.Read(v);
+        var bytes = store.Read(string.IsNullOrEmpty(v) ? store.CurrentVersion : v);
         var type = bytes is null ? null : PaymentQrStore.ContentType(bytes);
         if (type is null) return NotFound();
         Response.Headers.XContentTypeOptions = "nosniff";
