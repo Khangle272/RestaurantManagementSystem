@@ -1,2 +1,24 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+<script>
+    if (window.jQuery && jQuery.validator) {
+        jQuery.extend(jQuery.validator.messages, {
+            required: "Vui lòng nhập trường này.",
+            remote: "Vui lòng sửa trường này.",
+            email: "Vui lòng nhập email hợp lệ.",
+            url: "Vui lòng nhập URL hợp lệ.",
+            date: "Vui lòng nhập ngày hợp lệ.",
+            dateISO: "Vui lòng nhập ngày hợp lệ (ISO).",
+            number: "Vui lòng nhập số hợp lệ.",
+            digits: "Chỉ được nhập chữ số.",
+            equalTo: "Vui lòng nhập lại cùng một giá trị.",
+            maxlength: jQuery.validator.format("Vui lòng không nhập quá {0} ký tự."),
+            minlength: jQuery.validator.format("Vui lòng nhập ít nhất {0} ký tự."),
+            rangelength: jQuery.validator.format("Vui lòng nhập giá trị từ {0} đến {1} ký tự."),
+            range: jQuery.validator.format("Vui lòng nhập giá trị từ {0} đến {1}."),
+            max: jQuery.validator.format("Vui lòng nhập giá trị nhỏ hơn hoặc bằng {0}."),
+            min: jQuery.validator.format("Vui lòng nhập giá trị lớn hơn hoặc bằng {0}."),
+            step: jQuery.validator.format("Vui lòng nhập bội số hợp lệ ({0}).")
+        });
+    }
+</script>

@@ -51,6 +51,14 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
     private static DateTimeOffset StartDay(DateTime day) => new(day.Date, VietnamOffset);
     private static DateTime PaymentDay(HoaDon invoice) => (invoice.ThoiDiemThanhToan ?? invoice.ThoiDiemLap).ToOffset(VietnamOffset).Date;
     private static decimal Revenue(HoaDon invoice) => invoice.TongTienHang - invoice.TienGiam;
+    private static decimal CashTotal(IEnumerable<ChiTietThanhToan> rows, PhuongThucThanhToan hinhThuc) =>
+        rows.Where(x => x.HinhThuc == hinhThuc).Sum(PaymentLedger.SignedAmount);
+    private static decimal ChannelTotal(IEnumerable<ChiTietThanhToan> ledgerRows, IEnumerable<HoaDon> invoices, HashSet<int> invoicesWithLedger, PhuongThucThanhToan hinhThuc)
+    {
+        var ledgerSum = CashTotal(ledgerRows, hinhThuc);
+        var legacySum = invoices.Where(x => x.PhuongThucThanhToan == hinhThuc && !invoicesWithLedger.Contains(x.Id)).Sum(x => x.TongThanhToan);
+        return ledgerSum + legacySum;
+    }
     private Task<List<HoaDon>> PaidInvoices(DateTimeOffset start, DateTimeOffset end) => db.HoaDon.AsNoTracking()
         .Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan
             && (x.ThoiDiemThanhToan ?? x.ThoiDiemLap) >= start && (x.ThoiDiemThanhToan ?? x.ThoiDiemLap) < end).ToListAsync();
@@ -65,6 +73,11 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 
         var paidInvoices = await PaidInvoices(start, end);
         var cancelledInvoices = invoices.Where(x => x.TrangThai == TrangThaiHoaDon.DaHuy).ToList();
+        var payments = await db.ChiTietThanhToan.AsNoTracking()
+            .Where(x => x.NgayThanhToan >= DateOnly.FromDateTime(start.DateTime)
+                && x.NgayThanhToan < DateOnly.FromDateTime(end.DateTime))
+            .ToListAsync();
+        var ledgerInvoiceIds = payments.Where(x => x.HoaDonId.HasValue).Select(x => x.HoaDonId!.Value).ToHashSet();
 
         var model = new BaoCaoDashboardViewModel
         {
@@ -77,9 +90,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             SoDonThanhCong = paidInvoices.Count,
             SoDonDaHuy = cancelledInvoices.Count,
             TongChiPhiKhuyenMai = paidInvoices.Sum(x => x.TienGiam),
-            DoanhThuTienMat = paidInvoices.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.TienMat).Sum(x => x.TongThanhToan),
-            DoanhThuChuyenKhoan = paidInvoices.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan).Sum(x => x.TongThanhToan),
-            DoanhThuThe = paidInvoices.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.The).Sum(x => x.TongThanhToan)
+            DoanhThuTienMat = ChannelTotal(payments, paidInvoices, ledgerInvoiceIds, PhuongThucThanhToan.TienMat),
+            DoanhThuChuyenKhoan = ChannelTotal(payments, paidInvoices, ledgerInvoiceIds, PhuongThucThanhToan.ChuyenKhoan),
+            DoanhThuThe = ChannelTotal(payments, paidInvoices, ledgerInvoiceIds, PhuongThucThanhToan.The)
         };
 
         // Doanh thu theo 14 ngày gần nhất
@@ -159,6 +172,13 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
         var paidInvoices = await PaidInvoices(startOffset, endOffset);
         var cancelledInvoices = invoices.Where(x => x.TrangThai == TrangThaiHoaDon.DaHuy).ToList();
 
+        // Tiền mặt/chuyển khoản/thẻ là dòng tiền thực thu trong kỳ: gồm cọc nhận trước và trừ hoàn cọc.
+        var payments = await db.ChiTietThanhToan.AsNoTracking()
+            .Where(x => x.NgayThanhToan >= DateOnly.FromDateTime(startOffset.DateTime)
+                && x.NgayThanhToan < DateOnly.FromDateTime(endOffset.DateTime))
+            .ToListAsync();
+        var ledgerInvoiceIds = payments.Where(x => x.HoaDonId.HasValue).Select(x => x.HoaDonId!.Value).ToHashSet();
+
         var model = new BaoCaoDoanhThuViewModel
         {
             CheDo = cheDo,
@@ -173,9 +193,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             TongSoDonHang = invoices.Count,
             SoDonThanhCong = paidInvoices.Count,
             SoDonDaHuy = cancelledInvoices.Count,
-            DoanhThuTienMat = paidInvoices.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.TienMat).Sum(x => x.TongThanhToan),
-            DoanhThuChuyenKhoan = paidInvoices.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan).Sum(x => x.TongThanhToan),
-            DoanhThuThe = paidInvoices.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.The).Sum(x => x.TongThanhToan),
+            DoanhThuTienMat = ChannelTotal(payments, paidInvoices, ledgerInvoiceIds, PhuongThucThanhToan.TienMat),
+            DoanhThuChuyenKhoan = ChannelTotal(payments, paidInvoices, ledgerInvoiceIds, PhuongThucThanhToan.ChuyenKhoan),
+            DoanhThuThe = ChannelTotal(payments, paidInvoices, ledgerInvoiceIds, PhuongThucThanhToan.The),
             DoanhThuTaiBan = paidInvoices.Where(x => x.LoaiDonHang == LoaiDonHang.TaiBan).Sum(Revenue),
             DoanhThuMangDi = paidInvoices.Where(x => x.LoaiDonHang == LoaiDonHang.MangDi).Sum(Revenue),
             DoanhThuGiaoHang = paidInvoices.Where(x => x.LoaiDonHang == LoaiDonHang.GiaoHang).Sum(Revenue)
@@ -188,6 +208,7 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             {
                 var monthPaid = paidInvoices.Where(x => PaymentDay(x).Year == currentYear && PaymentDay(x).Month == m).ToList();
                 var monthCancelled = cancelledInvoices.Count(x => x.ThoiDiemLap.ToOffset(VietnamOffset).Year == currentYear && x.ThoiDiemLap.ToOffset(VietnamOffset).Month == m);
+                var monthPayments = payments.Where(x => x.NgayThanhToan.Year == currentYear && x.NgayThanhToan.Month == m).ToList();
 
                 model.ChiTietTimeline.Add(new DoanhThuTimelineRow
                 {
@@ -197,9 +218,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
                     TongTienHang = monthPaid.Sum(x => x.TongTienHang),
                     TienGiam = monthPaid.Sum(x => x.TienGiam),
                     DoanhThuThuc = monthPaid.Sum(Revenue),
-                    TienMat = monthPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.TienMat).Sum(x => x.TongThanhToan),
-                    ChuyenKhoan = monthPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan).Sum(x => x.TongThanhToan),
-                    The = monthPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.The).Sum(x => x.TongThanhToan)
+                    TienMat = ChannelTotal(monthPayments, monthPaid, ledgerInvoiceIds, PhuongThucThanhToan.TienMat),
+                    ChuyenKhoan = ChannelTotal(monthPayments, monthPaid, ledgerInvoiceIds, PhuongThucThanhToan.ChuyenKhoan),
+                    The = ChannelTotal(monthPayments, monthPaid, ledgerInvoiceIds, PhuongThucThanhToan.The)
                 });
             }
         }
@@ -209,6 +230,7 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             {
                 var yearPaid = paidInvoices.Where(x => PaymentDay(x).Year == y).ToList();
                 var yearCancelled = cancelledInvoices.Count(x => x.ThoiDiemLap.ToOffset(VietnamOffset).Year == y);
+                var yearPayments = payments.Where(x => x.NgayThanhToan.Year == y).ToList();
 
                 model.ChiTietTimeline.Add(new DoanhThuTimelineRow
                 {
@@ -218,9 +240,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
                     TongTienHang = yearPaid.Sum(x => x.TongTienHang),
                     TienGiam = yearPaid.Sum(x => x.TienGiam),
                     DoanhThuThuc = yearPaid.Sum(Revenue),
-                    TienMat = yearPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.TienMat).Sum(x => x.TongThanhToan),
-                    ChuyenKhoan = yearPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan).Sum(x => x.TongThanhToan),
-                    The = yearPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.The).Sum(x => x.TongThanhToan)
+                    TienMat = ChannelTotal(yearPayments, yearPaid, ledgerInvoiceIds, PhuongThucThanhToan.TienMat),
+                    ChuyenKhoan = ChannelTotal(yearPayments, yearPaid, ledgerInvoiceIds, PhuongThucThanhToan.ChuyenKhoan),
+                    The = ChannelTotal(yearPayments, yearPaid, ledgerInvoiceIds, PhuongThucThanhToan.The)
                 });
             }
         }
@@ -233,18 +255,20 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             {
                 var dayPaid = paidInvoices.Where(x => PaymentDay(x) == currentDay).ToList();
                 var dayCancelled = cancelledInvoices.Count(x => x.ThoiDiemLap.ToOffset(VietnamOffset).Date == currentDay);
+                var dayPayments = payments.Where(x => x.NgayThanhToan == DateOnly.FromDateTime(currentDay)).ToList();
 
                 model.ChiTietTimeline.Add(new DoanhThuTimelineRow
                 {
                     NhanThoiGian = VnTime.Ngay(currentDay),
+                    Ngay = DateOnly.FromDateTime(currentDay),
                     SoDonThanhCong = dayPaid.Count,
                     SoDonHuy = dayCancelled,
                     TongTienHang = dayPaid.Sum(x => x.TongTienHang),
                     TienGiam = dayPaid.Sum(x => x.TienGiam),
                     DoanhThuThuc = dayPaid.Sum(Revenue),
-                    TienMat = dayPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.TienMat).Sum(x => x.TongThanhToan),
-                    ChuyenKhoan = dayPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.ChuyenKhoan).Sum(x => x.TongThanhToan),
-                    The = dayPaid.Where(x => x.PhuongThucThanhToan == PhuongThucThanhToan.The).Sum(x => x.TongThanhToan)
+                    TienMat = ChannelTotal(dayPayments, dayPaid, ledgerInvoiceIds, PhuongThucThanhToan.TienMat),
+                    ChuyenKhoan = ChannelTotal(dayPayments, dayPaid, ledgerInvoiceIds, PhuongThucThanhToan.ChuyenKhoan),
+                    The = ChannelTotal(dayPayments, dayPaid, ledgerInvoiceIds, PhuongThucThanhToan.The)
                 });
 
                 currentDay = currentDay.AddDays(1);
