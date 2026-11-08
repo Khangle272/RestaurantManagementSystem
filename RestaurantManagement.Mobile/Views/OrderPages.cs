@@ -497,10 +497,11 @@ public sealed class OrderDetailPage : AppPage
         }
         else if (method == "🏦 Chuyển khoản")
         {
-            var reference = await DisplayPromptAsync("Chuyển khoản",
-                $"Đối chiếu tài khoản nhận đủ {ApiClient.Money(o.PhaiThu)}, nội dung {o.MaHoaDon}. Nhập mã giao dịch ngân hàng:", "Xác nhận", "Hủy", maxLength: 100);
-            if (string.IsNullOrWhiteSpace(reference)) return;
-            request = new PaymentRequest("ChuyenKhoan", o.PhaiThu, o.PhaiThu, reference.Trim(), o.RowVersion, o.BookingRowVersion);
+            var page = new TransferPaymentPage(o.PhaiThu, o.MaHoaDon);
+            await Navigation.PushModalAsync(page);
+            if (!await page.Accepted) return;
+            // Hệ thống chưa đối soát tự động: mã hóa đơn làm nội dung chuyển khoản và cũng là mã giao dịch ghi nhận.
+            request = new PaymentRequest("ChuyenKhoan", o.PhaiThu, o.PhaiThu, o.MaHoaDon, o.RowVersion, o.BookingRowVersion);
         }
         else return;
 
@@ -508,5 +509,84 @@ public sealed class OrderDetailPage : AppPage
         if (await RunAsync(async () => result = await ApiClient.Current.PayAsync(o.Id, request)))
             await Info(result!.Message + (result.TienThoiLai > 0 ? $" Tiền thối lại: {ApiClient.Money(result.TienThoiLai)}." : ""));
         await LoadAsync();
+    }
+}
+
+// Xác nhận chuyển khoản: hiện QR của nhà hàng và nội dung tự sinh (mã hóa đơn) như trang thanh toán trên web.
+public sealed class TransferPaymentPage : AppPage
+{
+    private readonly TaskCompletionSource<bool> accepted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Image qr = new() { Aspect = Aspect.AspectFit, HeightRequest = 250, IsVisible = false };
+    private readonly Label qrNote = Ui.Muted("Đang tải ảnh QR…", 12);
+    private bool confirmed;
+
+    public TransferPaymentPage(decimal amount, string content) : base("Chuyển khoản")
+    {
+        var info = new VerticalStackLayout
+        {
+            Spacing = 8,
+            Children =
+            {
+                new Border
+                {
+                    BackgroundColor = Colors.White, Padding = 10, StrokeThickness = 0,
+                    StrokeShape = new RoundRectangle { CornerRadius = 12 }, HorizontalOptions = LayoutOptions.Center, Content = qr
+                },
+                qrNote,
+                Ui.KeyValue("Số tiền", ApiClient.Money(amount), strong: true, valueTone: Ui.Brand),
+                Ui.KeyValue("Nội dung", content)
+            }
+        };
+        var body = new VerticalStackLayout
+        {
+            Padding = new Thickness(16, 16, 16, 24),
+            Spacing = 12,
+            Children =
+            {
+                Ui.Title("Quét mã để chuyển khoản"),
+                Ui.Card(info, padding: new Thickness(14)),
+                Ui.Muted("Nội dung chuyển khoản được tạo tự động, giữ nguyên mã hóa đơn khi chuyển.", 12),
+                Ui.Primary("Tôi đã chuyển khoản", ConfirmAsync),
+                Ui.Outline("Hủy", CancelAsync, Ui.MutedText)
+            }
+        };
+        SetBody(new ScrollView { Content = body });
+    }
+
+    // Kết quả sau khi hộp thoại đóng: true khi nhân viên bấm "Tôi đã chuyển khoản".
+    public Task<bool> Accepted => accepted.Task;
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        byte[]? bytes = null;
+        // Lỗi tải QR không chặn thanh toán: chỉ hiện cảnh báo để nhân viên tự đối chiếu.
+        await RunAsync(async () => bytes = await ApiClient.Current.PaymentQrAsync(), _ => { });
+        if (bytes is null || bytes.Length == 0)
+        {
+            qrNote.Text = "Chưa tải được ảnh QR nhận chuyển khoản. Vui lòng đối chiếu tài khoản ngân hàng của nhà hàng.";
+            return;
+        }
+        qr.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
+        qr.IsVisible = true;
+        qrNote.Text = "Ảnh QR không tự xác nhận thanh toán; thu ngân đối chiếu tiền thực nhận.";
+    }
+
+    private async Task ConfirmAsync() => await CloseAsync(true);
+
+    private async Task CancelAsync() => await CloseAsync(false);
+
+    private async Task CloseAsync(bool result)
+    {
+        if (accepted.Task.IsCompleted) return;
+        confirmed = result;
+        await Navigation.PopModalAsync();
+    }
+
+    // Đóng bằng nút back của máy cũng được tính là hủy.
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        accepted.TrySetResult(confirmed);
     }
 }

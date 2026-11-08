@@ -29,10 +29,16 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
     }
 
     [Authorize(Roles = AppRoles.Admin)]
-    public async Task<IActionResult> DoanhThu(string? cheDo, DateTime? tuNgay, DateTime? denNgay, int? nam)
+    public async Task<IActionResult> DoanhThu(string? cheDo, DateTime? tuNgay, DateTime? denNgay, int? nam, DateOnly? xemNgay)
     {
         if (InvalidPeriod(tuNgay, denNgay, nam, cheDo is not ("TheoThang" or "TheoNam")) is { } invalid) return invalid;
         var model = await baoCaoService.GetRevenueReportAsync(cheDo ?? "TheoNgay", tuNgay, denNgay, nam);
+        if (xemNgay is { } chiTietNgay && model.CheDo == "TheoNgay")
+        {
+            if (chiTietNgay.Year is < 1900 or > 2100) return BadRequest("Ngày xem chi tiết không hợp lệ.");
+            model.NgayXemChiTiet = chiTietNgay;
+            model.ChiTietThanhToanNgay = (await baoCaoService.GetShiftReportAsync(chiTietNgay, null)).GiaoDich;
+        }
         return View(model);
     }
 
@@ -42,7 +48,7 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
         if (InvalidPeriod(tuNgay, denNgay, nam, cheDo is not ("TheoThang" or "TheoNam")) is { } invalid) return invalid;
         var model = await baoCaoService.GetRevenueReportAsync(cheDo ?? "TheoNgay", tuNgay, denNgay, nam);
         var sb = new StringBuilder();
-        sb.AppendLine("Thời gian,Bill thanh toán,Đơn lập trong kỳ đã hủy,Tiền hàng (VNĐ),Giảm giá (VNĐ),Doanh thu sau giảm giá (VNĐ),Thu thêm tiền mặt (VNĐ),Thu thêm QR (VNĐ),Thu thêm thẻ (VNĐ)");
+        sb.AppendLine("Thời gian,Bill thanh toán,Đơn lập trong kỳ đã hủy,Tiền hàng (VNĐ),Giảm giá (VNĐ),Doanh thu sau giảm giá (VNĐ),Tiền mặt (VNĐ),Chuyển khoản (VNĐ),Thẻ (cũ) (VNĐ)");
 
         foreach (var r in model.ChiTietTimeline)
         {
