@@ -134,7 +134,7 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
                     SoTienKhachBao = x.SoTienKhachBao,
                     MaGiaoDichKhachBao = x.MaGiaoDichKhachBao,
                     HoaDonId = invoice?.Id,
-                    TongTienHoaDon = invoice?.ChiTiet.Sum(c => c.SoLuong * c.DonGia) ?? 0,
+                    TongTienHoaDon = invoice?.ChiTiet.Where(c => c.TrangThai != TrangThaiCheBien.DaHuy).Sum(c => c.SoLuong * c.DonGia) ?? 0,
                     DaThanhToan = daThanhToan
                 };
             }).ToList()
@@ -385,8 +385,20 @@ public class QuanLyDatBanController(RestaurantDbContext context, TableService ta
         int markerIdx = currentNoiDung.IndexOf("\n[Phản hồi từ Nhà hàng]:", StringComparison.Ordinal);
         var baseContent = markerIdx >= 0 ? currentNoiDung[..markerIdx] : currentNoiDung;
 
-        var fullContent = $"{baseContent}{replyTag}{noiDungPhanHoi.Trim()} ({VnTime.NgayGio(TableService.VietnamNow)})";
-        danhGia.NoiDung = fullContent.Length > 2000 ? fullContent[..2000] : fullContent;
+        // Ô sửa phản hồi được điền sẵn câu trả lời cũ kèm mốc thời gian: bỏ mốc cũ để không cộng dồn "(ngày giờ) (ngày giờ)".
+        var reply = Regex.Replace(noiDungPhanHoi.Trim(), @"(\s*\(\d{2}/\d{2}/\d{4} \d{2}:\d{2}\))+\s*\z", "").Trim();
+        if (reply.Length == 0 || reply.Length > 500)
+        {
+            TempData["ErrorMessage"] = "Nội dung phản hồi từ 1 đến 500 ký tự.";
+            return RedirectToAction(nameof(DanhGia));
+        }
+        var fullContent = $"{baseContent}{replyTag}{reply} ({VnTime.NgayGio(TableService.VietnamNow)})";
+        if (fullContent.Length > 2000)
+        {
+            TempData["ErrorMessage"] = "Phản hồi quá dài so với nội dung đánh giá. Vui lòng rút gọn câu trả lời.";
+            return RedirectToAction(nameof(DanhGia));
+        }
+        danhGia.NoiDung = fullContent;
 
         await Db.SaveChangesAsync();
         TempData["SuccessMessage"] = "Đã gửi câu trả lời phản hồi cho khách hàng thành công.";

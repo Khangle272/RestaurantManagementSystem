@@ -34,12 +34,26 @@ public class ReservationPlanningService(RestaurantDbContext db)
                 g.Sum(x => x.Ban.Count), g.Sum(x => x.SoNguoiLon + x.SoTreEm))).ToList();
         // Only pre-arrival food needs purchasing plans; received orders already pass through stock deduction.
         var lines = upcoming.SelectMany(x => x.MonDatTruoc.Select(line => (Code: x.MaDatBan, Line: line))).ToList();
-        var sizeIds = lines.Where(x => x.Line.MonAnSizeId.HasValue).Select(x => x.Line.MonAnSizeId!.Value).Distinct().ToArray();
-        var recipes = await db.DinhMucMon.AsNoTracking().Include(x => x.NguyenLieu).Where(x => sizeIds.Contains(x.MaKichCo)).ToListAsync();
+        // Combo trải ra món thành phần giống lúc trừ kho thật (InventoryService): món trong combo không chọn size nên dùng
+        // định mức của size có mã nhỏ nhất. Món lẻ chỉ dùng đúng định mức của size khách chọn, thiếu thì cảnh báo.
+        var dishIds = lines.Select(x => x.Line.MonAnId).Distinct().ToList();
+        var comboParts = await db.ChiTietCombo.AsNoTracking()
+            .Where(x => dishIds.Contains(x.ComboId) && x.Combo.Loai == LoaiMon.Set).ToListAsync();
+        var recipeDishIds = dishIds.Concat(comboParts.Select(x => x.MonAnId)).Distinct().ToList();
+        var recipes = await db.DinhMucMon.AsNoTracking().Include(x => x.NguyenLieu).Where(x => recipeDishIds.Contains(x.MonAnId)).ToListAsync();
+        List<DinhMucMon> RecipeOf(int dishId, int? sizeId)
+        {
+            if (sizeId is > 0) return recipes.Where(x => x.MonAnId == dishId && x.MaKichCo == sizeId).ToList();
+            var fallback = recipes.Where(x => x.MonAnId == dishId).Select(x => (int?)x.MaKichCo).Min();
+            return fallback is int size ? recipes.Where(x => x.MonAnId == dishId && x.MaKichCo == size).ToList() : [];
+        }
         var demand = new Dictionary<int, (NguyenLieu Ingredient, decimal Quantity)>();
         foreach (var item in lines)
         {
-            var recipe = recipes.Where(x => x.MonAnId == item.Line.MonAnId && x.MaKichCo == item.Line.MonAnSizeId).ToList();
+            var parts = comboParts.Where(x => x.ComboId == item.Line.MonAnId).ToList();
+            var recipe = parts.Count > 0
+                ? parts.SelectMany(p => RecipeOf(p.MonAnId, null).Select(r => (r.NguyenLieu, Quantity: r.SoLuong * p.SoLuong))).ToList()
+                : RecipeOf(item.Line.MonAnId, item.Line.MonAnSizeId).Select(r => (r.NguyenLieu, Quantity: r.SoLuong)).ToList();
             if (recipe.Count == 0)
             {
                 model.Warnings.Add($"{item.Code}: {item.Line.TenMonLucDat} / {item.Line.TenSizeLucDat} chưa có định mức riêng; chưa cộng vào dự trù.");
@@ -47,8 +61,8 @@ public class ReservationPlanningService(RestaurantDbContext db)
             }
             foreach (var part in recipe)
             {
-                var current = demand.GetValueOrDefault(part.NguyenLieuId);
-                demand[part.NguyenLieuId] = (part.NguyenLieu, current.Quantity + part.SoLuong * item.Line.SoLuong);
+                var current = demand.GetValueOrDefault(part.NguyenLieu.Id);
+                demand[part.NguyenLieu.Id] = (part.NguyenLieu, current.Quantity + part.Quantity * item.Line.SoLuong);
             }
         }
         model.Ingredients = demand.Values.OrderBy(x => x.Ingredient.TenNguyenLieu)

@@ -215,31 +215,18 @@ public class InventoryService(RestaurantDbContext db, ILogger<InventoryService>?
 
     private async Task AddDishIngredientsAsync(Dictionary<int, decimal> requirements, int dishId, int? sizeId, int dishQuantity)
     {
-        List<DinhMucMon> recipes;
+        List<DinhMucMon> recipes = sizeId is > 0
+            ? await db.DinhMucMon.Where(x => x.MonAnId == dishId && x.MaKichCo == sizeId.Value).ToListAsync()
+            : [];
 
-        if (sizeId.HasValue && sizeId.Value > 0)
+        if (recipes.Count == 0)
         {
-            recipes = await db.DinhMucMon
-                .Where(x => x.MonAnId == dishId && x.MaKichCo == sizeId.Value)
-                .ToListAsync();
-
-            if (recipes.Count == 0)
-            {
-                // Fallback to first available size recipes for this dish
-                recipes = await db.DinhMucMon
-                    .Where(x => x.MonAnId == dishId)
-                    .GroupBy(x => x.MaKichCo)
-                    .Select(g => g.ToList())
-                    .FirstOrDefaultAsync() ?? [];
-            }
-        }
-        else
-        {
-            recipes = await db.DinhMucMon
-                .Where(x => x.MonAnId == dishId)
-                .GroupBy(x => x.MaKichCo)
-                .Select(g => g.ToList())
-                .FirstOrDefaultAsync() ?? [];
+            // Món trong combo (không chọn size) hoặc size chưa có định mức: dùng định mức của một size cố định
+            // (size có mã nhỏ nhất) để lần trừ kho và lần trả kho luôn tính cùng một công thức.
+            var fallbackSize = await db.DinhMucMon.Where(x => x.MonAnId == dishId)
+                .OrderBy(x => x.MaKichCo).Select(x => (int?)x.MaKichCo).FirstOrDefaultAsync();
+            if (fallbackSize is int size)
+                recipes = await db.DinhMucMon.Where(x => x.MonAnId == dishId && x.MaKichCo == size).ToListAsync();
         }
 
         foreach (var r in recipes)

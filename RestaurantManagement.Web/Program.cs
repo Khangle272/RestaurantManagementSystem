@@ -27,6 +27,7 @@ builder.Services.AddIdentity<TaiKhoan, IdentityRole<int>>(options =>
     options.Lockout.AllowedForNewUsers = true;
 })
     .AddEntityFrameworkStores<RestaurantDbContext>()
+    .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
     .AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -71,6 +72,8 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new FriendlyTextErrorFilter());
+    // Thông báo kiểm tra dữ liệu và lỗi nhập sai kiểu bằng tiếng Việt.
+    VietnameseValidationMetadataProvider.Configure(options);
     options.Filters.Add(new KeepListFilterResultFilter());
 });
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();

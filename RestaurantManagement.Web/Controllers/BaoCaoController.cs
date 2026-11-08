@@ -122,7 +122,7 @@ public class BaoCaoController(IBaoCaoService baoCaoService) : Controller
             || year is < 1900 or > 2100 || (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date))
             return BadRequest("Khoảng ngày/năm không hợp lệ. Chọn ngày bắt đầu trước ngày kết thúc, trong năm 1900–2100.");
         var today = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).Date;
-        if (dailyTimeline && ((to ?? today).Date - (from ?? today.AddDays(-30)).Date).TotalDays > 366)
+        if (dailyTimeline && ((to ?? today).Date - (from ?? (to ?? today).AddDays(-30)).Date).TotalDays > 366)
             return BadRequest("Biểu đồ theo ngày tối đa một năm. Chọn theo tháng/năm nếu cần xem khoảng dài hơn.");
         return null;
     }

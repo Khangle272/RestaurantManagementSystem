@@ -364,12 +364,13 @@ public class DatBanController(RestaurantDbContext db, IWebHostEnvironment env, P
                 TrangThai = trangThaiText,
                 TrangThaiBadgeClass = badgeClass,
                 HoaDonId = activeInvoice?.Id,
-                TongTienHoaDon = activeInvoice?.ChiTiet.Sum(c => c.SoLuong * c.DonGia) ?? 0,
+                // Món đã hủy không tính tiền và không phải món khách đã dùng.
+                TongTienHoaDon = activeInvoice?.ChiTiet.Where(c => c.TrangThai != TrangThaiCheBien.DaHuy).Sum(c => c.SoLuong * c.DonGia) ?? 0,
                 DaThanhToan = daThanhToan,
                 CoTheDanhGia = reviewInvoice != null,
                 DaDanhGia = reviewInvoice != null && reviewedHoaDonIds.Contains(reviewInvoice.Id),
                 GhiChu = d.YeuCau,
-                ChiTietMonAn = activeInvoice?.ChiTiet.Select(c => new ChiTietMonAnItemVM
+                ChiTietMonAn = activeInvoice?.ChiTiet.Where(c => c.TrangThai != TrangThaiCheBien.DaHuy).Select(c => new ChiTietMonAnItemVM
                 {
                     TenMon = c.TenMonLucBan,
                     SoLuong = c.SoLuong,

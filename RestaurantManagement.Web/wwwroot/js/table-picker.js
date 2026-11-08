@@ -87,6 +87,7 @@
             url.searchParams.set('soNguoi', guests.value);
             if (area?.value) url.searchParams.set('maKhuVuc', area.value);
             const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+            if (response.redirected || !response.headers.get('content-type')?.includes('json')) throw new Error('Phiên đăng nhập thay đổi. Vui lòng tải lại trang.');
             const data = await response.json();
             if (run !== sequence) return;
             if (!response.ok) throw new Error(data.message || 'Không tải được sơ đồ bàn.');

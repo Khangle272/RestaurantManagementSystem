@@ -22,13 +22,13 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
 
         if (fromDate.HasValue)
         {
-            var fromOffset = new DateTimeOffset(fromDate.Value.Date);
+            var fromOffset = TableService.VietnamTime(fromDate.Value.Date); // Ngày lọc theo giờ Việt Nam, không phụ thuộc múi giờ máy chủ.
             query = query.Where(x => x.ThoiDiem >= fromOffset);
         }
 
         if (toDate.HasValue)
         {
-            var toOffset = new DateTimeOffset(toDate.Value.Date.AddDays(1).AddTicks(-1));
+            var toOffset = TableService.VietnamTime(toDate.Value.Date.AddDays(1).AddTicks(-1));
             query = query.Where(x => x.ThoiDiem <= toOffset);
         }
 
@@ -76,6 +76,8 @@ public class ThanhLyController(RestaurantDbContext context) : ManagementControll
         {
             ModelState.AddModelError("", "Vui lòng chọn ít nhất một nguyên liệu cần thanh lý / tiêu hủy.");
         }
+        if (model.NgayThanhLy > TableService.VietnamNow.AddMinutes(5))
+            ModelState.AddModelError(nameof(model.NgayThanhLy), "Ngày thanh lý không được ở tương lai.");
 
         if (ModelState.IsValid)
         {

@@ -112,7 +112,7 @@ namespace RestaurantManagement.Web.Controllers
             return new PromotionViewModel
             {
                 Name = p.TenChuongTrinh, Code = v.Ma, End = v.KetThuc ?? p.KetThuc,
-                Summary = $"Giảm {value:N0}{(type == KieuGiam.PhanTram ? "%" : " đ")} "
+                Summary = $"Giảm {(type == KieuGiam.PhanTram ? $"{value:0.#}%" : $"{value:N0} đ")} "
                     + (scope == PhamViUuDai.MonAn ? "món áp dụng" : "hóa đơn")
                     + (cap.HasValue ? $", tối đa {cap:N0} đ" : "") + (minimum > 0 ? $", từ {minimum:N0} đ" : "")
             };

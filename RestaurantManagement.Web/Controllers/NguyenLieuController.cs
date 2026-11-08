@@ -21,12 +21,9 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         var rows = query.OrderByDescending(x => x.Id).Select(x => new NguyenLieuRowViewModel
         {
             Item = x,
-            TonKho = (Db.ChiTietPhieuNhap.Where(c => c.NguyenLieuId == x.Id && c.PhieuNhap.TrangThai == TrangThaiPhieu.DaGhiSo)
-                .Sum(c => (decimal?)c.SoLuong) ?? 0)
-                - (Db.ChiTietPhieuXuat.Where(c => c.NguyenLieuId == x.Id && c.PhieuXuat.TrangThai == TrangThaiPhieu.DaGhiSo)
-                .Sum(c => (decimal?)c.SoLuong) ?? 0)
-                - (Db.ChiTietPhieuThanhLy.Where(c => c.NguyenLieuId == x.Id && c.PhieuThanhLy.TrangThai == "DaThanhLy")
-                .Sum(c => (decimal?)c.SoLuong) ?? 0)
+            // Dùng đúng số tồn mà trang Tồn kho, báo cáo và lúc trừ kho đang dùng. Tính lại từ chứng từ sẽ lệch
+            // khi xuất chế biến thiếu hàng (tồn bị chặn ở 0) hoặc khi nguyên liệu được tạo nhanh kèm tồn ban đầu.
+            TonKho = x.SoLuongTon
         });
         var result = await PageAsync(rows, page, search, trangThai);
         var total = await Db.NguyenLieu.CountAsync();

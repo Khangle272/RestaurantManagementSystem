@@ -56,8 +56,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
             && (x.ThoiDiemThanhToan ?? x.ThoiDiemLap) >= start && (x.ThoiDiemThanhToan ?? x.ThoiDiemLap) < end).ToListAsync();
     public async Task<BaoCaoDashboardViewModel> GetDashboardReportAsync(DateTime? tuNgay = null, DateTime? denNgay = null)
     {
-        var start = StartDay(tuNgay ?? Today.AddDays(-30));
-        var end = StartDay((denNgay ?? Today).AddDays(1));
+        var endDay = (denNgay ?? Today).Date;
+        var start = StartDay(tuNgay ?? endDay.AddDays(-30));
+        var end = StartDay(endDay.AddDays(1));
 
         var invoices = await db.HoaDon.AsNoTracking()
             .Where(x => x.ThoiDiemLap >= start && x.ThoiDiemLap < end)
@@ -83,13 +84,14 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
         };
 
         // Doanh thu theo 14 ngày gần nhất
+        // Biểu đồ luôn là 14 ngày gần nhất, không phụ thuộc khoảng ngày đang lọc ở trên.
         var daysBack = 14;
         var recentStart = Today.AddDays(-daysBack + 1);
+        var recentInvoices = await PaidInvoices(StartDay(recentStart), StartDay(Today.AddDays(1)));
         for (int i = 0; i < daysBack; i++)
         {
             var day = recentStart.AddDays(i);
-            var nextDay = day.AddDays(1);
-            var dayInvoices = paidInvoices.Where(x => PaymentDay(x) == day).ToList();
+            var dayInvoices = recentInvoices.Where(x => PaymentDay(x) == day).ToList();
 
             model.DoanhThuTheoNgay.Add(new DoanhThuTimelineRow
             {
@@ -130,8 +132,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
     {
         cheDo = string.IsNullOrWhiteSpace(cheDo) ? "TheoNgay" : cheDo;
         var currentYear = Math.Clamp(nam ?? Today.Year, 5, 9998);
-        var start = tuNgay ?? Today.AddDays(-30);
-        var end = denNgay ?? Today;
+        // Chỉ nhập "đến ngày" thì lấy 30 ngày trước đó, không để ngày bắt đầu vượt ngày kết thúc.
+        var end = (denNgay ?? Today).Date;
+        var start = (tuNgay ?? end.AddDays(-30)).Date;
 
         DateTimeOffset startOffset;
         DateTimeOffset endOffset;
@@ -256,8 +259,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 
     public async Task<BaoCaoMonBanChayViewModel> GetTopDishesReportAsync(DateTime? tuNgay, DateTime? denNgay, int? danhMucId, int topN = 10)
     {
-        var start = tuNgay ?? Today.AddDays(-30);
-        var end = denNgay ?? Today;
+        // Chỉ nhập "đến ngày" thì lấy 30 ngày trước đó, không để ngày bắt đầu vượt ngày kết thúc.
+        var end = (denNgay ?? Today).Date;
+        var start = (tuNgay ?? end.AddDays(-30)).Date;
 
         var startOffset = StartDay(start);
         var endOffset = StartDay(end.AddDays(1));
@@ -346,8 +350,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 
     public async Task<BaoCaoTonKhoTongHopViewModel> GetInventorySummaryReportAsync(DateTime? tuNgay, DateTime? denNgay)
     {
-        var start = tuNgay ?? Today.AddDays(-30);
-        var end = denNgay ?? Today;
+        // Chỉ nhập "đến ngày" thì lấy 30 ngày trước đó, không để ngày bắt đầu vượt ngày kết thúc.
+        var end = (denNgay ?? Today).Date;
+        var start = (tuNgay ?? end.AddDays(-30)).Date;
 
         var startOffset = StartDay(start);
         var endOffset = StartDay(end.AddDays(1));
@@ -407,8 +412,9 @@ public class BaoCaoService(RestaurantDbContext db) : IBaoCaoService
 
     public async Task<BaoCaoHieuQuaKhuyenMaiViewModel> GetPromotionEffectivenessReportAsync(DateTime? tuNgay, DateTime? denNgay)
     {
-        var start = tuNgay ?? Today.AddDays(-30);
-        var end = denNgay ?? Today;
+        // Chỉ nhập "đến ngày" thì lấy 30 ngày trước đó, không để ngày bắt đầu vượt ngày kết thúc.
+        var end = (denNgay ?? Today).Date;
+        var start = (tuNgay ?? end.AddDays(-30)).Date;
         var paidInvoices = await PaidInvoices(StartDay(start), StartDay(end.AddDays(1)));
         var histories = paidInvoices.Select(x => new { Invoice = x, History = PromotionService.ReadSnapshot(x) }).ToList();
         var usages = histories.Where(x => x.History is not null)

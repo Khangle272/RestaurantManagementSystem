@@ -270,7 +270,7 @@
         addIngredient(ing) {
             ingredients.push(ing);
             const text = `${ing.TenNguyenLieu} (${ing.DonViTinh})`;
-            root.querySelectorAll('select.select-nguyenlieu').forEach(sel => sel.add(new Option(text, ing.Id)));
+            root.querySelectorAll('select.select-nguyenlieu').forEach(sel => { const option = new Option(text, ing.Id); option.dataset.dvt = ing.DonViTinh ?? ''; sel.add(option); });
         }
     };
 

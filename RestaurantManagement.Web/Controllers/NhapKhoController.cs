@@ -23,13 +23,13 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
 
         if (fromDate.HasValue)
         {
-            var fromOffset = new DateTimeOffset(fromDate.Value.Date);
+            var fromOffset = TableService.VietnamTime(fromDate.Value.Date); // Ngày lọc theo giờ Việt Nam, không phụ thuộc múi giờ máy chủ.
             query = query.Where(x => x.ThoiDiem >= fromOffset);
         }
 
         if (toDate.HasValue)
         {
-            var toOffset = new DateTimeOffset(toDate.Value.Date.AddDays(1).AddTicks(-1));
+            var toOffset = TableService.VietnamTime(toDate.Value.Date.AddDays(1).AddTicks(-1));
             query = query.Where(x => x.ThoiDiem <= toOffset);
         }
 
@@ -84,6 +84,15 @@ public class NhapKhoController(RestaurantDbContext context) : ManagementControll
         {
             ModelState.AddModelError("", "Vui lòng thêm ít nhất một nguyên liệu nhập kho với số lượng hợp lệ.");
         }
+        // Kiểm tra trước khi ghi sổ: chọn sai hoặc nhà cung cấp/nguyên liệu đã ngừng dùng thì báo rõ, không để lỗi khóa ngoại.
+        if (!await Db.NhaCungCap.AnyAsync(x => x.Id == model.MaNhaCungCap && x.DangSuDung))
+            ModelState.AddModelError(nameof(model.MaNhaCungCap), "Vui lòng chọn nhà cung cấp đang hợp tác.");
+        var requestedIngredients = model.ChiTiets.Select(c => c.MaNguyenLieu).Distinct().ToList();
+        if (requestedIngredients.Count > 0
+            && await Db.NguyenLieu.CountAsync(x => requestedIngredients.Contains(x.Id) && x.DangSuDung) != requestedIngredients.Count)
+            ModelState.AddModelError("", "Có nguyên liệu không tồn tại hoặc đã ngừng sử dụng. Vui lòng chọn lại.");
+        if (model.NgayNhap > TableService.VietnamNow.AddMinutes(5))
+            ModelState.AddModelError(nameof(model.NgayNhap), "Ngày nhập không được ở tương lai.");
 
         if (ModelState.IsValid)
         {

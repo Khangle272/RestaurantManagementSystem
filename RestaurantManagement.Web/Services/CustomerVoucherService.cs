@@ -50,7 +50,7 @@ public class CustomerVoucherService(RestaurantDbContext db, IPromotionService pr
             var value = v.GiaTri ?? p.GiaTri; var type = v.KieuGiam ?? p.KieuGiam; var scope = v.PhamVi ?? p.PhamVi;
             var cap = v.GiaTri.HasValue ? v.MucGiamToiDa : p.MucGiamToiDa;
             var minimum = v.GiaTri.HasValue ? v.GiaTriToiThieu : p.GiaTriToiThieu;
-            var description = $"Giảm {value:N0}{(type == KieuGiam.PhanTram ? "%" : "đ")} {(scope == PhamViUuDai.MonAn ? "món áp dụng" : "hóa đơn")}"
+            var description = $"Giảm {(type == KieuGiam.PhanTram ? $"{value:0.#}%" : $"{value:N0}đ")} {(scope == PhamViUuDai.MonAn ? "món áp dụng" : "hóa đơn")}"
                 + (cap.HasValue ? $" · Tối đa {cap:N0}đ" : "") + (minimum > 0 ? $" · Đơn từ {minimum:N0}đ" : "");
             var available = status == "Có thể dùng";
             if (available && v.DiemCanDoi > 0 && !saved.Contains(v.Id)) status = "Có thể đổi điểm";

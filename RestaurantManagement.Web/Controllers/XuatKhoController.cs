@@ -22,13 +22,13 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
 
         if (fromDate.HasValue)
         {
-            var fromOffset = new DateTimeOffset(fromDate.Value.Date);
+            var fromOffset = TableService.VietnamTime(fromDate.Value.Date); // Ngày lọc theo giờ Việt Nam, không phụ thuộc múi giờ máy chủ.
             query = query.Where(x => x.ThoiDiem >= fromOffset);
         }
 
         if (toDate.HasValue)
         {
-            var toOffset = new DateTimeOffset(toDate.Value.Date.AddDays(1).AddTicks(-1));
+            var toOffset = TableService.VietnamTime(toDate.Value.Date.AddDays(1).AddTicks(-1));
             query = query.Where(x => x.ThoiDiem <= toOffset);
         }
 
@@ -82,6 +82,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
         {
             ModelState.AddModelError("", "Vui lòng chọn ít nhất một nguyên liệu cần xuất với số lượng hợp lệ.");
         }
+        if (model.NgayXuat > TableService.VietnamNow.AddMinutes(5))
+            ModelState.AddModelError(nameof(model.NgayXuat), "Ngày xuất không được ở tương lai.");
 
         if (ModelState.IsValid)
         {
