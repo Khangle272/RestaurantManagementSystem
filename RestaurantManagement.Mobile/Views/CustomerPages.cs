@@ -72,7 +72,7 @@ public sealed class CustomerOrdersPage : AppPage
             {
                 new Label { Text = "THÀNH VIÊN", FontSize = 11, CharacterSpacing = 1, TextColor = Color.FromRgba(255, 255, 255, 0.75) },
                 new Label { Text = s.HoTen, FontSize = 20, FontAttributes = FontAttributes.Bold, FontFamily = "OpenSansSemibold", TextColor = Colors.White },
-                new Label { Text = s.SoDienThoai, FontSize = 13, TextColor = Color.FromRgba(255, 255, 255, 0.8) },
+                new Label { Text = s.SoDienThoai, FontSize = 13, TextColor = Color.FromRgba(255, 255, 255, 0.8), IsVisible = !string.IsNullOrWhiteSpace(s.SoDienThoai) },
                 new HorizontalStackLayout
                 {
                     Spacing = 6, Margin = new Thickness(0, 12, 0, 0),

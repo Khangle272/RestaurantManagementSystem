@@ -52,7 +52,11 @@ public sealed class OrderEditorPage : AppPage
         submit = Ui.Primary("Gửi bếp", SubmitAsync);
         cartScroll = new ScrollView { Content = cartList, MaximumHeightRequest = 210 };
         cartToggle.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => { cartExpanded = !cartExpanded; RenderCart(); }) });
-        addressField = Ui.Field("Địa chỉ giao hàng", address);
+        addressField = Ui.Field("Địa chỉ giao hàng *", address);
+        recipient.ReturnType = ReturnType.Next;
+        phone.ReturnType = ReturnType.Next;
+        recipient.Completed += (_, _) => phone.Focus();
+        phone.Completed += (_, _) => { if (delivery) address.Focus(); else note.Focus(); };
 
         // Thông tin đơn mang đi / giao hàng trong thẻ đầu trang.
         var header = Ui.Card(new VerticalStackLayout
@@ -61,7 +65,7 @@ public sealed class OrderEditorPage : AppPage
             Children =
             {
                 Ui.Title("Thông tin đơn", 16), typeChips,
-                Ui.Field("Khách / người nhận", recipient), Ui.Field("Số điện thoại", phone), addressField, Ui.Field("Ghi chú đơn", note)
+                Ui.Field("Khách / người nhận *", recipient), Ui.Field("Số điện thoại *", phone), addressField, Ui.Field("Ghi chú đơn", note)
             }
         }, margin: new Thickness(12, 12, 12, 4));
         header.IsVisible = takeaway;
@@ -264,10 +268,21 @@ public sealed class OrderEditorPage : AppPage
 
     private async Task SubmitAsync()
     {
-        if (tableId is null && existingOrderId is null && delivery && string.IsNullOrWhiteSpace(address.Text))
+        // Đơn mang đi / giao hàng: kiểm tra đủ thông tin trước khi gửi (cùng quy tắc với website), báo một lần mọi mục còn thiếu.
+        if (tableId is null && existingOrderId is null)
         {
-            await Info("Nhập địa chỉ giao hàng.");
-            return;
+            var missing = new List<string>();
+            if (string.IsNullOrWhiteSpace(recipient.Text)) missing.Add("tên khách / người nhận");
+            var digits = new string((phone.Text ?? "").Where(char.IsDigit).ToArray());
+            if (string.IsNullOrWhiteSpace(phone.Text)) missing.Add("số điện thoại");
+            else if (digits.Length is < 9 or > 11) missing.Add("số điện thoại hợp lệ (9–11 chữ số)");
+            if (delivery && string.IsNullOrWhiteSpace(address.Text)) missing.Add("địa chỉ giao hàng");
+            if (missing.Count > 0)
+            {
+                await Info("Vui lòng nhập " + string.Join(", ", missing) + ".");
+                (string.IsNullOrWhiteSpace(recipient.Text) ? recipient : missing.Any(m => m.StartsWith("số")) ? phone : address).Focus();
+                return;
+            }
         }
         var items = cart.Select(x => new OrderItemRequest(x.Dish.Id, x.Size.Id, x.Quantity, x.Note)).ToList();
         OrderCreatedDto? created = null;
@@ -346,7 +361,7 @@ public sealed class OrderDetailPage : AppPage
                 new Grid
                 {
                     ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) }, ColumnSpacing = 8,
-                    Children = { Ui.Title($"{o.Ban} · {o.LoaiDonText}", 18), Ui.Badge(o.TrangThai, o.TrangThaiText).Column(1) }
+                    Children = { Ui.Title(Ui.OrderHeading(o.Ban, o.LoaiDon, o.LoaiDonText), 18), Ui.Badge(o.TrangThai, o.TrangThaiText).Column(1) }
                 },
                 Ui.Muted(o.MaHoaDon + (o.PhuongThucDaTra is null ? "" : $" · {o.PhuongThucDaTra}")),
                 Ui.Body(string.Join(" · ", new[] { o.KhachHang, o.SoDienThoai }.Where(x => !string.IsNullOrWhiteSpace(x))) is { Length: > 0 } who ? "👤 " + who : "", 13),
@@ -413,7 +428,7 @@ public sealed class OrderDetailPage : AppPage
                     Text = line.TenMon + (string.IsNullOrWhiteSpace(line.TenSize) || line.TenSize == "Mặc định" ? "" : $" ({line.TenSize})"), FontSize = 15, FontAttributes = FontAttributes.Bold,
                     TextDecorations = cancelled ? TextDecorations.Strikethrough : TextDecorations.None
                 }.Fg(cancelled ? Ui.MutedText : Ui.Text),
-                Ui.Muted($"{ApiClient.Money(line.SoLuong * line.DonGia)} · gọi lúc {VnTime.NgayGio(line.ThoiDiemGoi)}", 12),
+                Ui.Muted($"{ApiClient.Money(line.SoLuong * line.DonGia)} · gọi lúc {Ui.WhenShort(line.ThoiDiemGoi)}", 12),
                 new Label { Text = line.GhiChu is null ? "" : "✎ " + line.GhiChu, FontSize = 12, FontAttributes = FontAttributes.Italic, IsVisible = line.GhiChu is not null }.Fg(Ui.Warning)
             }
         };
@@ -453,13 +468,30 @@ public sealed class OrderDetailPage : AppPage
         PaymentRequest request;
         if (method == "💵 Tiền mặt")
         {
-            var given = await DisplayPromptAsync("Tiền mặt", $"Phải thu {ApiClient.Money(o.PhaiThu)}. Nhập số tiền khách đưa:",
-                "Xác nhận", "Hủy", keyboard: Keyboard.Numeric, initialValue: o.PhaiThu.ToString("0", CultureInfo.InvariantCulture));
-            if (given is null) return;
-            if (!decimal.TryParse(given.Replace(".", "").Replace(",", "").Replace(" ", ""), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount))
+            decimal amount;
+            var initial = o.PhaiThu.ToString("0", CultureInfo.InvariantCulture);
+            // Hỏi lại tới khi số tiền hợp lệ và đủ, giữ số vừa nhập để sửa; nhận cả kiểu viết tắt "500k".
+            while (true)
             {
-                await Info("Số tiền không hợp lệ.");
-                return;
+                var given = await DisplayPromptAsync("Tiền mặt", $"Phải thu {ApiClient.Money(o.PhaiThu)}. Nhập số tiền khách đưa (có thể viết 500k):",
+                    "Xác nhận", "Hủy", keyboard: Keyboard.Text, initialValue: initial);
+                if (given is null) return;
+                initial = given;
+                var text = given.Trim().ToLowerInvariant().Replace(".", "").Replace(",", "").Replace(" ", "").Replace("đ", "");
+                var thousands = text.EndsWith('k');
+                if (thousands) text = text[..^1];
+                if (!decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out amount) || amount <= 0)
+                {
+                    await Info("Số tiền không hợp lệ. Nhập số, ví dụ 500000 hoặc 500k.");
+                    continue;
+                }
+                if (thousands) amount *= 1000;
+                if (amount < o.PhaiThu)
+                {
+                    await Info($"Khách đưa {ApiClient.Money(amount)}, còn thiếu {ApiClient.Money(o.PhaiThu - amount)}.");
+                    continue;
+                }
+                break;
             }
             request = new PaymentRequest("TienMat", amount, o.PhaiThu, null, o.RowVersion, o.BookingRowVersion);
         }

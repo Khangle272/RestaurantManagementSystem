@@ -43,6 +43,14 @@ public static class Ui
         _ => (Neutral, NeutralSoft)
     };
 
+    // Tiêu đề đơn: "Bàn SV01" cho đơn tại bàn, "Mang đi" / "Giao hàng" cho đơn khác (không lặp "Mang đi · Mang đi").
+    public static string OrderHeading(string ban, string loaiDon, string loaiDonText) =>
+        loaiDon == "TaiBan" ? (ban == loaiDonText ? loaiDonText : $"Bàn {ban}") : loaiDonText;
+
+    // Giờ gọi món: trong ngày chỉ hiện giờ, ngày khác hiện đủ ngày giờ.
+    public static string WhenShort(DateTimeOffset value) =>
+        Shared.VnTime.Local(value).Date == Shared.VnTime.Local(DateTimeOffset.UtcNow).Date ? Shared.VnTime.Gio(value) : Shared.VnTime.NgayGio(value);
+
     // ----- Chữ -----
     public static Label Title(string text, double size = 18) =>
         new Label { Text = text, FontSize = size, FontFamily = "OpenSansSemibold", FontAttributes = FontAttributes.Bold, LineBreakMode = LineBreakMode.TailTruncation }.Fg(Text);

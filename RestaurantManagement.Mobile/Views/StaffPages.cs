@@ -48,6 +48,8 @@ public sealed class TablesPage : AppPage
     {
         list.Children.Clear();
         if (tables.Count == 0) { list.Children.Add(Ui.Empty("🪑", "Chưa có bàn nào", "Quản lý thêm bàn trên website.")); return; }
+        // Sau khi tự làm mới, trạng thái đang lọc có thể không còn bàn nào (ví dụ bàn chờ dọn vừa dọn xong): quay về Tất cả.
+        if (filter is not null && tables.All(x => x.TrangThai != filter)) filter = null;
 
         // Chip lọc: Tất cả + từng trạng thái kèm số lượng.
         var chips = new List<View> { Ui.Chip($"Tất cả · {tables.Count}", filter is null, () => { filter = null; Render(); }) };
@@ -58,7 +60,20 @@ public sealed class TablesPage : AppPage
         // Nhắc món đã nấu xong đang chờ mang ra.
         var ready = tables.Where(x => x.MonSanSang > 0).ToList();
         if (ready.Count > 0)
-            list.Children.Add(Ui.Banner($"🔔 {ready.Sum(x => x.MonSanSang)} món sẵn sàng chờ mang ra: {string.Join(", ", ready.Select(x => x.MaBan))}", Ui.Info, Ui.InfoSoft));
+        {
+            // Chạm thanh nhắc: một bàn thì mở thẳng đơn của bàn đó, nhiều bàn thì lọc các bàn đang phục vụ.
+            var banner = Ui.Banner($"🔔 {ready.Sum(x => x.MonSanSang)} món sẵn sàng chờ mang ra: {string.Join(", ", ready.Select(x => x.MaBan))} ›", Ui.Info, Ui.InfoSoft);
+            banner.GestureRecognizers.Add(new TapGestureRecognizer
+            {
+                Command = new Command(async () =>
+                {
+                    if (ready.Count == 1 && ready[0].HoaDonId is int orderId) { await Navigation.PushAsync(new OrderDetailPage(orderId, staff: true)); return; }
+                    filter = "DangPhucVu";
+                    Render();
+                })
+            });
+            list.Children.Add(banner);
+        }
 
         var shown = tables.Where(x => filter is null || x.TrangThai == filter).ToList();
         foreach (var area in shown.GroupBy(x => (x.Tang, x.KhuVuc)))
@@ -127,7 +142,19 @@ public sealed class TablesPage : AppPage
             if (user.CanServe) options.Add("Kết thúc phục vụ");
         }
         else if (t.TrangThai == "CanDon" && user.CanServe) options.Add("Đã dọn xong");
-        if (options.Count == 0) { await Info($"{t.MaBan}: {t.TrangThaiText}." + (t.LichSapToi is null ? "" : $" Lịch sắp tới {t.LichSapToi}.")); return; }
+        if (options.Count == 0)
+        {
+            // Giải thích vì sao bàn chưa có thao tác và bước tiếp theo, thay vì chỉ nhắc lại trạng thái.
+            var next = t.TrangThai switch
+            {
+                "Trong" => $"Bàn {t.SoCho} chỗ đang trống. Khách đến trực tiếp: tiếp tân nhận khách trên website (Đặt bàn cho khách), sau đó gọi món tại đây.",
+                "DaDat" => "Bàn đã được giữ cho lịch đặt. Khi khách đến, nhận bàn ở tab Đặt bàn (tiếp tân) hoặc trên website.",
+                "CanDon" => "Bàn đang chờ dọn. Bồi bàn hoặc quản lý báo đã dọn xong để bàn sẵn sàng.",
+                _ => $"Trạng thái: {t.TrangThaiText}."
+            };
+            await DisplayAlertAsync($"Bàn {t.MaBan} · {t.TrangThaiText}", next + (t.LichSapToi is null ? "" : $"\nLịch sắp tới: {t.LichSapToi}."), "Đóng");
+            return;
+        }
 
         var choice = await DisplayActionSheetAsync($"Bàn {t.MaBan} · {t.TrangThaiText}", "Đóng", null, options.ToArray());
         switch (choice)
@@ -186,12 +213,15 @@ public sealed class OpenOrdersPage : AppPage
     private void Render()
     {
         list.Children.Clear();
-        if (orders.Count == 0) { list.Children.Add(Ui.Empty("🧾", "Không có đơn nào đang mở", "Đơn tại bàn được tạo khi gọi món từ sơ đồ bàn.")); return; }
+        if (orders.Count == 0) { list.Children.Add(Ui.Empty("🧾", "Không có đơn nào đang mở", "Đơn tại bàn được tạo khi gọi món từ sơ đồ bàn.")); list.Children.Add(Stamp); return; }
+        if (filter is not null && orders.All(x => x.LoaiDon != filter)) filter = null;
         var chips = new List<View> { Ui.Chip($"Tất cả · {orders.Count}", filter is null, () => { filter = null; Render(); }) };
         foreach (var g in orders.GroupBy(x => (x.LoaiDon, x.LoaiDonText)))
             chips.Add(Ui.Chip($"{g.Key.LoaiDonText} · {g.Count()}", filter == g.Key.LoaiDon, () => { filter = g.Key.LoaiDon; Render(); }));
         list.Children.Add(Ui.ChipRow(chips));
-        foreach (var order in orders.Where(x => filter is null || x.LoaiDon == filter)) list.Children.Add(OrderCard(order, staff: true, Navigation));
+        // Đơn mới nhất lên đầu; đơn có món sẵn sàng chờ mang ra được ưu tiên.
+        foreach (var order in orders.Where(x => filter is null || x.LoaiDon == filter).OrderByDescending(x => x.MonSanSang > 0).ThenByDescending(x => x.ThoiDiemLap))
+            list.Children.Add(OrderCard(order, staff: true, Navigation));
         list.Children.Add(Stamp);
     }
 
@@ -221,7 +251,7 @@ public sealed class OpenOrdersPage : AppPage
                 {
                     ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
                     ColumnSpacing = 8,
-                    Children = { Ui.Title($"{o.Ban} · {o.LoaiDonText}", 16), Ui.Badge(o.TrangThai, o.TrangThaiText).Column(1) }
+                    Children = { Ui.Title(Ui.OrderHeading(o.Ban, o.LoaiDon, o.LoaiDonText), 16), Ui.Badge(o.TrangThai, o.TrangThaiText).Column(1) }
                 },
                 Ui.Muted($"{o.MaHoaDon} · {VnTime.NgayGio(o.ThoiDiemLap)}" + (o.KhachHang is null ? "" : $" · {o.KhachHang}")),
                 Ui.Divider(),
@@ -256,8 +286,10 @@ public sealed class ReservationsPage : AppPage
         if (!await RunAsync(async () => bookings = await ApiClient.Current.ReservationsAsync()) || !Changed(bookings)) return;
         list.Children.Clear();
         list.Children.Add(Ui.Section("Cần xử lý", $"{bookings.Count} lịch"));
-        list.Children.Add(Ui.Muted("Yêu cầu chờ xác nhận và lịch hôm nay chưa nhận bàn. Chạm vào lịch để xếp bàn hoặc nhận bàn.").Margin(16, 0));
-        if (bookings.Count == 0) list.Children.Add(Ui.Empty("📅", "Không có lịch cần xử lý"));
+        if (bookings.Count == 0)
+            list.Children.Add(Ui.Empty("📅", "Không có lịch cần xử lý", "Yêu cầu đặt bàn mới và lịch hôm nay sẽ hiện ở đây."));
+        else
+            list.Children.Add(Ui.Muted("Yêu cầu chờ xác nhận và lịch hôm nay chưa nhận bàn. Chạm vào lịch để xếp bàn hoặc nhận bàn.").Margin(16, 0));
         foreach (var b in bookings.OrderBy(x => x.GioDen)) list.Children.Add(Tappable(BookingCard(b), () => OpenAsync(b)));
         list.Children.Add(Stamp);
     }

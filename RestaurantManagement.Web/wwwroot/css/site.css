@@ -154,6 +154,13 @@ a { text-underline-offset: 3px; }
 .restaurant-footer { padding: 29px 0; border-top: 1px solid var(--line); background: #fff; color: #667c6c; font-size: .88rem; }
 .restaurant-footer strong { color: var(--forest); }
 .restaurant-footer a { color: #587260; }
+.restaurant-footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 20px 32px; align-items: start; }
+.restaurant-footer-label { display: block; margin-bottom: 4px; color: var(--forest); font-weight: 700; }
+.restaurant-footer-links { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: flex-end; }
+.restaurant-footer-links a { text-decoration: none; }
+.restaurant-footer-links a:hover { text-decoration: underline; }
+.restaurant-footer-copy { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: .8rem; }
+@media (max-width: 767.98px) { .restaurant-footer-grid { grid-template-columns: 1fr; } .restaurant-footer-links { justify-content: flex-start; } }
 @media (max-width: 1000px) {
   .restaurant-hero { grid-template-columns: 55% 45%; }
   .restaurant-hero-copy { padding: 40px; }
@@ -269,3 +276,11 @@ body:has(.cart-launcher) .restaurant-main { padding-bottom: 5rem; }
 .order-summary dd { margin: 0; font-weight: 600; text-align: right; }
 .order-summary .is-total { border-top: 1px dashed var(--line); margin-top: .25rem; padding-top: .6rem; }
 .order-summary .is-total dd { font-size: 1.15rem; color: var(--forest); }
+
+/* Nhãn trạng thái trên trang khách (trước đây chỉ có ở giao diện quản trị nên chữ trắng bị chìm trên nền trong suốt). */
+.badge-status-success, .badge-status-warning, .badge-status-danger, .badge-status-muted, .badge-status-info { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; border-radius: 9999px; }
+.badge-status-success { background: #DCFCE7; color: #166534; }
+.badge-status-warning { background: #FEF3C7; color: #92400E; }
+.badge-status-danger { background: #FEE2E2; color: #991B1B; }
+.badge-status-muted { background: #E2E8F0; color: #475569; }
+.badge-status-info { background: #DBEAFE; color: #1E40AF; }

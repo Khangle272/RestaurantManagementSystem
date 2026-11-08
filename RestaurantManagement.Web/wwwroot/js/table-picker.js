@@ -99,6 +99,8 @@
         } finally { board.removeAttribute('aria-busy'); }
     }
 
+    // Giỏ món có thể đã tính cọc trước khi file này tải xong (khi đó hiện "0 đ"): tính lại ngay theo bàn đang chọn.
+    updateDeposit();
     form.addEventListener('slots:refreshed', load);
     area?.addEventListener('change', () => { selected.value = ''; });
     document.addEventListener('cart:changed', updateDeposit);

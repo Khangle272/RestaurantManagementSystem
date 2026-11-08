@@ -57,7 +57,9 @@ public sealed class AccountPage : AppPage
     public AccountPage() : base("Tài khoản")
     {
         var user = ApiClient.Current.User!;
-        var initials = string.Concat(user.HoTen.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2).Select(w => char.ToUpperInvariant(w[0])));
+        // Bỏ các từ không bắt đầu bằng chữ cái (ví dụ "(demo)") để ảnh đại diện không thành "A(".
+        var initials = string.Concat(user.HoTen.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => char.IsLetter(w[0])).TakeLast(2).Select(w => char.ToUpperInvariant(w[0])));
+        if (initials.Length == 0) initials = "?";
 
         var profile = Ui.Card(new Grid
         {

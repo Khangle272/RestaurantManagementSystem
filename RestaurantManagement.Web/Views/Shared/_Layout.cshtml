@@ -65,7 +65,18 @@
     @if (showCart) { <partial name="_CustomerCart" /> }
     @RenderBody()
 </main>
-<footer class="restaurant-footer"><div class="restaurant-shell d-flex justify-content-between flex-wrap gap-2"><strong>Nhà hàng</strong><span>&copy; @RestaurantManagement.Web.Services.TableService.VietnamNow.Year · Món ngon cho mọi cuộc gặp gỡ</span></div></footer>
+<footer class="restaurant-footer">
+    <div class="restaurant-shell restaurant-footer-grid">
+        <div><strong>Nhà hàng</strong><p class="mb-0">Món ngon cho mọi cuộc gặp gỡ.</p></div>
+        <div><span class="restaurant-footer-label"><i class="bi bi-clock" aria-hidden="true"></i> Giờ phục vụ</span><p class="mb-0">Hằng ngày @RestaurantManagement.Web.Services.ReservationSchedule.ServiceHours</p></div>
+        <nav aria-label="Liên kết cuối trang" class="restaurant-footer-links">
+            <a asp-controller="Home" asp-action="Index" asp-fragment="thuc-don">Thực đơn</a>
+            @if (User.Identity?.IsAuthenticated != true || User.IsInRole("KhachHang")) { <a asp-controller="DatBan" asp-action="Index" asp-route-cart="new">Đặt bàn</a> }
+            @if (User.Identity?.IsAuthenticated != true) { <a asp-controller="Admin" asp-action="Index">Nhân viên đăng nhập</a> }
+        </nav>
+    </div>
+    <div class="restaurant-shell restaurant-footer-copy">&copy; @RestaurantManagement.Web.Services.TableService.VietnamNow.Year Nhà hàng</div>
+</footer>
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/vn-time.js" asp-append-version="true"></script>
