@@ -484,7 +484,10 @@ try
     Check(!await db.MonAn.AnyAsync(x => x.Id == comboId), "Combo deletion removes the set");
     await BlockDelete("NguyenLieu", ingredientId);
     var ingredientEdit = await Get($"/NguyenLieu/Edit/{ingredientId}");
-    await Post($"/NguyenLieu/Edit/{ingredientId}", ingredientEdit, new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["DonViTinh"] = "kg" }, false, "Không thể đổi đơn vị");
+    // Đơn vị tính được phép sửa cả khi nguyên liệu đã có công thức (sửa đơn vị nhập sai); đổi rồi trả lại để các bước sau không bị ảnh hưởng.
+    await Post($"/NguyenLieu/Edit/{ingredientId}", ingredientEdit, new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["DonViTinh"] = "kg" }, true);
+    Check(await db.NguyenLieu.AsNoTracking().AnyAsync(x => x.Id == ingredientId && x.DonViTinh == "kg"), "Ingredient unit can be edited even when used in a recipe");
+    await Post($"/NguyenLieu/Edit/{ingredientId}", await Get($"/NguyenLieu/Edit/{ingredientId}"), new(ingredientFields) { ["Id"] = ingredientId.ToString() }, true);
     var dishEdit = await Get($"/MonAn/Edit/{dishId}");
     var changedDish = new Dictionary<string, string>(dishFields)
     {
