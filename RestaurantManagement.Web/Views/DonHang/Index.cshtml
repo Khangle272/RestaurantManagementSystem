@@ -5,6 +5,7 @@
     ViewData["Title"] = "Quản lý đơn hàng";
     var canPay = User.IsInRole("Admin") || User.IsInRole("ThuNgan") || User.IsInRole("BoiBan");
     var canOrder = User.IsInRole("Admin") || User.IsInRole("BoiBan") || User.IsInRole("TiepTan"); // Thu ngân không gọi món.
+    var canOrderDineIn = RestaurantManagement.Web.Security.AppRoles.CanOrderDineIn(User); // Tiếp tân chỉ mang đi / giao hàng.
 }
 
 <div class="container-fluid py-4">
@@ -188,7 +189,7 @@
                                 </a>
                                 @if (order.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
                                 {
-                                    @if (canOrder)
+                                    @if (canOrder && (canOrderDineIn || order.LoaiDonHang != LoaiDonHang.TaiBan))
                                     {
                                     <a asp-action="AddDishes" asp-route-id="@order.Id" class="btn btn-outline-secondary" title="Gọi thêm món vào đơn">
                                         + Món

@@ -116,6 +116,14 @@ public static class MobileApiSmoke
             check(early.StatusCode == HttpStatusCode.Conflict, "API refuses to serve a dish the kitchen has not finished");
         using (var cashierAdd = await cashier.PostAsJsonAsync($"/api/staff/orders/{billId}/items", new AddItemsRequest([])))
             check(cashierAdd.StatusCode == HttpStatusCode.Forbidden, "API does not let cashiers take or add orders");
+        using (var receptionAdd = await reception.PostAsJsonAsync($"/api/staff/orders/{billId}/items", new AddItemsRequest([new(dish.Id, size.Id, 1, null)])))
+            check(receptionAdd.StatusCode == HttpStatusCode.Forbidden, "API does not let reception add dishes to a dine-in order");
+        using (var receptionDineIn = await reception.PostAsJsonAsync("/api/staff/orders",
+            new CreateOrderRequest("TaiBan", seated.Id, null, null, null, null, [new(dish.Id, size.Id, 1, null)])))
+            check(receptionDineIn.StatusCode == HttpStatusCode.Forbidden, "API does not let reception take dine-in orders");
+        using (var receptionTakeaway = await reception.PostAsJsonAsync("/api/staff/orders",
+            new CreateOrderRequest("MangDi", null, "MAPI lễ tân mang đi", "0901111222", null, null, [new(dish.Id, size.Id, 1, null)])))
+            check(receptionTakeaway.StatusCode == HttpStatusCode.OK, "API lets reception take takeaway orders");
         using (var cashierServe =await cashier.PostAsJsonAsync($"/api/staff/orders/{billId}/lines/{lines[0].Id}", new UpdateLineRequest("DaPhucVu")))
             check(cashierServe.StatusCode == HttpStatusCode.Forbidden, "API lets only waiters/admins update dish service");
         await db.ChiTietHoaDon.Where(x => x.HoaDonId == billId).ExecuteUpdateAsync(x => x.SetProperty(c => c.TrangThai, TrangThaiCheBien.SanSang));

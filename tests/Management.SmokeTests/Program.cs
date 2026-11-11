@@ -331,6 +331,12 @@ try
         await CheckAccess(roleClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, role + " denied account administration");
         if (role != "ThuNgan")
             await CheckAccess(roleClient, "/HoaDon", HttpStatusCode.Redirect, role + " denied invoices");
+        if (role == "TiepTan")
+        {
+            var orderPage = await roleClient.GetStringAsync("/DonHang/Create");
+            Check(!orderPage.Contains("id=\"type-dinein\"") && orderPage.Contains("id=\"type-takeaway\"") && orderPage.Contains("id=\"type-delivery\""),
+                "Reception order page offers only takeaway / delivery, not dine-in");
+        }
         if (role == "ThuNgan")
         {
             Check(!workspace.Contains("href=\"/DonHang/Create\""), "Cashier menu does not offer order taking");

@@ -84,7 +84,8 @@ public sealed class AccountPage : AppPage
             ? new[] { ("Theo dõi đơn và tiến độ món", true), ("Lịch sử mua hàng", true), ("Lịch sử tích điểm", true) }
             : new[]
             {
-                ("Xem sơ đồ bàn, gọi món, tạo đơn mang đi", user.CanOrder),
+                ("Tạo đơn mang đi / giao hàng", user.CanOrder),
+                ("Gọi món tại bàn", user.CanOrder && user.CanServe),
                 ("Mang món ra, hủy món, kết thúc phục vụ, dọn bàn", user.CanServe),
                 ("Thanh toán tiền mặt / chuyển khoản", user.CanPay),
                 ("Xếp bàn và nhận bàn cho lịch đặt", user.CanReceive)

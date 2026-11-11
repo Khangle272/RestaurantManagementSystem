@@ -138,7 +138,8 @@ public sealed class TablesPage : AppPage
         if (t.TrangThai == "DangPhucVu")
         {
             if (t.HoaDonId is not null) options.Add("Xem đơn hàng");
-            if (user.CanOrder) options.Add(t.HoaDonId is null ? "Gọi món" : "Gọi thêm món");
+            // Gọi món tại bàn: phục vụ / quản lý (CanServe). Tiếp tân chỉ tạo đơn mang đi / giao hàng.
+            if (user.CanOrder && user.CanServe) options.Add(t.HoaDonId is null ? "Gọi món" : "Gọi thêm món");
             if (user.CanServe) options.Add("Kết thúc phục vụ");
         }
         else if (t.TrangThai == "CanDon" && user.CanServe) options.Add("Đã dọn xong");

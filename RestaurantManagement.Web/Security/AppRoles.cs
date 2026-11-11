@@ -12,6 +12,9 @@ public static class AppRoles
     public const string NhanVien = Admin + "," + TiepTan + "," + BoiBan + "," + ThuNgan + "," + Bep + "," + Kho;
     // Được ghi nhận gọi món / gọi thêm món. Thu ngân không gọi món, chỉ xem đơn và thanh toán.
     public const string GoiMon = Admin + "," + TiepTan + "," + BoiBan;
+    // Gọi món tại bàn: phục vụ và quản lý. Tiếp tân chỉ nhận đơn mang đi / giao hàng ở quầy và qua điện thoại.
+    public static bool CanOrderDineIn(System.Security.Claims.ClaimsPrincipal user) => user.IsInRole(Admin) || user.IsInRole(BoiBan);
+    public const string DineInOnlyMessage = "Tiếp tân chỉ nhận đơn mang đi / giao hàng. Gọi món tại bàn do phục vụ thực hiện.";
     public static readonly string[] All =[Admin, KhachHang, TiepTan, BoiBan, ThuNgan, Bep, Kho];
     public static readonly string[] AssignableStaff = [TiepTan, BoiBan, ThuNgan, Bep, Kho];
     public static string Label(string? role) => role switch

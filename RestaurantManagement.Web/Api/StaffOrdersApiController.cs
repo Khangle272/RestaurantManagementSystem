@@ -54,6 +54,8 @@ public class StaffOrdersApiController(RestaurantDbContext db, UserManager<TaiKho
     {
         if (!Enum.TryParse<LoaiDonHang>(request.LoaiDonHang, true, out var type) || !Enum.IsDefined(type))
             return Fail("Loại đơn hàng không hợp lệ.");
+        if (type == LoaiDonHang.TaiBan && !AppRoles.CanOrderDineIn(User))
+            return Fail(AppRoles.DineInOnlyMessage, StatusCodes.Status403Forbidden);
         if (await CurrentStaffIdAsync() is not int staffId)
             return Fail("Tài khoản hiện tại chưa được liên kết với hồ sơ nhân viên đang làm việc.", StatusCodes.Status403Forbidden);
         var (error, billId) = await orders.CreateOrderAsync(new OrderCreateViewModel
@@ -70,6 +72,8 @@ public class StaffOrdersApiController(RestaurantDbContext db, UserManager<TaiKho
     [HttpPost("orders/{id:int}/items"), Authorize(Roles = MobileApi.OrderRoles)]
     public async Task<IActionResult> AddItems(int id, AddItemsRequest request)
     {
+        if (!AppRoles.CanOrderDineIn(User) && await Db.HoaDon.AnyAsync(x => x.Id == id && x.LoaiDonHang == LoaiDonHang.TaiBan))
+            return Fail(AppRoles.DineInOnlyMessage, StatusCodes.Status403Forbidden);
         var (error, billId) = await orders.AddDishesAsync(id, Items(request.Items));
         return error is not null ? Fail(error)
             : Ok(new OrderCreatedDto(billId!.Value, WithStockWarning("Đã gọi thêm món và gửi vào bếp.")));

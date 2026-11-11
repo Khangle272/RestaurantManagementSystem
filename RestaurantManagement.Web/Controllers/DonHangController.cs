@@ -12,7 +12,7 @@ using RestaurantManagement.Shared;
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.Admin + "," + AppRoles.BoiBan + "," + AppRoles.ThuNgan + "," + AppRoles.TiepTan)]
-// Thu ngân chỉ xem đơn và thanh toán; gọi món / gọi thêm món dành cho phục vụ, tiếp tân, quản lý.
+// Thu ngân chỉ xem đơn và thanh toán. Phục vụ, quản lý gọi mọi loại đơn; tiếp tân chỉ đơn mang đi / giao hàng.
 public class DonHangController(
     RestaurantDbContext db,
     OrderService orderService,
@@ -140,8 +140,17 @@ public class DonHangController(
     {
         ViewData["ActiveMenu"] = "DonHang";
         ViewData["AutoCollapseSidebar"] = true;
-        var model = await orderService.PrepareCreateViewModelAsync(banAnId);
-        return View(model);
+        var model = await orderService.PrepareCreateViewModelAsync(AppRoles.CanOrderDineIn(User) ? banAnId : null);
+        return View(ForRole(model));
+    }
+
+    // Tiếp tân không gọi món tại bàn: mở sẵn đơn mang đi, ẩn lựa chọn "Tại bàn".
+    private OrderCreateViewModel ForRole(OrderCreateViewModel model)
+    {
+        var dineIn = AppRoles.CanOrderDineIn(User);
+        ViewData["CanOrderDineIn"] = dineIn;
+        if (!dineIn && model.LoaiDonHang == LoaiDonHang.TaiBan) { model.LoaiDonHang = LoaiDonHang.MangDi; model.BanAnId = null; model.DatBanId = null; }
+        return model;
     }
 
     [Authorize(Roles = AppRoles.GoiMon)]
@@ -157,7 +166,9 @@ public class DonHangController(
             return RedirectToAction(nameof(Create));
         }
 
-        var (error, hoaDonId) = await orderService.CreateOrderAsync(model, staffId.Value);
+        var (error, hoaDonId) = model.LoaiDonHang == LoaiDonHang.TaiBan && !AppRoles.CanOrderDineIn(User)
+            ? (AppRoles.DineInOnlyMessage, null)
+            : await orderService.CreateOrderAsync(model, staffId.Value);
         if (error != null)
         {
             TempData["Error"] = error;
@@ -167,7 +178,7 @@ public class DonHangController(
             prep.SoDienThoaiNhan = model.SoDienThoaiNhan;
             prep.DiaChiGiaoHang = model.DiaChiGiaoHang;
             prep.GhiChuDonHang = model.GhiChuDonHang;
-            return View(prep);
+            return View(ForRole(prep));
         }
 
         TempData["Success"] = "Đã ghi nhận gọi món thành công và gửi thông tin chế biến vào bếp.";
@@ -209,6 +220,11 @@ public class DonHangController(
             TempData["Error"] = "Đơn hàng đã thanh toán hoặc đã hủy, không thể gọi thêm món.";
             return RedirectToAction(nameof(Details), new { id });
         }
+        if (invoice.LoaiDonHang == LoaiDonHang.TaiBan && !AppRoles.CanOrderDineIn(User))
+        {
+            TempData["Error"] = AppRoles.DineInOnlyMessage;
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         var prep = await orderService.PrepareCreateViewModelAsync();
         prep.LoaiDonHang = invoice.LoaiDonHang;
@@ -244,7 +260,9 @@ public class DonHangController(
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AddDishes(int id, List<OrderItemInputModel> items)
     {
-        var (error, _) = await orderService.AddDishesAsync(id, items);
+        var dineInBlocked = !AppRoles.CanOrderDineIn(User)
+            && await db.HoaDon.AnyAsync(x => x.Id == id && x.LoaiDonHang == LoaiDonHang.TaiBan);
+        var (error, _) = dineInBlocked ? (AppRoles.DineInOnlyMessage, null) : await orderService.AddDishesAsync(id, items);
         if (error != null)
         {
             if (IsAjaxRequest) return Conflict(new { ok = false, message = error });
