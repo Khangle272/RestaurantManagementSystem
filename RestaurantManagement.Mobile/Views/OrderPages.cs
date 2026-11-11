@@ -405,7 +405,7 @@ public sealed class OrderDetailPage : AppPage
         actionBar.Children.Clear();
         actionBar.ColumnDefinitions.Clear();
         var buttons = new List<Button>();
-        if (staff && o.CoTheGoiThem) buttons.Add(Ui.Outline("Gọi thêm món", () => Navigation.PushAsync(new OrderEditorPage(null, o.Ban, o.Id))));
+        if (staff && o.CoTheGoiThem && user.CanOrder) buttons.Add(Ui.Outline("Gọi thêm món", () => Navigation.PushAsync(new OrderEditorPage(null, o.Ban, o.Id))));
         if (staff && o.CoTheThanhToan && user.CanPay) buttons.Add(Ui.Primary($"Thanh toán {ApiClient.Money(o.PhaiThu)}", () => PayAsync(o)));
         for (var i = 0; i < buttons.Count; i++)
         {

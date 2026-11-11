@@ -49,7 +49,7 @@ public class StaffOrdersApiController(RestaurantDbContext db, UserManager<TaiKho
         await LoadOrderAsync(id, null, staff: true, orders, promotions) is { } order
             ? order : NotFound(new ApiError("Không tìm thấy đơn hàng."));
 
-    [HttpPost("orders")]
+    [HttpPost("orders"), Authorize(Roles = MobileApi.OrderRoles)]
     public async Task<IActionResult> Create(CreateOrderRequest request)
     {
         if (!Enum.TryParse<LoaiDonHang>(request.LoaiDonHang, true, out var type) || !Enum.IsDefined(type))
@@ -67,7 +67,7 @@ public class StaffOrdersApiController(RestaurantDbContext db, UserManager<TaiKho
             : Ok(new OrderCreatedDto(billId!.Value, WithStockWarning("Đã ghi nhận gọi món và gửi vào bếp.")));
     }
 
-    [HttpPost("orders/{id:int}/items")]
+    [HttpPost("orders/{id:int}/items"), Authorize(Roles = MobileApi.OrderRoles)]
     public async Task<IActionResult> AddItems(int id, AddItemsRequest request)
     {
         var (error, billId) = await orders.AddDishesAsync(id, Items(request.Items));

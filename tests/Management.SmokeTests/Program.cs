@@ -333,7 +333,10 @@ try
             await CheckAccess(roleClient, "/HoaDon", HttpStatusCode.Redirect, role + " denied invoices");
         if (role == "ThuNgan")
         {
-            var size = await db.MonAnSize.AsNoTracking().FirstAsync();
+            Check(!workspace.Contains("href=\"/DonHang/Create\""), "Cashier menu does not offer order taking");
+            await CheckAccess(roleClient, "/DonHang/Create", HttpStatusCode.Redirect, "Cashier cannot take orders");
+            await CheckAccess(roleClient, "/DonHang", HttpStatusCode.OK, "Cashier still views order list");
+            var size =await db.MonAnSize.AsNoTracking().FirstAsync();
             var bill = new HoaDon
             {
                 MaHoaDon = "HD-AUTH-TEST", ThoiDiemLap = DateTimeOffset.UtcNow,

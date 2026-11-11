@@ -138,7 +138,7 @@ public sealed class TablesPage : AppPage
         if (t.TrangThai == "DangPhucVu")
         {
             if (t.HoaDonId is not null) options.Add("Xem đơn hàng");
-            options.Add(t.HoaDonId is null ? "Gọi món" : "Gọi thêm món");
+            if (user.CanOrder) options.Add(t.HoaDonId is null ? "Gọi món" : "Gọi thêm món");
             if (user.CanServe) options.Add("Kết thúc phục vụ");
         }
         else if (t.TrangThai == "CanDon" && user.CanServe) options.Add("Đã dọn xong");
@@ -188,6 +188,8 @@ public sealed class OpenOrdersPage : AppPage
     {
         var takeaway = Ui.Primary("+  Tạo đơn mang đi / giao hàng", () => Navigation.PushAsync(new OrderEditorPage(null, null, null)));
         takeaway.Margin = new Thickness(12, 12, 12, 0);
+        // Thu ngân không gọi món: chỉ xem đơn và thanh toán.
+        takeaway.IsVisible = ApiClient.Current.User!.CanOrder;
         SetBody(new Grid
         {
             RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star) },

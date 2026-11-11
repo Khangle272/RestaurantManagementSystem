@@ -15,7 +15,8 @@ public static class MobileApi
 
     // Vai trò dùng được app: phục vụ tại nhà hàng và khách hàng. Bếp/Kho làm việc trên website.
     public const string StaffRoles = AppRoles.Admin + "," + AppRoles.TiepTan + "," + AppRoles.BoiBan + "," + AppRoles.ThuNgan;
-    public const string OrderRoles = StaffRoles;
+    // Thu ngân không gọi món (chỉ xem đơn, thanh toán).
+    public const string OrderRoles = AppRoles.GoiMon;
     public const string ServeRoles = AppRoles.Admin + "," + AppRoles.BoiBan;
     public const string PayRoles = AppRoles.Admin + "," + AppRoles.ThuNgan + "," + AppRoles.BoiBan;
     public const string ReceptionRoles = AppRoles.Admin + "," + AppRoles.TiepTan;

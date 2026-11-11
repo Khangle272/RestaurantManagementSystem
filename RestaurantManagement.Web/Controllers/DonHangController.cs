@@ -12,6 +12,7 @@ using RestaurantManagement.Shared;
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = AppRoles.Admin + "," + AppRoles.BoiBan + "," + AppRoles.ThuNgan + "," + AppRoles.TiepTan)]
+// Thu ngân chỉ xem đơn và thanh toán; gọi món / gọi thêm món dành cho phục vụ, tiếp tân, quản lý.
 public class DonHangController(
     RestaurantDbContext db,
     OrderService orderService,
@@ -134,6 +135,7 @@ public class DonHangController(
         return View(model);
     }
 
+    [Authorize(Roles = AppRoles.GoiMon)]
     public async Task<IActionResult> Create(int? banAnId = null)
     {
         ViewData["ActiveMenu"] = "DonHang";
@@ -142,6 +144,7 @@ public class DonHangController(
         return View(model);
     }
 
+    [Authorize(Roles = AppRoles.GoiMon)]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(OrderCreateViewModel model)
     {
@@ -191,6 +194,7 @@ public class DonHangController(
         return View(invoice);
     }
 
+    [Authorize(Roles = AppRoles.GoiMon)]
     public async Task<IActionResult> AddDishes(int id)
     {
         ViewData["ActiveMenu"] = "DonHang";
@@ -236,6 +240,7 @@ public class DonHangController(
     private string? InventoryWarning() => orderService.InventoryWarnings.Count == 0 ? null
         : "Lưu ý kho: " + string.Join(" ", orderService.InventoryWarnings);
 
+    [Authorize(Roles = AppRoles.GoiMon)]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AddDishes(int id, List<OrderItemInputModel> items)
     {

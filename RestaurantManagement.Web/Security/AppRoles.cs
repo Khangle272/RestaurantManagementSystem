@@ -10,7 +10,9 @@ public static class AppRoles
     public const string Bep = "Bep";
     public const string Kho = "Kho";
     public const string NhanVien = Admin + "," + TiepTan + "," + BoiBan + "," + ThuNgan + "," + Bep + "," + Kho;
-    public static readonly string[] All = [Admin, KhachHang, TiepTan, BoiBan, ThuNgan, Bep, Kho];
+    // Được ghi nhận gọi món / gọi thêm món. Thu ngân không gọi món, chỉ xem đơn và thanh toán.
+    public const string GoiMon = Admin + "," + TiepTan + "," + BoiBan;
+    public static readonly string[] All =[Admin, KhachHang, TiepTan, BoiBan, ThuNgan, Bep, Kho];
     public static readonly string[] AssignableStaff = [TiepTan, BoiBan, ThuNgan, Bep, Kho];
     public static string Label(string? role) => role switch
     {

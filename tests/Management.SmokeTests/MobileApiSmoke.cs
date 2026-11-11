@@ -114,7 +114,9 @@ public static class MobileApiSmoke
         // 5. Phục vụ món.
         using (var early = await waiter.PostAsJsonAsync($"/api/staff/orders/{billId}/lines/{lines[0].Id}", new UpdateLineRequest("DaPhucVu")))
             check(early.StatusCode == HttpStatusCode.Conflict, "API refuses to serve a dish the kitchen has not finished");
-        using (var cashierServe = await cashier.PostAsJsonAsync($"/api/staff/orders/{billId}/lines/{lines[0].Id}", new UpdateLineRequest("DaPhucVu")))
+        using (var cashierAdd = await cashier.PostAsJsonAsync($"/api/staff/orders/{billId}/items", new AddItemsRequest([])))
+            check(cashierAdd.StatusCode == HttpStatusCode.Forbidden, "API does not let cashiers take or add orders");
+        using (var cashierServe =await cashier.PostAsJsonAsync($"/api/staff/orders/{billId}/lines/{lines[0].Id}", new UpdateLineRequest("DaPhucVu")))
             check(cashierServe.StatusCode == HttpStatusCode.Forbidden, "API lets only waiters/admins update dish service");
         await db.ChiTietHoaDon.Where(x => x.HoaDonId == billId).ExecuteUpdateAsync(x => x.SetProperty(c => c.TrangThai, TrangThaiCheBien.SanSang));
         var detail = await waiter.GetFromJsonAsync<OrderDetailDto>($"/api/staff/orders/{billId}");

@@ -5,6 +5,7 @@
     var admin = User.IsInRole("Admin");
     var reception = admin || User.IsInRole("TiepTan");
     var staffOrder = admin || User.IsInRole("BoiBan") || User.IsInRole("ThuNgan") || User.IsInRole("TiepTan");
+    var canTakeOrder = admin || User.IsInRole("BoiBan") || User.IsInRole("TiepTan"); // Thu ngân không gọi món.
     var warehouse = admin || User.IsInRole("Kho");
     var cashier = admin || User.IsInRole("ThuNgan");
     var kitchen = admin || User.IsInRole("Bep");
@@ -14,7 +15,7 @@
         ("Đặt bàn & Phục vụ", "SoDoBan", "Index", "Sơ đồ bàn", reception || User.IsInRole("BoiBan")),
         ("Đặt bàn & Phục vụ", "QuanLyDatBan", "Create", "Đặt bàn cho khách", reception),
         ("Đặt bàn & Phục vụ", "QuanLyDatBan", "Index", "Danh sách đặt bàn", reception),
-        ("Gọi món & Bếp", "DonHang", "Create", "Ghi nhận gọi món", staffOrder),
+        ("Gọi món & Bếp", "DonHang", "Create", "Ghi nhận gọi món", canTakeOrder),
         ("Gọi món & Bếp", "DonHang", "Index", "Quản lý đơn hàng", staffOrder),
         ("Gọi món & Bếp", "Bep", "Index", "Màn hình bếp (KDS)", kitchen),
         ("Thu ngân", "HoaDon", "Index", "Hóa đơn & thanh toán", cashier),
