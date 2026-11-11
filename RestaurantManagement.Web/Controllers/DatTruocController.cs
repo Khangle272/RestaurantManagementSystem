@@ -21,11 +21,15 @@ public class DatTruocController(RestaurantDbContext db, PreorderService preorder
     public async Task<IActionResult> Index(string? keyword)
     {
         // Theo dõi (không AsNoTracking) để đọc RowVersion cho nút xác nhận thu cọc trên từng dòng.
-        var query = db.DatBan.Include(x => x.Ban).ThenInclude(x => x.BanAn).Where(x => x.ThoiDiemBaoChuyenKhoan != null);
+        // Mặc định: khoản khách báo chuyển chờ đối chiếu + lịch khách xin hủy chưa xử lý cọc.
+        // Có từ khóa: tìm mọi lịch (khách gọi điện hủy lịch đã cọc thì thu ngân tra theo mã/số điện thoại).
+        var query = db.DatBan.Include(x => x.Ban).ThenInclude(x => x.BanAn).AsQueryable();
         if (!string.IsNullOrWhiteSpace(keyword)) query = query.Where(x => x.MaDatBan.Contains(keyword.Trim())
             || (x.SoDienThoaiLienHe != null && x.SoDienThoaiLienHe.Contains(keyword.Trim())));
+        else query = query.Where(x => x.ThoiDiemBaoChuyenKhoan != null || (x.YeuCauHuy != null
+            && (x.TrangThai == TrangThaiDatBan.ChoXacNhan || x.TrangThai == TrangThaiDatBan.ChoCoc || x.TrangThai == TrangThaiDatBan.DaXacNhan)));
         ViewData["Keyword"] = keyword;
-        var list = await query.OrderBy(x => x.ThoiDiemBaoChuyenKhoan).Take(100).ToListAsync();
+        var list = await query.OrderBy(x => x.ThoiDiemBaoChuyenKhoan ?? x.ThoiDiemTao).Take(100).ToListAsync();
         ViewData["Versions"] = list.ToDictionary(x => x.Id, preorders.Version);
         return View(list);
     }
@@ -69,13 +73,9 @@ public class DatTruocController(RestaurantDbContext db, PreorderService preorder
         => Result(id, ModelState.IsValid ? await preorders.Quote(id, model) : ValidationError());
 
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
+    // Thu ngân và quản lý đều được thu, hoàn hoặc giữ cọc (kể cả khi khách hủy lịch trước giờ đến).
     public async Task<IActionResult> GiaoDichCoc(int id, DepositTransactionModel model)
-    {
-        // Giữ cọc là quyết định của quản lý; hoàn phần dư khi khách đang ở bàn là việc thu ngân tự làm được.
-        var cashierRefund = model.Loai == LoaiGiaoDichCoc.Hoan && await db.DatBan.AnyAsync(x => x.Id == id && x.TrangThai == TrangThaiDatBan.DaNhanBan);
-        if (model.Loai != LoaiGiaoDichCoc.Thu && !cashierRefund && !User.IsInRole(AppRoles.Admin)) return Forbid();
-        return Result(id, ModelState.IsValid ? await preorders.RecordDeposit(id, AccountId, model) : ValidationError());
-    }
+        => Result(id, ModelState.IsValid ? await preorders.RecordDeposit(id, AccountId, model) : ValidationError());
 
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     public async Task<IActionResult> TuChoiChuyenKhoan(int id, string rowVersion, string lyDo)
@@ -91,11 +91,11 @@ public class DatTruocController(RestaurantDbContext db, PreorderService preorder
             : "Chọn nhân viên đang làm việc phụ trách phiếu gọi món.");
     }
 
-    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.TiepTan)]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.TiepTan + "," + AppRoles.ThuNgan)]
     public async Task<IActionResult> Huy(int id, string rowVersion, string? lyDo)
         => Result(id, await tables.Cancel(id, rowVersion, lyDo, await StaffId()));
 
-    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin)]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = AppRoles.Admin + "," + AppRoles.ThuNgan)]
     public async Task<IActionResult> XuLyHuy(int id, string rowVersion, string? lyDo, bool daDoiChieu)
         => Result(id, await preorders.ResolveCancel(id, rowVersion, lyDo, await StaffId(), daDoiChieu));
 

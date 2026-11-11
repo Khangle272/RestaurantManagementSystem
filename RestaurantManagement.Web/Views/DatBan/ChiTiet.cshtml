@@ -119,12 +119,12 @@
                 </form>
             </details>
         }
-        @if ((!b.CocTuDong && cashier && (Model.CanEdit || Model.AvailableDeposit > 0 || b.ThoiDiemBaoChuyenKhoan is not null)) || (b.CocTuDong && (admin || (cashier && b.TrangThai == TrangThaiDatBan.DaNhanBan)) && Model.AvailableDeposit > 0)) {
+        @if ((!b.CocTuDong && cashier && (Model.CanEdit || Model.AvailableDeposit > 0 || b.ThoiDiemBaoChuyenKhoan is not null)) || (b.CocTuDong && cashier && Model.AvailableDeposit > 0)) {
             <details class="mt-3"><summary>Ghi nhận khoản tiền đã xử lý thực tế</summary>
                 <form asp-controller="DatTruoc" asp-action="GiaoDichCoc" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="mt-2">
                     <input type="hidden" name="RowVersion" value="@Model.Version" /><input type="hidden" name="RequestId" value="@Guid.NewGuid()" />
                     <label class="form-label" for="deposit-kind">Loại giao dịch</label><select id="deposit-kind" name="Loai" class="form-select">@if (!b.CocTuDong) { <option value="Thu">Đã nhận tiền đặt cọc</option> }
-                        @if (admin || b.TrangThai == TrangThaiDatBan.DaNhanBan) { <option value="Hoan">Đã hoàn cho khách</option> }@if (admin) { <option value="Giu">Giữ theo điều kiện đã thỏa thuận</option> }</select>
+                        <option value="Hoan">Đã hoàn cho khách</option><option value="Giu">Giữ theo điều kiện đã thỏa thuận</option></select>
                     <label class="form-label mt-2" for="deposit-method">Hình thức</label><select id="deposit-method" name="HinhThuc" class="form-select"><option value="TienMat">Tiền mặt</option><option value="ChuyenKhoan">Chuyển khoản ngân hàng</option></select>
                     <label class="form-label mt-2" for="deposit-amount">Số tiền (đ)</label><input id="deposit-amount" class="form-control" name="SoTien" type="number" min="1" max="1000000000" step="1" required />
                     <label class="form-label mt-2" for="deposit-reference">Mã tham chiếu / biên nhận (nếu có)</label><input id="deposit-reference" class="form-control" name="MaThamChieu" maxlength="100" />
@@ -151,19 +151,19 @@
             </form>
         </details>
     }
-    @if (reception && b.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan) {
+    @if ((reception || cashier) && b.TrangThai is TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan) {
         <details><summary>Xử lý hủy trước khi khách nhận bàn</summary>
             <form asp-controller="DatTruoc" asp-action="Huy" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="mt-2">
                 <input type="hidden" name="rowVersion" value="@Model.Version" /><label for="staff-cancel-reason" class="form-label">Lý do xử lý</label><textarea id="staff-cancel-reason" name="lyDo" class="form-control" maxlength="500" required>@b.YeuCauHuy</textarea>
                 <button class="btn btn-outline-danger mt-2">Hủy an toàn (chưa chế biến / đã xử lý hết cọc)</button>
             </form>
-            @if (admin) {
+            @if (cashier) {
                 <form asp-controller="DatTruoc" asp-action="XuLyHuy" asp-route-id="@b.Id" method="post" data-ajax-form="true" class="border rounded p-3 mt-3">
                     <input type="hidden" name="rowVersion" value="@Model.Version" />
                     <p class="small">Nếu món đã chế biến: xử lý cọc và đối chiếu hóa đơn trước. Đóng lịch giữ nguyên lịch sử món/tiền; không ghi nhận khoản chưa thu là đã thanh toán, không hoàn nguyên liệu đã dùng.</p>
                     <label for="admin-cancel-reason" class="form-label">Kết quả đối chiếu / lý do đóng lịch</label><textarea id="admin-cancel-reason" name="lyDo" class="form-control" maxlength="500" required></textarea>
                     <label class="d-block mt-2"><input name="daDoiChieu" type="checkbox" value="true" required /> Tôi đã đối chiếu món và tiền thực tế với khách.</label>
-                    <button class="btn btn-outline-danger mt-2">Quản lý xác nhận đóng lịch</button>
+                    <button class="btn btn-outline-danger mt-2">Xác nhận đóng lịch</button>
                 </form>
             }
         </details>
