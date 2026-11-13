@@ -22,13 +22,13 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
 
         if (fromDate.HasValue)
         {
-            var fromOffset = new DateTimeOffset(fromDate.Value.Date);
+            var fromOffset = TableService.VietnamTime(fromDate.Value.Date); // Ngày lọc theo giờ Việt Nam, không phụ thuộc múi giờ máy chủ.
             query = query.Where(x => x.ThoiDiem >= fromOffset);
         }
 
         if (toDate.HasValue)
         {
-            var toOffset = new DateTimeOffset(toDate.Value.Date.AddDays(1).AddTicks(-1));
+            var toOffset = TableService.VietnamTime(toDate.Value.Date.AddDays(1).AddTicks(-1));
             query = query.Where(x => x.ThoiDiem <= toOffset);
         }
 
@@ -82,6 +82,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
         {
             ModelState.AddModelError("", "Vui lòng chọn ít nhất một nguyên liệu cần xuất với số lượng hợp lệ.");
         }
+        if (model.NgayXuat > TableService.VietnamNow.AddMinutes(5))
+            ModelState.AddModelError(nameof(model.NgayXuat), "Ngày xuất không được ở tương lai.");
 
         if (ModelState.IsValid)
         {
@@ -117,7 +119,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
                     LyDo = LyDoXuat.CheBien,
                     BoPhanNhan = model.BoPhanNhan,
                     NguoiNhan = model.NguoiNhan?.Trim(),
-                    GhiChu = model.GhiChu?.Trim()
+                    // Lý do/ca xuất người dùng chọn không có cột riêng: ghi vào ghi chú để không mất khi lưu phiếu.
+                    GhiChu = Truncate(string.IsNullOrWhiteSpace(model.GhiChu) ? model.LyDoXuat.Trim() : $"{model.LyDoXuat.Trim()} — {model.GhiChu.Trim()}", 500)
                 };
 
                 decimal totalVal = 0;
@@ -179,6 +182,8 @@ public class XuatKhoController(RestaurantDbContext context) : ManagementControll
 
         return View(new PhieuXuatDetailsVM { PhieuXuat = phieu });
     }
+
+    private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
 
     private async Task LoadDropdownsAsync()
     {

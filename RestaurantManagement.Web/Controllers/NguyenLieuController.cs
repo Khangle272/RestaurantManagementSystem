@@ -21,12 +21,9 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         var rows = query.OrderByDescending(x => x.Id).Select(x => new NguyenLieuRowViewModel
         {
             Item = x,
-            TonKho = (Db.ChiTietPhieuNhap.Where(c => c.NguyenLieuId == x.Id && c.PhieuNhap.TrangThai == TrangThaiPhieu.DaGhiSo)
-                .Sum(c => (decimal?)c.SoLuong) ?? 0)
-                - (Db.ChiTietPhieuXuat.Where(c => c.NguyenLieuId == x.Id && c.PhieuXuat.TrangThai == TrangThaiPhieu.DaGhiSo)
-                .Sum(c => (decimal?)c.SoLuong) ?? 0)
-                - (Db.ChiTietPhieuThanhLy.Where(c => c.NguyenLieuId == x.Id && c.PhieuThanhLy.TrangThai == "DaThanhLy")
-                .Sum(c => (decimal?)c.SoLuong) ?? 0)
+            // Dùng đúng số tồn mà trang Tồn kho, báo cáo và lúc trừ kho đang dùng. Tính lại từ chứng từ sẽ lệch
+            // khi xuất chế biến thiếu hàng (tồn bị chặn ở 0) hoặc khi nguyên liệu được tạo nhanh kèm tồn ban đầu.
+            TonKho = x.SoLuongTon
         });
         var result = await PageAsync(rows, page, search, trangThai);
         var total = await Db.NguyenLieu.CountAsync();
@@ -133,7 +130,8 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
 
     private async Task<bool> InUseAsync(int id) => await Db.DinhMucMon.AnyAsync(x => x.NguyenLieuId == id)
         || await Db.ChiTietPhieuNhap.AnyAsync(x => x.NguyenLieuId == id)
-        || await Db.ChiTietPhieuXuat.AnyAsync(x => x.NguyenLieuId == id);
+        || await Db.ChiTietPhieuXuat.AnyAsync(x => x.NguyenLieuId == id)
+        || await Db.ChiTietPhieuThanhLy.AnyAsync(x => x.NguyenLieuId == id);
 
     private async Task ValidateAsync(NguyenLieuFormViewModel model, int id)
     {
@@ -141,15 +139,6 @@ public class NguyenLieuController(RestaurantDbContext context) : ManagementContr
         model.DonViTinh = model.DonViTinh?.Trim() ?? "";
         if (await Db.NguyenLieu.AnyAsync(x => x.Id != id && x.TenNguyenLieu == model.TenNguyenLieu))
             ModelState.AddModelError(nameof(model.TenNguyenLieu), "Tên nguyên liệu đã tồn tại.");
-        // Không cho đổi đơn vị khi nguyên liệu đã có công thức hoặc chứng từ để không làm sai lệch số lượng cũ.
-        if (id != 0)
-        {
-            var currentUnit = await Db.NguyenLieu.AsNoTracking().Where(x => x.Id == id)
-                .Select(x => x.DonViTinh).SingleOrDefaultAsync();
-            if (currentUnit is not null && currentUnit != model.DonViTinh && await InUseAsync(id))
-                ModelState.AddModelError(nameof(model.DonViTinh),
-                    "Không thể đổi đơn vị tính vì nguyên liệu đã có công thức hoặc chứng từ.");
-        }
     }
 
     [HttpPost, ValidateAntiForgeryToken]

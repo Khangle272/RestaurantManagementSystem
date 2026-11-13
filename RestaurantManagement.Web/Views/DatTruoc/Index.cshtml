@@ -1,9 +1,10 @@
 @model List<RestaurantManagement.API.Models.DatBan>
-@{ Layout = "_AdminLayout"; ViewData["Title"] = "Đối chiếu tiền đặt cọc"; }
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Đối chiếu tiền đặt cọc"; var versions = ViewData["Versions"] as Dictionary<int, string> ?? []; var here = Context.Request.Path + Context.Request.QueryString; }
 <div class="page-header">
     <div>
         <h1 class="h3">Đối chiếu tiền đặt cọc</h1>
-        <p class="text-muted">Khách đã báo chuyển tiền. Kiểm tra số tiền thực nhận và nội dung mã đặt bàn trên ngân hàng trước khi xác nhận.</p>
+        <p class="text-muted">Các lịch khách đã báo chuyển khoản cọc, đang chờ thu ngân đối chiếu. Kiểm tra tiền vào ngân hàng đúng số tiền và nội dung mã đặt bàn rồi bấm <strong>Xác nhận thu cọc</strong>; nếu chưa thấy tiền hoặc không khớp, mở <strong>Chi tiết</strong> để báo khách kiểm tra lại.</p>
+        <p class="text-muted mb-0">Lịch <strong>khách xin hủy</strong> cũng hiện ở đây: mở <strong>Chi tiết</strong>, hoàn hoặc giữ cọc, rồi hủy lịch. Khách gọi điện hủy: tìm theo mã đặt bàn hoặc số điện thoại.</p>
     </div>
 </div>
 <form method="get" class="filter-bar">
@@ -19,16 +20,26 @@
 <div class="data-card">
     <div class="table-responsive">
         <table class="table table-hover align-middle">
-            <thead><tr><th>Mã đặt bàn</th><th>Khách / lịch đến</th><th class="text-end">Khách báo đã chuyển</th><th>Thời điểm báo</th><th class="text-end">Thao tác</th></tr></thead>
+            <thead><tr><th>Mã đặt bàn</th><th>Khách / lịch đến</th><th class="text-end">Khách báo đã chuyển</th><th>Thời điểm báo</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
             <tbody>
-            @if (!Model.Any()) { <tr><td colspan="5" class="empty-state"><i class="bi bi-piggy-bank" aria-hidden="true"></i>Không có khoản chuyển nào đang chờ đối chiếu.</td></tr> }
+            @if (!Model.Any()) { <tr><td colspan="6" class="empty-state"><i class="bi bi-piggy-bank" aria-hidden="true"></i>Không có khoản chuyển hoặc yêu cầu hủy nào đang chờ xử lý.</td></tr> }
             @foreach (var booking in Model) {
                 <tr>
                     <td class="cell-code">@booking.MaDatBan</td>
-                    <td>@booking.HoTenLienHe · @booking.SoDienThoaiLienHe<span class="cell-sub">Đến lúc @booking.GioDen.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</span></td>
+                    <td>@booking.HoTenLienHe · @booking.SoDienThoaiLienHe<span class="cell-sub">Đến lúc @VnTime.NgayGio(booking.GioDen)</span></td>
+                    @if (booking.ThoiDiemBaoChuyenKhoan is not null) {
                     <td class="text-end"><span class="fw-semibold">@booking.SoTienKhachBao.ToString("N0") đ</span><span class="cell-sub">@booking.MaGiaoDichKhachBao</span></td>
-                    <td class="cell-nowrap">@booking.ThoiDiemBaoChuyenKhoan?.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm dd/MM")</td>
-                    <td class="text-end"><a asp-action="ChiTiet" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-primary">Đối chiếu</a></td>
+                    <td class="cell-nowrap">@VnTime.NgayGio(booking.ThoiDiemBaoChuyenKhoan)</td>
+                    <td><span class="badge-status-info">Khách báo chuyển · chờ đối chiếu</span><span class="cell-sub">@(booking.Ban.Any() ? "Bàn " + string.Join(", ", booking.Ban.Select(x => x.BanAn.MaBan)) : "Chưa chọn bàn") · cần cọc @booking.TienCocYeuCau.ToString("N0") đ</span></td>
+                    } else {
+                    <td class="text-end text-muted">—</td>
+                    <td class="cell-nowrap text-muted">—</td>
+                    <td>@if (booking.YeuCauHuy is not null && booking.TrangThai is RestaurantManagement.API.Models.TrangThaiDatBan.ChoXacNhan or RestaurantManagement.API.Models.TrangThaiDatBan.ChoCoc or RestaurantManagement.API.Models.TrangThaiDatBan.DaXacNhan) { <span class="badge-status-warning">Khách xin hủy · cần xử lý cọc</span> } else { <span class="badge-status-muted">@RestaurantManagement.Web.Services.ReservationDepositPolicy.StatusText(booking)</span> }<span class="cell-sub">Đang giữ cọc @RestaurantManagement.Web.Services.ReservationDepositPolicy.Received(booking).ToString("N0") đ@(booking.YeuCauHuy is null ? "" : " · Lý do: " + booking.YeuCauHuy)</span></td>
+                    }
+                    <td class="text-end"><div class="row-actions can-wrap">
+                        @if (booking.ThoiDiemBaoChuyenKhoan is not null && versions.TryGetValue(booking.Id, out var version)) { <partial name="_XacNhanCoc" model="@(new RestaurantManagement.Web.Models.DepositConfirmButton(booking.Id, booking.MaDatBan, version, booking.SoTienKhachBao, here))" /> }
+                        <a asp-action="ChiTiet" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-secondary">Chi tiết</a>
+                    </div></td>
                 </tr>
             }
             </tbody>

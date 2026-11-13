@@ -4,6 +4,8 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Quản lý đơn hàng";
     var canPay = User.IsInRole("Admin") || User.IsInRole("ThuNgan") || User.IsInRole("BoiBan");
+    var canOrder = User.IsInRole("Admin") || User.IsInRole("BoiBan") || User.IsInRole("TiepTan"); // Thu ngân không gọi món.
+    var canOrderDineIn = RestaurantManagement.Web.Security.AppRoles.CanOrderDineIn(User); // Tiếp tân chỉ mang đi / giao hàng.
 }
 
 <div class="container-fluid py-4">
@@ -12,12 +14,15 @@
             <h1 class="h3">Quản lý đơn hàng</h1>
             <p class="text-muted mb-0">Theo dõi, cập nhật tiến độ phục vụ và xử lý đơn hàng tại bàn, mang đi và giao hàng.</p>
         </div>
+        @if (canOrder)
+        {
         <div>
             <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center gap-1">
                 <i class="bi bi-plus-lg"></i>
                 Ghi nhận gọi món mới
             </a>
         </div>
+        }
     </div>
 
     <!-- Bộ lọc tìm kiếm -->
@@ -29,11 +34,11 @@
                         <span class="input-group-text bg-white border-end-0 text-muted">
                             <i class="bi bi-search"></i>
                         </span>
-                        <input type="text" name="search" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo mã HĐ, tên bàn, tên khách, SĐT..." />
+                        <input type="text" name="search" aria-label="Tìm đơn hàng" value="@Model.Search" class="form-control border-start-0" placeholder="Tìm theo mã HĐ, tên bàn, tên khách, SĐT..." />
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <select name="loaiDonHang" class="form-select">
+                    <select name="loaiDonHang" class="form-select" aria-label="Loại đơn">
                         <option value="">-- Tất cả loại đơn --</option>
                         <option value="TaiBan" selected="@(Model.LoaiDonHang == LoaiDonHang.TaiBan)">Tại bàn</option>
                         <option value="MangDi" selected="@(Model.LoaiDonHang == LoaiDonHang.MangDi)">Mang đi</option>
@@ -41,7 +46,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
-                    <select name="trangThai" class="form-select">
+                    <select name="trangThai" class="form-select" aria-label="Trạng thái thanh toán">
                         <option value="">-- Tất cả trạng thái --</option>
                         <option value="ChuaThanhToan" selected="@(Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)">Chờ thanh toán</option>
                         <option value="DaThanhToan" selected="@(Model.TrangThai == TrangThaiHoaDon.DaThanhToan)">Đã thanh toán</option>
@@ -79,7 +84,7 @@
                     <tr>
                         <td colspan="6" class="text-center py-5 text-muted">
                             <p class="mb-2">Không tìm thấy đơn hàng nào phù hợp với điều kiện tìm kiếm.</p>
-                            <a asp-action="Create" class="btn btn-sm btn-outline-primary">Tạo đơn gọi món ngay</a>
+                            @if (canOrder) { <a asp-action="Create" class="btn btn-sm btn-outline-primary">Tạo đơn gọi món ngay</a> }
                         </td>
                     </tr>
                 }
@@ -114,7 +119,7 @@
                             <a asp-action="Details" asp-route-id="@order.Id" class="fw-bold text-decoration-none text-dark">
                                 @order.MaHoaDon
                             </a>
-                            <div class="small text-muted">@order.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm") · @order.TenLoaiDon</div>
+                            <div class="small text-muted">@VnTime.NgayGio(order.ThoiDiemLap) · @order.TenLoaiDon</div>
                         </td>
                         <td>
                             @if (order.LoaiDonHang == LoaiDonHang.TaiBan)
@@ -174,7 +179,7 @@
                             <span class="badge rounded-pill @payBadge px-2 py-1">@payLabel</span>
                             @if (order.TrangThai == TrangThaiHoaDon.DaThanhToan)
                             {
-                                <div class="small text-muted">@order.PhuongThucThanhToan</div>
+                                <div class="small text-muted">@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(order.PhuongThucThanhToan)</div>
                             }
                         </td>
                         <td class="text-end pe-3">
@@ -184,9 +189,12 @@
                                 </a>
                                 @if (order.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
                                 {
+                                    @if (canOrder && (canOrderDineIn || order.LoaiDonHang != LoaiDonHang.TaiBan))
+                                    {
                                     <a asp-action="AddDishes" asp-route-id="@order.Id" class="btn btn-outline-secondary" title="Gọi thêm món vào đơn">
                                         + Món
                                     </a>
+                                    }
                                     @if (canPay)
                                     {
                                         <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@order.Id" class="btn btn-success" title="Thanh toán đơn hàng">

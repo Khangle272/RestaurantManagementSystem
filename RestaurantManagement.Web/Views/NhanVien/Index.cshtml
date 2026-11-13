@@ -74,7 +74,7 @@
                             <td><span class="@(item.TaiKhoan is null ? "badge-status-muted" : "badge-status-success")" title="@item.TaiKhoan?.Email">@(item.TaiKhoan is null ? "Chưa cấp" : "Đã cấp")</span>
                                 @if (item.TaiKhoan?.LockoutEnd > DateTimeOffset.UtcNow) { <span class="badge-status-danger">Đã khóa</span> }
                             </td>
-                            <td class="cell-nowrap">@item.NgayVaoLam.ToString("dd/MM/yyyy")</td>
+                            <td class="cell-nowrap">@VnTime.Ngay(item.NgayVaoLam)</td>
                             <td><span class="badge @(item.DangLamViec ? "bg-success" : "bg-secondary")">@(item.DangLamViec ? "Đang làm việc" : "Đã nghỉ việc")</span></td>
                             <td class="text-end text-nowrap">
                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Sửa</a>

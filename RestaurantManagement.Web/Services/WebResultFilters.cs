@@ -15,6 +15,12 @@ public static class AppCulture
     {
         var culture = (CultureInfo)CultureInfo.GetCultureInfo("en-US").Clone();
         culture.NumberFormat.NumberGroupSeparator = ".";
+        // Ngày mặc định kiểu Việt Nam (dd/MM/yyyy, 24 giờ) cho mọi chỗ in ngày không ghi định dạng.
+        // Ô nhập date/datetime-local gửi ISO (yyyy-MM-dd) nên vẫn đọc đúng.
+        culture.DateTimeFormat.ShortDatePattern = "dd/MM/yyyy";
+        culture.DateTimeFormat.ShortTimePattern = "HH:mm";
+        culture.DateTimeFormat.LongTimePattern = "HH:mm:ss";
+        culture.DateTimeFormat.AMDesignator = culture.DateTimeFormat.PMDesignator = "";
         return culture;
     }
 }

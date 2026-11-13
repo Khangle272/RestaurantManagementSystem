@@ -15,7 +15,9 @@
         try { bookingId = Number(sessionStorage.getItem(contextKey)) || 0; } catch { /* New booking is the default. */ }
     }
     const key = () => 'customer-cart:v1:' + owner + ':' + (bookingId || 'new');
-    const newRequestId = () => crypto.randomUUID();
+    // randomUUID chỉ có trên HTTPS/localhost; mở qua địa chỉ http trong mạng LAN vẫn cần mã yêu cầu hợp lệ.
+    const newRequestId = () => typeof crypto.randomUUID === 'function' ? crypto.randomUUID()
+        : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
     const cleanItems = value => (Array.isArray(value) ? value : []).slice(0, 50).filter(x => x && Number.isSafeInteger(x.monAnId) && x.monAnId > 0 && Number.isSafeInteger(x.sizeId) && x.sizeId > 0 && Number.isInteger(x.quantity) && x.quantity > 0 && x.quantity <= 99).map(x => ({ monAnId: x.monAnId, sizeId: x.sizeId, quantity: x.quantity, note: String(x.note || '').slice(0, 500) }));
     let draft = storage.get(key());
     if (!cleanItems(draft?.items).length && !bookingId && owner !== 'guest') {
@@ -145,7 +147,7 @@
                 sent = (context.items || []).filter(x => x.sent);
                 if (!draft) items = cleanItems((context.items || []).filter(x => !x.sent));
                 const label = byId('cart-context'); label.hidden = false;
-                label.textContent = `Đang chọn cho lịch ${context.code || '#' + bookingId}${context.arrival ? ' · ' + new Date(context.arrival).toLocaleString('vi-VN') : ''}. `;
+                label.textContent = `Đang chọn cho lịch ${context.code || '#' + bookingId}${context.arrival ? ' · ' + window.vnTime.dateTime(context.arrival) : ''}. `;
                 const detailLink = document.createElement('a'); detailLink.href = root.dataset.detailUrl + '/' + bookingId; detailLink.textContent = 'Xem chi tiết'; label.append(detailLink);
                 byId('cart-description').textContent = canEdit ? 'Bổ sung hoặc sửa món chưa gửi bếp cho lịch này. Món đã gửi bếp được giữ để theo dõi.' : 'Lịch này không còn nhận thay đổi món. Bạn có thể xem chi tiết bên dưới.';
                 byId('cart-new-checkout').hidden = true;

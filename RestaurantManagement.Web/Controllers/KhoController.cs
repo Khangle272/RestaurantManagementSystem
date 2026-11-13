@@ -7,6 +7,7 @@ using RestaurantManagement.API.Models;
 using RestaurantManagement.Web.Models;
 using RestaurantManagement.Web.Security;
 using RestaurantManagement.Web.Services;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -101,8 +102,8 @@ public class KhoController(RestaurantDbContext context) : ManagementControllerBa
 
         var sb = new StringBuilder();
         sb.AppendLine("BÁO CÁO TỔNG HỢP NHẬP - XUẤT - TỒN KHO");
-        sb.AppendLine($"Khoảng thời gian: {model.TuNgay:dd/MM/yyyy} - {model.DenNgay:dd/MM/yyyy}");
-        sb.AppendLine($"Ngày xuất báo cáo: {TableService.VietnamNow:dd/MM/yyyy HH:mm}");
+        sb.AppendLine($"Khoảng thời gian: {VnTime.Ngay(model.TuNgay)} - {VnTime.Ngay(model.DenNgay)}");
+        sb.AppendLine($"Ngày xuất báo cáo: {VnTime.NgayGio(TableService.VietnamNow)}");
         sb.AppendLine();
         sb.AppendLine("Mã NL,Tên nguyên liệu,ĐVT,Nhóm,Đơn giá (VNĐ),Tồn đầu (SL),Tồn đầu (Tiền),Nhập trong kỳ (SL),Nhập trong kỳ (Tiền),Xuất trong kỳ (SL),Xuất trong kỳ (Tiền),Thanh lý trong kỳ (SL),Thanh lý trong kỳ (Tiền),Tồn cuối (SL),Tồn cuối (Tiền)");
 

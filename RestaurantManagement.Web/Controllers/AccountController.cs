@@ -109,7 +109,20 @@ public class AccountController(
     }
 
     [Authorize, HttpGet]
-    public IActionResult Index() => View();
+    public async Task<IActionResult> Index()
+    {
+        // Hiện họ tên và số điện thoại của hồ sơ khách/nhân viên gắn với tài khoản, không chỉ email.
+        if (int.TryParse(users.GetUserId(User), out var accountId))
+        {
+            var profile = await db.KhachHang.AsNoTracking().Where(x => x.TaiKhoanId == accountId)
+                    .Select(x => new { x.HoTen, x.SoDienThoai }).FirstOrDefaultAsync()
+                ?? await db.NhanVien.AsNoTracking().Where(x => x.TaiKhoanId == accountId)
+                    .Select(x => new { x.HoTen, x.SoDienThoai }).FirstOrDefaultAsync();
+            ViewBag.HoTen = profile?.HoTen;
+            ViewBag.SoDienThoai = profile?.SoDienThoai;
+        }
+        return View();
+    }
 
     // Customers can edit only themselves; staff profiles are controlled by Admin.
     private async Task<TaiKhoan?> EditableAccount(int? id)

@@ -20,6 +20,14 @@
         }
     }
 
+    // Phản hồi không phải JSON (hết phiên đăng nhập, không có quyền, lỗi máy chủ) trả về thông báo rõ ràng.
+    async function readJson(res) {
+        if (res.ok && res.headers.get('content-type')?.includes('application/json')) return res.json();
+        return { success: false, message: res.status === 401 || res.status === 403 || res.redirected
+            ? 'Bạn không có quyền thực hiện thao tác này hoặc phiên đăng nhập đã hết. Vui lòng tải lại trang.'
+            : 'Máy chủ không xử lý được yêu cầu (mã ' + res.status + '). Vui lòng thử lại.' };
+    }
+
     function networkErrorText(error) {
         return 'Không thể kết nối đến máy chủ. Kiểm tra ứng dụng đang chạy, tải lại trang (Ctrl+F5) rồi thử lại. Chi tiết: ' + error.message;
     }
@@ -114,7 +122,7 @@
             try {
                 const res = await postJson('/DanhMuc/QuickCreate', { tenDanhMuc, moTa });
 
-                const data = await res.json();
+                const data = await readJson(res);
                 if (data.success) {
                     const cboDanhMuc = document.getElementById('cboDanhMuc') || document.querySelector('select[name="DanhMucId"]');
                     if (cboDanhMuc) {
@@ -180,7 +188,7 @@
             try {
                 const res = await postJson('/NguyenLieu/QuickCreate', { tenNguyenLieu, donViTinh, donGia, dinhMucToiThieu });
 
-                const data = await res.json();
+                const data = await readJson(res);
                 if (data.success) {
                     // Bổ sung lựa chọn cho mọi dòng đang có và các dòng tạo mới sau này.
                     window.dishBom?.addIngredient({ Id: data.id, TenNguyenLieu: data.name, DonViTinh: data.unit, DonGia: donGia });

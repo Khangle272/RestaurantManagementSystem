@@ -134,10 +134,13 @@ public class SoDoBanController(RestaurantDbContext db, TableService tables) : Ma
                 booking!.SoNguoiLon + booking.SoTreEm);
             foreach (var card in model.Tables) card.IsSuggested = suggestion?.Any(x => x.Id == card.Table.Id) == true;
         }
+        if (booking is not null)
+            model.BookingTableNames = string.Join(", ", await Db.ChiTietDatBan.Where(x => x.DatBanId == booking.Id)
+                .OrderBy(x => x.BanAn.MaBan).Select(x => x.BanAn.MaBan).ToListAsync());
         if (!fragment && (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.TiepTan)))
             model.Requests = await Db.DatBan.AsNoTracking().Where(x => x.TrangThai == TrangThaiDatBan.ChoXacNhan
                 && x.GioKetThucDuKien > DateTimeOffset.UtcNow).OrderBy(x => x.GioDen).Take(30).ToListAsync();
-        if (dialog) return booking is null ? BadRequest("Thiếu yêu cầu cần xếp bàn.") : PartialView("_Assignment", model);
+        if (dialog) return booking is null ? BadRequest("Thiếu lịch cần chọn bàn.") : PartialView("_Assignment", model);
         return fragment ? PartialView("_Board", model) : View(model);
     }
 

@@ -4,6 +4,7 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Ghi nhận gọi món";
     var dishCountByCategory = Model.MenuDishes.GroupBy(x => x.DanhMucId).ToDictionary(x => x.Key, x => x.Count());
+    var dineIn = ViewData["CanOrderDineIn"] as bool? ?? true; // Tiếp tân: chỉ mang đi / giao hàng.
     var tableAreas = Model.OccupiedTables.Select(x => x.TenKhuVuc).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
     string StatusLabel(TrangThaiCheBien status) => status switch
     {
@@ -40,10 +41,18 @@
         <div id="pos-menu-placeholder" class="alert alert-info mb-2" role="status" hidden>Chọn bàn đang phục vụ hoặc loại đơn mang đi/giao hàng để mở danh mục và thực đơn.</div>
 
         <!-- Hàng ngang trên cùng: chọn nhanh bàn đang phục vụ -->
-        <section class="card pos-table-panel pos-tables mb-2" aria-label="Bàn đang phục vụ">
+        <section class="card pos-table-panel pos-tables mb-2" aria-label="@(dineIn ? "Bàn đang phục vụ" : "Loại đơn")">
             <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                @if (dineIn)
+                {
                 <h2 class="h6 mb-0"><i class="bi bi-people me-1"></i>Bàn đang phục vụ</h2>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">@Model.OccupiedTables.Count bàn</span>
+                }
+                else
+                {
+                <h2 class="h6 mb-0"><i class="bi bi-bag me-1"></i>Đơn mang đi / giao hàng</h2>
+                <span class="small text-muted">Gọi món tại bàn do phục vụ thực hiện.</span>
+                }
             </div>
             <div class="card-body p-2">
                 <div id="pos-current-target" class="d-flex justify-content-between align-items-center gap-2 pb-1" hidden>
@@ -52,8 +61,11 @@
                 </div>
                 <div id="pos-order-config">
                     <div class="btn-group w-100 mb-2" role="group" aria-label="Loại đơn hàng">
+                        @if (dineIn)
+                        {
                         <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-dinein" value="TaiBan" autocomplete="off" />
                         <label class="btn btn-outline-primary btn-sm" for="type-dinein">Tại bàn</label>
+                        }
                         <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-takeaway" value="MangDi" autocomplete="off" />
                         <label class="btn btn-outline-primary btn-sm" for="type-takeaway">Mang đi</label>
                         <input type="radio" class="btn-check" asp-for="LoaiDonHang" id="type-delivery" value="GiaoHang" autocomplete="off" />
@@ -195,7 +207,7 @@
                                         {
                                             <li>
                                                 <span class="fw-semibold">@line.SoLuong × @line.TenMon</span>
-                                                <span class="text-muted small">@line.TenSize · @line.ThoiDiemGoi.ToOffset(TimeSpan.FromHours(7)).ToString("HH:mm")</span>
+                                                <span class="text-muted small">@line.TenSize · @VnTime.Gio(line.ThoiDiemGoi)</span>
                                                 @if (!string.IsNullOrWhiteSpace(line.YeuCauCheBien)) { <span class="text-muted small">Ghi chú: @line.YeuCauCheBien</span> }
                                                 <span class="ms-auto">@line.ThanhTien.ToString("N0") đ</span>
                                                 <span class="badge @StatusClass(line.TrangThai)">@StatusLabel(line.TrangThai)</span>

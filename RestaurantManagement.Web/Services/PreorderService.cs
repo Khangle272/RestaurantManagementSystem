@@ -125,7 +125,7 @@ public class PreorderService(RestaurantDbContext db, OrderService orders, IKhoSe
         if (!CanEdit(booking) || booking.TrangThai == TrangThaiDatBan.DaNhanBan || booking.TienCocYeuCau <= 0)
             return "Lịch đã hết hạn hoặc không còn cần thanh toán cọc.";
         if (!await db.ChiTietDatBan.AnyAsync(x => x.DatBanId == id))
-            return "Lịch chưa được kiểm tra và xếp bàn. Liên hệ nhà hàng trước khi chuyển tiền.";
+            return "Lịch chưa được kiểm tra và chọn bàn. Liên hệ nhà hàng trước khi chuyển tiền.";
         var reference = model.MaGiaoDich?.Trim();
         if (booking.ThoiDiemBaoChuyenKhoan is not null)
             return booking.SoTienKhachBao == model.SoTien && booking.MaGiaoDichKhachBao == reference
@@ -268,6 +268,9 @@ public class PreorderService(RestaurantDbContext db, OrderService orders, IKhoSe
         if (model.RequestId == Guid.Empty || !Enum.IsDefined(model.Loai) || model.SoTien is <= 0 or > 1000000000
             || string.IsNullOrWhiteSpace(model.LyDo) || model.LyDo.Length > 500 || (model.MaThamChieu?.Length ?? 0) > 100)
             return "Thông tin xử lý cọc không hợp lệ.";
+        // Kiểm tra trước khi sửa số cọc để không để lại thay đổi dở dang trong phiên làm việc.
+        if (model.Loai != LoaiGiaoDichCoc.Giu && model.HinhThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan))
+            return "Chỉ nhận tiền mặt hoặc chuyển khoản ngân hàng.";
         if (model.Loai == LoaiGiaoDichCoc.Thu)
         {
             if (ReservationDepositPolicy.Expired(booking)) return "Đã hết hạn giữ chỗ. Đối chiếu khoản chuyển muộn với khách trước khi tạo lịch mới/hoàn tiền.";
@@ -306,8 +309,6 @@ public class PreorderService(RestaurantDbContext db, OrderService orders, IKhoSe
         // Giữ cọc không phát sinh dòng tiền; thu và hoàn cọc ghi vào sổ chi tiết thanh toán theo ngày thực thu/chi.
         if (model.Loai != LoaiGiaoDichCoc.Giu)
         {
-            if (model.HinhThuc is not (PhuongThucThanhToan.TienMat or PhuongThucThanhToan.ChuyenKhoan))
-                return "Chỉ nhận tiền mặt hoặc chuyển khoản ngân hàng.";
             var staffId = await db.NhanVien.Where(x => x.TaiKhoanId == actorId).Select(x => (int?)x.Id).FirstOrDefaultAsync();
             db.ChiTietThanhToan.Add(PaymentLedger.Create(
                 model.Loai == LoaiGiaoDichCoc.Thu ? LoaiGiaoDichThanhToan.DatCoc : LoaiGiaoDichThanhToan.HoanCoc,

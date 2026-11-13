@@ -30,6 +30,13 @@ public class MenuItemViewModel
     public List<MenuSizeViewModel> Sizes { get; set; } = [];
     public List<string> ComboItems { get; set; } = [];
     public List<PromotionViewModel> Promotions { get; set; } = [];
+    public string TypeLabel => Type switch { LoaiMon.Set => "Set / Combo", LoaiMon.ThucUong => "Thức uống", _ => "Món lẻ" };
+    // Không lặp chữ khi tên danh mục trùng loại món (ví dụ "Thức uống · Thức uống").
+    public string CategoryLine => string.Equals(Category.Trim(), TypeLabel, StringComparison.OrdinalIgnoreCase)
+        || (Type == LoaiMon.Set && Category.Contains("set", StringComparison.OrdinalIgnoreCase))
+        ? Category : $"{Category} · {TypeLabel}";
+    // Ảnh thay thế khi món chưa có hình: biểu tượng theo loại món thay vì luôn là tách cà phê.
+    public string PlaceholderIcon => Type switch { LoaiMon.ThucUong => "bi-cup-straw", LoaiMon.Set => "bi-basket2", _ => "bi-egg-fried" };
 }
 
 public class MenuSizeViewModel

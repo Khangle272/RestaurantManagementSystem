@@ -44,7 +44,7 @@
                     <span class="text-muted small fw-semibold text-uppercase">Đơn hàng hoàn tất</span>
                     <span class="badge bg-primary-subtle text-primary p-2 rounded-circle"><i class="bi bi-receipt fs-5"></i></span>
                 </div>
-                <div class="fs-3 fw-bold text-dark mb-1">@Model.SoDonThanhCong bill thanh toán</div>
+                <div class="fs-3 fw-bold text-dark mb-1">@Model.SoDonThanhCong <span class="fs-6 fw-normal text-muted">hóa đơn đã thanh toán</span></div>
                 <div class="small text-muted">@Model.TongSoDonHang đơn tạo trong kỳ</div>
                 <div class="small text-muted">@Model.SoDonDaHuy đơn đã hủy</div>
             </div>
@@ -94,11 +94,11 @@
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white py-3">
-                <h2 class="h6 mb-0 fw-bold text-dark"><i class="bi bi-credit-card me-1 text-primary"></i> Tiền thu thêm khi chốt bill</h2>
+                <h2 class="h6 mb-0 fw-bold text-dark"><i class="bi bi-credit-card me-1 text-primary"></i> Tiền thu thêm khi chốt hóa đơn</h2>
                 <p class="small text-muted mb-0">Chưa gồm @Model.TongTienCocDaTru.ToString("N0") đ cọc nhận trước. Doanh thu tổng đã gồm cọc cấn trừ.</p>
                 @if (Model.SoHoaDonThieuNgayThanhToan > 0)
                 {
-                    <p class="small text-warning mb-0">@Model.SoHoaDonThieuNgayThanhToan bill cũ thiếu ngày thanh toán được tạm tính theo ngày lập.</p>
+                    <p class="small text-warning mb-0">@Model.SoHoaDonThieuNgayThanhToan hóa đơn cũ thiếu ngày thanh toán được tạm tính theo ngày lập.</p>
                 }
             </div>
             <div class="card-body p-3 d-flex flex-column justify-content-center">

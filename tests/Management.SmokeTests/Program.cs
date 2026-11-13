@@ -143,6 +143,16 @@ try
         return;
     }
 
+    if (args.Contains("--mobile-api-only"))
+    {
+        await InitDemoAccounts();
+        await using var mobileDb = new RestaurantDbContext(options);
+        await DbSeeder.SeedAsync(mobileDb);
+        await Management.SmokeTests.MobileApiSmoke.Run(mobileDb, client, NewClient, Check);
+        Console.WriteLine($"PASS: {checks} mobile API HTTP/database checks.");
+        return;
+    }
+
     if (args.Contains("--promotions-only"))
     {
         await InitDemoAccounts();
@@ -321,9 +331,18 @@ try
         await CheckAccess(roleClient, "/TaiKhoanNhanVien", HttpStatusCode.Redirect, role + " denied account administration");
         if (role != "ThuNgan")
             await CheckAccess(roleClient, "/HoaDon", HttpStatusCode.Redirect, role + " denied invoices");
+        if (role == "TiepTan")
+        {
+            var orderPage = await roleClient.GetStringAsync("/DonHang/Create");
+            Check(!orderPage.Contains("id=\"type-dinein\"") && orderPage.Contains("id=\"type-takeaway\"") && orderPage.Contains("id=\"type-delivery\""),
+                "Reception order page offers only takeaway / delivery, not dine-in");
+        }
         if (role == "ThuNgan")
         {
-            var size = await db.MonAnSize.AsNoTracking().FirstAsync();
+            Check(!workspace.Contains("href=\"/DonHang/Create\""), "Cashier menu does not offer order taking");
+            await CheckAccess(roleClient, "/DonHang/Create", HttpStatusCode.Redirect, "Cashier cannot take orders");
+            await CheckAccess(roleClient, "/DonHang", HttpStatusCode.OK, "Cashier still views order list");
+            var size =await db.MonAnSize.AsNoTracking().FirstAsync();
             var bill = new HoaDon
             {
                 MaHoaDon = "HD-AUTH-TEST", ThoiDiemLap = DateTimeOffset.UtcNow,
@@ -474,7 +493,10 @@ try
     Check(!await db.MonAn.AnyAsync(x => x.Id == comboId), "Combo deletion removes the set");
     await BlockDelete("NguyenLieu", ingredientId);
     var ingredientEdit = await Get($"/NguyenLieu/Edit/{ingredientId}");
-    await Post($"/NguyenLieu/Edit/{ingredientId}", ingredientEdit, new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["DonViTinh"] = "kg" }, false, "Không thể đổi đơn vị");
+    // Đơn vị tính được phép sửa cả khi nguyên liệu đã có công thức (sửa đơn vị nhập sai); đổi rồi trả lại để các bước sau không bị ảnh hưởng.
+    await Post($"/NguyenLieu/Edit/{ingredientId}", ingredientEdit, new(ingredientFields) { ["Id"] = ingredientId.ToString(), ["DonViTinh"] = "kg" }, true);
+    Check(await db.NguyenLieu.AsNoTracking().AnyAsync(x => x.Id == ingredientId && x.DonViTinh == "kg"), "Ingredient unit can be edited even when used in a recipe");
+    await Post($"/NguyenLieu/Edit/{ingredientId}", await Get($"/NguyenLieu/Edit/{ingredientId}"), new(ingredientFields) { ["Id"] = ingredientId.ToString() }, true);
     var dishEdit = await Get($"/MonAn/Edit/{dishId}");
     var changedDish = new Dictionary<string, string>(dishFields)
     {
@@ -607,6 +629,7 @@ try
     await Management.SmokeTests.PaymentLedgerSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.KitchenStockSmoke.Run(db, client, NewClient, Hidden, Check);
     await Management.SmokeTests.RealWorldRulesSmoke.Run(db, client, NewClient, Hidden, Check);
+    await Management.SmokeTests.MobileApiSmoke.Run(db, client, NewClient, Check);
     Console.WriteLine($"PASS: {checks} HTTP/database checks.");
 }
 catch

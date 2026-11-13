@@ -117,7 +117,7 @@
                                     @item.MaPhieu
                                 </a>
                             </td>
-                            <td class="cell-nowrap">@item.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="cell-nowrap">@VnTime.NgayGio(item.ThoiDiem)</td>
                             <td>
                                 <div class="fw-medium">@(item.NhaCungCap?.TenNhaCungCap ?? "Nhập điều chỉnh / Tồn đầu kỳ")</div>
                                 @if (!string.IsNullOrEmpty(item.SoHoaDon)) { <span class="cell-sub">HĐ: @item.SoHoaDon</span> }

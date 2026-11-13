@@ -1,9 +1,11 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
+using RestaurantManagement.Web.Api;
 using RestaurantManagement.Web.Security;
 using RestaurantManagement.Web.Services;
 
@@ -25,6 +27,7 @@ builder.Services.AddIdentity<TaiKhoan, IdentityRole<int>>(options =>
     options.Lockout.AllowedForNewUsers = true;
 })
     .AddEntityFrameworkStores<RestaurantDbContext>()
+    .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
     .AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -48,6 +51,19 @@ builder.Services.ConfigureApplicationCookie(options =>
         return Task.CompletedTask;
     };
 });
+// REST API /api cho ứng dụng mobile dùng bearer token của ASP.NET Core Identity; website giữ cookie.
+// Chọn scheme theo đường dẫn để API không bao giờ đọc cookie (tránh CSRF) và trả 401/403 thay vì chuyển trang.
+builder.Services.AddAuthentication()
+    .AddBearerToken(IdentityConstants.BearerScheme, options => options.BearerTokenExpiration = TimeSpan.FromHours(8))
+    .AddPolicyScheme(MobileApi.AuthScheme, "Website hoặc API mobile", options =>
+        options.ForwardDefaultSelector = context => MobileApi.IsApiRequest(context.Request)
+            ? IdentityConstants.BearerScheme : IdentityConstants.ApplicationScheme);
+builder.Services.Configure<AuthenticationOptions>(options =>
+{
+    options.DefaultAuthenticateScheme = MobileApi.AuthScheme;
+    options.DefaultChallengeScheme = MobileApi.AuthScheme;
+    options.DefaultForbidScheme = MobileApi.AuthScheme;
+});
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
     options.ValidationInterval = TimeSpan.Zero);
 builder.Services.AddAuthorizationBuilder()
@@ -56,6 +72,8 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new FriendlyTextErrorFilter());
+    // Thông báo kiểm tra dữ liệu và lỗi nhập sai kiểu bằng tiếng Việt.
+    VietnameseValidationMetadataProvider.Configure(options);
     options.Filters.Add(new KeepListFilterResultFilter());
 });
 builder.Services.AddScoped<RestaurantManagement.Web.Services.TableService>();
@@ -114,26 +132,6 @@ if (args.Contains("--init-week10-demo", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
-if (args.Contains("--init-week9-demo", StringComparer.OrdinalIgnoreCase))
-{
-    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Chỉ tạo dữ liệu tuần 9 trong Development.");
-    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
-    using var scope = app.Services.CreateScope();
-    await RestaurantManagement.Web.Services.Week9DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>(),
-        scope.ServiceProvider.GetRequiredService<RestaurantManagement.Web.Services.TableService>());
-    return;
-}
-
-if (args.Contains("--init-week8-demo", StringComparer.OrdinalIgnoreCase))
-{
-    if (!app.Environment.IsDevelopment())
-        throw new InvalidOperationException("Chỉ được tạo dữ liệu tuần 8 trong môi trường Development.");
-    await AuthSetup.InitializeDemoAccountsAsync(app.Services, builder.Configuration);
-    using var scope = app.Services.CreateScope();
-    await RestaurantManagement.Web.Services.Week8DemoSetup.InitializeAsync(scope.ServiceProvider.GetRequiredService<RestaurantDbContext>());
-    return;
-}
-
 if (args.Contains("--remove-retired-menu-roles", StringComparer.OrdinalIgnoreCase))
 {
     if (!app.Environment.IsDevelopment())
@@ -155,7 +153,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Lỗi 404/403/400... (không có nội dung) hiển thị trang báo lỗi tiếng Việt thay vì trang trắng.
-app.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}");
+// API mobile trả JSON, không đổi sang trang lỗi HTML.
+app.UseWhen(context => !MobileApi.IsApiRequest(context.Request),
+    branch => branch.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}"));
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();

@@ -33,7 +33,7 @@
             <div class="col-4 text-end">
                 <h4 class="fw-bold text-danger mb-1">PHIẾU NHẬP KHO</h4>
                 <div class="fw-bold text-dark">Số: @p.MaPhieu</div>
-                <div class="text-muted small">Ngày lập: @p.ThoiDiem.ToString("dd/MM/yyyy HH:mm")</div>
+                <div class="text-muted small">Ngày lập: @VnTime.NgayGio(p.ThoiDiem)</div>
             </div>
         </div>
 
@@ -100,7 +100,7 @@
                             <td class="text-end">@item.DonGia.ToString("N0")</td>
                             <td class="text-end fw-bold text-dark">@item.ThanhTien.ToString("N0")</td>
                             <td class="text-center text-muted small">
-                                @(item.HanSuDung?.ToString("dd/MM/yyyy") ?? "—")
+                                @(item.HanSuDung is null ? "—" : VnTime.Ngay(item.HanSuDung))
                             </td>
                             <td class="text-center small">@(item.MaLo ?? "—")</td>
                         </tr>

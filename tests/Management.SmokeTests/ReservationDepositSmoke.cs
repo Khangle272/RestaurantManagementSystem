@@ -110,10 +110,27 @@ public static class ReservationDepositSmoke
         var receipt = new Dictionary<string, string> { ["RowVersion"] = Version(booking), ["RequestId"] = Guid.NewGuid().ToString(),
             ["Loai"] = "Thu", ["SoTien"] = "125000", ["LyDo"] = "Đã đối chiếu ngân hàng" };
         await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt, HttpStatusCode.BadRequest);
+        // Lịch khách báo chuyển nằm ở danh sách "Chờ đối chiếu cọc", không lẫn với lịch chưa nộp cọc.
+        check(WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=ChoDoiChieu")).Contains(booking.MaDatBan)
+            && !WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=ChoXacNhan")).Contains(booking.MaDatBan)
+            && !WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=DaXacNhan")).Contains(booking.MaDatBan),
+            "Reported transfer is listed only under awaiting reconciliation");
+        queue = WebUtility.HtmlDecode(await Get(cashier, "/DatTruoc"));
+        check(queue.Contains("Khách báo chuyển · chờ đối chiếu") && queue.Contains("Xác nhận thu cọc 125.000 đ"),
+            "Cashier queue shows the reconciliation status and a one-step deposit confirmation button");
+        // Nút xác nhận thu cọc trên danh sách: sai số tiền bị từ chối, đúng số tiền ghi một khoản thu, bấm lặp không ghi thêm.
+        var confirm = new Dictionary<string, string> { ["rowVersion"] = Version(booking), ["soTien"] = "100000",
+            ["requestId"] = Guid.NewGuid().ToString(), ["returnUrl"] = "/DatTruoc" };
+        await Post(cashier, $"/DatTruoc/XacNhanCoc/{id}", queue, confirm, HttpStatusCode.Redirect);
+        check((await Reload(id)).TienCocDaNop == 0, "Confirming an amount different from the customer's notice records nothing");
+        confirm["soTien"] = "125000";
+        await Post(cashier, $"/DatTruoc/XacNhanCoc/{id}", queue, confirm, HttpStatusCode.Redirect);
+        await Post(cashier, $"/DatTruoc/XacNhanCoc/{id}", queue, confirm, HttpStatusCode.Redirect);
         receipt["DaDoiChieuNganHang"] = "true";
-        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt);
-        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt);
+        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{id}", internalPage, receipt, HttpStatusCode.BadRequest);
         booking = await Reload(id);
+        check(WebUtility.HtmlDecode(await Get(admin, "/QuanLyDatBan?tab=DaXacNhan")).Contains(booking.MaDatBan),
+            "Confirmed deposit moves the booking to the confirmed list");
         check(booking.TienCocDaNop == 125000m && booking.TrangThai == TrangThaiDatBan.DaXacNhan
             && booking.ThoiDiemBaoChuyenKhoan == null && await db.GiaoDichCoc.CountAsync(x => x.DatBanId == id) == 1,
             "Cashier confirmation needs no bank transaction code; repeated confirmation records one receipt");
@@ -194,5 +211,26 @@ public static class ReservationDepositSmoke
         legacy = await Reload(legacy.Id);
         check(legacy.TienCocDaNop == 50000m && legacy.YeuCauHuy != null && legacy.TrangThai != TrangThaiDatBan.DaXacNhan,
             "Actual money received during a pending cancellation is recorded without confirming or reopening the reservation");
+
+        // Thu ngân xử lý khách hủy trước giờ đến như quản lý: thấy yêu cầu, hoàn cọc rồi hủy lịch.
+        var cancelQueue = WebUtility.HtmlDecode(await Get(cashier, "/DatTruoc"));
+        check(cancelQueue.Contains(legacy.MaDatBan) && cancelQueue.Contains("Khách xin hủy"), "Cashier queue lists customer cancellation requests holding a deposit");
+        check(WebUtility.HtmlDecode(await Get(cashier, "/DatTruoc?keyword=" + legacy.MaDatBan)).Contains(legacy.MaDatBan), "Cashier finds any booking by code for phone cancellations");
+        var cashierDetail = WebUtility.HtmlDecode(await Get(cashier, $"/DatTruoc/ChiTiet/{legacy.Id}"));
+        check(cashierDetail.Contains("value=\"Hoan\"") && cashierDetail.Contains("value=\"Giu\"") && cashierDetail.Contains("/DatTruoc/Huy/"),
+            "Cashier sees refund/keep deposit and cancellation actions before arrival");
+        await Post(cashier, $"/DatTruoc/Huy/{legacy.Id}", internalPage, new()
+            { ["rowVersion"] = Version(legacy), ["lyDo"] = "Thử hủy khi còn cọc" }, HttpStatusCode.BadRequest);
+        check((await Reload(legacy.Id)).TrangThai != TrangThaiDatBan.DaHuy, "Cancellation stays blocked while the deposit is unresolved");
+        legacy = await Reload(legacy.Id);
+        await Post(cashier, $"/DatTruoc/GiaoDichCoc/{legacy.Id}", internalPage, new()
+            { ["RowVersion"] = Version(legacy), ["RequestId"] = Guid.NewGuid().ToString(), ["Loai"] = "Hoan", ["HinhThuc"] = "ChuyenKhoan",
+                ["SoTien"] = "50000", ["LyDo"] = "Khách hủy trước giờ đến, hoàn toàn bộ cọc." });
+        legacy = await Reload(legacy.Id);
+        check(legacy.TienCocDaHoan == 50000m && await db.ChiTietThanhToan.AnyAsync(x => x.DatBanId == legacy.Id && x.LoaiGiaoDich == LoaiGiaoDichThanhToan.HoanCoc),
+            "Cashier refunds a deposit before arrival and the refund reaches the cash ledger");
+        await Post(cashier, $"/DatTruoc/Huy/{legacy.Id}", internalPage, new()
+            { ["rowVersion"] = Version(legacy), ["lyDo"] = "Khách hủy, đã hoàn cọc." });
+        check((await Reload(legacy.Id)).TrangThai == TrangThaiDatBan.DaHuy, "Cashier cancels the booking once the deposit is refunded");
     }
 }

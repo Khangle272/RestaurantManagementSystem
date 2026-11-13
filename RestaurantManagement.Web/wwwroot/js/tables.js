@@ -63,7 +63,7 @@
     });
     const board = document.getElementById('table-board');
     const status = document.getElementById('board-refresh');
-    if (!board || board.dataset.poll !== 'true') { if (status) status.textContent = 'Đang xếp bàn · tạm dừng tự cập nhật'; return; }
+    if (!board || board.dataset.poll !== 'true') { if (status) status.textContent = 'Đang chọn bàn · tạm dừng tự cập nhật'; return; }
     let busy = false;
     setInterval(async () => {
         if (busy || document.hidden || board.contains(document.activeElement)) return;
@@ -73,7 +73,7 @@
             const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
             if (!response.ok || response.redirected) { status.textContent = 'Phiên đăng nhập hoặc kết nối đã thay đổi. Tải lại trang.'; return; }
             board.innerHTML = await response.text();
-            status.textContent = 'Đã cập nhật ' + new Date().toLocaleTimeString('vi-VN');
+            status.textContent = 'Đã cập nhật ' + window.vnTime.time();
         } catch { status.textContent = 'Mất kết nối · đang chờ cập nhật lại'; }
         finally { busy = false; }
     }, 10000);

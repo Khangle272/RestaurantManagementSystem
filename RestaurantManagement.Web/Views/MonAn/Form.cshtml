@@ -52,9 +52,13 @@
                             <option value="@danhMuc.Id" data-thuc-uong="@(MonAnController.LaDanhMucThucUong(danhMuc.TenDanhMuc) ? "true" : "false")" selected="@(danhMuc.Id == Model.DanhMucId)">@danhMuc.TenDanhMuc</option>
                         }
                     </select>
-                    <button class="btn btn-outline-rose" type="button" data-bs-toggle="modal" data-bs-target="#modalQuickAddCategory" title="Thêm danh mục mới">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
+                    @* Thêm nhanh danh mục/nguyên liệu chỉ Quản lý gọi được; Bếp không thấy nút để khỏi gặp lỗi quyền. *@
+                    @if (admin)
+                    {
+                        <button class="btn btn-outline-rose" type="button" data-bs-toggle="modal" data-bs-target="#modalQuickAddCategory" title="Thêm danh mục mới">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    }
                 </div>
             </div>
             @if (laCombo)
@@ -119,7 +123,7 @@
                             : "Nhập định lượng nguyên thủy một lần; hệ thống tự nhân theo hệ số tỷ lệ cho từng size. Kho tự động trừ đúng size khi phục vụ.")
                     </p>
                 </div>
-                @if (!laCombo)
+                @if (!laCombo && admin)
                 {
                     <button type="button" class="btn btn-sm btn-outline-rose" data-bs-toggle="modal" data-bs-target="#modalQuickAddIngredient">
                         <i class="bi bi-plus-lg me-1"></i> Thêm nhanh nguyên liệu

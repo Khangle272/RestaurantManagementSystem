@@ -6,6 +6,8 @@
     var tables = Model.DatBan == null ? "-" : string.Join(", ", Model.DatBan.Ban.Select(x => x.BanAn.MaBan));
     var activeItems = Model.ChiTiet.Where(x => x.TrangThai != TrangThaiCheBien.DaHuy).ToList();
     var canPay = User.IsInRole("Admin") || User.IsInRole("ThuNgan") || User.IsInRole("BoiBan");
+    var canOrder = (User.IsInRole("Admin") || User.IsInRole("BoiBan") || User.IsInRole("TiepTan")) // Thu ngân không gọi món.
+        && (Model.LoaiDonHang != LoaiDonHang.TaiBan || RestaurantManagement.Web.Security.AppRoles.CanOrderDineIn(User)); // Tiếp tân chỉ mang đi / giao hàng.
 
     var typeBadge = Model.LoaiDonHang switch
     {
@@ -41,16 +43,19 @@
             }
             else
             {
-                <span class="badge bg-secondary">@Model.TrangThai</span>
+                <span class="badge bg-secondary">@(Model.TrangThai switch { TrangThaiHoaDon.ThanhToanMotPhan => "Thanh toán một phần", TrangThaiHoaDon.DaHuy => "Đã hủy", _ => Model.TrangThai.ToString() })</span>
             }
         </div>
         <div class="d-flex gap-2">
             @if (Model.TrangThai == TrangThaiHoaDon.ChuaThanhToan)
             {
+                @if (canOrder)
+                {
                 <a asp-action="AddDishes" asp-route-id="@Model.Id" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Gọi thêm món
                 </a>
+                }
                 @if (canPay)
                 {
                     <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-success d-inline-flex align-items-center gap-1 shadow-sm">
@@ -225,7 +230,7 @@
                         <dd class="col-7">@Model.NhanVien.HoTen</dd>
 
                         <dt class="col-5 text-muted">Thời điểm lập:</dt>
-                        <dd class="col-7">@Model.ThoiDiemLap.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")</dd>
+                        <dd class="col-7">@VnTime.NgayGio(Model.ThoiDiemLap)</dd>
 
                         @if (!string.IsNullOrEmpty(Model.GhiChuDonHang))
                         {
@@ -264,8 +269,8 @@
                     {
                         <div class="alert alert-success mb-0 py-2 small">
                             <strong>Đã thanh toán xong</strong><br />
-                            Phương thức: <strong>@Model.PhuongThucThanhToan</strong><br />
-                            Thời gian: @Model.ThoiDiemThanhToan?.ToOffset(TimeSpan.FromHours(7)).ToString("dd/MM/yyyy HH:mm")<br />
+                            Phương thức: <strong>@RestaurantManagement.Web.Services.PaymentLedger.HinhThucText(Model.PhuongThucThanhToan)</strong><br />
+                            Thời gian: @VnTime.NgayGio(Model.ThoiDiemThanhToan)<br />
                             @if (!string.IsNullOrEmpty(Model.MaGiaoDich))
                             {
                                 <span>Mã giao dịch: @Model.MaGiaoDich</span>

@@ -24,20 +24,10 @@ Dữ liệu demo và tài khoản đã nạp được giữ trong SQL Server loc
 
 ```powershell
 Set-Location D:\RestaurantManagementSystem
-.\Start-QuickTunnel.ps1
-```
-
-Nếu Windows chặn chạy script PowerShell, dùng lệnh chỉ áp dụng cho lần chạy này:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Start-QuickTunnel.ps1
-```
-
-Script dùng lệnh tương đương dưới đây. Nếu không dùng script, có thể chạy trực tiếp:
-
-```powershell
 .\cloudflared.exe --no-autoupdate tunnel --url https://localhost:7167 --no-tls-verify
 ```
+
+Nếu cài cloudflared bằng winget (đã có trong PATH), thay `.\cloudflared.exe` bằng `cloudflared`.
 
 Copy URL HTTPS có đuôi `trycloudflare.com` do cloudflared in ra để mở trên điện thoại hoặc chia sẻ cho người xem demo. Đợi log báo kết nối tunnel thành công. Trang quản trị là `<URL>/admin`, đăng nhập khách là `<URL>/Account/Login`. App MAUI cũng có thể nhập URL gốc HTTPS này.
 
@@ -52,7 +42,7 @@ Web hiện chuyển HTTP sang HTTPS và dùng cookie đăng nhập Secure. Vì v
 
 ## 5. Xử lý lỗi thường gặp
 
-- **Script báo chưa chạy Web / connection refused:** chạy bước 2, kiểm tra Web lắng nghe `https://localhost:7167` và SQL Server đã bật.
+- **cloudflared báo connection refused:** chạy bước 2, kiểm tra Web lắng nghe `https://localhost:7167` và SQL Server đã bật.
 - **502 Bad Gateway:** kiểm tra lại trang HTTPS local; dùng đúng cổng 7167 và giữ cờ `--no-tls-verify` khi dùng chứng chỉ phát triển.
 - **Không đăng nhập được:** mở đúng URL HTTPS công khai, kiểm tra tài khoản trước trên Web local; không đổi tunnel sang origin HTTP 5255.
 - **Không kết nối được QUIC trên mạng hiện tại:** dừng tunnel rồi thử `.\cloudflared.exe --no-autoupdate tunnel --protocol http2 --url https://localhost:7167 --no-tls-verify`.

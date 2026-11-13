@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagement.API.Data;
 using RestaurantManagement.API.Models;
+using RestaurantManagement.Shared;
 
 namespace RestaurantManagement.Web.Services;
 
@@ -17,8 +18,6 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
     public const int PhysicalBusyMinutes = 30;
     // Quá giờ hẹn chừng này mà khách chưa đến thì lễ tân được ghi nhận "Không đến" để trả bàn.
     public const int NoShowGraceMinutes = 15;
-    public static bool ReadyForSchedule(BanAn table, DateTimeOffset arrival) => table.TrangThai == TrangThaiBan.SanSang
-        || DateOnly.FromDateTime(arrival.ToOffset(TimeSpan.FromHours(7)).DateTime) > DateOnly.FromDateTime(VietnamNow);
     public static DateTimeOffset VietnamTime(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), TimeSpan.FromHours(7));
     public static DateTime VietnamNow => DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).DateTime;
     public static IQueryable<ChiTietDatBan> CurrentServices(RestaurantDbContext db)
@@ -226,7 +225,7 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         if (booking is null || !SameVersion(booking, version)) return "Yêu cầu đã thay đổi. Vui lòng mở lại.";
         if (ReservationDepositPolicy.Expired(booking)) return "Lịch đã hết hạn giữ chỗ chờ thanh toán. Khách cần tạo lịch mới.";
         if (booking.TrangThai is not (TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan))
-            return "Chỉ xếp bàn cho yêu cầu chờ xác nhận, chờ cọc hoặc đã xác nhận.";
+            return "Chỉ chọn hoặc đổi bàn cho lịch chờ xác nhận, chờ cọc hoặc đã xác nhận.";
         if (booking.GioKetThucDuKien <= DateTimeOffset.UtcNow) return "Yêu cầu đã quá giờ kết thúc dự kiến.";
         if (tables.Count != ids.Length || tables.Any(x => !x.KhuVuc.DangSuDung || x.TrangThai == TrangThaiBan.NgungSuDung))
             return "Có bàn hoặc khu vực đã ngừng sử dụng.";
@@ -270,7 +269,7 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var busy = await PhysicalBusyTables(from, id);
         if (selected.Any(x => x.TrangThai == TrangThaiBan.NgungSuDung || !x.KhuVuc.DangSuDung || busy.Contains(x.Id)))
             return "Bàn đang xếp chưa sẵn sàng cho giờ mới; chọn bàn khác trước khi đổi giờ.";
-        var audit = $"\nĐổi giờ {booking.GioDen.ToOffset(TimeSpan.FromHours(7)):dd/MM HH:mm} → {arrival:dd/MM HH:mm}; {staffId?.ToString() ?? "Admin"}: {reason.Trim()}";
+        var audit = $"\nĐổi giờ {VnTime.NgayGio(booking.GioDen)} → {VnTime.NgayGio(arrival)}; {staffId?.ToString() ?? "Admin"}: {reason.Trim()}";
         if ((booking.YeuCau?.Length ?? 0) + audit.Length > 1000) return "Ghi chú lịch đã đầy; rút gọn trước khi thêm lý do đổi giờ.";
         booking.YeuCau = (booking.YeuCau ?? "") + audit;
         booking.GioDen = from; booking.GioKetThucDuKien = until;
@@ -284,7 +283,7 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
         var booking = await db.DatBan.SingleOrDefaultAsync(x => x.Id == id);
         if (booking is null || !SameVersion(booking, version)) return "Yêu cầu đã thay đổi. Vui lòng mở lại.";
         if (booking.TrangThai is not (TrangThaiDatBan.ChoXacNhan or TrangThaiDatBan.ChoCoc or TrangThaiDatBan.DaXacNhan) || tables.Count == 0)
-            return "Chỉ nhận khách của lịch còn hiệu lực và đã xếp bàn.";
+            return "Chỉ nhận khách của lịch còn hiệu lực và đã có bàn.";
         if (booking.YeuCauHuy is not null) return "Khách đang yêu cầu hủy. Xử lý yêu cầu trước khi nhận bàn.";
         if (booking.ThoiDiemBaoChuyenKhoan is not null) return "Khách đã báo chuyển khoản cọc. Thu ngân đối chiếu khoản tiền trước khi nhận bàn.";
         var now = DateTimeOffset.UtcNow;
@@ -296,7 +295,7 @@ public class TableService(RestaurantDbContext db, PreorderService preorders, IKh
             return "Bàn đang có lịch khác trùng giờ. Kiểm tra và xếp lại bàn trước khi nhận khách.";
         var physicallyBusy = await PhysicalBusyTables(now, id);
         if (tables.Any(x => !x.KhuVuc.DangSuDung || x.TrangThai == TrangThaiBan.NgungSuDung || physicallyBusy.Contains(x.Id)))
-            return "Bàn chưa sẵn sàng; hãy dọn bàn hoặc xếp bàn khác.";
+            return "Bàn chưa sẵn sàng; hãy dọn bàn hoặc đổi sang bàn khác.";
         // Cọc chỉ để giữ chỗ: khách đã có mặt thì phần cọc chưa nộp không còn cần thu trước.
         booking.TienCocYeuCau = Math.Min(booking.TienCocYeuCau, Math.Max(0, ReservationDepositPolicy.Received(booking)));
         booking.YeuCauCoc = booking.TienCocYeuCau > 0;

@@ -220,6 +220,10 @@ public class MonAnController(RestaurantDbContext context, IWebHostEnvironment en
                     // Touch the aggregate even when only sizes/recipe/combo changed.
                     Db.Entry(entity).Property(x => x.TenMon).IsModified = true;
                     var removedSizes = entity.Sizes.Where(x => !model.Sizes.Any(s => s.Id == x.Id)).ToList();
+                    // Định mức của size bị xóa phải xóa trước, nếu không khóa ngoại (Restrict) chặn việc xóa size.
+                    var removedSizeIds = removedSizes.Select(x => x.Id).ToList();
+                    if (removedSizeIds.Count > 0)
+                        Db.DinhMucMon.RemoveRange(await Db.DinhMucMon.Where(x => removedSizeIds.Contains(x.MaKichCo)).ToListAsync());
                     Db.MonAnSize.RemoveRange(removedSizes);
                 }
                 var sizeMap = new Dictionary<MonAnSizeFormViewModel, MonAnSize>();

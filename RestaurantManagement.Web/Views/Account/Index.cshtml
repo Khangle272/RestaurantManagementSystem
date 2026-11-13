@@ -4,6 +4,16 @@
     <h1 class="h3 mb-2">Thông tin cá nhân</h1>
     <p class="text-muted">Thông tin đăng nhập và bảo mật của bạn.</p>
     <dl class="info-list">
+        @if (!string.IsNullOrWhiteSpace(ViewBag.HoTen as string))
+        {
+            <dt class="small text-muted">Họ và tên</dt>
+            <dd>@ViewBag.HoTen</dd>
+        }
+        @if (!string.IsNullOrWhiteSpace(ViewBag.SoDienThoai as string))
+        {
+            <dt class="small text-muted">Số điện thoại</dt>
+            <dd>@ViewBag.SoDienThoai</dd>
+        }
         <dt class="small text-muted">Tài khoản đăng nhập</dt>
         <dd>@User.Identity?.Name</dd>
         <dt class="small text-muted">Vai trò</dt>

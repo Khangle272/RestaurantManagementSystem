@@ -69,7 +69,9 @@ public class AdminController(RestaurantDbContext db, UserManager<TaiKhoan> users
         var today = TableService.VietnamTime(TableService.VietnamNow.Date);
         var tomorrow = today.AddDays(1);
         var paidToday = db.HoaDon.AsNoTracking()
-            .Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan && x.ThoiDiemLap >= today && x.ThoiDiemLap < tomorrow);
+            .Where(x => x.TrangThai == TrangThaiHoaDon.DaThanhToan
+                // Doanh thu tính theo lúc thanh toán, khớp với trang Báo cáo (hóa đơn mở hôm qua, trả hôm nay tính cho hôm nay).
+                && (x.ThoiDiemThanhToan ?? x.ThoiDiemLap) >= today && (x.ThoiDiemThanhToan ?? x.ThoiDiemLap) < tomorrow);
         var model = new DashboardViewModel
         {
             ShowStats = true,

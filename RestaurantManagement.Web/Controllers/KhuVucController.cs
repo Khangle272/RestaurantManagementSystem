@@ -25,7 +25,7 @@ public class KhuVucController(RestaurantDbContext db) : ManagementControllerBase
     {
         var area = model.Id == 0 ? new KhuVuc() : await Db.KhuVuc.FindAsync(model.Id);
         if (area is null) return NotFound();
-        model.TenKhuVuc = model.TenKhuVuc.Trim();
+        model.TenKhuVuc = model.TenKhuVuc?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(model.TenKhuVuc)) ModelState.AddModelError(nameof(model.TenKhuVuc), "Nhập tên khu vực.");
         if (await Db.KhuVuc.AnyAsync(x => x.Id != model.Id && x.Tang == model.Tang && x.TenKhuVuc == model.TenKhuVuc))
             ModelState.AddModelError(nameof(model.TenKhuVuc), "Tên khu vực đã có trên tầng này.");

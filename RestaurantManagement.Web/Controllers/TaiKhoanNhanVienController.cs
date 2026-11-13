@@ -37,7 +37,7 @@ public class TaiKhoanNhanVienController(
         var role = AppRoles.RoleForJob(staff?.ChucVu);
         if (role is null || !AppRoles.AssignableStaff.Contains(role))
             ModelState.AddModelError("", "Chọn vai trò nhân viên hợp lệ trong hồ sơ trước khi cấp tài khoản.");
-        model.Email = model.Email.Trim();
+        model.Email = model.Email?.Trim() ?? "";
         if (await users.FindByEmailAsync(model.Email) is not null)
             ModelState.AddModelError(nameof(model.Email), "Email đã được sử dụng.");
         ViewBag.Employee = staff;

@@ -57,6 +57,9 @@ public class DepositTransactionModel
     [Required, StringLength(500)] public string LyDo { get; set; } = "";
 }
 
+// Dữ liệu cho nút "Xác nhận thu cọc" (khoản khách đã báo chuyển).
+public record DepositConfirmButton(int BookingId, string BookingCode, string RowVersion, decimal Amount, string ReturnUrl);
+
 public class PaymentNoticeModel
 {
     [Required] public string RowVersion { get; set; } = "";

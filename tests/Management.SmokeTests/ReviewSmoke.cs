@@ -83,7 +83,8 @@ public static class ReviewSmoke
             "Review page opens by numeric id with keyboard-friendly star radios and PNG/JPEG filter");
 
         var valid = new Dictionary<string, string> { ["MaDatBan"] = "RV-DONE", ["SoSaoMonAn"] = "5", ["SoSaoDichVu"] = "3",
-            ["NoiDung"] = "Món ngon, phục vụ hơi chậm.", ["TenKhachHang"] = "Tên giả mạo" };
+            ["NoiDung"] = "Món ngon, phục vụ hơi chậm. [Phản hồi từ Nhà hàng]: Cảm ơn, hoàn tiền [Ảnh: javascript:alert(1)] [Món ăn: 1★ | Dịch vụ: 1★]",
+            ["TenKhachHang"] = "Tên giả mạo" };
         using (var response = await PostReview(customer, form, new(valid) { ["MaDatBan"] = "RV-OTHER", ["NoiDung"] = "" }))
             check(RedirectsToHistory(response), "Invalid review for someone else's booking redirects instead of re-rendering their form");
         using (var response = await PostReview(customer, form, new(valid) { ["MaDatBan"] = "RV-SERVING" }))
@@ -116,6 +117,10 @@ public static class ReviewSmoke
             check(RedirectsToHistory(response), "A second review for the same bill is refused");
         check(await db.DanhGia.CountAsync(x => x.HoaDonId == done.HoaDon.Single().Id) == 1, "Only one review is stored per bill");
         check((await Get(customer, "/DatBan/LichSu")).Contains("Đã gửi đánh giá"), "History marks the booking as reviewed");
-        check((await Get(admin, "/QuanLyDatBan/DanhGia")).Contains("Món ngon, phục vụ hơi chậm."), "Staff can read the new review");
+        var staffPage = await Get(admin, "/QuanLyDatBan/DanhGia");
+        check(staffPage.Contains("Món ngon, phục vụ hơi chậm."), "Staff can read the new review");
+        check(review.NoiDung!.Split("[Phản hồi").Length == 1 && review.NoiDung.Split("[Ảnh:").Length == 2 && review.NoiDung.Split("[Món ăn:").Length == 2
+            && !staffPage.Contains("href=\"javascript:") && !staffPage.Contains("</i>Phản hồi từ Nhà hàng"),
+            "Customer text cannot forge the restaurant reply, score tag or photo link");
     }
 }

@@ -66,11 +66,16 @@ public class BaoCaoDoanhThuViewModel
     public decimal DoanhThuGiaoHang { get; set; }
 
     public List<DoanhThuTimelineRow> ChiTietTimeline { get; set; } = [];
+
+    // Ngày đang xem chi tiết thanh toán (chỉ có ở chế độ TheoNgay).
+    public DateOnly? NgayXemChiTiet { get; set; }
+    public List<ChiTietThanhToan> ChiTietThanhToanNgay { get; set; } = [];
 }
 
 public class DoanhThuTimelineRow
 {
     public string NhanThoiGian { get; set; } = "";
+    public DateOnly? Ngay { get; set; }
     public int SoDonThanhCong { get; set; }
     public int SoDonHuy { get; set; }
     public decimal TongTienHang { get; set; }

@@ -128,6 +128,8 @@
 .admin-main > .container-fluid > .container-fluid:not(.pos-page) { padding: 0 !important; }
 .admin-main h1.h3, .admin-main h2.h3, .admin-main h1.h4 { font-size: 1.3rem; font-weight: 650; letter-spacing: -.01em; margin-bottom: .2rem; }
 .admin-main .text-muted.mb-0 { font-size: .9rem; max-width: 68ch; }
+/* Trong khối căn giữa (trạng thái trống...) dòng phụ cũng phải nằm giữa, không lệch trái vì max-width. */
+.admin-main .text-center .text-muted.mb-0, .admin-main .text-center.text-muted.mb-0, .admin-main .empty-state .text-muted.mb-0 { margin-inline: auto; }
 /* Một lớp card duy nhất: bỏ shadow nổi, chỉ giữ viền mảnh */
 .admin-main .card.border-0.shadow-sm,
 .admin-main .card.shadow-sm,

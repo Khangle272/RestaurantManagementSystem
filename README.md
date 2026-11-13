@@ -1,58 +1,61 @@
 # RestaurantManagementSystem
 
-Đọc [nhật ký ý tưởng và tiến độ](NHAT_KY_Y_TUONG_VA_TIEN_DO.md) để biết cách chạy tài khoản thử, quyền hiện có, quyết định đã làm và phần còn dự kiến. Sau mỗi lượt hoàn thành, cập nhật cùng file này để nhóm chỉ cần theo dõi một nơi.
+Hệ thống quản lý nhà hàng (C# .NET 10, ASP.NET Core MVC, SQL Server, .NET MAUI). Gồm:
 
-Giao diện quản trị Web có CRUD nhân viên (`/NhanVien`), bàn ăn (`/BanAn`) và
-danh mục món ăn (`/DanhMuc`). Các trang hỗ trợ tìm kiếm, lọc trạng thái, phân trang,
-kiểm tra dữ liệu đầu vào, mã/tên trùng và xác nhận xóa. Bàn ăn có thêm bộ lọc khu vực.
-Bản ghi đang được sử dụng không được xóa; có thể chuyển sang trạng thái ngừng sử dụng/nghỉ việc.
-Thông tin đăng nhập liên kết với nhân viên được giữ nguyên khi sửa hồ sơ.
+| Project | Vai trò |
+| --- | --- |
+| `RestaurantManagement.Web` | Website khách + trang quản trị nội bộ, đồng thời chứa REST API `/api` cho mobile |
+| `RestaurantManagement.API` | Tầng dữ liệu dùng chung: entity, `RestaurantDbContext`, migrations, script SQL, lệnh `--seed` |
+| `RestaurantManagement.Shared` | DTO hợp đồng dữ liệu giữa API và app mobile |
+| `RestaurantManagement.Mobile` | App MAUI native (Android/Windows) gọi `/api` bằng bearer token |
+| `tests/Management.SmokeTests` | Kiểm thử tích hợp HTTP + database trên database tạm |
 
-Chạy Web bằng `dotnet run --project RestaurantManagement.Web` sau khi cấu hình
-`ConnectionStrings:DefaultConnection`. Web áp dụng migrations và khởi tạo vai trò, không tự nạp dữ liệu mẫu,
-kể cả khi khởi tạo database mới. Các trang CRUD đọc và ghi trực tiếp vào SQL Server.
-Dữ liệu được nhập qua giao diện hoặc bằng script SQL chủ động.
-`RestaurantDB` là tên database minh họa; mỗi máy tự tạo/nạp dữ liệu theo hướng dẫn bên dưới.
-Không chạy lệnh API `--seed` trên database dùng dữ liệu thật vì lệnh đó nạp dữ liệu minh họa.
-Bản cập nhật người 1 có migrations `TableFloorAndReservationLifecycle` và `MenuApprovalAndKitchenOwnership`; Web tự áp dụng khi khởi động.
-Chúng bổ sung tầng/khu vực ưu tiên/thời điểm kết thúc lượt bàn và cột duyệt món/lý do ngừng kinh doanh, không tạo lại hay xóa database.
-Sao lưu database có dữ liệu quan trọng trước khi nâng cấp; không chạy rollback xóa cột mới tùy tiện.
+Tài liệu khác:
 
-Bộ dữ liệu cho ba CRUD nằm tại `RestaurantManagement.API/Scripts/PopulateCrudData.sql`.
-Đây là thông tin tự soạn để thực hành, gồm 12 nhân viên, 18 bàn và 10 danh mục,
-kèm khu vực cần thiết. Các tên/thông tin liên hệ không đại diện cho nhân sự thực tế;
-email dùng miền `.test`. Dữ liệu được lưu trong SQL Server và có thể sửa/xóa qua giao diện.
-Để nạp trên máy khác, mở script trong SSMS, chọn database ứng dụng đã có schema rồi Execute.
-Script chỉ thêm mã/tên chưa có, không sửa/xóa bản ghi cũ và không tự chạy khi mở ứng dụng.
-Connection string mẫu dùng `.\SQLEXPRESS`; sửa tên instance/database cho đúng máy chạy, không mặc nhiên dùng cấu hình máy của người khác.
+- [NHAT_KY_Y_TUONG_VA_TIEN_DO.md](NHAT_KY_Y_TUONG_VA_TIEN_DO.md): ma trận quyền, quyết định nghiệp vụ, tiến độ và bàn giao. Cập nhật file này sau mỗi lượt làm việc.
+- [DESIGN.md](DESIGN.md): thiết kế giao diện và luồng màn hình.
+- [API_MOBILE.md](API_MOBILE.md): kiến trúc REST API, danh sách endpoint, phân quyền và cách chạy app mobile.
+- [DEMO_WEBSITE.md](DEMO_WEBSITE.md), [KICH_BAN_TEST_DEMO.md](KICH_BAN_TEST_DEMO.md): bộ dữ liệu và kịch bản trình bày.
+- [HUONG_DAN_CLOUDFLARE.md](HUONG_DAN_CLOUDFLARE.md): chia sẻ demo qua Cloudflare Quick Tunnel.
+- [RestaurantManagement.API/README.md](RestaurantManagement.API/README.md): database, migration và dữ liệu minh họa.
 
-Để bổ sung dữ liệu liên kết cho các bảng nghiệp vụ còn lại, chạy
-`RestaurantManagement.API/Scripts/PopulateRestaurantData.sql` sau script trên.
-Bộ dữ liệu tự soạn bao gồm thực đơn/size/công thức/combo, khách hàng, đặt bàn,
-món đặt trước, hóa đơn/chi tiết, nhà cung cấp, nhập/xuất kho, khuyến mãi/voucher và đánh giá.
-Script dùng transaction, kiểm tra tổng hóa đơn và lượng xuất theo lô; chạy lại không tạo trùng.
-`PopulateIngredientStock.sql` tạo ba phiếu nhập minh họa cho 15 nguyên liệu, cập nhật tồn kho và đơn giá tham khảo theo đúng chứng từ; chạy lại không cộng tồn hai lần.
-`SeedPosKdsPaymentDemo.sql` thêm hai hóa đơn đang mở để minh họa thanh toán thường và thanh toán có voucher; chạy sau các script trên, không tự chạy khi khởi động ứng dụng.
-Script ghi tài khoản `admin.mau@example.test` và năm nhân viên NV004/NV005/NV006/NV008/NV012. Mỗi nhân viên có đúng một vai trò ứng dụng: `ThuNgan`, `TiepTan`, `BoiBan`, `Bep` hoặc `Kho`. Trên database mới, sáu tài khoản nội bộ được tạo ở trạng thái hoạt động với mật khẩu riêng đã băm bằng ASP.NET Identity; đăng nhập sau khi nạp SQL. Script giữ nguyên mật khẩu của tài khoản đã hoạt động; không tạo lại vị trí Thực đơn/Danh mục riêng. Với tài khoản mẫu bị khóa do SQL cũ, chỉ kích hoạt khi đúng hồ sơ/quyền và chưa có mật khẩu.
-Bảng đăng nhập ngoài, token và claim không được chèn dữ liệu giả; chúng dành cho chức năng xác thực.
+## Chạy website
 
-Để nạp các script theo đúng thứ tự bằng ứng dụng (môi trường Development), chạy:
+Yêu cầu .NET 10 SDK và SQL Server (mặc định `.\SQLEXPRESS`, Windows Authentication). Đặt chuỗi kết nối `ConnectionStrings:DefaultConnection` theo máy của mình rồi chạy:
+
+```powershell
+dotnet run --project RestaurantManagement.Web --launch-profile https
+```
+
+Khi khởi động, Web tự áp dụng migrations và tạo vai trò; **không tự nạp dữ liệu mẫu**. Sao lưu database có dữ liệu quan trọng trước khi nâng cấp.
+
+- Trang nhà hàng cho khách: `https://localhost:7167/`, khách đăng nhập tại `/Account/Login`.
+- Cổng nội bộ cho nhân viên/Admin: `https://localhost:7167/admin`.
+- Profile `http` dùng `http://localhost:5255`; cookie đăng nhập là Secure nên demo nên dùng HTTPS.
+
+## Nạp dữ liệu (chỉ Development)
+
+Cách nhanh nhất là bộ demo toàn website. Lệnh nâng schema, nạp các script SQL còn thiếu, tạo tài khoản đủ 7 vai trò và giao dịch mẫu (hóa đơn 28 ngày, ví voucher, điểm, lịch cọc, bàn đang phục vụ, KDS, chứng từ kho). Có thể chạy lại mà không tạo trùng:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
-$env:ConnectionStrings__DefaultConnection = 'Server=.\SQLEXPRESS;Database=RestaurantDB;Trusted_Connection=True;TrustServerCertificate=True;'
-dotnet run --project RestaurantManagement.Web -- --import-sql-data
+$env:AuthBootstrap__DemoPassword = 'Demo@2026!'
+dotnet run --project RestaurantManagement.Web --no-launch-profile -- --init-website-demo
 ```
 
-Lệnh có thể chạy lại; mỗi script chỉ bổ sung bản ghi còn thiếu. Sáu tài khoản nội bộ mẫu có thể đăng nhập ngay sau khi nạp; bộ demo đủ cả khách ở mục 4 của nhật ký. Hóa đơn POS/KDS tra cứu theo mã `HD-POSDEMO-01` (không voucher) và `HD-POSDEMO-02` (voucher `POSKDS-DEMO10`).
+Tài khoản `.demo@example.test` dùng mật khẩu `Demo@2026!`; danh sách và kịch bản xem tại [DEMO_WEBSITE.md](DEMO_WEBSITE.md).
 
-Nếu thích dùng SSMS: tạo `RestaurantDB`, chọn database đó và chạy lần lượt `InitialSchema.sql`, `PopulateCrudData.sql`, `PopulateRestaurantData.sql`, `PopulateIngredientStock.sql`, `SeedPosKdsPaymentDemo.sql`. Sau đó chạy Web bằng:
+Các lệnh Development khác của Web:
 
-```powershell
-dotnet run --project RestaurantManagement.Web --launch-profile http
-```
+| Tham số | Tác dụng |
+| --- | --- |
+| `--import-sql-data` | Chạy lần lượt các script trong `RestaurantManagement.API/Scripts` (nhân viên, bàn, thực đơn, khách, hóa đơn, kho, khuyến mãi) và tạo sáu tài khoản nội bộ mẫu |
+| `--init-demo-accounts` | Chỉ tạo tài khoản demo đủ vai trò |
+| `--init-week10-demo` | Khu vực và hai bàn riêng kèm lịch đặt bàn có món đặt trước theo ca (W10) |
+| `--init-auth` | Chỉ đồng bộ schema và vai trò |
+| `--remove-retired-menu-roles` | Dọn vai trò/tài khoản mẫu cũ đã ngừng dùng, có kiểm tra bảo toàn lịch sử |
 
-Trang chủ ở `http://localhost:5255/`, cổng quản trị/nhân viên ở `http://localhost:5255/admin`. Sáu tài khoản nội bộ mẫu sử dụng các mật khẩu riêng sau đây chỉ cho dữ liệu Development:
+Sau `--import-sql-data`, sáu tài khoản nội bộ mẫu dùng mật khẩu riêng (chỉ cho dữ liệu Development; chạy lại script không đặt lại mật khẩu đã đổi):
 
 | Chức vụ | Email | Mật khẩu mẫu |
 | --- | --- | --- |
@@ -63,100 +66,41 @@ Trang chủ ở `http://localhost:5255/`, cổng quản trị/nhân viên ở `h
 | Quản lý bếp | `bep.minhhoa@nhahang.example.test` | `BepCom2026!` |
 | Kho | `kho.minhhoa@nhahang.example.test` | `KhoGao2026!` |
 
-Mật khẩu trong bảng dành cho tài khoản mẫu mới nạp. Nếu đã đổi mật khẩu thì dùng mật khẩu mới; chạy lại SQL không đặt lại mật khẩu của tài khoản đang hoạt động.
-Người dùng mở `/Account` (**Thông tin cá nhân**) để xem tài khoản, sửa thông tin nếu được phép và đổi mật khẩu. Trang chủ nội bộ ở `/admin/TrangChu`; menu nhóm chỉ hiện chức năng đúng vai trò, còn `/` vẫn là web nhà hàng cho khách.
+Dữ liệu là thông tin tự soạn để thực hành; email dùng miền `.test`. Khi chạy script bằng `sqlcmd`, thêm `-f 65001 -I` để giữ đúng tiếng Việt. Không chạy `RestaurantManagement.API -- --seed` hay các lệnh trên với database dữ liệu thật.
 
-Nếu dùng `sqlcmd` thay SSMS để đọc các file SQL UTF-8, thêm **`-f 65001 -I`**; thiếu bảng mã có thể lưu sai tiếng Việt vào database. Lệnh nạp qua ứng dụng đọc file UTF-8.
+## Chức năng chính
 
-Trang món ăn có thêm/sửa/xóa, giá theo nhiều size, định mức, thành phần combo và tải ảnh
-PNG/JPEG/WebP tối đa 5 MB. Món/size có lịch sử liên quan được bảo vệ khi xóa.
-Trang nguyên liệu lấy tồn kho từ tổng nhập trừ tổng xuất đã ghi sổ; không cho đổi đơn vị
-khi nguyên liệu đã có công thức hoặc chứng từ.
-Thống kê hai trang tính trên toàn bộ dữ liệu, bộ lọc lấy từ database.
-Các nút chưa có chức năng, chi nhánh/tài khoản/thông báo giả đã được gỡ khỏi giao diện chung.
+- **Tài khoản và phân quyền:** 6 vai trò nội bộ (Admin, Tiếp tân, Bồi bàn, Thu ngân, Quản lý bếp, Kho) và Khách hàng; mỗi tài khoản đúng một vai trò. `/Account` là trang Thông tin cá nhân; Admin cấp tài khoản nhân viên trong hồ sơ `/NhanVien` và quản lý khách tại `/TaiKhoanKhachHang`. Menu nội bộ chỉ hiện chức năng đúng vai trò; quyền vẫn được kiểm tra ở server.
+- **Thực đơn:** món nhiều size, định mức nguyên liệu, combo, ảnh PNG/JPEG/WebP tối đa 5 MB. Bếp soạn nội dung kỹ thuật, Admin duyệt và đặt giá trước khi mở bán.
+- **Bàn và đặt bàn:** sơ đồ bàn `/SoDoBan` theo tầng/khu vực, gợi ý bàn theo lịch/sức chứa/VIP, tiếp nhận yêu cầu tại `/QuanLyDatBan`, đặt cọc và đặt món trước. Thanh toán không tự trả bàn: bồi bàn bấm **Kết thúc phục vụ** rồi **Dọn xong**.
+- **Gọi món và bếp:** POS `/DonHang` cho đơn tại bàn, mang đi, giao hàng; gọi thêm món; KDS `/Bep` chế biến theo thứ tự vào trước (`ChoCheBien` → `DangCheBien` → `SanSang`); bồi bàn xác nhận mang ra (`DaPhucVu`) hoặc hủy món chưa nấu.
+- **Thanh toán** tại `/HoaDon/Details/{id}`: tiền mặt (tính tiền thối) hoặc chuyển khoản (hiện thông tin tài khoản, số tiền, nội dung và lưu mã giao dịch). Tự trừ tiền cọc, áp dụng khuyến mãi/voucher, in hóa đơn K80/A5.
+- **Khuyến mãi và khách hàng thân thiết:** chương trình nhiều mã tại `/KhuyenMai` (giảm %/tiền, phạm vi hóa đơn/món, trần giảm, giới hạn phát hành/lượt dùng); khách thu thập voucher vào ví hoặc đổi điểm tại `/KhachHang/Vouchers`. Cứ 10.000đ sau giảm được 1 điểm. Giờ hiệu lực theo UTC+7, chính xác tới giây.
+- **Kho:** nhà cung cấp, nhập/xuất/thanh lý; tồn kho = tổng nhập − tổng xuất đã ghi sổ.
+- **Báo cáo:** doanh thu, món bán chạy, tồn kho, hiệu quả ưu đãi, thống kê đặt bàn.
+- **App mobile:** nhân viên xem sơ đồ bàn, gọi món, phục vụ, thanh toán, tiếp nhận đặt bàn; khách theo dõi đơn, lịch sử và điểm. Thu thập/đổi voucher vẫn làm trên website. Chi tiết: [API_MOBILE.md](API_MOBILE.md).
 
-Kiểm thử tích hợp (chạy từ thư mục gốc repository):
+Bản ghi đang được dùng không bị xóa cứng; chuyển sang ngừng sử dụng/nghỉ việc. Quy tắc nghiệp vụ chi tiết và lý do từng quyết định nằm trong nhật ký.
+
+## Kiểm thử
 
 ```powershell
 dotnet run --project tests/Management.SmokeTests/Management.SmokeTests.csproj
 ```
 
-Bộ kiểm thử yêu cầu .NET 10 và SQL Server cục bộ hỗ trợ Windows Authentication.
-Mặc định dùng `.\SQLEXPRESS`; có thể đặt biến môi trường `CRUD_TEST_SQL_SERVER` để đổi instance.
-Tài khoản chạy cần quyền tạo/xóa database. Kiểm thử khởi động Web trên cổng tạm,
-tạo database `RestaurantCrudTests_<GUID>` riêng và xóa sau khi chạy; không dùng database ứng dụng.
-Dữ liệu mẫu được bộ kiểm thử nạp riêng sau khi xác nhận Web khởi động với database trống.
-Các ca kiểm thử bao gồm CRUD qua HTTP, xác thực form, dữ liệu trùng, khóa ngoại,
-xung đột phiên bản, bộ lọc/phân trang và giữ nguyên kết quả xóa sau khi khởi động lại.
-
-Admin quản lý hồ sơ và tài khoản đăng nhập chung tại `/NhanVien`: tạo nhân viên, chọn vai trò công việc rồi cấp tài khoản trong hồ sơ; không chọn thêm một bộ quyền riêng. `/TaiKhoanNhanVien` cũ chuyển về màn hình này.
-Quản lý tài khoản khách tại `/TaiKhoanKhachHang`. Nhân viên không tự sửa hồ sơ/quyền; khách và Admin được sửa thông tin trong phạm vi cho phép, với mật khẩu xác nhận.
-
-Sơ đồ bàn ở `/SoDoBan`; Tiếp tân tạo yêu cầu đặt bàn cho khách tại `/QuanLyDatBan/Create` và xếp vào bàn có sẵn. Chỉ Admin cấu hình bàn/khu vực vật lý.
-Sơ đồ có danh sách yêu cầu bên cạnh và gợi ý bàn phù hợp theo lịch/sức chứa/khu vực/VIP. Bấm mã bàn để tạo yêu cầu điền sẵn bàn; gợi ý và chọn bàn chưa giữ chỗ, vẫn cần tiếp tân xác nhận để server kiểm tra lại.
-Thanh toán không tự trả bàn: bồi bàn bấm **Kết thúc phục vụ** sau khi xử lý xong và đủ điều kiện thanh toán, sau đó bấm **Dọn xong** để bàn sẵn sàng.
-
-Màn hình POS gọi món và quản lý đơn hàng tại `/DonHang`:
-- Tạo đơn gọi món tại bàn đang phục vụ, đơn mang đi hoặc giao hàng tận nơi (`/DonHang/Create`) kèm giỏ hàng tức thì, phân loại danh mục, tìm kiếm món, chọn kích cỡ món và ghi chú riêng từng món.
-- Gọi thêm món vào đơn đang mở (`/DonHang/AddDishes`), lưu snapshot tên size và thời điểm gọi để bếp chế biến theo thứ tự vào trước ra trước (FIFO).
-- Bếp theo dõi và chế biến món tại màn hình KDS `/Bep` (`ChoCheBien` → `DangCheBien` → `SanSang`).
-- Bồi bàn / Tiếp tân / Admin xác nhận món đã mang ra bàn (`SanSang` → `DaPhucVu`) tại trang chi tiết `/DonHang/Details/{id}`, giải phóng hoàn toàn điều kiện kết thúc phục vụ bàn. Hỗ trợ hủy món chưa nấu (`ChoCheBien` → `DaHuy`) và tự động khấu trừ tiền hóa đơn.
-
-Thanh toán đa hình thức tại `/HoaDon/Details/{id}`:
-- **Tiền mặt**: Nhập số tiền khách đưa, tự động tính tiền thối lại và kiểm tra đủ tiền thanh toán.
-- **Chuyển khoản ngân hàng (VietQR)**: Hiển thị ảnh QR VietQR tĩnh của nhà hàng (MBBank 999917860000 — LA VAN NAM) kèm số tiền và nội dung chuyển khoản, lưu mã giao dịch ngân hàng.
-- **Quẹt thẻ POS**: Lưu thông tin loại thẻ (Visa, MasterCard, JCB, Napas), 4 số cuối và mã chuẩn chi giao dịch.
-- Tự động khấu trừ tiền cọc đặt bàn và áp dụng mã giảm giá voucher; in hóa đơn tức thì chuẩn định dạng in nhiệt K80 và khổ A5.
-
-Xem **NHAT_KY_Y_TUONG_VA_TIEN_DO.md** để biết ma trận 7 vai trò (6 nội bộ + Khách), bộ demo đủ vai trò, các phần đã bổ sung và bàn giao chi tiết. Không còn hai role `ThucDon`/`DanhMucMon`: Admin quản lý danh mục/giá/combo/duyệt mở bán, Quản lý bếp chuẩn bị nội dung kỹ thuật trên màn hình riêng, không có quyền sửa giá. Món Bếp tạo/sửa phải được Admin duyệt lại trước khi public.
-Nhân viên xem trang nhà hàng được nhưng không thấy nút đặt bàn của khách. Dọn role/tài khoản mẫu cũ trên database Development bằng `--remove-retired-menu-roles` theo hướng dẫn và điều kiện bảo toàn lịch sử trong nhật ký; không tự xóa lúc khởi động.
-
-Kiểm chứng bản cập nhật ngày 03/10/2026: build **0 cảnh báo, 0 lỗi**, **PASS: 532 HTTP/database checks** trên database tạm đã dọn. Hệ thống đã hoàn thiện liên thông luồng nghiệp vụ trọn vẹn: Đặt bàn/Xếp bàn → Gọi món POS/Thêm món → KDS Bếp chế biến → Phục vụ bàn → Thanh toán đa phương thức & In bill → Kết thúc phục vụ & Dọn bàn sẵn sàng.
-
-## Chương trình – voucher và khách hàng (25/10/2026)
-
-- Admin mở `/KhuyenMai`, tạo một chương trình rồi thêm nhiều dòng mã ngay trong form. Mỗi mã có kiểu giảm %, giảm tiền trực tiếp, phạm vi hóa đơn/món, danh sách món, trần giảm, đơn tối thiểu và thời hạn riêng. Lưu chương trình và mã trong một transaction. Các đường dẫn `/Voucher` cũ chuyển về chương trình.
-- Chương trình và mã có giới hạn vé phát hành; để trống là không giới hạn. Số vé gồm các lần lưu vào ví và hóa đơn nhập mã trực tiếp chưa có vé trong ví. Mã nhập trực tiếp đang giữ/đã thanh toán vẫn chiếm vé; gỡ mã hoặc hủy hóa đơn giải phóng vé trực tiếp. Vé đã lưu trong ví vẫn được tính phát hành. Mỗi mã còn có giới hạn lượt sử dụng riêng (cũng cho phép để trống); hóa đơn chưa thanh toán giữ một lượt. Một khách lưu một vé cho mỗi mã, vé đó dùng một lần, không dùng đồng thời trên hai hóa đơn.
-- Toàn bộ form thời gian dùng **giờ Việt Nam UTC+7**, chính xác tới giây, bao gồm cả hai biên `Bắt đầu <= hiện tại <= Kết thúc`. Voucher phải nằm trong thời hạn chương trình; cả chương trình và mã đều phải hoạt động. Mặc định bắt đầu từ 00:00 hôm nay theo giờ Việt Nam để mã mới có thể dùng ngay. Khi cần kết thúc hết ngày, nhập 23:59:59 của ngày đó.
-- Khách đăng nhập qua `/Account/Login`, mở `/KhachHang/Vouchers` để thu thập hoặc `/KhachHang/Vouchers?wallet=true` để xem ví. Trong `/KhachHang/Order/{id}`, chọn mã trong ví hoặc nhập mã trực tiếp. Khách chỉ được xem/thao tác hóa đơn của mình; thu ngân xác nhận thanh toán qua luồng hiện có. Trạng thái món tự kiểm tra mỗi 15 giây khi trang đơn đang hiển thị.
-- **Đổi điểm lấy voucher:** Admin nhập **Điểm đổi voucher** cho từng mã trong `/KhuyenMai` (0 = miễn phí, số nguyên dương = cần đổi điểm). Khách xem số dư tại `/KhachHang/Vouchers`, bấm **Đổi … điểm lấy voucher** để trừ điểm và nhận mã vào ví. Mỗi khách đổi mỗi mã một lần; gửi lặp không trừ lại. Server kiểm tra số dư, thời hạn, khách nhận và giới hạn phát hành; khóa theo khách để các lần đổi đồng thời không chi vượt điểm. Không thể nhận miễn phí hoặc nhập trực tiếp mã cần đổi điểm khi chưa có trong ví. Mức điểm không được đổi sau khi mã đã phát hành/sử dụng; tạo mã mới nếu cần mức khác. Điểm đã đổi không tự hoàn khi voucher hết hạn hoặc bị ngừng; gỡ voucher khỏi hóa đơn chỉ gỡ áp dụng, không hoàn điểm đổi.
-- Số dư điểm bằng tổng cộng/trừ trong `LichSuTichDiem`: cộng điểm gắn hóa đơn, trừ điểm gắn voucher. Lịch sử khách và Admin đều hiển thị giao dịch đổi cùng số điểm âm. Voucher đã đổi dùng theo quy tắc ví hiện có, và hóa đơn sau giảm tiếp tục tích điểm theo giá trị mua thực tế.
-- Thu ngân mở `/HoaDon/Details/{id}` để chọn ví của khách hoặc nhập mã. Hóa đơn chưa gắn khách có thể gắn hồ sơ bằng số điện thoại trước khi chọn voucher; thao tác này chỉ áp dụng khi hóa đơn chưa thanh toán/chưa có voucher và không đổi khách đã gắn.
-- `/TaiKhoanKhachHang` quản lý toàn bộ hồ sơ, kể cả khách chưa có tài khoản; có thêm/sửa hồ sơ, cấp tài khoản cho hồ sơ cũ mà không tạo trùng khách, lịch sử đơn, trạng thái chế biến/thanh toán, tổng chi tiêu và lịch sử tích điểm. Hồ sơ có tài khoản tiếp tục dùng màn sửa tài khoản có xác nhận mật khẩu.
-- **Quy tắc điểm mặc định:** mỗi 10.000đ giá trị mua sau giảm giá được 1 điểm, làm tròn xuống; tính cả phần thanh toán bằng tiền cọc. Ghi điểm trong cùng transaction thanh toán và ràng buộc duy nhất theo hóa đơn. Không cộng lại hóa đơn cũ; chưa bổ sung đổi điểm hoặc hoàn điểm vì chưa có nghiệp vụ đổi/hoàn tiền trong phạm vi này.
-
-Web tự áp dụng migration `20261025134614_CampaignVoucherWalletAndCustomerPoints` khi khởi động. Migration sao chép thời hạn, điều kiện và danh sách món của mã cũ từ chương trình xuống voucher; giữ nguyên hóa đơn, snapshot giảm giá và giới hạn lượt cũ. Các cột ưu đãi trên chương trình được giữ để tương thích chương trình tự động và script dữ liệu cũ. Ba bảng mới: `VoucherMon`, `VoucherKhachHang`, `LichSuTichDiem`. Nếu nâng cấp thủ công từ schema W9, dùng script chạy lại an toàn `RestaurantManagement.API/Scripts/UpgradeCampaignVoucherWalletAndCustomerPoints.sql`. Script chỉ nâng cấp schema có sẵn, không thay thế `InitialSchema.sql`.
-
-Migration tiếp theo `20261026132015_LoyaltyVoucherRedemption` bổ sung mức điểm (mã cũ mặc định 0), mở rộng sổ điểm cho giao dịch đổi và giữ nguyên điểm đã tích. Web tự áp dụng khi khởi động; nâng cấp thủ công từ bản ví voucher bằng `RestaurantManagement.API/Scripts/UpgradeLoyaltyVoucherRedemption.sql`. Không thể rollback về schema cũ nếu đã có giao dịch đổi điểm. Chạy bộ kiểm thử ví và đổi điểm trên database tạm bằng `dotnet run --project tests/Management.SmokeTests -- --customer-promotions-only`.
-
-Ứng dụng MAUI hiện dùng **WebView HTTPS** để chia sẻ luồng khách với Web. Mở ứng dụng, nhập địa chỉ gốc HTTPS của Web (thiết bị phải truy cập được và tin cậy chứng chỉ), bấm **Mở tài khoản khách hàng**. Đăng nhập cùng tài khoản website để thu thập mã, chọn mã, theo dõi đơn và xem điểm. Đây là giao diện Web trong app, chưa phải bộ API/mobile native riêng; không giả lập việc thanh toán thành công trên thiết bị.
-
-Kiểm thử các luồng mới và hồi quy khuyến mãi:
+Bộ kiểm thử khởi động Web trên cổng tạm với database riêng `RestaurantCrudTests_<GUID>` và xóa database đó sau khi chạy; không đụng database ứng dụng. Tài khoản Windows cần quyền tạo/xóa database; đổi instance bằng biến `CRUD_TEST_SQL_SERVER`. Chạy riêng một nhóm:
 
 ```powershell
-dotnet run --project tests/Management.SmokeTests -- --customer-promotions-only
-dotnet run --project tests/Management.SmokeTests -- --promotions-only
 dotnet run --project tests/Management.SmokeTests -- --orders-only
 dotnet run --project tests/Management.SmokeTests -- --deposits-only
+dotnet run --project tests/Management.SmokeTests -- --promotions-only
+dotnet run --project tests/Management.SmokeTests -- --customer-promotions-only
+dotnet run --project tests/Management.SmokeTests -- --website-demo-only
+dotnet run --project tests/Management.SmokeTests -- --mobile-api-only
 ```
 
-Các bộ test dùng database tạm tự tạo/xóa. Có thể đặt `CRUD_TEST_SQL_SERVER` theo instance cục bộ. Khi môi trường không cho MSBuild chạy song song, biên dịch với `-m:1 -p:BuildInParallel=false`.
+Nếu môi trường không cho MSBuild chạy song song, biên dịch với `-m:1 -p:BuildInParallel=false`. Lần kiểm chứng gần nhất (06/11/2026): **PASS 1170 HTTP/database checks**.
 
-## Bộ demo toàn website (26/10/2026)
+## Chia sẻ demo
 
-Xem **[DEMO_WEBSITE.md](DEMO_WEBSITE.md)** để lấy tài khoản đủ 7 vai trò, mã voucher, các đơn/lịch chuẩn bị sẵn và kịch bản trình bày từng trang. Lệnh Development `--init-website-demo` nâng schema, nạp lại dữ liệu SQL còn thiếu rồi bổ sung 29 hóa đơn đã thanh toán trong 28 ngày qua và hôm nay, ví voucher, điểm, lịch cọc/đặt trước, bàn đang phục vụ, KDS và chứng từ kho. Mã theo ngày/tháng; nạp lại cùng ngày không tạo trùng, không cộng tồn/điểm lần hai và không đặt lại tiến độ đã thao tác.
-
-```powershell
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
-$env:AuthBootstrap__DemoPassword = 'Demo@2026!'
-dotnet run --project RestaurantManagement.Web --no-launch-profile -- --init-website-demo
-dotnet run --project RestaurantManagement.Web --no-build --launch-profile https
-```
-
-Đăng nhập nội bộ tại `https://localhost:7167/admin`, khách tại `/Account/Login`. Các tài khoản `.demo@example.test` trong hướng dẫn dùng mật khẩu `Demo@2026!`; không đổi mật khẩu tài khoản đã có. Kiểm chứng riêng bộ dữ liệu: `dotnet run --project tests/Management.SmokeTests -- --website-demo-only` (database tạm).
-
-## Chia sẻ demo qua Cloudflare Quick Tunnel
-
-Xem **[HUONG_DAN_CLOUDFLARE.md](HUONG_DAN_CLOUDFLARE.md)**. Chạy Web bằng `dotnet run --project RestaurantManagement.Web --launch-profile https`, rồi mở PowerShell thứ hai chạy `.\Start-QuickTunnel.ps1`. Chia sẻ URL HTTPS `trycloudflare.com` do cloudflared in ra; giữ Web, SQL Server và tunnel chạy trong suốt buổi demo.
-
-Database và ảnh/QR vẫn ở máy bạn; không cần ZIP hoặc triển khai qua GitHub. Mỗi lần tạo Quick Tunnel sẽ nhận URL mới. Tunnel dùng origin `https://localhost:7167` để tương thích chuyển hướng HTTPS và cookie đăng nhập Secure hiện có.
+Chạy Web bằng profile `https`, rồi mở Cloudflare Quick Tunnel trỏ tới `https://localhost:7167` theo [HUONG_DAN_CLOUDFLARE.md](HUONG_DAN_CLOUDFLARE.md). Database và ảnh vẫn nằm trên máy chạy demo; mỗi lần mở tunnel có URL mới.

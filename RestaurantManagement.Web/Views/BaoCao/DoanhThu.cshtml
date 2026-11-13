@@ -1,14 +1,18 @@
 @model RestaurantManagement.Web.Models.BaoCaoDoanhThuViewModel
+@using RestaurantManagement.API.Models
+@using RestaurantManagement.Web.Services
+@using RestaurantManagement.Shared
 @{
     ViewData["Title"] = "Báo cáo doanh thu & đơn hàng";
     ViewData["ActiveMenu"] = "BaoCaoDoanhThu";
+    string Money(decimal value) => value.ToString("N0") + " đ";
 }
 
 <div class="page-header">
     <div>
         <h1 class="h3">Báo cáo doanh thu & đơn hàng</h1>
         <p class="text-muted mb-0">Doanh thu tiền món sau giảm giá theo ngày thanh toán (giờ Việt Nam). Cọc là tiền đã nhận, không phải giảm giá.</p>
-        <p class="small text-muted mb-0">Tiền mặt/chuyển khoản là tiền thu thêm khi chốt bill, chưa gồm tiền đặt cọc nhận trước (xem Báo cáo nộp ca để có dòng tiền thực thu theo ngày). Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
+        <p class="small text-muted mb-0">Tiền mặt/chuyển khoản/thẻ là tiền thực thu theo Chi tiết thanh toán (gồm cả tiền cọc nhận trước, trừ hoàn cọc) nên có thể chênh với doanh thu hóa đơn khi cọc nhận ở ngày khác. Đơn tạo và đơn đã hủy đếm theo ngày lập trong kỳ.</p>
         @if (Model.SoHoaDonThieuNgayThanhToan > 0)
         {
             <div class="alert alert-warning mt-2">Có @Model.SoHoaDonThieuNgayThanhToan hóa đơn cũ chưa lưu ngày thanh toán; tạm thống kê theo ngày lập, không sửa dữ liệu gốc.</div>
@@ -74,7 +78,7 @@
         <div class="card border-0 shadow-sm h-100 bg-white">
             <div class="card-body">
                 <span class="text-muted small fw-semibold text-uppercase">Đơn hàng hoàn tất</span>
-                <div class="fs-3 fw-bold text-dark my-1">@Model.SoDonThanhCong bill thanh toán</div>
+                <div class="fs-3 fw-bold text-dark my-1">@Model.SoDonThanhCong <span class="fs-6 fw-normal text-muted">hóa đơn đã thanh toán</span></div>
                 <div class="small text-muted">@Model.TongSoDonHang đơn tạo trong kỳ</div>
                 <div class="small text-muted">Hủy: @Model.SoDonDaHuy đơn</div>
             </div>
@@ -167,13 +171,17 @@ else
                     <th class="text-end">Tiền mặt</th>
                     <th class="text-end">Chuyển khoản</th>
                     <th class="text-end">Thẻ (cũ)</th>
+                    @if (Model.CheDo == "TheoNgay")
+                    {
+                        <th class="text-end">Chi tiết</th>
+                    }
                 </tr>
             </thead>
             <tbody>
                 @if (Model.ChiTietTimeline.Count == 0)
                 {
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">Chưa có phát sinh giao dịch trong kỳ này.</td>
+                        <td colspan="@(Model.CheDo == "TheoNgay" ? 10 : 9)" class="text-center text-muted py-4">Chưa có phát sinh giao dịch trong kỳ này.</td>
                     </tr>
                 }
                 @foreach (var row in Model.ChiTietTimeline)
@@ -197,6 +205,12 @@ else
                         <td class="text-end small">@row.TienMat.ToString("N0") đ</td>
                         <td class="text-end small">@row.ChuyenKhoan.ToString("N0") đ</td>
                         <td class="text-end small">@row.The.ToString("N0") đ</td>
+                        @if (Model.CheDo == "TheoNgay")
+                        {
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="DoanhThu" asp-route-cheDo="TheoNgay" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")" asp-route-xemNgay="@row.Ngay?.ToString("yyyy-MM-dd")" asp-fragment="chi-tiet-ngay">Chi tiết</a>
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
@@ -211,11 +225,81 @@ else
                     <td class="text-end">@Model.DoanhThuTienMat.ToString("N0") đ</td>
                     <td class="text-end">@Model.DoanhThuChuyenKhoan.ToString("N0") đ</td>
                     <td class="text-end">@Model.DoanhThuThe.ToString("N0") đ</td>
+                    @if (Model.CheDo == "TheoNgay")
+                    {
+                        <td></td>
+                    }
                 </tr>
             </tfoot>
         </table>
     </div>
 </div>
+
+@if (Model.NgayXemChiTiet is { } ngay)
+{
+    <div class="card border-0 shadow-sm mt-4" id="chi-tiet-ngay">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h2 class="h6 fw-bold mb-0"><i class="bi bi-receipt me-1 text-primary"></i> Chi tiết thanh toán ngày @VnTime.Ngay(ngay)</h2>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-dark border">@Model.ChiTietThanhToanNgay.Count giao dịch</span>
+                <a class="btn btn-sm btn-outline-secondary" asp-action="DoanhThu" asp-route-cheDo="TheoNgay" asp-route-tuNgay="@Model.TuNgay.ToString("yyyy-MM-dd")" asp-route-denNgay="@Model.DenNgay.ToString("yyyy-MM-dd")">Đóng</a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light small">
+                    <tr>
+                        <th>Giờ</th>
+                        <th>Mã thanh toán</th>
+                        <th>Hóa đơn / đặt bàn</th>
+                        <th>Loại đơn</th>
+                        <th>Loại giao dịch</th>
+                        <th>Hình thức</th>
+                        <th>Thu ngân</th>
+                        <th class="text-end">Số tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.ChiTietThanhToanNgay)
+                    {
+                        <tr>
+                            <td>@p.GioThanhToan.ToString("HH:mm")</td>
+                            <td class="font-monospace small">@p.MaThanhToan</td>
+                            <td class="small">
+                                @if (p.HoaDon is not null)
+                                {
+                                    <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@p.HoaDonId">@p.HoaDon.MaHoaDon</a>
+                                }
+                                @if (p.DatBan is not null)
+                                {
+                                    <div class="text-muted">@p.DatBan.MaDatBan · @p.DatBan.HoTenLienHe</div>
+                                }
+                            </td>
+                            <td class="small">@(p.HoaDon is null ? (p.DatBan is null ? "—" : "Đặt bàn") : p.HoaDon.LoaiDonHang switch { LoaiDonHang.MangDi => "Mang đi", LoaiDonHang.GiaoHang => "Giao hàng", _ => "Tại bàn" })</td>
+                            <td><span class="badge @(p.LoaiGiaoDich switch { LoaiGiaoDichThanhToan.DatCoc => "bg-info text-dark", LoaiGiaoDichThanhToan.ThanhToan => "bg-success", _ => "bg-danger" })">@PaymentLedger.LoaiText(p.LoaiGiaoDich)</span></td>
+                            <td>@PaymentLedger.HinhThucText(p.HinhThuc)</td>
+                            <td class="small">@(p.NhanVien?.HoTen ?? "—")</td>
+                            <td class="text-end fw-semibold @(p.LoaiGiaoDich == LoaiGiaoDichThanhToan.HoanCoc ? "text-danger" : "")">@Money(PaymentLedger.SignedAmount(p))</td>
+                        </tr>
+                    }
+                    @if (Model.ChiTietThanhToanNgay.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">Chưa có giao dịch thu/chi trong ngày này.</td></tr>
+                    }
+                </tbody>
+                @if (Model.ChiTietThanhToanNgay.Count > 0)
+                {
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="7">TỔNG CỘNG</td>
+                            <td class="text-end">@Money(Model.ChiTietThanhToanNgay.Sum(PaymentLedger.SignedAmount))</td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+}
 
 @section Scripts {
 @if (Model.CheDo != "TheoNgay")
